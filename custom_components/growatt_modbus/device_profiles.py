@@ -1,7 +1,6 @@
 """Device profiles for Growatt inverters."""
 from typing import Dict, Set
 
-
 # ============================================================================
 # SENSOR GROUPS
 # ============================================================================
@@ -76,7 +75,7 @@ INVERTER_PROFILES = {
     # ========================================================================
     
     "min_3000_6000_tl_x": {
-        "name": "MIN 3000-6000TL-X",
+        "name": "MIN Series 3000-6000TL-X",
         "description": "2 PV string single-phase inverter (3-6kW)",
         "register_map": "MIN_3000_6000TL_X",
         "phases": 1,
@@ -97,7 +96,7 @@ INVERTER_PROFILES = {
     },
     
     "min_7000_10000_tl_x": {
-        "name": "MIN 7000-10000TL-X",
+        "name": "MIN Series 7000-10000TL-X",
         "description": "3 PV string single-phase inverter (7-10kW)",
         "register_map": "MIN_7000_10000TL_X",
         "phases": 1,
@@ -173,7 +172,7 @@ INVERTER_PROFILES = {
     # ========================================================================
     
     "mid_15000_25000tl3_x": {
-        "name": "MID 15000-25000TL3-X",
+        "name": "MID Series 15000-25000TL3-X",
         "description": "Three-phase commercial inverter (15-25kW)",
         "register_map": "MID_15000_25000TL3_X",
         "phases": 3,
@@ -195,7 +194,7 @@ INVERTER_PROFILES = {
     # ========================================================================
     
     "mac_20000_40000tl3_x": {
-        "name": "MAC 20000-40000TL3-X",
+        "name": "MAC Series 20000-40000TL3-X",
         "description": "Compact three-phase commercial inverter (20-40kW)",
         "register_map": "MAC_20000_40000TL3_X",
         "phases": 3,
@@ -217,7 +216,7 @@ INVERTER_PROFILES = {
     # ========================================================================
     
     "max_50000_125000tl3_x": {
-        "name": "MAX 50000-125000TL3-X",
+        "name": "MAX Series 50000-125000TL3-X",
         "description": "Commercial three-phase inverter (50-125kW)",
         "register_map": "MAX_50000_125000TL3_X",
         "phases": 3,
@@ -236,7 +235,7 @@ INVERTER_PROFILES = {
     },
     
     "max_1500v_series": {
-        "name": "MAX 1500V Series",
+        "name": "MAX Series 1500V",
         "description": "High-voltage commercial three-phase inverter (up to 150kW)",
         "register_map": "MAX_1500V_SERIES",
         "phases": 3,
@@ -255,7 +254,7 @@ INVERTER_PROFILES = {
     },
     
     "max_x_lv_series": {
-        "name": "MAX-X LV Series",
+        "name": "MAX-X Series LV",
         "description": "Low-voltage commercial three-phase inverter (up to 125kW)",
         "register_map": "MAX_X_LV_SERIES",
         "phases": 3,
@@ -278,7 +277,7 @@ INVERTER_PROFILES = {
     # ========================================================================
     
     "sph_3000_10000": {
-        "name": "SPH 3000-10000",
+        "name": "SPH Series 3000-10000",
         "description": "Hybrid inverter with battery storage (3-10kW)",
         "register_map": "SPH_3000_10000",
         "phases": 1,
@@ -288,6 +287,33 @@ INVERTER_PROFILES = {
         "sensors": (
             BASIC_PV_SENSORS |
             BASIC_AC_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
+            ENERGY_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
+            BATTERY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
+    # ========================================================================
+    # SPH TL3 SERIES - Hybrid Storage (Three Phase with Battery)
+    # ========================================================================
+    
+    "sph_tl3_3000_10000": {
+        "name": "SPH-TL3 Series 3000-10000",
+        "description": "Hybrid 3-phase inverter with battery storage (3-10kW)",
+        "register_map": "SPH_TL3_3000_10000",
+        "phases": 3,
+        "has_pv3": False,
+        "has_battery": True,
+        "max_power_kw": 10.0,
+        "sensors": (
+            BASIC_PV_SENSORS |
+            BASIC_AC_SENSORS |
+            THREE_PHASE_SENSORS |
             GRID_SENSORS |
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
