@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple, Union
 
 # Import register definitions
-from .const import REGISTER_MAPS, STATUS_CODES, combine_registers
+from .const import STATUS_CODES, combine_registers, REGISTER_MAPS
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -231,45 +231,46 @@ class GrowattModbus:
         self._enforce_read_interval()
         
         try:
-            # Try new parameter name first (device_id for pymodbus 3.x+)
+            # Try keyword arguments (pymodbus 3.x+)
             try:
                 response = self.client.read_input_registers(
-                    address=start_address, count=count, device_id=self.slave_id
+                    address=start_address, 
+                    count=count, 
+                    slave=self.slave_id
                 )
             except TypeError:
-                # Fall back to older parameter name (slave for pymodbus 2.x)
+                # Try with 'unit' parameter (pymodbus 2.5.x)
                 try:
                     response = self.client.read_input_registers(
-                        address=start_address, count=count, slave=self.slave_id
+                        start_address, 
+                        count, 
+                        unit=self.slave_id
                     )
                 except TypeError:
-                    # Very old version - positional arguments only
+                    # Simplest - just address and count (some versions handle slave differently)
                     response = self.client.read_input_registers(
-                        start_address, count, unit=self.slave_id
+                        start_address, 
+                        count
                     )
             
             # Handle different pymodbus versions for error checking
             if hasattr(response, 'isError'):
-                # Old version (2.x)
                 if response.isError():
-                    logger.debug(f"Modbus error reading input registers {start_address}-{start_address+count-1} (inverter may be offline)")
+                    logger.debug(f"Modbus error reading input registers {start_address}-{start_address+count-1}")
                     return None
-            elif hasattr(response, 'is_error'):
-                # New version (3.x)
+            elif hasattr(response, 'is_error') and callable(response.is_error):
                 if response.is_error():
-                    logger.debug(f"Modbus error reading input registers {start_address}-{start_address+count-1} (inverter may be offline)")
+                    logger.debug(f"Modbus error reading input registers {start_address}-{start_address+count-1}")
                     return None
-            elif hasattr(response, 'registers'):
-                # Success - has registers attribute
-                pass
-            else:
-                # Unknown response type
-                logger.debug(f"Unknown response type: {type(response)}")
-                return None
-                
-            return response.registers
+            
+            if hasattr(response, 'registers'):
+                return response.registers
+            
+            logger.debug(f"Unknown response type: {type(response)}")
+            return None
+            
         except Exception as e:
-            logger.debug(f"Exception reading input registers (inverter may be offline): {e}")
+            logger.debug(f"Exception reading input registers: {e}")
             return None
     
     def read_holding_registers(self, start_address: int, count: int) -> Optional[list]:
@@ -277,45 +278,46 @@ class GrowattModbus:
         self._enforce_read_interval()
         
         try:
-            # Try new parameter name first (device_id for pymodbus 3.x+)
+            # Try keyword arguments (pymodbus 3.x+)
             try:
                 response = self.client.read_holding_registers(
-                    address=start_address, count=count, device_id=self.slave_id
+                    address=start_address, 
+                    count=count, 
+                    slave=self.slave_id
                 )
             except TypeError:
-                # Fall back to older parameter name (slave for pymodbus 2.x)
+                # Try with 'unit' parameter (pymodbus 2.5.x)
                 try:
                     response = self.client.read_holding_registers(
-                        address=start_address, count=count, slave=self.slave_id
+                        start_address, 
+                        count, 
+                        unit=self.slave_id
                     )
                 except TypeError:
-                    # Very old version - positional arguments only
+                    # Simplest - just address and count (some versions handle slave differently)
                     response = self.client.read_holding_registers(
-                        start_address, count, unit=self.slave_id
+                        start_address, 
+                        count
                     )
             
             # Handle different pymodbus versions for error checking
             if hasattr(response, 'isError'):
-                # Old version (2.x)
                 if response.isError():
-                    logger.debug(f"Modbus error reading holding registers {start_address}-{start_address+count-1} (inverter may be offline)")
+                    logger.debug(f"Modbus error reading holding registers {start_address}-{start_address+count-1}")
                     return None
-            elif hasattr(response, 'is_error'):
-                # New version (3.x)
+            elif hasattr(response, 'is_error') and callable(response.is_error):
                 if response.is_error():
-                    logger.debug(f"Modbus error reading holding registers {start_address}-{start_address+count-1} (inverter may be offline)")
+                    logger.debug(f"Modbus error reading holding registers {start_address}-{start_address+count-1}")
                     return None
-            elif hasattr(response, 'registers'):
-                # Success - has registers attribute
-                pass
-            else:
-                # Unknown response type
-                logger.debug(f"Unknown response type: {type(response)}")
-                return None
-                
-            return response.registers
+            
+            if hasattr(response, 'registers'):
+                return response.registers
+            
+            logger.debug(f"Unknown response type: {type(response)}")
+            return None
+            
         except Exception as e:
-            logger.debug(f"Exception reading holding registers (inverter may be offline): {e}")
+            logger.debug(f"Exception reading holding registers: {e}")
             return None
 
     def _get_register_value(self, address: int) -> Optional[float]:
@@ -556,6 +558,41 @@ class GrowattModbus:
         
         return data
     
+    def write_register(self, register: int, value: int) -> bool:
+        """
+        Write a single holding register.
+        
+        Args:
+            register: Register address (relative to base address 0)
+            value: Value to write (already scaled as integer)
+        
+        Returns:
+            bool: True if write successful, False otherwise
+        """
+        try:
+            if not self.connected:
+                _LOGGER.error("Cannot write register - not connected")
+                return False
+            
+            # Write to holding register (function code 6)
+            result = self.client.write_register(
+                address=register,
+                value=value,
+                slave=self.slave_id
+            )
+            
+            if result.isError():
+                _LOGGER.error(f"Failed to write register {register}: {result}")
+                return False
+            
+            _LOGGER.info(f"Successfully wrote value {value} to register {register}")
+            return True
+            
+        except Exception as e:
+            _LOGGER.error(f"Exception writing register {register}: {e}")
+            return False
+
+
     def _find_register_by_name(self, name: str) -> Optional[int]:
         """Find register address by its name"""
         input_regs = self.register_map['input_registers']

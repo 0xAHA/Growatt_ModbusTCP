@@ -191,7 +191,7 @@ export_register_dump:
       name: IP Address
       description: The IP address of your inverter
       required: true
-      example: "192.168.1.100"
+      example: "192.168.1.60"
       selector:
         text:
     port:
