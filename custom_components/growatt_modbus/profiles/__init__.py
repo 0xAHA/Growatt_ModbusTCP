@@ -21,11 +21,11 @@ from typing import Dict, List, Optional
 # Import register maps from individual profile files
 from .min import MIN_REGISTER_MAPS
 from .mid import MID_REGISTER_MAPS
+from .sph import SPH_REGISTER_MAPS
 
 # TODO: Create these files following the same pattern as min.py
 # from .mod import MOD_REGISTER_MAPS
 # from .tl_xh import TL_XH_REGISTER_MAPS
-# from .sph import SPH_REGISTER_MAPS
 # from .max import MAX_REGISTER_MAPS
 # from .mac import MAC_REGISTER_MAPS
 # from .mix import MIX_REGISTER_MAPS
@@ -36,10 +36,10 @@ from .mid import MID_REGISTER_MAPS
 REGISTER_MAPS = {
     **MIN_REGISTER_MAPS,
     **MID_REGISTER_MAPS,
+    **SPH_REGISTER_MAPS,
     # Add others as they're created:
     # **MOD_REGISTER_MAPS,
     # **TL_XH_REGISTER_MAPS,
-    # **SPH_REGISTER_MAPS,
     # **MAX_REGISTER_MAPS,
     # **MAC_REGISTER_MAPS,
     # **MIX_REGISTER_MAPS,
