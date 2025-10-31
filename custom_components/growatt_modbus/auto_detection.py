@@ -228,58 +228,78 @@ async def async_detect_inverter_series(
         Profile key or None
     """
     try:
+        # Ensure client is connected
+        if not await hass.async_add_executor_job(client.connect):
+            _LOGGER.error("Failed to connect to inverter for detection")
+            return None
+        
+        # CHECK MIN SERIES FIRST (uses 3000 range)
+        # Test for PV1 at register 3003 to confirm MIN series
+        min_test = await hass.async_add_executor_job(
+            client.read_input_registers, 3003, 1
+        )
+        if min_test is not None:
+            _LOGGER.info("Detected 3000-range registers - MIN series inverter")
+            
+            # Test for PV3 at register 3011 (MIN 7-10k has 3 strings)
+            pv3_test = await hass.async_add_executor_job(
+                client.read_input_registers, 3011, 1
+            )
+            if pv3_test is not None:  # Register exists, even if value is 0
+                _LOGGER.info("Detected PV3 register - MIN 7000-10000TL-X")
+                await hass.async_add_executor_job(client.disconnect)
+                return 'min_7000_10000_tl_x'
+            else:
+                _LOGGER.info("No PV3 register - MIN 3000-6000TL-X")
+                await hass.async_add_executor_job(client.disconnect)
+                return 'min_3000_6000_tl_x'
+        
         # Test for battery registers at 3169 (SPH/TL-XH/MOD specific)
         result = await hass.async_add_executor_job(
-            client.client.read_input_registers,
-            3169, 1,
+            client.read_input_registers, 3169, 1
         )
-        if not result.isError() and result.registers[0] > 0:
+        if result and len(result) > 0 and result[0] > 0:
             _LOGGER.info("Detected battery voltage register - hybrid inverter")
             
             # Check for 3-phase at register 42 (MOD uses R/S/T phases)
             phase_test = await hass.async_add_executor_job(
-                client.client.read_input_registers,
-                42, 1
+                client.read_input_registers, 42, 1
             )
-            if not phase_test.isError():
+            if phase_test:
                 _LOGGER.info("Detected 3-phase hybrid - MOD series")
+                await hass.async_add_executor_job(client.disconnect)
                 return 'mod_6000_15000tl3_xh'
             else:
                 _LOGGER.info("Detected single-phase hybrid - SPH/TL-XH series")
+                await hass.async_add_executor_job(client.disconnect)
                 return 'sph_3000_10000'  # Default to SPH
         
         # Test for 3-phase at register 38 (MID/MAC/MAX)
         result = await hass.async_add_executor_job(
-            client.client.read_input_registers,
-            38, 1
+            client.read_input_registers, 38, 1
         )
-        if not result.isError():
+        if result:
             # Check register 42 for second phase
             phase2 = await hass.async_add_executor_job(
-                client.client.read_input_registers,
-                42, 1
+                client.read_input_registers, 42, 1
             )
-            if not phase2.isError():
+            if phase2:
                 _LOGGER.info("Detected 3-phase grid-tied inverter - MID/MAX series")
+                await hass.async_add_executor_job(client.disconnect)
                 return 'mid_15000_25000tl3_x'  # Default to MID
         
-        # Test for PV3 at register 11 (MIN 7-10k has 3 strings)
-        result = await hass.async_add_executor_job(
-            client.client.read_input_registers,
-            11, 1
-        )
-        if not result.isError() and result.registers[0] > 0:
-            _LOGGER.info("Detected 3 PV strings - MIN 7000-10000TL-X")
-            return 'min_7000_10000_tl_x'
-        
-        # Default to MIN 3-6k if nothing else detected
-        _LOGGER.info("Detected single-phase with 2 PV strings - MIN 3000-6000TL-X")
+        # Default fallback
+        _LOGGER.warning("Could not definitively detect inverter series, defaulting to MIN 3000-6000TL-X")
+        await hass.async_add_executor_job(client.disconnect)
         return 'min_3000_6000_tl_x'
         
     except Exception as e:
         _LOGGER.error(f"Exception detecting inverter series: {str(e)}")
+        try:
+            await hass.async_add_executor_job(client.disconnect)
+        except:
+            pass
         return None
-
 
 async def async_determine_inverter_type(
     hass: HomeAssistant,

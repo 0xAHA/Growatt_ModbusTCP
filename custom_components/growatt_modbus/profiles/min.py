@@ -1,17 +1,6 @@
-"""MIN Series Inverter Profiles.
-
-Single-phase inverters (3-10kW) with 2 or 3 PV strings.
-Based on Growatt Protocol V1.39 (2024.04.16)
-
-Register Structure:
-- Uses 3000-3124 address range (3000 series)
-- 32-bit values stored as HIGH/LOW word pairs
-- Power values use 0.1W scale, voltage 0.1V, current 0.1A
-"""
-
 # MIN-3000-6000TL-X (2 PV strings, 3-6kW)
 MIN_3000_6000TL_X = {
-    'name': 'MIN-3000-6000TL-X',
+    'name': 'MIN Series 3-6kW',
     'description': '2 PV string single-phase inverter (3-6kW)',
     'notes': 'Uses 3000-3124 register range. No PV3 string.',
     'input_registers': {
@@ -87,7 +76,7 @@ MIN_3000_6000TL_X = {
 
 # MIN-7000-10000TL-X (3 PV strings, 7-10kW)
 MIN_7000_10000TL_X = {
-    'name': 'MIN-7000-10000TL-X',
+    'name': 'MIN Series 7-10kW',
     'description': '3 PV string single-phase inverter (7-10kW)',
     'notes': 'Uses 3000-3124 register range. Includes PV3 string. Tested with real hardware.',
     'input_registers': {

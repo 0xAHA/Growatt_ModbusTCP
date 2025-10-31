@@ -1,7 +1,8 @@
 """Data update coordinator for Growatt Modbus Integration."""
 import asyncio
 import logging
-from datetime import datetime, timedelta, time
+import time
+from datetime import datetime, timedelta
 from typing import Any, Dict
 
 from homeassistant.config_entries import ConfigEntry
@@ -40,7 +41,8 @@ def test_connection(config: dict) -> dict:
             host=config[CONF_HOST],
             port=config[CONF_PORT],
             slave_id=config[CONF_SLAVE_ID],
-            register_map=register_map
+            register_map=register_map,
+            timeout=self.entry.options.get("timeout", 10)
         )
         
         # Test connection
@@ -125,6 +127,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         
         # Set up midnight callback for daily total resets
         self._setup_midnight_callback()
+    @property
+    def modbus_client(self):
+        """Expose the modbus client for write operations."""
+        return self._client
 
     def _get_register_map(self) -> str:
         """Get register map with migration support."""
@@ -164,13 +170,17 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         try:
             register_map = self._get_register_map()
             
+            # Get timeout from options (default 10 seconds)
+            timeout = self.entry.options.get("timeout", 10)
+            
             # TCP-only connection
             self._client = GrowattModbus(
                 connection_type="tcp",
                 host=self.config[CONF_HOST],
                 port=self.config[CONF_PORT],
                 slave_id=self.config[CONF_SLAVE_ID],
-                register_map=register_map
+                register_map=register_map,
+                timeout=timeout  # Pass timeout
             )
                 
             _LOGGER.info("Initialized Growatt client with register map: %s", register_map)
@@ -331,24 +341,56 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
     def _fetch_data(self) -> GrowattData | None:
         """Fetch data from the inverter (runs in executor)."""
-        try:
-            if not self._client.connect():
-                _LOGGER.error("Failed to connect to Growatt inverter")
-                return None
-                
-            data = self._client.read_all_data()
-            self._client.disconnect()
-            
-            return data
-            
-        except Exception as err:
-            _LOGGER.error("Error during data fetch: %s", err)
-            if self._client:
-                try:
+        max_retries = 3
+        retry_delay = 3  # seconds - increased from 2
+        
+        for attempt in range(max_retries):
+            try:
+                if not self._client.connect():
+                    _LOGGER.warning(
+                        "Failed to connect to Growatt inverter (attempt %d/%d)", 
+                        attempt + 1, max_retries
+                    )
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)  # constant delay, not exponential
+                        continue
+                    _LOGGER.error("All connection attempts failed")
+                    return None
+                    
+                data = self._client.read_all_data()
+                if data is not None:  # Success!
                     self._client.disconnect()
-                except:
-                    pass
-            return None
+                    return data
+                
+                # Read failed but connection was ok - retry without disconnecting
+                _LOGGER.warning("Read returned None (attempt %d/%d)", attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                    
+            except Exception as err:
+                _LOGGER.warning(
+                    "Error during data fetch (attempt %d/%d): %s", 
+                    attempt + 1, max_retries, err
+                )
+                if self._client:
+                    try:
+                        self._client.disconnect()
+                    except:
+                        pass
+                
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                else:
+                    _LOGGER.error("All fetch attempts failed after %d retries", max_retries)
+                    return None
+        
+        # Final disconnect if we get here
+        try:
+            self._client.disconnect()
+        except:
+            pass
+        return None
 
     async def async_config_entry_first_refresh(self) -> None:
         """Perform first refresh and handle setup errors."""
@@ -367,3 +409,8 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             "manufacturer": "Growatt",
             "model": profile["name"],
         }
+
+    @property
+    def modbus_client(self):
+        """Expose the modbus client for write operations."""
+        return self._client

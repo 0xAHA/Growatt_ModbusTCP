@@ -20,7 +20,6 @@ from .const import (
     DOMAIN,
 )
 from .device_profiles import get_available_profiles, get_profile
-from .coordinator import test_connection
 from .growatt_modbus import GrowattModbus
 from .auto_detection import async_determine_inverter_type
 
@@ -122,7 +121,7 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
         errors = {}
         
         if user_input is not None:
-            if user_input.get("confirm_detection"):
+            if user_input.get("action") == "accept":
                 # User accepted auto-detection
                 config_data = {
                     CONF_NAME: self._discovered_data[CONF_NAME],
@@ -146,16 +145,20 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                     data=config_data,
                 )
             else:
-                # User rejected auto-detection, go to manual selection
+                # User wants manual selection
                 return await self.async_step_manual()
         
-        # Show confirmation form
+        # Show confirmation form with detected profile info
         detected_profile = self._discovered_data.get("detected_profile", {})
         profile_name = detected_profile.get("name", "Unknown")
-        profile_desc = detected_profile.get("description", "")
+        profile_key = self._discovered_data.get(CONF_INVERTER_SERIES, "unknown")
         
+        # Use a selector dropdown instead of checkbox
         schema = vol.Schema({
-            vol.Required("confirm_detection", default=True): bool,
+            vol.Required("action", default="accept"): vol.In({
+                "accept": f"✅ Use detected profile: {profile_name}",
+                "manual": "🔧 Choose different profile manually"
+            }),
         })
         
         return self.async_show_form(
@@ -163,9 +166,7 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
             data_schema=schema,
             errors=errors,
             description_placeholders={
-                "detected_model": profile_name,
-                "model_description": profile_desc,
-                "info": "Auto-detection successful! Confirm to proceed or uncheck to manually select."
+                "info": f"Auto-detection complete!\n\nDetected: {profile_name}\nProfile key: {profile_key}"
             }
         )
 
@@ -253,16 +254,29 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             # Update options
             new_options = {**user_input}
             
-            # If device name changed, update config data too
-            if "device_name" in user_input:
-                new_data = dict(self.config_entry.data)
+            # If profile changed, update config data too
+            new_data = dict(self.config_entry.data)
+            changed = False
+            
+            if "device_name" in user_input and user_input["device_name"] != new_data.get(CONF_NAME):
                 new_data[CONF_NAME] = user_input["device_name"]
-                
+                changed = True
+            
+            if CONF_INVERTER_SERIES in user_input:
+                profile = get_profile(user_input[CONF_INVERTER_SERIES])
+                if profile:
+                    new_data[CONF_INVERTER_SERIES] = user_input[CONF_INVERTER_SERIES]
+                    new_data[CONF_REGISTER_MAP] = user_input[CONF_INVERTER_SERIES]
+                    new_data["register_map"] = profile["register_map"]
+                    changed = True
+                    _LOGGER.info(f"Profile changed to: {profile['name']}")
+            
+            if changed:
                 self.hass.config_entries.async_update_entry(
                     self.config_entry,
                     data=new_data,
                     options=new_options,
-                    title=user_input["device_name"],
+                    title=new_data[CONF_NAME],
                 )
             else:
                 # Just update options
@@ -278,15 +292,22 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
 
         # Build options schema with current values
         current_name = self.config_entry.data.get(CONF_NAME, "Growatt")
+        current_series = self.config_entry.data.get(CONF_INVERTER_SERIES, "min_7000_10000_tl_x")
         current_scan_interval = self.config_entry.options.get("scan_interval", 30)
         current_timeout = self.config_entry.options.get("timeout", 10)
         current_invert = self.config_entry.options.get("invert_grid_power", False)
+        
+        available_profiles = get_available_profiles()
 
         options_schema = vol.Schema({
             vol.Required(
                 "device_name",
                 default=current_name
             ): str,
+            vol.Required(
+                CONF_INVERTER_SERIES,
+                default=current_series
+            ): vol.In(available_profiles),
             vol.Required(
                 "scan_interval",
                 default=current_scan_interval
@@ -306,8 +327,7 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             data_schema=options_schema,
             errors=errors,
             description_placeholders={
-                "scan_interval_desc": "How often to poll the inverter (seconds)",
-                "timeout_desc": "Connection timeout (seconds)",
-                "invert_desc": "Reverse grid power sign if CT clamp installed backwards"
+                "info": "Update integration settings and inverter profile"
             }
         )
+    

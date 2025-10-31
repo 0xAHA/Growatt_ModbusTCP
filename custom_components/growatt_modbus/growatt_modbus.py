@@ -20,6 +20,7 @@ import time
 import logging
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple, Union
+from homeassistant.config_entries import ConfigEntry
 
 # Import register definitions
 from .const import STATUS_CODES, combine_registers, REGISTER_MAPS
@@ -122,8 +123,8 @@ class GrowattModbus:
     """Growatt MIN series Modbus client"""
     
     def __init__(self, connection_type='tcp', host='192.168.1.100', port=502, 
-                 device='/dev/ttyUSB0', baudrate=9600, slave_id=1, 
-                 register_map='MIN_10000_TL_X_OFFICIAL'):
+             device='/dev/ttyUSB0', baudrate=9600, slave_id=1, 
+             register_map='MIN_7000_10000TL_X', timeout=10):
         """
         Initialize Modbus connection
         
@@ -135,12 +136,14 @@ class GrowattModbus:
             baudrate: Serial baud rate (usually 9600)
             slave_id: Modbus slave ID (usually 1)
             register_map: Which register mapping to use (see const.py)
+            timeout: Connection timeout in seconds (default: 10)
         """
         self.connection_type = connection_type
         self.slave_id = slave_id
         self.client: Optional[Union['ModbusTcpClient', 'ModbusSerialClient']] = None
         self.last_read_time = 0
         self.min_read_interval = 1.0  # 1 second minimum between reads
+        self._timeout = timeout
         
         # Load register map
         if register_map not in REGISTER_MAPS:
@@ -159,13 +162,16 @@ class GrowattModbus:
             
             # Handle different pymodbus versions for TCP client
             try:
-                # New style (pymodbus 3.x+) - requires keyword arguments
-                self.client = ModbusTcpClient(host=host, port=port)
+                # New style (pymodbus 3.x+) - supports timeout parameter
+                self.client = ModbusTcpClient(host=host, port=port, timeout=self._timeout)
             except TypeError:
-                # Old style (pymodbus 2.x) - accepts positional arguments
+                # Old style (pymodbus 2.x) - timeout must be set after creation
                 self.client = ModbusTcpClient(host, port)
+                # Set timeout on the client object if supported
+                if hasattr(self.client, 'timeout'):
+                    self.client.timeout = self._timeout
             
-            logger.info(f"Connecting to Growatt via TCP: {host}:{port}")
+            logger.info(f"Connecting to Growatt via TCP: {host}:{port} (timeout: {self._timeout}s)")
             
         elif connection_type == 'serial':
             if not SERIAL_AVAILABLE:
@@ -177,7 +183,7 @@ class GrowattModbus:
                 self.client = ModbusClient(
                     port=device,
                     baudrate=baudrate,
-                    timeout=3,
+                    timeout=self._timeout,  # Use configured timeout, not hardcoded 3
                     parity='N',
                     stopbits=1,
                     bytesize=8
@@ -188,12 +194,12 @@ class GrowattModbus:
                     method='rtu',
                     port=device,
                     baudrate=baudrate,
-                    timeout=3,
+                    timeout=self._timeout,  # Use configured timeout
                     parity='N',
                     stopbits=1,
                     bytesize=8
                 )
-            logger.info(f"Connecting to Growatt via Serial: {device} @ {baudrate} baud")
+            logger.info(f"Connecting to Growatt via Serial: {device} @ {baudrate} baud (timeout: {self._timeout}s)")
         else:
             raise ValueError("connection_type must be 'tcp' or 'serial'")
     
@@ -231,27 +237,36 @@ class GrowattModbus:
         self._enforce_read_interval()
         
         try:
-            # Try keyword arguments (pymodbus 3.x+)
+            # Try keyword arguments with different parameter names for pymodbus versions
             try:
+                # Newer pymodbus uses device_id
                 response = self.client.read_input_registers(
                     address=start_address, 
                     count=count, 
-                    slave=self.slave_id
+                    device_id=self.slave_id
                 )
             except TypeError:
-                # Try with 'unit' parameter (pymodbus 2.5.x)
+                # Try with 'slave' parameter
                 try:
                     response = self.client.read_input_registers(
-                        start_address, 
-                        count, 
-                        unit=self.slave_id
+                        address=start_address, 
+                        count=count, 
+                        slave=self.slave_id
                     )
                 except TypeError:
-                    # Simplest - just address and count (some versions handle slave differently)
-                    response = self.client.read_input_registers(
-                        start_address, 
-                        count
-                    )
+                    # Try with 'unit' parameter (pymodbus 2.5.x)
+                    try:
+                        response = self.client.read_input_registers(
+                            start_address, 
+                            count, 
+                            unit=self.slave_id
+                        )
+                    except TypeError:
+                        # Simplest - just address and count
+                        response = self.client.read_input_registers(
+                            start_address, 
+                            count
+                        )
             
             # Handle different pymodbus versions for error checking
             if hasattr(response, 'isError'):
@@ -570,26 +585,27 @@ class GrowattModbus:
             bool: True if write successful, False otherwise
         """
         try:
-            if not self.connected:
-                _LOGGER.error("Cannot write register - not connected")
+            # Check if client exists and is connected
+            if not self.client or not hasattr(self.client, 'is_socket_open') or not self.client.is_socket_open():
+                logger.error("Cannot write register - not connected")
                 return False
             
             # Write to holding register (function code 6)
             result = self.client.write_register(
                 address=register,
                 value=value,
-                slave=self.slave_id
+                device_id=self.slave_id
             )
             
             if result.isError():
-                _LOGGER.error(f"Failed to write register {register}: {result}")
+                logger.error(f"Failed to write register {register}: {result}")
                 return False
             
-            _LOGGER.info(f"Successfully wrote value {value} to register {register}")
+            logger.info(f"Successfully wrote value {value} to register {register}")
             return True
             
         except Exception as e:
-            _LOGGER.error(f"Exception writing register {register}: {e}")
+            logger.error(f"Exception writing register {register}: {e}")
             return False
 
 

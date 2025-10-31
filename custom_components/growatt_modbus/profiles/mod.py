@@ -1,23 +1,6 @@
-"""MOD Series Inverter Profiles.
-
-Modular three-phase hybrid inverters with battery (6-15kW).
-Based on Growatt Protocol V1.39 (2024.04.16) + real hardware scan.
-
-Register Structure:
-- Uses 0-124 base range (same as MID series for inverter data)
-- Uses 3000+ range for battery-specific registers
-- Three-phase AC output (R, S, T phases)
-- 32-bit values stored as HIGH/LOW word pairs
-
-HARDWARE VALIDATED: 2025-10-26
-- Energy today: 8.1kWh at register 53-54 ✓
-- PV power: 1048W at register 1-2 ✓
-- 2 PV strings active (PV3 unused)
-"""
-
 # MOD-6000-15000TL3-XH (Three-phase hybrid with battery, 6-15kW)
 MOD_6000_15000TL3_XH = {
-    'name': 'MOD-6000-15000TL3-XH',
+    'name': 'MOD TL3-XH Series',
     'description': 'Modular three-phase hybrid inverter with battery (6-15kW)',
     'notes': 'Uses 0-124 base range + 3000+ battery range. Validated with real hardware 2025-10-26.',
     'input_registers': {

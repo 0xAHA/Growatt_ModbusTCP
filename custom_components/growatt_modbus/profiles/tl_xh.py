@@ -61,3 +61,5 @@ TL_XH_REGISTER_MAPS = {
         "sensor_sets": ["basic", "three_phase", "diagnostic", "temperature"],
     },
 }
+
+

@@ -3,7 +3,7 @@
 # Register scan date: 2025-10-28
 
 SPH_TL3_3000_10000 = {
-    'name': 'SPH-TL3-3000-10000',
+    'name': 'SPH-TL3 Series 3-10kW',
     'description': 'Three-phase hybrid inverter with battery storage (3-10kW)',
     'notes': 'Uses 0-124, 1000-1124 register ranges. Three-phase with battery management.',
     'input_registers': {
@@ -113,28 +113,7 @@ SPH_TL3_3000_10000 = {
     }
 }
 
-# Device profile entry for device_profiles.py
-DEVICE_PROFILE_SPH_TL3 = {
-    "sph_tl3_3000_10000": {
-        "name": "SPH-TL3 3000-10000",
-        "description": "Three-phase hybrid inverter with battery storage (3-10kW)",
-        "register_map": "SPH_TL3_3000_10000",
-        "phases": 3,
-        "has_pv3": False,  # SPH-TL3 typically has 2 PV inputs
-        "has_battery": True,
-        "max_power_kw": 10.0,
-        "sensors": (
-            "BASIC_PV_SENSORS |"
-            "BASIC_AC_SENSORS |"
-            "THREE_PHASE_SENSORS |"
-            "GRID_SENSORS |"
-            "POWER_FLOW_SENSORS |"
-            "CONSUMPTION_SENSORS |"
-            "ENERGY_SENSORS |"
-            "ENERGY_BREAKDOWN_SENSORS |"
-            "BATTERY_SENSORS |"
-            "TEMPERATURE_SENSORS |"
-            "STATUS_SENSORS"
-        ),
-    }
+# Export all SPH profiles
+SPH_TL3_REGISTER_MAPS = {
+    'SPH_TL3_3000_10000': SPH_TL3_3000_10000,
 }

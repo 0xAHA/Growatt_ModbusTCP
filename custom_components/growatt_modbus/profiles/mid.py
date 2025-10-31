@@ -1,17 +1,6 @@
-"""MID Series Inverter Profiles.
-
-Three-phase commercial inverters (15-25kW).
-Based on Growatt Protocol V1.39 (2024.04.16)
-
-Register Structure:
-- Uses 0-124 address range (base 0 series)
-- Three-phase AC output (R, S, T phases)
-- 32-bit values stored as HIGH/LOW word pairs
-"""
-
 # MID-15000-25000TL3-X (Three-phase, 15-25kW)
 MID_15000_25000TL3_X = {
-    'name': 'MID-15000-25000TL3-X',
+    'name': 'MID-TL3-X Series',
     'description': 'Three-phase commercial inverter (15-25kW)',
     'notes': 'Uses 0-124, 125-249 register range. Three-phase output.',
     'input_registers': {
