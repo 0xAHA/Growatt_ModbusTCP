@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Growatt Modbus Setup",
-        "description": "Configure your Growatt inverter connection. Choose between TCP (Ethernet/WiFi adapter like EW11) or Serial (USB-to-RS485 adapter).",
+        "description": "Configure your Growatt inverter connection.",
         "data": {
           "name": "Integration Name",
           "inverter_series": "Inverter Series",

@@ -1,10 +1,14 @@
 read_inverter_data:
   name: Read Inverter Data
   description: Manually trigger a data read from the Growatt inverter
-  target:
-    device:
-      integration: growatt_modbus
   fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device
+      required: true
+      selector:
+        device:
+          integration: growatt_modbus
     force_refresh:
       name: Force Refresh
       description: Force a fresh read even if within minimum interval
@@ -15,17 +19,26 @@ read_inverter_data:
 test_connection:
   name: Test Connection
   description: Test the connection to the Growatt inverter
-  target:
-    device:
-      integration: growatt_modbus
+  fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device
+      required: true
+      selector:
+        device:
+          integration: growatt_modbus
 
 get_register_data:
   name: Get Register Data
   description: Read specific Modbus registers for debugging
-  target:
-    device:
-      integration: growatt_modbus
   fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device
+      required: true
+      selector:
+        device:
+          integration: growatt_modbus
     register_type:
       name: Register Type
       description: Type of registers to read
@@ -57,10 +70,14 @@ get_register_data:
 update_register_map:
   name: Update Register Map
   description: Change the register mapping for the inverter
-  target:
-    device:
-      integration: growatt_modbus
   fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device
+      required: true
+      selector:
+        device:
+          integration: growatt_modbus
     register_map:
       name: Register Map
       description: Select the register mapping to use
@@ -191,7 +208,7 @@ export_register_dump:
       name: IP Address
       description: The IP address of your inverter
       required: true
-      example: "192.168.1.100"
+      example: "192.168.1.60"
       selector:
         text:
     port:

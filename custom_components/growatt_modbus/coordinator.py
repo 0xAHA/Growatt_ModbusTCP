@@ -1,7 +1,8 @@
 """Data update coordinator for Growatt Modbus Integration."""
 import asyncio
 import logging
-from datetime import datetime, timedelta, time
+import time
+from datetime import datetime, timedelta
 from typing import Any, Dict
 
 from homeassistant.config_entries import ConfigEntry
@@ -14,28 +15,21 @@ from .const import (
     DOMAIN,
     CONF_SLAVE_ID,
     CONF_REGISTER_MAP,
-    REGISTER_MAPS,
     get_sensor_type,
     SENSOR_OFFLINE_BEHAVIOR,
 )
+
+from .const import REGISTER_MAPS
+
 from .growatt_modbus import GrowattModbus, GrowattData
 
 _LOGGER = logging.getLogger(__name__)
-
-# Map old register map names to new ones for migration
-REGISTER_MAP_MIGRATION = {
-    'MIN_10000_VARIANT_A': 'MIN_10000_TL_X_OFFICIAL',
-    'MIN_10000_CORRECTED': 'MIN_10000_TL_X_OFFICIAL',
-    'MIN_SERIES_STANDARD': 'MIN_10000_TL_X_OFFICIAL',
-}
-
 
 def test_connection(config: dict) -> dict:
     """Test the connection to the Growatt inverter (TCP only)."""
     try:
         # Migrate old register map names
         register_map = config.get(CONF_REGISTER_MAP, 'MIN_7000_10000TL_X')
-        register_map = REGISTER_MAP_MIGRATION.get(register_map, register_map)
         
         # Ensure register map exists
         if register_map not in REGISTER_MAPS:
@@ -47,7 +41,8 @@ def test_connection(config: dict) -> dict:
             host=config[CONF_HOST],
             port=config[CONF_PORT],
             slave_id=config[CONF_SLAVE_ID],
-            register_map=register_map
+            register_map=register_map,
+            timeout=self.entry.options.get("timeout", 10)
         )
         
         # Test connection
@@ -81,6 +76,32 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self.entry = entry
         self.config = entry.data
         self.hass = hass
+
+        self._slave_id = entry.data[CONF_SLAVE_ID]
+        
+        # Handle register map key (might be dict or string due to old bug)
+        raw_register_map = entry.data.get(CONF_REGISTER_MAP, 'MIN_7000_10000TL_X')
+        
+        if isinstance(raw_register_map, dict):
+            # Config stored entire dict instead of key name - use fallback
+            _LOGGER.warning("Config contains register map dict instead of name, using fallback")
+            self._register_map_key = "MIN_7000_10000TL_X"  # Your inverter model as fallback
+            
+            # Update config entry to store string key instead of dict
+            new_data = {**entry.data, CONF_REGISTER_MAP: self._register_map_key}
+            hass.config_entries.async_update_entry(entry, data=new_data)
+            _LOGGER.info(f"Fixed config entry to store register map key: {self._register_map_key}")
+        else:
+            # Normal case - it's a string key, use it directly
+            self._register_map_key = raw_register_map
+        
+        # Verify the key exists in REGISTER_MAPS
+        if self._register_map_key not in REGISTER_MAPS:
+            _LOGGER.error(f"Unknown register map '{self._register_map_key}', available: {list(REGISTER_MAPS.keys())}")
+            # Try fallback
+            self._register_map_key = "MIN_7000_10000TL_X"
+            _LOGGER.warning(f"Using fallback register map: {self._register_map_key}")
+
         self.last_successful_update = None
         self.last_update_success_time = None  # For timezone-aware timestamp sensor
         
@@ -106,20 +127,33 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         
         # Set up midnight callback for daily total resets
         self._setup_midnight_callback()
+    @property
+    def modbus_client(self):
+        """Expose the modbus client for write operations."""
+        return self._client
 
     def _get_register_map(self) -> str:
         """Get register map with migration support."""
         register_map = self.config.get(CONF_REGISTER_MAP, 'MIN_7000_10000TL_X')
         
-        # Migrate old register map names
-        if register_map in REGISTER_MAP_MIGRATION:
-            old_map = register_map
-            register_map = REGISTER_MAP_MIGRATION[register_map]
-            _LOGGER.info(
-                "Migrating register map from '%s' to '%s'",
-                old_map,
-                register_map
-            )
+        # BUGFIX: Handle case where config stored the dict instead of the string name
+        if isinstance(register_map, dict):
+            _LOGGER.warning("Config contains register map dict instead of name, attempting to identify...")
+            # Try to find which register map this is by comparing
+            for map_name, map_data in REGISTER_MAPS.items():
+                if map_data == register_map or map_data.get('name') == register_map.get('name'):
+                    _LOGGER.info("Identified register map as: %s", map_name)
+                    register_map = map_name
+                    break
+            else:
+                # Could not identify, use default
+                _LOGGER.error("Could not identify register map dict, falling back to MIN_7000_10000TL_X")
+                register_map = 'MIN_7000_10000TL_X'
+        
+        # Ensure we have a string at this point
+        if not isinstance(register_map, str):
+            _LOGGER.error("register_map is not a string (%s), using default", type(register_map))
+            register_map = 'MIN_7000_10000TL_X'
         
         # Validate register map exists
         if register_map not in REGISTER_MAPS:
@@ -136,13 +170,17 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         try:
             register_map = self._get_register_map()
             
+            # Get timeout from options (default 10 seconds)
+            timeout = self.entry.options.get("timeout", 10)
+            
             # TCP-only connection
             self._client = GrowattModbus(
                 connection_type="tcp",
                 host=self.config[CONF_HOST],
                 port=self.config[CONF_PORT],
                 slave_id=self.config[CONF_SLAVE_ID],
-                register_map=register_map
+                register_map=register_map,
+                timeout=timeout  # Pass timeout
             )
                 
             _LOGGER.info("Initialized Growatt client with register map: %s", register_map)
@@ -303,24 +341,56 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
     def _fetch_data(self) -> GrowattData | None:
         """Fetch data from the inverter (runs in executor)."""
-        try:
-            if not self._client.connect():
-                _LOGGER.error("Failed to connect to Growatt inverter")
-                return None
-                
-            data = self._client.read_all_data()
-            self._client.disconnect()
-            
-            return data
-            
-        except Exception as err:
-            _LOGGER.error("Error during data fetch: %s", err)
-            if self._client:
-                try:
+        max_retries = 3
+        retry_delay = 3  # seconds - increased from 2
+        
+        for attempt in range(max_retries):
+            try:
+                if not self._client.connect():
+                    _LOGGER.warning(
+                        "Failed to connect to Growatt inverter (attempt %d/%d)", 
+                        attempt + 1, max_retries
+                    )
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)  # constant delay, not exponential
+                        continue
+                    _LOGGER.error("All connection attempts failed")
+                    return None
+                    
+                data = self._client.read_all_data()
+                if data is not None:  # Success!
                     self._client.disconnect()
-                except:
-                    pass
-            return None
+                    return data
+                
+                # Read failed but connection was ok - retry without disconnecting
+                _LOGGER.warning("Read returned None (attempt %d/%d)", attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                    
+            except Exception as err:
+                _LOGGER.warning(
+                    "Error during data fetch (attempt %d/%d): %s", 
+                    attempt + 1, max_retries, err
+                )
+                if self._client:
+                    try:
+                        self._client.disconnect()
+                    except:
+                        pass
+                
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                else:
+                    _LOGGER.error("All fetch attempts failed after %d retries", max_retries)
+                    return None
+        
+        # Final disconnect if we get here
+        try:
+            self._client.disconnect()
+        except:
+            pass
+        return None
 
     async def async_config_entry_first_refresh(self) -> None:
         """Perform first refresh and handle setup errors."""
@@ -331,22 +401,16 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             raise
 
     @property
-    def device_info(self) -> Dict[str, Any]:
-        """Return device information."""
-        if self.data:
-            return {
-                "identifiers": {(DOMAIN, self.data.serial_number)},
-                "name": self.config[CONF_NAME],
-                "manufacturer": "Growatt",
-                "model": "MIN Series",
-                "sw_version": self.data.firmware_version,
-                "serial_number": self.data.serial_number,
-            }
-        
-        # Fallback device info if no data available yet
+    def device_info(self):
+        profile = REGISTER_MAPS[self._register_map_key] # ✅ Use stored key
         return {
-            "identifiers": {(DOMAIN, f"{self.config[CONF_HOST]}_{self.config[CONF_SLAVE_ID]}")},
-            "name": self.config[CONF_NAME],
+            "identifiers": {(DOMAIN, self._slave_id)},
+            "name": "Growatt Inverter",
             "manufacturer": "Growatt",
-            "model": "MIN Series",
+            "model": profile["name"],
         }
+
+    @property
+    def modbus_client(self):
+        """Expose the modbus client for write operations."""
+        return self._client
