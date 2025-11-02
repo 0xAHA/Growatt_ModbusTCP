@@ -68,17 +68,7 @@ def detect_profile_from_model_name(model_name: str) -> Optional[str]:
         'MAC30000': 'mac_20000_40000tl3_x',
         'MAC36000': 'mac_20000_40000tl3_x',
         'MAC40000': 'mac_20000_40000tl3_x',
-        
-        # MAX series
-        'MAX50': 'max_50000_125000tl3_x',
-        'MAX60': 'max_50000_125000tl3_x',
-        'MAX75': 'max_50000_125000tl3_x',
-        'MAX100': 'max_50000_125000tl3_x',
-        'MAX110': 'max_50000_125000tl3_x',
-        'MAX125': 'max_50000_125000tl3_x',
-        'MAX1500V': 'max_1500v_series',
-        'MAXXLV': 'max_x_lv_series',
-        
+
         # SPH series (single-phase hybrid)
         'SPH3000': 'sph_3000_6000',
         'SPH3600': 'sph_3000_6000',

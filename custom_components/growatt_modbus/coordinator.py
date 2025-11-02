@@ -79,6 +79,12 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
         self._slave_id = entry.data[CONF_SLAVE_ID]
         
+        # Device identification (populated during first refresh)
+        self._serial_number = None
+        self._firmware_version = None  
+        self._inverter_type = None
+        self._model_name = None
+
         # Handle register map key (might be dict or string due to old bug)
         raw_register_map = entry.data.get(CONF_REGISTER_MAP, 'MIN_7000_10000TL_X')
         
@@ -395,20 +401,152 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
     async def async_config_entry_first_refresh(self) -> None:
         """Perform first refresh and handle setup errors."""
         try:
+            # Read device identification before first data refresh
+            await self.hass.async_add_executor_job(self._read_device_identification)
+            
             await super().async_config_entry_first_refresh()
         except UpdateFailed as err:
             _LOGGER.error("Initial setup failed: %s", err)
             raise
+    
+    def _read_device_identification(self):
+        """Read device identification info (serial, firmware, inverter type)."""
+        try:
+            if not self._client:
+                _LOGGER.warning("Cannot read device ID - client not initialized")
+                return
+            
+            profile_key = self._register_map_key
+            profile = REGISTER_MAPS.get(profile_key, {})
+            
+            # Determine which serial number registers to use
+            # TL-X and TL-XH models use 3000-3015, others use 23-27
+            is_tl_x_model = 'tl_x' in profile_key or 'tl_xh' in profile_key
+            
+            # Read serial number
+            try:
+                if is_tl_x_model:
+                    # TL-X/TL-XH: registers 3000-3015 (30 characters)
+                    result = self._client.client.read_holding_registers(address=3000, count=15, device_id=self._slave_id)
+                else:
+                    # Standard: registers 23-27 (10 characters)
+                    result = self._client.client.read_holding_registers(address=23, count=5, device_id=self._slave_id)
+                
+                if not result.isError():
+                    self._serial_number = self._registers_to_ascii(result.registers)
+                    _LOGGER.info(f"Read serial number: {self._serial_number}")
+            except Exception as e:
+                _LOGGER.debug(f"Could not read serial number: {e}")
+            
+            # Read firmware version (registers 9-11)
+            try:
+                result = self._client.client.read_holding_registers(address=9, count=3, device_id=self._slave_id)
+                if not result.isError():
+                    self._firmware_version = self._registers_to_ascii(result.registers)
+                    _LOGGER.info(f"Read firmware version: {self._firmware_version}")
+            except Exception as e:
+                _LOGGER.debug(f"Could not read firmware version: {e}")
+            
+            # Read inverter type (registers 125-132)
+            try:
+                result = self._client.client.read_holding_registers(address=125, count=8, device_id=self._slave_id)
+                if not result.isError():
+                    self._inverter_type = self._registers_to_ascii(result.registers)
+                    _LOGGER.info(f"Read inverter type: {self._inverter_type}")
+                    
+                    # Parse model name from inverter type
+                    self._model_name = self._parse_model_name(self._inverter_type, profile)
+            except Exception as e:
+                _LOGGER.debug(f"Could not read inverter type: {e}")
+                # Fallback to profile name
+                self._model_name = profile.get("name", "Unknown Model")
+            
+        except Exception as e:
+            _LOGGER.error(f"Error reading device identification: {e}")
+
+    def _registers_to_ascii(self, registers):
+        """Convert list of 16-bit registers to ASCII string."""
+        ascii_bytes = []
+        for reg in registers:
+            high_byte = (reg >> 8) & 0xFF
+            low_byte = reg & 0xFF
+            ascii_bytes.extend([high_byte, low_byte])
+        
+        return bytes(ascii_bytes).decode('ascii', errors='ignore').strip('\x00').strip()
+
+    def _parse_model_name(self, inverter_type: str, profile: dict) -> str:
+        """
+        Parse inverter type string to create proper model name.
+        
+        Examples:
+        - "PV  10000" + MIN profile → "MIN-10000TL-X"
+        - "PV  6000" + SPH profile → "SPH-6000"
+        """
+        if not inverter_type:
+            return profile.get("name", "Unknown Model")
+        
+        # Extract capacity (power rating) from inverter type
+        import re
+        capacity_match = re.search(r'(\d+)', inverter_type)
+        
+        if not capacity_match:
+            return profile.get("name", "Unknown Model")
+        
+        capacity = capacity_match.group(1)
+        profile_name = profile.get("name", "")
+        
+        # Build model name based on series
+        if "MIN" in profile_name:
+            return f"MIN-{capacity}TL-X"
+        elif "SPH-TL3" in profile_name:
+            return f"SPH-TL3-{capacity}"
+        elif "SPH" in profile_name:
+            return f"SPH-{capacity}"
+        elif "MID" in profile_name:
+            return f"MID-{capacity}TL3-X"
+        elif "MAX" in profile_name:
+            return f"MAX-{capacity}TL3-X"
+        elif "MOD" in profile_name:
+            return f"MOD-{capacity}TL3-XH"
+        elif "MAC" in profile_name:
+            return f"MAC-{capacity}TL3-X"
+        elif "TL-XH" in profile_name:
+            if "US" in profile_name:
+                return f"TL-XH-US-{capacity}"
+            return f"TL-XH-{capacity}"
+        elif "MIX" in profile_name:
+            return f"MIX-{capacity}"
+        elif "SPA" in profile_name:
+            return f"SPA-{capacity}"
+        elif "WIT" in profile_name:
+            return f"WIT-TL3-{capacity}"
+        else:
+            return f"Growatt-{capacity}W"
 
     @property
     def device_info(self):
-        profile = REGISTER_MAPS[self._register_map_key] # ✅ Use stored key
-        return {
+        """Return device information for Home Assistant."""
+        profile = REGISTER_MAPS[self._register_map_key]
+        
+        # Use parsed model name if available, otherwise fall back to profile name
+        model = self._model_name if self._model_name else profile.get("name", "Unknown Model")
+        
+        device_info = {
             "identifiers": {(DOMAIN, self._slave_id)},
-            "name": "Growatt Inverter",
+            "name": self.config[CONF_NAME],
             "manufacturer": "Growatt",
-            "model": profile["name"],
+            "model": model,
         }
+        
+        # Add serial number if available
+        if self._serial_number:
+            device_info["serial_number"] = self._serial_number
+        
+        # Add firmware version if available
+        if self._firmware_version:
+            device_info["sw_version"] = self._firmware_version
+        
+        return device_info
 
     @property
     def modbus_client(self):

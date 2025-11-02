@@ -102,7 +102,7 @@ SCAN_PROFILES = {
         "has_battery": True,
     },
     "mid_max": {
-        "name": "MID/MAX Series (3-Phase)",
+        "name": "MID Series (3-Phase)",
         "series_key": "mid_15000_25000tl3_x",
         "ranges": [
             {"start": 0, "count": 125, "name": "Base Range"},

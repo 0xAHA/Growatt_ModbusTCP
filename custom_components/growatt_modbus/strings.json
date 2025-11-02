@@ -76,9 +76,6 @@
     "inverter_series": {
       "options": {
         "mac_20000_40000_tl3_x": "MAC 20000-40000TL3-X (3-phase compact, 20-40kW)",
-        "max_1500v_series": "MAX 1500V Series (High-voltage commercial, up to 150kW)",
-        "max_50000_125000_tl3_x": "MAX 50000-125000TL3-X (3-phase commercial, 50-125kW)",
-        "max_x_lv_series": "MAX-X LV Series (Low-voltage commercial, up to 125kW)",
         "mid_15000_25000_tl3_x": "MID 15000-25000TL3-X (3-phase, 15-25kW)",
         "min_3000_6000_tl_x": "MIN 3000-6000TL-X (Single-phase, 2 PV, 3-6kW)",
         "min_7000_10000_tl_x": "MIN 7000-10000TL-X (Single-phase, 3 PV, 7-10kW)",

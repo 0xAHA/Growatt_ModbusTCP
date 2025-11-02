@@ -212,67 +212,6 @@ INVERTER_PROFILES = {
     },
     
     # ========================================================================
-    # MAX SERIES - Commercial Three Phase
-    # ========================================================================
-    
-    "max_50000_125000tl3_x": {
-        "name": "MAX Series 50000-125000TL3-X",
-        "description": "Commercial three-phase inverter (50-125kW)",
-        "register_map": "MAX_50000_125000TL3_X",
-        "phases": 3,
-        "has_pv3": True,
-        "has_battery": False,
-        "max_power_kw": 125.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            BASIC_AC_SENSORS |
-            THREE_PHASE_SENSORS |
-            ENERGY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
-    },
-    
-    "max_1500v_series": {
-        "name": "MAX Series 1500V",
-        "description": "High-voltage commercial three-phase inverter (up to 150kW)",
-        "register_map": "MAX_1500V_SERIES",
-        "phases": 3,
-        "has_pv3": True,
-        "has_battery": False,
-        "max_power_kw": 150.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            BASIC_AC_SENSORS |
-            THREE_PHASE_SENSORS |
-            ENERGY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
-    },
-    
-    "max_x_lv_series": {
-        "name": "MAX-X Series LV",
-        "description": "Low-voltage commercial three-phase inverter (up to 125kW)",
-        "register_map": "MAX_X_LV_SERIES",
-        "phases": 3,
-        "has_pv3": True,
-        "has_battery": False,
-        "max_power_kw": 125.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            BASIC_AC_SENSORS |
-            THREE_PHASE_SENSORS |
-            ENERGY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
-    },
-    
-    # ========================================================================
     # SPH SERIES - Hybrid Storage (Single Phase with Battery)
     # ========================================================================
     
