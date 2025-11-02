@@ -88,131 +88,13 @@ update_register_map:
             - "MIN_SERIES_STANDARD"
             - "MIN_10000_VARIANT_A"
 
-run_diagnostic:
-  name: Run Diagnostic Test
-  description: Test Modbus TCP connection and validate inverter responses before installing the integration
+export_register_dump:
+  name: Universal Register Scanner
+  description: Scan ALL register ranges, auto-detect your inverter model, and export complete register dump to CSV. File saved to /config/growatt_register_scan_[timestamp].csv
   fields:
     host:
       name: IP Address
       description: IP address of your RS485-TCP adapter
-      required: true
-      example: "192.168.1.100"
-      selector:
-        text:
-    port:
-      name: Port
-      description: Modbus TCP port (usually 502)
-      required: false
-      default: 502
-      selector:
-        number:
-          min: 1
-          max: 65535
-          mode: box
-    slave_id:
-      name: Slave ID
-      description: Modbus slave ID (check inverter display, usually 1)
-      required: false
-      default: 1
-      selector:
-        number:
-          min: 1
-          max: 247
-          mode: box
-    inverter_series:
-      name: Inverter Series
-      description: Select your inverter model
-      required: true
-      selector:
-        select:
-          options:
-            - label: "MIN 3000-6000TL-X (2 PV, single-phase, 3-6kW)"
-              value: "min_3000_6000_tl_x"
-            - label: "MIN 7000-10000TL-X (3 PV, single-phase, 7-10kW)"
-              value: "min_7000_10000_tl_x"
-            - label: "SPH 3000-6000 (Single-phase hybrid with battery, 3-6kW)"
-              value: "sph_3000_6000"
-            - label: "SPH 7000-10000 (Single-phase hybrid with battery, 7-10kW)"
-              value: "sph_7000_10000"
-            - label: "SPH-TL3 3000-10000 (3-phase hybrid with battery, 3-10kW)"
-              value: "sph_tl3_3000_10000"
-            - label: "MID 15000-25000TL3-X (Three-phase, 15-25kW)"
-              value: "mid_15000_25000tl3_x"
-            - label: "MOD 6000-15000TL3-XH (Hybrid three-phase, 6-15kW)"
-              value: "mod_6000_15000tl3_xh"
-    notify:
-      name: Send Notification
-      description: Show results as a persistent notification
-      required: false
-      default: true
-      selector:
-        boolean:
-
-scan_registers:
-  name: Scan Registers (Find Battery)
-  description: Scan all modbus registers to find battery data and power values. Perfect for troubleshooting missing sensors!
-  fields:
-    host:
-      name: IP Address
-      description: The IP address of your inverter
-      required: true
-      example: "192.168.1.100"
-      selector:
-        text:
-    port:
-      name: Port
-      description: Modbus TCP port (usually 502)
-      required: false
-      default: 502
-      selector:
-        number:
-          min: 1
-          max: 65535
-          mode: box
-    slave_id:
-      name: Slave ID
-      description: Modbus slave/unit ID (usually 1)
-      required: false
-      default: 1
-      selector:
-        number:
-          min: 1
-          max: 247
-          mode: box
-    inverter_series:
-      name: Inverter Series
-      description: Select your inverter series to scan the correct register ranges
-      required: true
-      default: "sph"
-      selector:
-        select:
-          options:
-            - label: "SPH Series - Single-phase hybrid (0-124)"
-              value: "sph"
-            - label: "SPH-TL3 Series - 3-phase hybrid (0-124, 1000-1124)"
-              value: "sph_tl3"
-            - label: "MIN Series - String inverter (3000-3124)"
-              value: "min"
-            - label: "MOD Series - Hybrid with battery (3000-3249)"
-              value: "mod"
-            - label: "MID/MAX Series - 3-phase (0-249)"
-              value: "mid_max"
-          mode: dropdown
-    notify:
-      name: Show Notification
-      description: Display results as a persistent notification
-      required: false
-      default: true
-      selector:
-        boolean:
-
-export_register_dump:
-  name: Export Register Dump (CSV)
-  description: Export all registers to CSV file for detailed analysis. File saved to /config/ directory. Download and send for troubleshooting.
-  fields:
-    host:
-      name: IP Address
-      description: The IP address of your inverter
       required: true
       example: "192.168.1.60"
       selector:
@@ -237,22 +119,10 @@ export_register_dump:
           min: 1
           max: 247
           mode: box
-    inverter_series:
-      name: Inverter Series
-      description: Select your inverter series (must match your integration config)
-      required: true
-      default: "sph"
+    notify:
+      name: Show Notification
+      description: Display detection results as a persistent notification
+      required: false
+      default: true
       selector:
-        select:
-          options:
-            - label: "SPH Series - Single-phase hybrid"
-              value: "sph"
-            - label: "SPH-TL3 Series - 3-phase hybrid"
-              value: "sph_tl3"
-            - label: "MIN Series - String inverter"
-              value: "min"
-            - label: "MOD Series - Hybrid with battery"
-              value: "mod"
-            - label: "MID/MAX Series - 3-phase"
-              value: "mid_max"
-          mode: dropdown
+        boolean:
