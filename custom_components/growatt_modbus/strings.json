@@ -75,19 +75,21 @@
   "selector": {
     "inverter_series": {
       "options": {
+        "mac_20000_40000_tl3_x": "MAC 20000-40000TL3-X (3-phase compact, 20-40kW)",
+        "max_1500v_series": "MAX 1500V Series (High-voltage commercial, up to 150kW)",
+        "max_50000_125000_tl3_x": "MAX 50000-125000TL3-X (3-phase commercial, 50-125kW)",
+        "max_x_lv_series": "MAX-X LV Series (Low-voltage commercial, up to 125kW)",
+        "mid_15000_25000_tl3_x": "MID 15000-25000TL3-X (3-phase, 15-25kW)",
         "min_3000_6000_tl_x": "MIN 3000-6000TL-X (Single-phase, 2 PV, 3-6kW)",
         "min_7000_10000_tl_x": "MIN 7000-10000TL-X (Single-phase, 3 PV, 7-10kW)",
+        "mix_series": "MIX Series (Legacy storage inverter)",
+        "mod_6000_15000_tl3_xh": "MOD 6000-15000TL3-XH (3-phase hybrid, 6-15kW)",
+        "spa_series": "SPA Series (AC-coupled storage)",
+        "sph_3000_6000": "SPH 3000-6000 (Single-phase hybrid with battery, 3-6kW)",
+        "sph_7000_10000": "SPH 7000-10000 (Single-phase hybrid with battery, 7-10kW)",
+        "sph_tl3_3000_10000": "SPH-TL3 3000-10000 (3-phase hybrid with battery, 3-10kW)",
         "tl_xh_3000_10000": "TL-XH 3000-10000 (Hybrid with battery, 3-10kW)",
         "tl_xh_us_3000_10000": "TL-XH US 3000-10000 (US Hybrid with battery, 3-10kW)",
-        "mid_15000_25000_tl3_x": "MID 15000-25000TL3-X (3-phase, 15-25kW)",
-        "mac_20000_40000_tl3_x": "MAC 20000-40000TL3-X (3-phase compact, 20-40kW)",
-        "max_50000_125000_tl3_x": "MAX 50000-125000TL3-X (3-phase commercial, 50-125kW)",
-        "max_1500v_series": "MAX 1500V Series (High-voltage commercial, up to 150kW)",
-        "max_x_lv_series": "MAX-X LV Series (Low-voltage commercial, up to 125kW)",
-        "sph_3000_10000": "SPH 3000-10000 (Hybrid with battery, 3-10kW)",
-        "mix_series": "MIX Series (Legacy storage inverter)",
-        "spa_series": "SPA Series (AC-coupled storage)",
-        "mod_6000_15000_tl3_xh": "MOD 6000-15000TL3-XH (3-phase hybrid, 6-15kW)",
         "wit_tl3_series": "WIT TL3 Series (Business storage power, 3-phase)"
       }
     }
