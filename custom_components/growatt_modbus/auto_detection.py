@@ -79,14 +79,27 @@ def detect_profile_from_model_name(model_name: str) -> Optional[str]:
         'MAX1500V': 'max_1500v_series',
         'MAXXLV': 'max_x_lv_series',
         
-        # SPH series
-        'SPH3000': 'sph_3000_10000',
-        'SPH3600': 'sph_3000_10000',
-        'SPH4000': 'sph_3000_10000',
-        'SPH5000': 'sph_3000_10000',
-        'SPH6000': 'sph_3000_10000',
-        'SPH8000': 'sph_3000_10000',
-        'SPH10000': 'sph_3000_10000',
+        # SPH series (single-phase hybrid)
+        'SPH3000': 'sph_3000_6000',
+        'SPH3600': 'sph_3000_6000',
+        'SPH4000': 'sph_3000_6000',
+        'SPH5000': 'sph_3000_6000',
+        'SPH6000': 'sph_3000_6000',
+        'SPH7000': 'sph_7000_10000',
+        'SPH8000': 'sph_7000_10000',
+        'SPH9000': 'sph_7000_10000',
+        'SPH10000': 'sph_7000_10000',
+        
+        # SPH TL3 series (three-phase hybrid) - MUST CHECK BEFORE SPH
+        'SPHTL3': 'sph_tl3_3000_10000',
+        'SPH3000TL3': 'sph_tl3_3000_10000',
+        'SPH4000TL3': 'sph_tl3_3000_10000',
+        'SPH5000TL3': 'sph_tl3_3000_10000',
+        'SPH6000TL3': 'sph_tl3_3000_10000',
+        'SPH7000TL3': 'sph_tl3_3000_10000',
+        'SPH8000TL3': 'sph_tl3_3000_10000',
+        'SPH9000TL3': 'sph_tl3_3000_10000',
+        'SPH10000TL3': 'sph_tl3_3000_10000',
         
         # MOD series
         'MOD6000': 'mod_6000_15000tl3_xh',
@@ -105,8 +118,8 @@ def detect_profile_from_model_name(model_name: str) -> Optional[str]:
         'WIT': 'wit_tl3_series',
     }
     
-    # Try to find a match
-    for pattern, profile_key in patterns.items():
+    # Try to find a match - check longer patterns first to match specific models
+    for pattern, profile_key in sorted(patterns.items(), key=lambda x: len(x[0]), reverse=True):
         if pattern in model_upper:
             _LOGGER.info(f"Matched model '{model_name}' to profile '{profile_key}'")
             return profile_key
@@ -261,18 +274,34 @@ async def async_detect_inverter_series(
         if result and len(result) > 0 and result[0] > 0:
             _LOGGER.info("Detected battery voltage register - hybrid inverter")
             
-            # Check for 3-phase at register 42 (MOD uses R/S/T phases)
-            phase_test = await hass.async_add_executor_job(
+            # Check for 3-phase at register 42 (S-phase voltage)
+            phase_s_test = await hass.async_add_executor_job(
                 client.read_input_registers, 42, 1
             )
-            if phase_test:
-                _LOGGER.info("Detected 3-phase hybrid - MOD series")
-                await hass.async_add_executor_job(client.disconnect)
-                return 'mod_6000_15000tl3_xh'
+            # Check for 3-phase at register 46 (T-phase voltage)
+            phase_t_test = await hass.async_add_executor_job(
+                client.read_input_registers, 46, 1
+            )
+            
+            if phase_s_test and phase_t_test:
+                _LOGGER.info("Detected 3-phase hybrid - SPH TL3 or MOD series")
+                
+                # Check for register 1000 range (SPH TL3 uses 1000-1124, MOD may not)
+                storage_test = await hass.async_add_executor_job(
+                    client.read_input_registers, 1000, 1
+                )
+                if storage_test is not None:
+                    _LOGGER.info("Detected storage range - SPH TL3 series")
+                    await hass.async_add_executor_job(client.disconnect)
+                    return 'sph_tl3_3000_10000'
+                else:
+                    _LOGGER.info("No storage range - MOD series")
+                    await hass.async_add_executor_job(client.disconnect)
+                    return 'mod_6000_15000tl3_xh'
             else:
-                _LOGGER.info("Detected single-phase hybrid - SPH/TL-XH series")
+                _LOGGER.info("Detected single-phase hybrid - SPH or TL-XH series")
                 await hass.async_add_executor_job(client.disconnect)
-                return 'sph_3000_10000'  # Default to SPH
+                return 'sph_7000_10000'  # Default to SPH 7-10k
         
         # Test for 3-phase at register 38 (MID/MAC/MAX)
         result = await hass.async_add_executor_job(

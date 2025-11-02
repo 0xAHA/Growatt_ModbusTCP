@@ -276,12 +276,34 @@ INVERTER_PROFILES = {
     # SPH SERIES - Hybrid Storage (Single Phase with Battery)
     # ========================================================================
     
-    "sph_3000_10000": {
-        "name": "SPH Series 3000-10000",
-        "description": "Hybrid inverter with battery storage (3-10kW)",
-        "register_map": "SPH_3000_10000",
+    "sph_3000_6000": {
+        "name": "SPH Series 3000-6000",
+        "description": "Single-phase hybrid inverter with battery storage (3-6kW)",
+        "register_map": "SPH_3000_6000",
         "phases": 1,
-        "has_pv3": False,  # SPH typically has 2 PV inputs
+        "has_pv3": False,
+        "has_battery": True,
+        "max_power_kw": 6.0,
+        "sensors": (
+            BASIC_PV_SENSORS |
+            BASIC_AC_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
+            ENERGY_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
+            BATTERY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+    
+    "sph_7000_10000": {
+        "name": "SPH Series 7000-10000",
+        "description": "Single-phase hybrid inverter with battery storage (7-10kW)",
+        "register_map": "SPH_7000_10000",
+        "phases": 1,
+        "has_pv3": False,
         "has_battery": True,
         "max_power_kw": 10.0,
         "sensors": (

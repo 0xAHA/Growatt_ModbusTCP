@@ -130,8 +130,12 @@ run_diagnostic:
               value: "min_3000_6000_tl_x"
             - label: "MIN 7000-10000TL-X (3 PV, single-phase, 7-10kW)"
               value: "min_7000_10000_tl_x"
-            - label: "SPH 3000-10000 (Hybrid with battery, 3-10kW)"
-              value: "sph_3000_10000"
+            - label: "SPH 3000-6000 (Single-phase hybrid with battery, 3-6kW)"
+              value: "sph_3000_6000"
+            - label: "SPH 7000-10000 (Single-phase hybrid with battery, 7-10kW)"
+              value: "sph_7000_10000"
+            - label: "SPH-TL3 3000-10000 (3-phase hybrid with battery, 3-10kW)"
+              value: "sph_tl3_3000_10000"
             - label: "MID 15000-25000TL3-X (Three-phase, 15-25kW)"
               value: "mid_15000_25000tl3_x"
             - label: "MOD 6000-15000TL3-XH (Hybrid three-phase, 6-15kW)"
@@ -183,8 +187,10 @@ scan_registers:
       selector:
         select:
           options:
-            - label: "SPH Series - Hybrid with battery (0-124, 1000-1124)"
+            - label: "SPH Series - Single-phase hybrid (0-124)"
               value: "sph"
+            - label: "SPH-TL3 Series - 3-phase hybrid (0-124, 1000-1124)"
+              value: "sph_tl3"
             - label: "MIN Series - String inverter (3000-3124)"
               value: "min"
             - label: "MOD Series - Hybrid with battery (3000-3249)"
@@ -239,8 +245,10 @@ export_register_dump:
       selector:
         select:
           options:
-            - label: "SPH Series - Hybrid with battery"
+            - label: "SPH Series - Single-phase hybrid"
               value: "sph"
+            - label: "SPH-TL3 Series - 3-phase hybrid"
+              value: "sph_tl3"
             - label: "MIN Series - String inverter"
               value: "min"
             - label: "MOD Series - Hybrid with battery"
