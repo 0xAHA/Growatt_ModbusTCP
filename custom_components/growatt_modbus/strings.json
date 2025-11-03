@@ -75,6 +75,7 @@
   "selector": {
     "inverter_series": {
       "options": {
+        "mic_600_3300tl_x": "MIC 600-3300TL-X (Micro inverter 0.6-3.3kW)",
         "mid_15000_25000_tl3_x": "MID 15000-25000TL3-X (3-phase, 15-25kW)",
         "min_3000_6000_tl_x": "MIN 3000-6000TL-X (Single-phase, 2 PV, 3-6kW)",
         "min_7000_10000_tl_x": "MIN 7000-10000TL-X (Single-phase, 3 PV, 7-10kW)",

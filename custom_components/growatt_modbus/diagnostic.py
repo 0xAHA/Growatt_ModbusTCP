@@ -207,8 +207,17 @@ def _detect_inverter_model(register_data: Dict[int, int]) -> Dict[str, str]:
     elif has_pv1_at_3:
         detection["reasoning"].append("✓ Found PV1 at register 3 (0-124 base range detected)")
         
+        if not has_1000_1124 and not has_3000_3124 and not has_3125_3249:
+        # Only base range responds, no extended ranges → MIC micro inverter
+            detection["model"] = "MIC 600-3300TL-X"
+            detection["confidence"] = "High"
+            detection["profile_key"] = "mic_600_3300tl_x"
+            detection["register_map"] = "MIC_600_3300TL_X"
+            detection["reasoning"].append("✓ Only 0-179 register range responds → MIC micro inverter (V3.05 protocol)")
+            detection["reasoning"].append("✓ Single PV string, legacy protocol from 2013")
+
         # Check for battery (SPH series)
-        if has_battery_at_13 or has_battery_at_1013 or has_storage_range:
+        elif has_battery_at_13 or has_battery_at_1013 or has_storage_range:
             detection["reasoning"].append("✓ Battery detected → SPH hybrid series")
             
             # Check for 3-phase
