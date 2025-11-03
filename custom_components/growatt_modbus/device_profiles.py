@@ -190,28 +190,6 @@ INVERTER_PROFILES = {
     },
     
     # ========================================================================
-    # MAC SERIES - Three Phase Compact
-    # ========================================================================
-    
-    "mac_20000_40000tl3_x": {
-        "name": "MAC Series 20000-40000TL3-X",
-        "description": "Compact three-phase commercial inverter (20-40kW)",
-        "register_map": "MAC_20000_40000TL3_X",
-        "phases": 3,
-        "has_pv3": False,
-        "has_battery": False,
-        "max_power_kw": 40.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            BASIC_AC_SENSORS |
-            THREE_PHASE_SENSORS |
-            ENERGY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
-    },
-    
-    # ========================================================================
     # SPH SERIES - Hybrid Storage (Single Phase with Battery)
     # ========================================================================
     
@@ -287,56 +265,6 @@ INVERTER_PROFILES = {
     },
     
     # ========================================================================
-    # MIX SERIES - Legacy Storage
-    # ========================================================================
-    
-    "mix_series": {
-        "name": "MIX Series",
-        "description": "Legacy storage inverter (merged into SPH)",
-        "register_map": "MIX_SERIES",
-        "phases": 1,
-        "has_pv3": False,
-        "has_battery": True,
-        "max_power_kw": 10.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            BASIC_AC_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
-    },
-    
-    # ========================================================================
-    # SPA SERIES - AC-Coupled Storage
-    # ========================================================================
-    
-    "spa_series": {
-        "name": "SPA Series",
-        "description": "AC-coupled storage inverter",
-        "register_map": "SPA_SERIES",
-        "phases": 1,
-        "has_pv3": False,
-        "has_battery": True,
-        "max_power_kw": 10.0,
-        "sensors": (
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
-    },
-    
-    # ========================================================================
     # MOD SERIES - Modular Three Phase Hybrid
     # ========================================================================
     
@@ -348,34 +276,6 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            BASIC_AC_SENSORS |
-            THREE_PHASE_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
-    },
-    
-    # ========================================================================
-    # WIT SERIES - Business Storage Power
-    # ========================================================================
-    
-    "wit_tl3_series": {
-        "name": "WIT TL3 Series",
-        "description": "Business storage power three-phase inverter",
-        "register_map": "WIT_TL3_SERIES",
-        "phases": 3,
-        "has_pv3": True,
-        "has_battery": True,
-        "max_power_kw": 50.0,
         "sensors": (
             BASIC_PV_SENSORS |
             PV3_SENSORS |

@@ -61,13 +61,6 @@ def detect_profile_from_model_name(model_name: str) -> Optional[str]:
         'MID20000': 'mid_15000_25000tl3_x',
         'MID22000': 'mid_15000_25000tl3_x',
         'MID25000': 'mid_15000_25000tl3_x',
-        
-        # MAC series
-        'MAC20000': 'mac_20000_40000tl3_x',
-        'MAC25000': 'mac_20000_40000tl3_x',
-        'MAC30000': 'mac_20000_40000tl3_x',
-        'MAC36000': 'mac_20000_40000tl3_x',
-        'MAC40000': 'mac_20000_40000tl3_x',
 
         # SPH series (single-phase hybrid)
         'SPH3000': 'sph_3000_6000',
@@ -97,15 +90,6 @@ def detect_profile_from_model_name(model_name: str) -> Optional[str]:
         'MOD10000': 'mod_6000_15000tl3_xh',
         'MOD12000': 'mod_6000_15000tl3_xh',
         'MOD15000': 'mod_6000_15000tl3_xh',
-        
-        # MIX series
-        'MIX': 'mix_series',
-        
-        # SPA series
-        'SPA': 'spa_series',
-        
-        # WIT series
-        'WIT': 'wit_tl3_series',
     }
     
     # Try to find a match - check longer patterns first to match specific models
