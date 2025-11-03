@@ -37,6 +37,16 @@ def detect_profile_from_model_name(model_name: str) -> Optional[str]:
     
     # Model name patterns to profile mappings
     patterns = {
+        # MIC series - Micro inverters
+        'MIC600': 'mic_600_3300tl_x',
+        'MIC750': 'mic_600_3300tl_x',
+        'MIC1000': 'mic_600_3300tl_x',
+        'MIC1500': 'mic_600_3300tl_x',
+        'MIC2000': 'mic_600_3300tl_x',
+        'MIC2500': 'mic_600_3300tl_x',
+        'MIC3000': 'mic_600_3300tl_x',
+        'MIC3300': 'mic_600_3300tl_x',
+        
         # MIN series
         'MIN3000': 'min_3000_6000_tl_x',
         'MIN4000': 'min_3000_6000_tl_x',

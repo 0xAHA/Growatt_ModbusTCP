@@ -14,6 +14,7 @@ Profile Structure:
 from typing import Dict, List, Optional
 
 # Import register maps from individual profile files
+from .mic import MIC_REGISTER_MAPS
 from .min import MIN_REGISTER_MAPS
 from .mid import MID_REGISTER_MAPS
 from .sph import SPH_REGISTER_MAPS
@@ -24,6 +25,7 @@ from .tl_xh import TL_XH_REGISTER_MAPS
 
 # Combine all register maps into single dict
 REGISTER_MAPS = {
+    **MIC_REGISTER_MAPS,
     **MIN_REGISTER_MAPS,
     **MID_REGISTER_MAPS,
     **SPH_REGISTER_MAPS,
