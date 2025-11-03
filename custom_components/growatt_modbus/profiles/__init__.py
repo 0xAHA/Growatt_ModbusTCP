@@ -9,11 +9,6 @@ Profile Structure:
 - mod.py: MOD series (6-15kW three-phase hybrid)
 - tl_xh.py: TL-XH series (3-10kW hybrid)
 - sph.py: SPH series (storage/battery)
-- max.py: MAX series (50-125kW commercial)
-- mac.py: MAC series (20-40kW compact)
-- mix.py: MIX series (legacy storage)
-- spa.py: SPA series (AC-coupled storage)
-- wit.py: WIT series (business storage)
 """
 
 from typing import Dict, List, Optional
@@ -25,11 +20,7 @@ from .sph import SPH_REGISTER_MAPS
 from .sph_tl3 import SPH_TL3_REGISTER_MAPS
 from .mod import MOD_REGISTER_MAPS
 from .tl_xh import TL_XH_REGISTER_MAPS
-from .max import MAX_REGISTER_MAPS
-from .mac import MAC_REGISTER_MAPS
-from .mix import MIX_REGISTER_MAPS
-from .spa import SPA_REGISTER_MAPS
-from .wit import WIT_REGISTER_MAPS
+
 
 # Combine all register maps into single dict
 REGISTER_MAPS = {
@@ -39,11 +30,6 @@ REGISTER_MAPS = {
     **SPH_TL3_REGISTER_MAPS,
     **MOD_REGISTER_MAPS,
     **TL_XH_REGISTER_MAPS,
-    **MAX_REGISTER_MAPS,
-    **MAC_REGISTER_MAPS,
-    **MIX_REGISTER_MAPS,
-    **SPA_REGISTER_MAPS,
-    **WIT_REGISTER_MAPS,
 }
 
 
