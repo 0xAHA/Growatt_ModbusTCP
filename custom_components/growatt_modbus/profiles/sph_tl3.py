@@ -32,14 +32,24 @@ SPH_TL3_3000_10000 = {
         
         # AC Grid Frequency
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
-        
-        # Three-Phase Line-to-Line Voltages
-        38: {'name': 'ac_voltage_rs', 'scale': 0.1, 'unit': 'V', 'desc': 'Line voltage R-S'},
-        39: {'name': 'ac_current', 'scale': 0.1, 'unit': 'A', 'desc': 'AC current'},
-        40: {'name': 'ac_power_high', 'scale': 1, 'unit': '', 'desc': 'AC power HIGH', 'pair': 41},
-        41: {'name': 'ac_power_low', 'scale': 1, 'unit': '', 'desc': 'AC power LOW', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        42: {'name': 'ac_voltage_st', 'scale': 0.1, 'unit': 'V', 'desc': 'Line voltage S-T'},
-        46: {'name': 'ac_voltage_tr', 'scale': 0.1, 'unit': 'V', 'desc': 'Line voltage T-R'},
+
+        # Three-Phase AC Output - Phase R
+        38: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R voltage'},
+        39: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R current'},
+        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41},
+        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Three-Phase AC Output - Phase S
+        42: {'name': 'ac_voltage_s', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase S voltage'},
+        43: {'name': 'ac_current_s', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase S current'},
+        44: {'name': 'ac_power_s_high', 'scale': 1, 'unit': '', 'pair': 45},
+        45: {'name': 'ac_power_s_low', 'scale': 1, 'unit': '', 'pair': 44, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Three-Phase AC Output - Phase T
+        46: {'name': 'ac_voltage_t', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase T voltage'},
+        47: {'name': 'ac_current_t', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase T current'},
+        48: {'name': 'ac_power_t_high', 'scale': 1, 'unit': '', 'pair': 49},
+        49: {'name': 'ac_power_t_low', 'scale': 1, 'unit': '', 'pair': 48, 'combined_scale': 0.1, 'combined_unit': 'W'},
         
         # Energy
         53: {'name': 'energy_today_high', 'scale': 1, 'unit': '', 'desc': 'Today energy HIGH', 'pair': 54},

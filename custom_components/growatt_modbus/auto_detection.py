@@ -255,8 +255,8 @@ async def async_detect_inverter_series(
         result = await hass.async_add_executor_job(
             client.read_input_registers, 3169, 1
         )
-        if result and len(result) > 0 and result[0] > 0:
-            _LOGGER.info("Detected battery voltage register - hybrid inverter")
+        if result is not None:
+            _LOGGER.info("Detected battery voltage register returns value")
             
             # Check for 3-phase at register 42 (S-phase voltage)
             phase_s_test = await hass.async_add_executor_job(
