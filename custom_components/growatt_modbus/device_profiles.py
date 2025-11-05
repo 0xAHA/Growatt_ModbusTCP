@@ -59,9 +59,10 @@ STATUS_SENSORS: Set[str] = {
 }
 
 THREE_PHASE_SENSORS: Set[str] = {
-    "ac_voltage_r", "ac_voltage_s", "ac_voltage_t",
+    "ac_voltage_rs", "ac_voltage_st", "ac_voltage_tr",  # Line-to-line voltages
     "ac_current_r", "ac_current_s", "ac_current_t",
     "ac_power_r", "ac_power_s", "ac_power_t",
+    "ac_frequency",
 }
 
 
@@ -78,9 +79,17 @@ INVERTER_PROFILES = {
         "name": "MIC 600-3300TL-X",
         "description": "Micro inverter (0.6-3.3kW)",
         "register_map": "MIC_600_3300TL_X",
+        "phases": 1,
+        "has_pv3": False,
         "has_battery": False,
-        "phase": "single",
-        "pv_strings": 1,
+        "max_power_kw": 3.3,
+        "sensors": (
+            BASIC_PV_SENSORS |
+            BASIC_AC_SENSORS |
+            ENERGY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
     },
     
     
@@ -195,7 +204,6 @@ INVERTER_PROFILES = {
         "max_power_kw": 25.0,
         "sensors": (
             BASIC_PV_SENSORS |
-            BASIC_AC_SENSORS |
             THREE_PHASE_SENSORS |
             ENERGY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -265,7 +273,6 @@ INVERTER_PROFILES = {
         "max_power_kw": 10.0,
         "sensors": (
             BASIC_PV_SENSORS |
-            BASIC_AC_SENSORS |
             THREE_PHASE_SENSORS |
             GRID_SENSORS |
             POWER_FLOW_SENSORS |
@@ -293,7 +300,6 @@ INVERTER_PROFILES = {
         "sensors": (
             BASIC_PV_SENSORS |
             PV3_SENSORS |
-            BASIC_AC_SENSORS |
             THREE_PHASE_SENSORS |
             GRID_SENSORS |
             POWER_FLOW_SENSORS |

@@ -154,6 +154,84 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfFrequency.HERTZ,
         "attr": "ac_frequency",
     },
+
+    # Three-Phase AC Voltages
+    "ac_voltage_r": {
+        "name": "AC Voltage R",
+        "icon": "mdi:lightning-bolt",
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricPotential.VOLT,
+        "attr": "ac_voltage_r",
+    },
+    "ac_voltage_s": {
+        "name": "AC Voltage S",
+        "icon": "mdi:lightning-bolt",
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricPotential.VOLT,
+        "attr": "ac_voltage_s",
+    },
+    "ac_voltage_t": {
+        "name": "AC Voltage T",
+        "icon": "mdi:lightning-bolt",
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricPotential.VOLT,
+        "attr": "ac_voltage_t",
+    },
+
+    # Three-Phase AC Currents
+    "ac_current_r": {
+        "name": "AC Current Phase R",
+        "icon": "mdi:current-ac",
+        "device_class": SensorDeviceClass.CURRENT,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricCurrent.AMPERE,
+        "attr": "ac_current_r",
+    },
+    "ac_current_s": {
+        "name": "AC Current Phase S",
+        "icon": "mdi:current-ac",
+        "device_class": SensorDeviceClass.CURRENT,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricCurrent.AMPERE,
+        "attr": "ac_current_s",
+    },
+    "ac_current_t": {
+        "name": "AC Current Phase T",
+        "icon": "mdi:current-ac",
+        "device_class": SensorDeviceClass.CURRENT,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricCurrent.AMPERE,
+        "attr": "ac_current_t",
+    },
+
+    # Three-Phase AC Powers
+    "ac_power_r": {
+        "name": "AC Power Phase R",
+        "icon": "mdi:power-plug",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.WATT,
+        "attr": "ac_power_r",
+    },
+    "ac_power_s": {
+        "name": "AC Power Phase S",
+        "icon": "mdi:power-plug",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.WATT,
+        "attr": "ac_power_s",
+    },
+    "ac_power_t": {
+        "name": "AC Power Phase T",
+        "icon": "mdi:power-plug",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.WATT,
+        "attr": "ac_power_t",
+    },
     
     # Grid Power Sensors
     "grid_power": {

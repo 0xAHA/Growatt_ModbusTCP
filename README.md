@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.0.5-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.0.6-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -35,11 +35,11 @@ The integration focuses on **residential and small commercial** Growatt inverter
 ### Single-Phase Grid-Tied Inverters
 
 
-| Inverter Series        | Model Range    | PV Strings | Tested        | Notes             |
-| ------------------------ | ---------------- | ------------ | --------------- | ------------------- |
-| **MIC 600-3300TL-X**   | 600-3300TL-X   | 1          | ⚠️ Untested | Micro inverter, 0.6-3.3kW (V3.05)   |
-| **MIN 3000-6000TL-X**  | 3000-6000TL-X  | 2          | ⚠️ Untested | Grid-tied, 3-6kW  |
-| **MIN 7000-10000TL-X** | 7000-10000TL-X | 3          | ✅**Tested**  | Grid-tied, 7-10kW |
+| Inverter Series        | Model Range    | PV Strings | Tested        | Notes                             |
+| ------------------------ | ---------------- | ------------ | --------------- | ----------------------------------- |
+| **MIC 600-3300TL-X**   | 600-3300TL-X   | 1          | ⚠️ Untested | Micro inverter, 0.6-3.3kW (V3.05) |
+| **MIN 3000-6000TL-X**  | 3000-6000TL-X  | 2          | ⚠️ Untested | Grid-tied, 3-6kW                  |
+| **MIN 7000-10000TL-X** | 7000-10000TL-X | 3          | ✅**Tested**  | Grid-tied, 7-10kW                 |
 
 ### Single-Phase Hybrid Inverters (with Battery)
 
@@ -78,41 +78,41 @@ Different inverter models create different sensors based on their capabilities:
 
 | Sensor                          | MIC | MIN 3-6k | MIN 7-10k | TL-XH | SPH 3-6k | SPH 7-10k | SPH-TL3 | MID | MOD |
 | --------------------------------- | :---: | :--------: | :---------: | :-----: | :--------: | :---------: | :-------: | :---: | :---: |
-| **Solar Input**                 |     |          |          |      |          |          |        |    |    |
-| PV1 Voltage/Current/Power       | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| PV2 Voltage/Current/Power       | ❌  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| PV3 Voltage/Current/Power       | ❌  |    ❌    |    ✅    |  ✅  |    ❌    |    ❌    |   ❌   | ❌ | ✅ |
-| Solar Total Power               | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| **AC Output (Single-Phase)**    |     |          |          |      |          |          |        |    |    |
-| AC Voltage/Current/Power        | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ❌   | ❌ | ❌ |
-| AC Frequency                    | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ❌   | ❌ | ❌ |
-| **AC Output (Three-Phase)**     |     |          |          |      |          |          |        |    |    |
-| AC Phase R/S/T Voltage          | ❌  |    ❌    |    ❌    |  ❌  |    ❌    |    ❌    |   ✅   | ✅ | ✅ |
-| AC Phase R/S/T Current          | ❌  |    ❌    |    ❌    |  ❌  |    ❌    |    ❌    |   ✅   | ✅ | ✅ |
-| AC Phase R/S/T Power            | ❌  |    ❌    |    ❌    |  ❌  |    ❌    |    ❌    |   ✅   | ✅ | ✅ |
-| AC Total Power                  | ❌  |    ❌    |    ❌    |  ❌  |    ❌    |    ❌    |   ✅   | ✅ | ✅ |
-| **Grid Power (Calculated)**     |     |          |          |      |          |          |        |    |    |
-| Grid Export Power               | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| Grid Import Power               | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| Self Consumption                | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| House Consumption               | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| **Grid Power (From Registers)** |     |          |          |      |          |          |        |    |    |
-| Power to Grid                   | ❌  |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
-| Power to Load                   | ❌  |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
-| Power to User                   | ❌  |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
-| **Battery (Hybrid Only)**       |     |          |          |      |          |          |        |    |    |
-| Battery Voltage/Current/Power   | ❌  |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
-| Battery SOC                     | ❌  |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
-| Battery Temperature             | ❌  |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
-| **Energy Totals**               |     |          |          |      |          |          |        |    |    |
-| Energy Today/Total              | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| Energy to Grid Today/Total      | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| Load Energy Today/Total         | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| **System & Diagnostics**        |     |          |          |      |          |          |        |    |    |
-| Inverter Temperature            | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| IPM Temperature                 | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| Boost Temperature               | ❌  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| Status/Derating/Faults          | ✅  |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| **Solar Input**                 |    |          |          |      |          |          |        |    |    |
+| PV1 Voltage/Current/Power       | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| PV2 Voltage/Current/Power       | ❌ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| PV3 Voltage/Current/Power       | ❌ |    ❌    |    ✅    |  ✅  |    ❌    |    ❌    |   ❌   | ❌ | ✅ |
+| Solar Total Power               | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| **AC Output (Single-Phase)**    |    |          |          |      |          |          |        |    |    |
+| AC Voltage/Current/Power        | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ❌   | ❌ | ❌ |
+| AC Frequency                    | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ❌   | ❌ | ❌ |
+| **AC Output (Three-Phase)**     |    |          |          |      |          |          |        |    |    |
+| AC Phase R/S/T Voltage          | ❌ |    ❌    |    ❌    |  ❌  |    ❌    |    ❌    |   ✅   | ✅ | ✅ |
+| AC Phase R/S/T Current          | ❌ |    ❌    |    ❌    |  ❌  |    ❌    |    ❌    |   ✅   | ✅ | ✅ |
+| AC Phase R/S/T Power            | ❌ |    ❌    |    ❌    |  ❌  |    ❌    |    ❌    |   ✅   | ✅ | ✅ |
+| AC Total Power                  | ❌ |    ❌    |    ❌    |  ❌  |    ❌    |    ❌    |   ✅   | ✅ | ✅ |
+| **Grid Power (Calculated)**     |    |          |          |      |          |          |        |    |    |
+| Grid Export Power               | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| Grid Import Power               | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| Self Consumption                | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| House Consumption               | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| **Grid Power (From Registers)** |    |          |          |      |          |          |        |    |    |
+| Power to Grid                   | ❌ |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
+| Power to Load                   | ❌ |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
+| Power to User                   | ❌ |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
+| **Battery (Hybrid Only)**       |    |          |          |      |          |          |        |    |    |
+| Battery Voltage/Current/Power   | ❌ |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
+| Battery SOC                     | ❌ |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
+| Battery Temperature             | ❌ |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
+| **Energy Totals**               |    |          |          |      |          |          |        |    |    |
+| Energy Today/Total              | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| Energy to Grid Today/Total      | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| Load Energy Today/Total         | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| **System & Diagnostics**        |    |          |          |      |          |          |        |    |    |
+| Inverter Temperature            | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| IPM Temperature                 | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| Boost Temperature               | ❌ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+| Status/Derating/Faults          | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
 
 **Legend:**
 
@@ -209,11 +209,11 @@ Choose the profile that matches your inverter model:
 #### Single-Phase Grid-Tied
 
 
-| Selection              | When to Use                              |
-| ------------------------ | ------------------------------------------ |
-| **MIC 600-3300TL-X**  | 1 PV string models (0.6-3.3kW single-phase)  |
-| **MIN 3000-6000TL-X**  | 2 PV string models (3-6kW single-phase)  |
-| **MIN 7000-10000TL-X** | 3 PV string models (7-10kW single-phase) |
+| Selection              | When to Use                                 |
+| ------------------------ | --------------------------------------------- |
+| **MIC 600-3300TL-X**   | 1 PV string models (0.6-3.3kW single-phase) |
+| **MIN 3000-6000TL-X**  | 2 PV string models (3-6kW single-phase)     |
+| **MIN 7000-10000TL-X** | 3 PV string models (7-10kW single-phase)    |
 
 #### Single-Phase Hybrid (with Battery)
 
@@ -567,6 +567,12 @@ The integration automatically reads and displays:
 View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click your inverter device
 
 ---
+## 🆕 What's New in v0.0.6
+
+- **📱 Bug Fixes** 
+  - Fix MIC sensors not being created.
+  - Fix SPH TL3 auto detection failing
+  - Fix SPH TL3 3-phase voltages not being created
 
 ## 🆕 What's New in v0.0.5
 
