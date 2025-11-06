@@ -103,43 +103,82 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     )
 
 
-def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk_size: int = 50) -> Dict[int, int]:
+def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk_size: int = 50) -> Dict[int, Dict[str, Any]]:
     """
     Read registers in chunks to avoid timeouts.
-    
-    Returns dict mapping register address to value (only non-zero values).
+
+    Returns dict mapping register address to: {
+        'value': int or None,
+        'status': 'success'|'error'|'exception',
+        'error': str (error description if status != 'success')
+    }
     """
     register_data = {}
-    
+
     for chunk_start in range(0, count, chunk_size):
         chunk_count = min(chunk_size, count - chunk_start)
         chunk_address = start + chunk_start
-        
+
         try:
             response = client.read_input_registers(
                 address=chunk_address,
                 count=chunk_count,
                 device_id=slave_id
             )
-            
+
             if not response.isError():
+                # Store ALL values, including zeros
                 for i, value in enumerate(response.registers):
-                    if value > 0:  # Only store non-zero values
-                        register_data[chunk_address + i] = value
-                _LOGGER.debug(f"Read chunk {chunk_address}-{chunk_address+chunk_count-1}: {len([v for v in response.registers if v > 0])} non-zero")
+                    register_data[chunk_address + i] = {
+                        'value': value,
+                        'status': 'success',
+                        'error': None
+                    }
+                _LOGGER.debug(f"Read chunk {chunk_address}-{chunk_address+chunk_count-1}: {chunk_count} registers")
             else:
-                _LOGGER.debug(f"Chunk {chunk_address}-{chunk_address+chunk_count-1} returned error")
-                
+                # Store error for each register in the chunk
+                error_msg = str(response)
+                # Try to extract specific error type
+                if hasattr(response, 'exception_code'):
+                    error_code = response.exception_code
+                    error_names = {
+                        1: "Illegal Function",
+                        2: "Illegal Data Address",
+                        3: "Illegal Data Value",
+                        4: "Slave Device Failure",
+                        5: "Acknowledge",
+                        6: "Slave Device Busy",
+                        10: "Gateway Path Unavailable",
+                        11: "Gateway Target Failed to Respond"
+                    }
+                    error_msg = error_names.get(error_code, f"Error Code {error_code}")
+
+                for i in range(chunk_count):
+                    register_data[chunk_address + i] = {
+                        'value': None,
+                        'status': 'error',
+                        'error': error_msg
+                    }
+                _LOGGER.debug(f"Chunk {chunk_address}-{chunk_address+chunk_count-1} returned error: {error_msg}")
+
         except Exception as e:
+            # Store exception for each register in the chunk
+            error_msg = f"Exception: {type(e).__name__}: {str(e)}"
+            for i in range(chunk_count):
+                register_data[chunk_address + i] = {
+                    'value': None,
+                    'status': 'exception',
+                    'error': error_msg
+                }
             _LOGGER.debug(f"Chunk {chunk_address} exception: {e}")
-    
+
     return register_data
 
 
-def _detect_inverter_model(register_data: Dict[int, int]) -> Dict[str, str]:
+def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str, str]:
     """
     Analyze register responses to detect inverter model.
-    
+
     Returns dict with: model, confidence, profile_key, register_map, reasoning
     """
     detection = {
@@ -149,16 +188,16 @@ def _detect_inverter_model(register_data: Dict[int, int]) -> Dict[str, str]:
         "register_map": "UNKNOWN",
         "reasoning": [],
     }
-    
-    # Helper to check if register exists
+
+    # Helper to check if register exists with valid data
     def has_reg(addr):
-        return addr in register_data
+        return addr in register_data and register_data[addr]['status'] == 'success' and register_data[addr]['value'] is not None and register_data[addr]['value'] > 0
     
-    # Check register ranges
-    has_0_124 = any(0 <= r <= 124 for r in register_data.keys())
-    has_1000_1124 = any(1000 <= r <= 1124 for r in register_data.keys())
-    has_3000_3124 = any(3000 <= r <= 3124 for r in register_data.keys())
-    has_3125_3249 = any(3125 <= r <= 3249 for r in register_data.keys())
+    # Check register ranges (only successful reads with non-zero values)
+    has_0_124 = any(0 <= r <= 124 and register_data[r]['status'] == 'success' and register_data[r]['value'] > 0 for r in register_data.keys())
+    has_1000_1124 = any(1000 <= r <= 1124 and register_data[r]['status'] == 'success' and register_data[r]['value'] > 0 for r in register_data.keys())
+    has_3000_3124 = any(3000 <= r <= 3124 and register_data[r]['status'] == 'success' and register_data[r]['value'] > 0 for r in register_data.keys())
+    has_3125_3249 = any(3125 <= r <= 3249 and register_data[r]['status'] == 'success' and register_data[r]['value'] > 0 for r in register_data.keys())
     
     # Key register checks
     has_pv1_at_3 = has_reg(3)  # PV1 voltage in 0-124 range
@@ -301,20 +340,22 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int) -> dict:
         # Scan ALL ranges
         all_register_data = {}
         range_responses = {}
-        
+
         for range_config in UNIVERSAL_SCAN_RANGES:
             range_name = range_config["name"]
             start = range_config["start"]
             count = range_config["count"]
-            
+
             _LOGGER.info(f"Scanning {range_name}...")
-            
+
             registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=50)
-            
+
             if registers:
                 all_register_data.update(registers)
-                range_responses[range_name] = len(registers)
-                _LOGGER.info(f"{range_name}: {len(registers)} non-zero registers")
+                # Count successful non-zero reads for range summary
+                successful_count = sum(1 for r in registers.values() if r['status'] == 'success' and r['value'] > 0)
+                range_responses[range_name] = successful_count
+                _LOGGER.info(f"{range_name}: {successful_count} non-zero registers out of {len(registers)} attempted")
             else:
                 range_responses[range_name] = 0
                 _LOGGER.info(f"{range_name}: No response")
@@ -369,51 +410,82 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int) -> dict:
                 "×0.1",
                 "×0.01",
                 "Signed",
-                "32-bit Combined (with next reg)"
+                "32-bit Combined (with next reg)",
+                "Status/Comment"
             ])
             
             # Write all registers sorted by address
             total = 0
-            non_zero = len(all_register_data)
-            
+            non_zero = 0
+
             # Group by ranges for organized output
             for range_config in UNIVERSAL_SCAN_RANGES:
                 range_name = range_config["name"]
                 start = range_config["start"]
                 end = start + range_config["count"]
-                
+
+                # Get all registers in this range
                 range_registers = {k: v for k, v in all_register_data.items() if start <= k < end}
-                
+
                 if range_registers:
                     writer.writerow([])
                     writer.writerow([f"--- {range_name} ---"])
-                    
-                    for reg_addr in sorted(range_registers.keys()):
-                        value = range_registers[reg_addr]
-                        total += 1
-                        
-                        # Calculate interpretations
-                        scaled_01 = value * 0.1
-                        scaled_001 = value * 0.01
-                        signed = value - 65536 if value > 32767 else value
-                        
-                        # Try to combine with next register for 32-bit values
-                        combined_32bit = ""
-                        if reg_addr + 1 in all_register_data:
-                            next_val = all_register_data[reg_addr + 1]
-                            combined = (value << 16) | next_val
-                            if 0 < combined < 10000000:
-                                combined_32bit = f"{combined} (×0.1={combined*0.1:.1f})"
-                        
-                        writer.writerow([
-                            reg_addr,
-                            f"0x{reg_addr:04X}",
-                            value,
-                            f"{scaled_01:.1f}",
-                            f"{scaled_001:.2f}",
-                            signed,
-                            combined_32bit
-                        ])
+
+                    # Write ALL registers in sequential order
+                    for reg_addr in range(start, end):
+                        if reg_addr in range_registers:
+                            reg_info = range_registers[reg_addr]
+                            value = reg_info['value']
+                            status = reg_info['status']
+                            error = reg_info['error']
+
+                            total += 1
+
+                            # Build status/comment field
+                            if status == 'success':
+                                if value == 0:
+                                    status_comment = "Read OK (zero value)"
+                                else:
+                                    status_comment = "Read OK"
+                                    non_zero += 1
+                            elif status == 'error':
+                                status_comment = f"Modbus Error: {error}"
+                                value = ""  # Clear value field for errors
+                            else:  # exception
+                                status_comment = error
+                                value = ""  # Clear value field for exceptions
+
+                            # Calculate interpretations only for successful reads
+                            if status == 'success' and value is not None:
+                                scaled_01 = value * 0.1
+                                scaled_001 = value * 0.01
+                                signed = value - 65536 if value > 32767 else value
+
+                                # Try to combine with next register for 32-bit values
+                                combined_32bit = ""
+                                if reg_addr + 1 in all_register_data:
+                                    next_info = all_register_data[reg_addr + 1]
+                                    if next_info['status'] == 'success' and next_info['value'] is not None:
+                                        next_val = next_info['value']
+                                        combined = (value << 16) | next_val
+                                        if 0 < combined < 10000000:
+                                            combined_32bit = f"{combined} (×0.1={combined*0.1:.1f})"
+                            else:
+                                scaled_01 = ""
+                                scaled_001 = ""
+                                signed = ""
+                                combined_32bit = ""
+
+                            writer.writerow([
+                                reg_addr,
+                                f"0x{reg_addr:04X}",
+                                value,
+                                f"{scaled_01:.1f}" if scaled_01 != "" else "",
+                                f"{scaled_001:.2f}" if scaled_001 != "" else "",
+                                signed,
+                                combined_32bit,
+                                status_comment
+                            ])
         
         result["success"] = True
         result["filename"] = filename
