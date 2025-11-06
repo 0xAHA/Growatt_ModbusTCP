@@ -2,7 +2,7 @@
 import logging
 import csv
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 import voluptuous as vol
 from pymodbus.client import ModbusTcpClient
@@ -11,6 +11,20 @@ from homeassistant.core import HomeAssistant, ServiceCall
 import homeassistant.helpers.config_validation as cv
 
 from .const import DOMAIN
+
+# Import register maps for "Suggested Match" column
+try:
+    from .growatt_register_map import (
+        INPUT_REGISTERS_BASE,
+        INPUT_REGISTERS_STORAGE,
+        HOLDING_REGISTERS,
+    )
+    REGISTER_MAPS_AVAILABLE = True
+except ImportError:
+    REGISTER_MAPS_AVAILABLE = False
+    INPUT_REGISTERS_BASE = {}
+    INPUT_REGISTERS_STORAGE = {}
+    HOLDING_REGISTERS = {}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,6 +49,51 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         vol.Optional("notify", default=True): cv.boolean,
     }
 )
+
+
+def _lookup_register_info(register_addr: int) -> Optional[str]:
+    """
+    Look up register information from the register maps.
+
+    Returns formatted string like "Grid_Voltage (×0.1, V)" or None if not found.
+    """
+    if not REGISTER_MAPS_AVAILABLE:
+        return None
+
+    # Check all register maps
+    reg_info = None
+    if register_addr in INPUT_REGISTERS_BASE:
+        reg_info = INPUT_REGISTERS_BASE[register_addr]
+    elif register_addr in INPUT_REGISTERS_STORAGE:
+        reg_info = INPUT_REGISTERS_STORAGE[register_addr]
+    elif register_addr in HOLDING_REGISTERS:
+        reg_info = HOLDING_REGISTERS[register_addr]
+
+    if reg_info:
+        name = reg_info.get("name", "")
+        scale = reg_info.get("scale", 1)
+        unit = reg_info.get("unit", "")
+        description = reg_info.get("description", "")
+
+        # Format: "Name (×scale, unit) - description"
+        parts = [name]
+
+        # Add scale and unit if present
+        if scale != 1 or unit:
+            detail = []
+            if scale != 1:
+                detail.append(f"×{scale}")
+            if unit:
+                detail.append(unit)
+            parts.append(f"({', '.join(detail)})")
+
+        # Add description if present and different from name
+        if description and description != name:
+            parts.append(f"- {description}")
+
+        return " ".join(parts)
+
+    return None
 
 
 async def async_setup_services(hass: HomeAssistant) -> None:
@@ -411,6 +470,7 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int) -> dict:
                 "×0.01",
                 "Signed",
                 "32-bit Combined (with next reg)",
+                "Suggested Match",
                 "Status/Comment"
             ])
             
@@ -476,6 +536,9 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int) -> dict:
                                 signed = ""
                                 combined_32bit = ""
 
+                            # Look up suggested match from register map
+                            suggested_match = _lookup_register_info(reg_addr) or ""
+
                             writer.writerow([
                                 reg_addr,
                                 f"0x{reg_addr:04X}",
@@ -484,6 +547,7 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int) -> dict:
                                 f"{scaled_001:.2f}" if scaled_001 != "" else "",
                                 signed,
                                 combined_32bit,
+                                suggested_match,
                                 status_comment
                             ])
         
