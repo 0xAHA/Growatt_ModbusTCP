@@ -371,9 +371,82 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
             detection["reasoning"].append("⚠ Single-phase in 0-124 range without clear battery signature")
     
     else:
+        # FALLBACK DETECTION for night/standby mode (no PV voltage detected)
         detection["reasoning"].append("✗ No PV1 voltage found in expected registers (3 or 3003)")
-        detection["reasoning"].append("⚠ Inverter may be off, in standby, or using unknown register layout")
-    
+        detection["reasoning"].append("⚠ Inverter may be off, in standby, or scanning at night")
+
+        # Try to detect based on other indicators and range responses
+        if has_0_124 or has_1000_1124 or has_3000_3124:
+            detection["reasoning"].append("✓ However, some registers responded - attempting fallback detection...")
+
+            # Check for 3-phase + battery + storage range → SPH TL3
+            if has_phase_s and has_phase_t and (has_storage_range or has_battery_at_1013):
+                detection["model"] = "SPH-TL3 3000-10000 (Night/Standby Mode)"
+                detection["confidence"] = "Medium"
+                detection["profile_key"] = "sph_tl3_3000_10000"
+                detection["register_map"] = "SPH_TL3_3000_10000"
+                detection["reasoning"].append("✓ Found S-phase (42) and T-phase (46) → 3-phase inverter")
+                detection["reasoning"].append("✓ Found storage range (1000-1124) or battery at 1013 → SPH TL3")
+                detection["reasoning"].append("⚠ No PV voltage detected → likely night or standby mode")
+
+            # Check for single-phase battery system (SPH)
+            elif (has_battery_at_13 or has_battery_at_1013 or has_storage_range) and has_0_124:
+                if has_storage_range or has_battery_at_1013:
+                    detection["model"] = "SPH 7000-10000 (Night/Standby Mode)"
+                    detection["confidence"] = "Medium"
+                    detection["profile_key"] = "sph_7000_10000"
+                    detection["register_map"] = "SPH_7000_10000"
+                    detection["reasoning"].append("✓ Found battery indicators in storage range → SPH 7-10kW")
+                else:
+                    detection["model"] = "SPH 3000-6000 (Night/Standby Mode)"
+                    detection["confidence"] = "Medium"
+                    detection["profile_key"] = "sph_3000_6000"
+                    detection["register_map"] = "SPH_3000_6000"
+                    detection["reasoning"].append("✓ Found battery at register 13 → SPH 3-6kW")
+                detection["reasoning"].append("✗ No 3-phase detected → Single-phase SPH")
+                detection["reasoning"].append("⚠ No PV voltage detected → likely night or standby mode")
+
+            # Check for 3000 range responses (MIN/MOD series in standby)
+            elif has_3000_3124 or has_3125_3249:
+                if has_battery_at_3169:
+                    detection["model"] = "MOD 6000-15000TL3-XH (Night/Standby Mode)"
+                    detection["confidence"] = "Medium"
+                    detection["profile_key"] = "mod_6000_15000tl3_xh"
+                    detection["register_map"] = "MOD_6000_15000TL3_XH"
+                    detection["reasoning"].append("✓ Found battery at register 3169 → MOD series")
+                else:
+                    detection["model"] = "MIN Series (Night/Standby Mode)"
+                    detection["confidence"] = "Low"
+                    detection["profile_key"] = "min_3000_6000_tl_x"
+                    detection["register_map"] = "MIN_3000_6000TL_X"
+                    detection["reasoning"].append("✓ Found 3000 range response → MIN series")
+                detection["reasoning"].append("⚠ No PV voltage detected → likely night or standby mode")
+
+            # Check for 3-phase grid-tied based on phase detection alone
+            elif has_phase_s and has_phase_t and has_0_124:
+                detection["model"] = "MID/MAX/MAC Series (Night/Standby Mode)"
+                detection["confidence"] = "Low"
+                detection["profile_key"] = "mid_15000_25000tl3_x"
+                detection["register_map"] = "MID_15000_25000TL3_X"
+                detection["reasoning"].append("✓ Found S-phase (42) and T-phase (46) → 3-phase inverter")
+                detection["reasoning"].append("✗ No battery detected → Grid-tied MID/MAX/MAC series")
+                detection["reasoning"].append("⚠ No PV voltage detected → likely night or standby mode")
+
+            # Generic detection based on range responses only
+            else:
+                detection["model"] = "Unknown Growatt (Registers Responding)"
+                detection["confidence"] = "Very Low"
+                detection["reasoning"].append("✓ Some registers responded but cannot determine specific model")
+                if has_0_124:
+                    detection["reasoning"].append("  - Base range (0-124) responding")
+                if has_1000_1124:
+                    detection["reasoning"].append("  - Storage range (1000-1124) responding")
+                if has_3000_3124:
+                    detection["reasoning"].append("  - MIN/MOD range (3000-3124) responding")
+                if has_3125_3249:
+                    detection["reasoning"].append("  - MOD extended range (3125-3249) responding")
+                detection["reasoning"].append("⚠ Try scanning during daytime when PV is generating for better detection")
+
     return detection
 
 
