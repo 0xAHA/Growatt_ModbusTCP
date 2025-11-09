@@ -123,12 +123,14 @@ MOD_6000_15000TL3_XH = {
         3170: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
         3171: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
         3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C'},
-        
-        # Battery Power (32-bit)
-        3178: {'name': 'battery_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 3179},
-        3179: {'name': 'battery_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 3178, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        3180: {'name': 'battery_charge_power_high', 'scale': 1, 'unit': '', 'pair': 3181},
-        3181: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 3180, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # NOTE: Registers 3178-3180 don't exist on some MOD hardware
+        # If your inverter doesn't have these, battery power will be calculated from V×I
+        # Battery Power (32-bit) - OPTIONAL, may not exist on all MOD hardware
+        3178: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 3179},
+        3179: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 3178, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        3180: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 3181},
+        3181: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 3180, 'combined_scale': 0.1, 'combined_unit': 'W'},
     },
     'holding_registers': {
         # Basic control

@@ -450,7 +450,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "battery_current",
-        "condition": lambda data: hasattr(data, 'battery_current') and data.battery_current > 0,
+        "condition": lambda data: hasattr(data, 'battery_current') and data.battery_voltage > 0,
     },
     "battery_soc": {
         "name": "Battery SOC",
