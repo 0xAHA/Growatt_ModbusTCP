@@ -100,6 +100,7 @@ class GrowattData:
 
     # Battery (storage/hybrid models)
     battery_voltage: float = 0.0      # V
+    battery_current: float = 0.0      # A (signed: +discharge, -charge)
     battery_soc: float = 0.0          # %
     battery_temp: float = 0.0         # °C
     charge_power: float = 0.0         # W
@@ -658,20 +659,26 @@ class GrowattModbus:
             if addr:
                 data.battery_voltage = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery voltage from reg {addr}: {data.battery_voltage}V")
-            
+
+            # Battery current (signed: positive=discharge, negative=charge)
+            addr = self._find_register_by_name('battery_current')
+            if addr:
+                data.battery_current = self._get_register_value(addr) or 0.0
+                logger.debug(f"Battery current from reg {addr}: {data.battery_current}A")
+
             # Battery SOC
             addr = self._find_register_by_name('battery_soc')
             if addr:
                 data.battery_soc = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery SOC from reg {addr}: {data.battery_soc}%")
-            
+
             # Battery temperature
             addr = self._find_register_by_name('battery_temp')
             if addr:
                 data.battery_temp = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery temp from reg {addr}: {data.battery_temp}°C")
-            
-            # Charge power
+
+            # Charge power (try to read from registers first)
             addr = self._find_register_by_name('charge_power_low')
             if addr:
                 raw_low = self._register_cache.get(addr, 0)
@@ -679,8 +686,12 @@ class GrowattModbus:
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.charge_power = self._get_register_value(addr) or 0.0
                 logger.debug(f"Charge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_power}W")
-            
-            # Discharge power
+            elif data.battery_voltage > 0 and data.battery_current < 0:
+                # Fallback: Calculate from V×I when charging (negative current)
+                data.charge_power = data.battery_voltage * abs(data.battery_current)
+                logger.debug(f"Charge power (calculated): {data.battery_voltage}V × {abs(data.battery_current)}A = {data.charge_power}W")
+
+            # Discharge power (try to read from registers first)
             addr = self._find_register_by_name('discharge_power_low')
             if addr:
                 raw_low = self._register_cache.get(addr, 0)
@@ -688,6 +699,10 @@ class GrowattModbus:
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.discharge_power = self._get_register_value(addr) or 0.0
                 logger.debug(f"Discharge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_power}W")
+            elif data.battery_voltage > 0 and data.battery_current > 0:
+                # Fallback: Calculate from V×I when discharging (positive current)
+                data.discharge_power = data.battery_voltage * data.battery_current
+                logger.debug(f"Discharge power (calculated): {data.battery_voltage}V × {data.battery_current}A = {data.discharge_power}W")
             
             # Charge energy today
             addr = self._find_register_by_name('charge_energy_today_low')
@@ -726,7 +741,7 @@ class GrowattModbus:
                 logger.debug(f"Discharge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_energy_total} kWh")
             
             if data.battery_voltage > 0:
-                logger.info(f"Battery summary: {data.battery_voltage}V, {data.battery_soc}%, {data.battery_temp}°C, Charge={data.charge_power}W, Discharge={data.discharge_power}W")
+                logger.info(f"Battery summary: {data.battery_voltage}V, {data.battery_current}A, {data.battery_soc}%, {data.battery_temp}°C, Charge={data.charge_power}W, Discharge={data.discharge_power}W")
             
         except Exception as e:
             logger.debug(f"Battery data not available: {e}")
