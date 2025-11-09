@@ -33,11 +33,11 @@ SPH_TL3_3000_10000 = {
         # AC Grid Frequency
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
 
-        # Three-Phase AC Output - Phase R
-        38: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R voltage'},
-        39: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R current'},
-        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41},
-        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Three-Phase AC Output - Phase R (with generic aliases for compatibility)
+        38: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R voltage', 'alias': 'ac_voltage'},
+        39: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R current', 'alias': 'ac_current'},
+        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41, 'alias': 'ac_power_high'},
+        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'W', 'alias': 'ac_power_low'},
 
         # Three-Phase AC Output - Phase S
         42: {'name': 'ac_voltage_s', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase S voltage'},

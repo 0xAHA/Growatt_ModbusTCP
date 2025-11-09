@@ -72,11 +72,27 @@ class GrowattData:
     pv3_power: float = 0.0            # W
     pv_total_power: float = 0.0       # W
     
-    # AC Output
+    # AC Output (generic - usually Phase R for 3-phase)
     ac_voltage: float = 0.0           # V
     ac_current: float = 0.0           # A
     ac_power: float = 0.0             # W
     ac_frequency: float = 0.0         # Hz
+
+    # Three-Phase AC Output (individual phases)
+    ac_voltage_r: float = 0.0         # V (Phase R/L1)
+    ac_current_r: float = 0.0         # A (Phase R/L1)
+    ac_power_r: float = 0.0           # W (Phase R/L1)
+    ac_voltage_s: float = 0.0         # V (Phase S/L2)
+    ac_current_s: float = 0.0         # A (Phase S/L2)
+    ac_power_s: float = 0.0           # W (Phase S/L2)
+    ac_voltage_t: float = 0.0         # V (Phase T/L3)
+    ac_current_t: float = 0.0         # A (Phase T/L3)
+    ac_power_t: float = 0.0           # W (Phase T/L3)
+
+    # Line-to-Line Voltages (3-phase only)
+    ac_voltage_rs: float = 0.0        # V
+    ac_voltage_st: float = 0.0        # V
+    ac_voltage_tr: float = 0.0        # V
     
     # Power Flow (storage/hybrid models)
     power_to_user: float = 0.0        # W
@@ -496,12 +512,12 @@ class GrowattModbus:
                 # Calculate from strings if not available
                 data.pv_total_power = data.pv1_power + data.pv2_power + data.pv3_power
             
-            # AC Output
+            # AC Output (generic - will use Phase R via alias for 3-phase)
             ac_voltage_addr = self._find_register_by_name('ac_voltage')
             ac_current_addr = self._find_register_by_name('ac_current')
             ac_power_addr = self._find_register_by_name('ac_power_low')
             ac_freq_addr = self._find_register_by_name('ac_frequency')
-            
+
             if ac_voltage_addr:
                 data.ac_voltage = self._get_register_value(ac_voltage_addr) or 0.0
             if ac_current_addr:
@@ -510,6 +526,51 @@ class GrowattModbus:
                 data.ac_power = self._get_register_value(ac_power_addr) or 0.0
             if ac_freq_addr:
                 data.ac_frequency = self._get_register_value(ac_freq_addr) or 0.0
+
+            # Three-Phase AC Output (individual phases)
+            # Phase R
+            ac_voltage_r_addr = self._find_register_by_name('ac_voltage_r')
+            ac_current_r_addr = self._find_register_by_name('ac_current_r')
+            ac_power_r_addr = self._find_register_by_name('ac_power_r_low')
+            if ac_voltage_r_addr:
+                data.ac_voltage_r = self._get_register_value(ac_voltage_r_addr) or 0.0
+            if ac_current_r_addr:
+                data.ac_current_r = self._get_register_value(ac_current_r_addr) or 0.0
+            if ac_power_r_addr:
+                data.ac_power_r = self._get_register_value(ac_power_r_addr) or 0.0
+
+            # Phase S
+            ac_voltage_s_addr = self._find_register_by_name('ac_voltage_s')
+            ac_current_s_addr = self._find_register_by_name('ac_current_s')
+            ac_power_s_addr = self._find_register_by_name('ac_power_s_low')
+            if ac_voltage_s_addr:
+                data.ac_voltage_s = self._get_register_value(ac_voltage_s_addr) or 0.0
+            if ac_current_s_addr:
+                data.ac_current_s = self._get_register_value(ac_current_s_addr) or 0.0
+            if ac_power_s_addr:
+                data.ac_power_s = self._get_register_value(ac_power_s_addr) or 0.0
+
+            # Phase T
+            ac_voltage_t_addr = self._find_register_by_name('ac_voltage_t')
+            ac_current_t_addr = self._find_register_by_name('ac_current_t')
+            ac_power_t_addr = self._find_register_by_name('ac_power_t_low')
+            if ac_voltage_t_addr:
+                data.ac_voltage_t = self._get_register_value(ac_voltage_t_addr) or 0.0
+            if ac_current_t_addr:
+                data.ac_current_t = self._get_register_value(ac_current_t_addr) or 0.0
+            if ac_power_t_addr:
+                data.ac_power_t = self._get_register_value(ac_power_t_addr) or 0.0
+
+            # Line-to-Line Voltages
+            ac_voltage_rs_addr = self._find_register_by_name('line_voltage_rs')
+            ac_voltage_st_addr = self._find_register_by_name('line_voltage_st')
+            ac_voltage_tr_addr = self._find_register_by_name('line_voltage_tr')
+            if ac_voltage_rs_addr:
+                data.ac_voltage_rs = self._get_register_value(ac_voltage_rs_addr) or 0.0
+            if ac_voltage_st_addr:
+                data.ac_voltage_st = self._get_register_value(ac_voltage_st_addr) or 0.0
+            if ac_voltage_tr_addr:
+                data.ac_voltage_tr = self._get_register_value(ac_voltage_tr_addr) or 0.0
             
             # Power Flow (if available - storage/hybrid models)
             power_to_user_addr = self._find_register_by_name('power_to_user_low')
@@ -611,10 +672,14 @@ class GrowattModbus:
 
 
     def _find_register_by_name(self, name: str) -> Optional[int]:
-        """Find register address by its name"""
+        """Find register address by its name or alias"""
         input_regs = self.register_map['input_registers']
         for addr, reg_info in input_regs.items():
+            # Check exact name match
             if reg_info['name'] == name:
+                return addr
+            # Check alias match (for 3-phase compatibility)
+            if reg_info.get('alias') == name:
                 return addr
         return None
     
