@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.0.6-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.0.7b1-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -567,9 +567,10 @@ The integration automatically reads and displays:
 View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click your inverter device
 
 ---
+
 ## 🆕 What's New in v0.0.6
 
-- **📱 Bug Fixes** 
+- **📱 Bug Fixes**
   - Fix MIC sensors not being created.
   - Fix SPH TL3 auto detection failing
   - Fix SPH TL3 3-phase voltages not being created
