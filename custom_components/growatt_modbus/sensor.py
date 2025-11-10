@@ -704,6 +704,8 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
             self._attr_native_unit_of_measurement = sensor_def["unit"]
         if "icon" in sensor_def:
             self._attr_icon = sensor_def["icon"]
+        if "entity_category" in sensor_def:
+            self._attr_entity_category = sensor_def["entity_category"]
 
     @property
     def device_info(self) -> dict[str, Any]:
