@@ -37,12 +37,13 @@ MOD_6000_15000TL3_XH = {
         # === AC OUTPUT - THREE PHASE ===
         # Grid Frequency (shared across all phases)
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'AC output frequency'},
-        
-        # Phase R (L1) - AC Output
-        38: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R AC voltage'},
-        39: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R AC current'},
-        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41},
-        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'VA'},
+
+        # Generic AC aliases (point to Phase R for compatibility with generic code)
+        # These allow the standard ac_voltage/current/power fields to work
+        38: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R AC voltage', 'alias': 'ac_voltage'},
+        39: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R AC current', 'alias': 'ac_current'},
+        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41, 'alias': 'ac_power_high'},
+        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'VA', 'alias': 'ac_power_low'},
         
         # Phase S (L2) - AC Output
         42: {'name': 'ac_voltage_s', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase S AC voltage'},
