@@ -5,6 +5,7 @@ from typing import Any
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -46,6 +47,8 @@ async def async_setup_entry(
 class GrowattExportLimitModeSelect(CoordinatorEntity, SelectEntity):
     """Select entity for export limit mode."""
 
+    _attr_entity_category = EntityCategory.CONFIG
+
     def __init__(
         self,
         coordinator: GrowattModbusCoordinator,
@@ -53,12 +56,12 @@ class GrowattExportLimitModeSelect(CoordinatorEntity, SelectEntity):
     ) -> None:
         """Initialize the select entity."""
         super().__init__(coordinator)
-        
+
         self._config_entry = config_entry
         self._attr_name = f"{config_entry.data['name']} Export Limit Mode"
         self._attr_unique_id = f"{config_entry.entry_id}_export_limit_mode"
         self._attr_icon = "mdi:transmission-tower-export"
-        
+
         # Set options from const.py
         self._attr_options = list(WRITABLE_REGISTERS['export_limit_mode']['options'].values())
 

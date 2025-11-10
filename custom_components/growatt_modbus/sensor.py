@@ -19,6 +19,7 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -29,8 +30,13 @@ from .device_profiles import get_sensors_for_profile
 _LOGGER = logging.getLogger(__name__)
 
 
+# Entity Categories organize sensors on the device page:
+# - None/omitted = MAIN section (expanded) - frequently checked sensors
+# - EntityCategory.DIAGNOSTIC = DIAGNOSTIC section (collapsed) - technical details
+# - EntityCategory.CONFIG = CONFIG section (collapsed) - settings (in number/select entities)
+
 SENSOR_DEFINITIONS = {
-    # Solar Input Sensors - PV1
+    # Solar Input Sensors - PV1 (Individual string details - diagnostic)
     "pv1_voltage": {
         "name": "PV1 Voltage",
         "icon": "mdi:lightning-bolt",
@@ -38,14 +44,16 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "pv1_voltage",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "pv1_current": {
-        "name": "PV1 Current", 
+        "name": "PV1 Current",
         "icon": "mdi:current-dc",
         "device_class": SensorDeviceClass.CURRENT,
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "pv1_current",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "pv1_power": {
         "name": "PV1 Power",
@@ -54,9 +62,10 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfPower.WATT,
         "attr": "pv1_power",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
-    
-    # Solar Input Sensors - PV2
+
+    # Solar Input Sensors - PV2 (Individual string details - diagnostic)
     "pv2_voltage": {
         "name": "PV2 Voltage",
         "icon": "mdi:lightning-bolt",
@@ -64,14 +73,16 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "pv2_voltage",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "pv2_current": {
         "name": "PV2 Current",
-        "icon": "mdi:current-dc", 
+        "icon": "mdi:current-dc",
         "device_class": SensorDeviceClass.CURRENT,
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "pv2_current",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "pv2_power": {
         "name": "PV2 Power",
@@ -80,9 +91,10 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfPower.WATT,
         "attr": "pv2_power",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
-    
-    # Solar Input Sensors - PV3
+
+    # Solar Input Sensors - PV3 (Individual string details - diagnostic)
     "pv3_voltage": {
         "name": "PV3 Voltage",
         "icon": "mdi:lightning-bolt",
@@ -91,15 +103,17 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "pv3_voltage",
         "condition": lambda data: data.pv3_voltage > 0 or data.pv3_power > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "pv3_current": {
         "name": "PV3 Current",
-        "icon": "mdi:current-dc", 
+        "icon": "mdi:current-dc",
         "device_class": SensorDeviceClass.CURRENT,
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "pv3_current",
         "condition": lambda data: data.pv3_voltage > 0 or data.pv3_power > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "pv3_power": {
         "name": "PV3 Power",
@@ -109,6 +123,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfPower.WATT,
         "attr": "pv3_power",
         "condition": lambda data: data.pv3_voltage > 0 or data.pv3_power > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     
     # Solar Total
@@ -129,6 +144,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "ac_voltage",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "ac_current": {
         "name": "AC Current",
@@ -137,6 +153,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "ac_current",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "ac_power": {
         "name": "AC Power",
@@ -153,6 +170,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfFrequency.HERTZ,
         "attr": "ac_frequency",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
 
     # Three-Phase AC Voltages
@@ -163,6 +181,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "ac_voltage_r",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "ac_voltage_s": {
         "name": "AC Voltage S",
@@ -171,6 +190,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "ac_voltage_s",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "ac_voltage_t": {
         "name": "AC Voltage T",
@@ -179,6 +199,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "ac_voltage_t",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
 
     # Three-Phase AC Currents
@@ -189,6 +210,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "ac_current_r",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "ac_current_s": {
         "name": "AC Current Phase S",
@@ -197,6 +219,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "ac_current_s",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "ac_current_t": {
         "name": "AC Current Phase T",
@@ -205,6 +228,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "ac_current_t",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
 
     # Three-Phase AC Powers
@@ -215,6 +239,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfPower.WATT,
         "attr": "ac_power_r",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "ac_power_s": {
         "name": "AC Power Phase S",
@@ -223,6 +248,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfPower.WATT,
         "attr": "ac_power_s",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "ac_power_t": {
         "name": "AC Power Phase T",
@@ -231,6 +257,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfPower.WATT,
         "attr": "ac_power_t",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     
     # Grid Power Sensors
@@ -358,6 +385,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "energy_to_grid_today",
         "condition": lambda data: data.energy_to_grid_today > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "energy_to_grid_total": {
         "name": "Energy to Grid Total",
@@ -367,6 +395,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "energy_to_grid_total",
         "condition": lambda data: data.energy_to_grid_total > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "grid_import_energy_today": {
         "name": "Grid Import Energy Today",
@@ -376,6 +405,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "calculated",
         "condition": lambda data: data.load_energy_today > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "grid_import_energy_total": {
         "name": "Grid Import Energy Total",
@@ -385,6 +415,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "calculated",
         "condition": lambda data: data.load_energy_total > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "load_energy_today": {
         "name": "Load Energy Today",
@@ -394,6 +425,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "load_energy_today",
         "condition": lambda data: data.load_energy_today > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "load_energy_total": {
         "name": "Load Energy Total",
@@ -403,6 +435,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "load_energy_total",
         "condition": lambda data: data.load_energy_total > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     
     # Temperature Sensors
@@ -413,6 +446,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfTemperature.CELSIUS,
         "attr": "inverter_temp",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "ipm_temp": {
         "name": "IPM Temperature",
@@ -422,6 +456,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfTemperature.CELSIUS,
         "attr": "ipm_temp",
         "condition": lambda data: data.ipm_temp > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "boost_temp": {
         "name": "Boost Temperature",
@@ -431,6 +466,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfTemperature.CELSIUS,
         "attr": "boost_temp",
         "condition": lambda data: data.boost_temp > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     
     # Battery Sensors
@@ -442,6 +478,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "battery_voltage",
         "condition": lambda data: data.battery_voltage > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "battery_current": {
         "name": "Battery Current",
@@ -451,6 +488,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "battery_current",
         "condition": lambda data: hasattr(data, 'battery_current') and data.battery_voltage > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "battery_soc": {
         "name": "Battery SOC",
@@ -469,6 +507,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfTemperature.CELSIUS,
         "attr": "battery_temp",
         "condition": lambda data: hasattr(data, 'battery_temp'),
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "battery_power": {
         "name": "Battery Power",
@@ -486,6 +525,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfPower.WATT,
         "attr": "charge_power",
         "condition": lambda data: hasattr(data, 'charge_power'),
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "battery_discharge_power": {
         "name": "Battery Discharge Power",
@@ -495,6 +535,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfPower.WATT,
         "attr": "discharge_power",
         "condition": lambda data: hasattr(data, 'discharge_power'),
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "battery_charge_today": {
         "name": "Battery Charge Today",
@@ -504,6 +545,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "charge_energy_today",
         "condition": lambda data: hasattr(data, 'charge_energy_today') and data.charge_energy_today > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "battery_discharge_today": {
         "name": "Battery Discharge Today",
@@ -513,6 +555,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "discharge_energy_today",
         "condition": lambda data: hasattr(data, 'discharge_energy_today') and data.discharge_energy_today > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "battery_charge_total": {
         "name": "Battery Charge Total",
@@ -522,6 +565,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "charge_energy_total",
         "condition": lambda data: hasattr(data, 'charge_energy_total') and data.charge_energy_total > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "battery_discharge_total": {
         "name": "Battery Discharge Total",
@@ -531,6 +575,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "discharge_energy_total",
         "condition": lambda data: hasattr(data, 'discharge_energy_total') and data.discharge_energy_total > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
 
     # System Sensors
@@ -544,29 +589,34 @@ SENSOR_DEFINITIONS = {
         "icon": "mdi:clock-outline",
         "device_class": SensorDeviceClass.TIMESTAMP,
         "attr": "calculated",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "derating_mode": {
         "name": "Derating Mode",
         "icon": "mdi:speedometer-slow",
         "attr": "derating_mode",
         "condition": lambda data: data.derating_mode > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "derating_mode_text": {
         "name": "Derating Mode Status",
         "icon": "mdi:speedometer-slow",
         "attr": "derating_mode_text",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "fault_code": {
         "name": "Fault Code",
         "icon": "mdi:alert-circle",
         "attr": "fault_code",
         "condition": lambda data: data.fault_code > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "warning_code": {
         "name": "Warning Code",
         "icon": "mdi:alert",
         "attr": "warning_code",
         "condition": lambda data: data.warning_code > 0,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
 }
 
