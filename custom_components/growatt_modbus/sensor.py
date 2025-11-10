@@ -551,6 +551,11 @@ SENSOR_DEFINITIONS = {
         "attr": "derating_mode",
         "condition": lambda data: data.derating_mode > 0,
     },
+    "derating_mode_text": {
+        "name": "Derating Mode Status",
+        "icon": "mdi:speedometer-slow",
+        "attr": "derating_mode_text",
+    },
     "fault_code": {
         "name": "Fault Code",
         "icon": "mdi:alert-circle",

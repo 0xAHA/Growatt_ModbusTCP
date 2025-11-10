@@ -158,9 +158,65 @@ STATUS_CODES = {
 def get_status_name(status_code: int) -> dict:
     """Get human-readable status name and description."""
     return STATUS_CODES.get(
-        status_code, 
+        status_code,
         {'name': f'Unknown ({status_code})', 'desc': 'Unknown status code'}
     )
+
+
+# ============================================================================
+# DERATING MODE CODES
+# ============================================================================
+
+# Derating Mode for Register 104 (MIN series / base range)
+DERATING_MODES_104 = {
+    0: "Normal",
+    1: "PV Voltage",
+    2: "Reserved",
+    3: "AC Voltage",
+    4: "AC Frequency",
+    5: "Boost Temperature",
+    6: "Inverter Temperature",
+    7: "Control Command",
+    8: "Reserved",
+    9: "Over Back By Time",
+}
+
+# Derating Mode for Register 3086 (MOD/Storage series)
+DERATING_MODES_3086 = {
+    0: "Normal",
+    1: "PV High Voltage",
+    2: "Power Limit",
+    3: "Grid Overvoltage",
+    4: "Grid Overfrequency",
+    5: "DC Source Mode",
+    6: "Inverter Temperature",
+    7: "Active Power Control",
+    8: "Load Ramp Rate",
+    9: "Over Back By Time",
+    10: "Internal Temperature",
+    11: "External Temperature",
+    12: "Line Impedance",
+    13: "Parallel Anti-Backflow",
+    14: "Local Anti-Backflow",
+    15: "Battery Priority",
+    16: "CT Error",
+}
+
+
+def get_derating_mode_text(derating_code: int, register: int) -> str:
+    """Get human-readable derating mode text.
+
+    Args:
+        derating_code: The derating mode code value
+        register: Which register (104 or 3086) to determine mapping
+
+    Returns:
+        Human-readable derating mode description
+    """
+    if register == 3086:
+        return DERATING_MODES_3086.get(derating_code, f"Unknown ({derating_code})")
+    else:  # register == 104 or default
+        return DERATING_MODES_104.get(derating_code, f"Unknown ({derating_code})")
 
 
 # ============================================================================

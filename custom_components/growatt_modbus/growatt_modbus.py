@@ -23,7 +23,7 @@ from typing import Dict, Any, Optional, Tuple, Union
 from homeassistant.config_entries import ConfigEntry
 
 # Import register definitions
-from .const import STATUS_CODES, combine_registers, REGISTER_MAPS
+from .const import STATUS_CODES, combine_registers, REGISTER_MAPS, get_derating_mode_text
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -129,6 +129,7 @@ class GrowattData:
     # Diagnostics
     status: int = 0                   # Inverter status
     derating_mode: int = 0
+    derating_mode_text: str = "Unknown"  # Human-readable derating mode
     fault_code: int = 0
     warning_code: int = 0
     
@@ -616,9 +617,11 @@ class GrowattModbus:
             derating_addr = self._find_register_by_name('derating_mode')
             fault_addr = self._find_register_by_name('fault_code')
             warning_addr = self._find_register_by_name('warning_code')
-            
+
             if derating_addr:
                 data.derating_mode = int(self._get_register_value(derating_addr) or 0)
+                # Convert derating code to human-readable text based on register
+                data.derating_mode_text = get_derating_mode_text(data.derating_mode, derating_addr)
             if fault_addr:
                 data.fault_code = int(self._get_register_value(fault_addr) or 0)
             if warning_addr:
