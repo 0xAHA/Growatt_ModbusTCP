@@ -106,7 +106,7 @@ class InverterSimulator:
         grid_power = self._calculate_grid_power(pv_power, battery_power)
 
         # Calculate AC output
-        ac_power = pv_power + battery_power  # Total output to grid/load
+        ac_power = pv_power['total'] + battery_power  # Total output to grid/load
 
         # Calculate temperatures
         temps = self._calculate_temperatures(ac_power)
