@@ -267,15 +267,20 @@ Available Models:
         # Interactive selection
         model_key = select_model_interactive()
 
-    # Check port permissions
-    if args.port < 1024 and os.geteuid() != 0:
-        print(f"\n⚠️  Warning: Port {args.port} requires root privileges")
+    # Check port permissions (Unix/Linux only)
+    if args.port < 1024 and hasattr(os, 'geteuid') and os.geteuid() != 0:
+        print(f"\n⚠️  Warning: Port {args.port} requires root privileges on Linux/Unix")
         print(f"   Consider using a port >= 1024 or running with sudo")
         print(f"\n   Example: python3 {sys.argv[0]} --model {model_key} --port 5020\n")
 
         response = input("Continue anyway? [y/N]: ").strip().lower()
         if response != 'y':
             sys.exit(0)
+    elif args.port < 1024 and not hasattr(os, 'geteuid'):
+        # Windows - just warn
+        print(f"\n⚠️  Note: Using port {args.port}")
+        print(f"   If you get permission errors, try a port >= 1024")
+        print(f"   Example: python {sys.argv[0]} --model {model_key} --port 5020\n")
 
     # Create and start emulator
     try:
