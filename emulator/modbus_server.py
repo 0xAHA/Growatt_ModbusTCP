@@ -113,8 +113,7 @@ class ModbusEmulatorServer:
             di=discrete_block,  # Discrete Inputs
             co=coil_block,      # Coils
             hr=holding_block,   # Holding Registers
-            ir=input_block,     # Input Registers
-            zero_mode=True      # Use 0-based addressing
+            ir=input_block      # Input Registers
         )
 
         # Create server context
