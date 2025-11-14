@@ -90,7 +90,7 @@ class GrowattEmulator:
             with self.display.start_live_display() as live:
                 while self.running:
                     live.update(self.display.render())
-                    time.sleep(0.5)
+                    time.sleep(1.0)  # Update every second
 
         except KeyboardInterrupt:
             print("\n\n⚠️  Interrupted by user")

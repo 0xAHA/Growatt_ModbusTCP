@@ -4,7 +4,7 @@ Terminal UI Display for Inverter Emulator
 Provides a live-updating dashboard showing inverter status and values.
 """
 
-from rich.console import Console
+from rich.console import Console, Group
 from rich.layout import Layout
 from rich.panel import Panel
 from rich.table import Table
@@ -109,11 +109,11 @@ class EmulatorDisplay:
             f"[bold green]{pv.get('total', 0):.0f}W[/bold green]"
         )
 
-        # Add irradiance info
-        irradiance_text = f" ☀️ {self.simulator.solar_irradiance:.0f}W/m² ☁️ {self.simulator.cloud_cover * 100:.0f}%"
+        # Add irradiance info below table
+        irradiance_text = Text.from_markup(f"☀️ {self.simulator.solar_irradiance:.0f}W/m² ☁️ {self.simulator.cloud_cover * 100:.0f}%")
 
         return Panel(
-            Text.from_markup(str(table) + irradiance_text),
+            Group(table, irradiance_text),
             title="[bold]PV[/bold]",
             border_style="green",
             padding=(0, 1)
@@ -240,9 +240,9 @@ class EmulatorDisplay:
         """Generate temperature panel."""
         temps = self.simulator.values.get('temperatures', {})
 
-        table = Table(show_header=False, box=None, padding=(0, 1))
-        table.add_column("Component", style="cyan", width=15)
-        table.add_column("Temp", justify="right", width=15)
+        table = Table(show_header=False, box=None, padding=(0, 0), collapse_padding=True)
+        table.add_column("Component", style="cyan", width=12)
+        table.add_column("Temp", justify="right", width=10)
 
         inverter_temp = temps.get('inverter', 0)
         temp_color = "green" if inverter_temp < 50 else "yellow" if inverter_temp < 70 else "red"
@@ -319,7 +319,7 @@ class EmulatorDisplay:
 
     def start_live_display(self):
         """Start live updating display."""
-        self.live = Live(self.render(), console=self.console, refresh_per_second=2, screen=True)
+        self.live = Live(self.render(), console=self.console, refresh_per_second=1, screen=True)
         return self.live
 
     def stop_live_display(self):
