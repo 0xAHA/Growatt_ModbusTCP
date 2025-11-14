@@ -118,7 +118,7 @@ class ModbusEmulatorServer:
 
         # Create server context
         self.server_context = ModbusServerContext(
-            slaves={slave_id: self.device_context},
+            devices={slave_id: self.device_context},
             single=False
         )
 
