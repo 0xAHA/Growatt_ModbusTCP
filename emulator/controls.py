@@ -2,13 +2,36 @@
 Control Handler for Inverter Emulator
 
 Handles user input and adjusts simulation parameters.
+Cross-platform support for Windows, Linux, and macOS.
 """
 
 import sys
-import tty
-import termios
+import platform
 import threading
+import time
 from typing import Callable, Optional
+
+
+# Detect platform and import appropriate modules
+IS_WINDOWS = platform.system() == 'Windows'
+
+if IS_WINDOWS:
+    try:
+        import msvcrt
+        KEYBOARD_AVAILABLE = True
+    except ImportError:
+        KEYBOARD_AVAILABLE = False
+        print("Warning: Keyboard input not available on this platform")
+else:
+    # Unix-like systems (Linux, macOS)
+    try:
+        import tty
+        import termios
+        import select
+        KEYBOARD_AVAILABLE = True
+    except ImportError:
+        KEYBOARD_AVAILABLE = False
+        print("Warning: Keyboard input not available on this platform")
 
 
 class ControlHandler:
@@ -28,6 +51,11 @@ class ControlHandler:
 
     def start(self) -> None:
         """Start listening for keyboard input."""
+        if not KEYBOARD_AVAILABLE:
+            print("\nKeyboard controls disabled (platform not supported)")
+            print("You can still view the emulator output\n")
+            return
+
         self.running = True
         self.input_thread = threading.Thread(target=self._input_loop, daemon=True)
         self.input_thread.start()
@@ -40,7 +68,13 @@ class ControlHandler:
 
     def _input_loop(self) -> None:
         """Main input loop (runs in thread)."""
-        # Save terminal settings
+        if IS_WINDOWS:
+            self._input_loop_windows()
+        else:
+            self._input_loop_unix()
+
+    def _input_loop_unix(self) -> None:
+        """Unix/Linux/macOS input loop."""
         old_settings = None
         try:
             old_settings = termios.tcgetattr(sys.stdin)
@@ -57,6 +91,17 @@ class ControlHandler:
             # Restore terminal settings
             if old_settings:
                 termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+
+    def _input_loop_windows(self) -> None:
+        """Windows input loop using msvcrt."""
+        try:
+            while self.running:
+                if msvcrt.kbhit():
+                    char = msvcrt.getch().decode('utf-8', errors='ignore').lower()
+                    self._handle_key(char)
+                time.sleep(0.1)
+        except Exception as e:
+            print(f"\nInput error: {e}")
 
     def _handle_key(self, key: str) -> None:
         """Handle keyboard input.
@@ -107,9 +152,11 @@ class ControlHandler:
             value = float(input())
             self.simulator.set_irradiance(value)
             print(f"✓ Irradiance set to {self.simulator.solar_irradiance:.0f} W/m²")
+            time.sleep(1)
 
         except (ValueError, EOFError, KeyboardInterrupt):
             print("✗ Invalid input")
+            time.sleep(1)
 
     def _prompt_clouds(self) -> None:
         """Prompt for cloud cover."""
@@ -124,9 +171,11 @@ class ControlHandler:
             value = float(input()) / 100.0
             self.simulator.set_cloud_cover(value)
             print(f"✓ Cloud cover set to {self.simulator.cloud_cover * 100:.0f}%")
+            time.sleep(1)
 
         except (ValueError, EOFError, KeyboardInterrupt):
             print("✗ Invalid input")
+            time.sleep(1)
 
     def _prompt_load(self) -> None:
         """Prompt for house load."""
@@ -141,9 +190,11 @@ class ControlHandler:
             value = float(input())
             self.simulator.set_house_load(value)
             print(f"✓ House load set to {self.simulator.house_load:.0f}W")
+            time.sleep(1)
 
         except (ValueError, EOFError, KeyboardInterrupt):
             print("✗ Invalid input")
+            time.sleep(1)
 
     def _prompt_time_speed(self) -> None:
         """Prompt for time multiplier."""
@@ -158,9 +209,11 @@ class ControlHandler:
             value = float(input())
             self.simulator.set_time_multiplier(value)
             print(f"✓ Time speed set to {self.simulator.time_multiplier}x")
+            time.sleep(1)
 
         except (ValueError, EOFError, KeyboardInterrupt):
             print("✗ Invalid input")
+            time.sleep(1)
 
     def _prompt_battery(self) -> None:
         """Prompt for battery control."""
@@ -197,118 +250,8 @@ class ControlHandler:
                 self.simulator.set_battery_override(0)
                 print("✓ Battery set to IDLE")
 
+            time.sleep(1)
+
         except (ValueError, EOFError, KeyboardInterrupt):
             print("✗ Invalid input")
-
-
-# For systems without select module (Windows compatibility)
-try:
-    import select
-except ImportError:
-    # Fallback for Windows - use simpler polling
-    import msvcrt
-
-    class ControlHandler:
-        """Windows-compatible control handler."""
-
-        def __init__(self, simulator, on_quit: Optional[Callable] = None):
-            self.simulator = simulator
-            self.on_quit = on_quit
-            self.running = False
-            self.input_thread = None
-
-        def start(self) -> None:
-            self.running = True
-            self.input_thread = threading.Thread(target=self._input_loop, daemon=True)
-            self.input_thread.start()
-
-        def stop(self) -> None:
-            self.running = False
-
-        def _input_loop(self) -> None:
-            """Windows input loop."""
-            import time
-
-            while self.running:
-                if msvcrt.kbhit():
-                    char = msvcrt.getch().decode('utf-8', errors='ignore').lower()
-                    self._handle_key(char)
-                time.sleep(0.1)
-
-        def _handle_key(self, key: str) -> None:
-            """Handle keyboard input."""
-            if key == 'q':
-                self.running = False
-                if self.on_quit:
-                    self.on_quit()
-            elif key == 'i':
-                self._prompt_irradiance()
-            elif key == 'c':
-                self._prompt_clouds()
-            elif key == 'l':
-                self._prompt_load()
-            elif key == 't':
-                self._prompt_time_speed()
-            elif key == 'b' and self.simulator.model.has_battery:
-                self._prompt_battery()
-            elif key == 'r':
-                self.simulator._reset_daily_totals()
-
-        def _prompt_irradiance(self) -> None:
-            try:
-                print("\n\nEnter irradiance (0-1000 W/m²): ", end='', flush=True)
-                value = float(input())
-                self.simulator.set_irradiance(value)
-                print(f"✓ Set to {self.simulator.solar_irradiance:.0f} W/m²")
-            except:
-                print("✗ Invalid input")
-
-        def _prompt_clouds(self) -> None:
-            try:
-                print("\n\nEnter cloud cover (0-100%): ", end='', flush=True)
-                value = float(input()) / 100.0
-                self.simulator.set_cloud_cover(value)
-                print(f"✓ Set to {self.simulator.cloud_cover * 100:.0f}%")
-            except:
-                print("✗ Invalid input")
-
-        def _prompt_load(self) -> None:
-            try:
-                print("\n\nEnter house load (W): ", end='', flush=True)
-                value = float(input())
-                self.simulator.set_house_load(value)
-                print(f"✓ Set to {self.simulator.house_load:.0f}W")
-            except:
-                print("✗ Invalid input")
-
-        def _prompt_time_speed(self) -> None:
-            try:
-                print("\n\nEnter time multiplier (0.1-100): ", end='', flush=True)
-                value = float(input())
-                self.simulator.set_time_multiplier(value)
-                print(f"✓ Set to {self.simulator.time_multiplier}x")
-            except:
-                print("✗ Invalid input")
-
-        def _prompt_battery(self) -> None:
-            try:
-                print("\n\nBattery: 1=Auto 2=Charge 3=Discharge 4=Idle: ", end='', flush=True)
-                choice = input().strip()
-                if choice == '1':
-                    self.simulator.set_battery_override(None)
-                    print("✓ AUTO mode")
-                elif choice == '2':
-                    print("Charge power (W): ", end='', flush=True)
-                    power = float(input())
-                    self.simulator.set_battery_override(abs(power))
-                    print(f"✓ Charging at {abs(power):.0f}W")
-                elif choice == '3':
-                    print("Discharge power (W): ", end='', flush=True)
-                    power = float(input())
-                    self.simulator.set_battery_override(-abs(power))
-                    print(f"✓ Discharging at {abs(power):.0f}W")
-                elif choice == '4':
-                    self.simulator.set_battery_override(0)
-                    print("✓ IDLE")
-            except:
-                print("✗ Invalid input")
+            time.sleep(1)
