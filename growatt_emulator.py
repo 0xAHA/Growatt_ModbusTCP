@@ -25,7 +25,7 @@ from typing import Optional
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from emulator.models import InverterModel, get_available_models
+from emulator.models import InverterModel, get_available_models, INVERTER_PROFILES
 from emulator.simulator import InverterSimulator
 from emulator.modbus_server import ModbusEmulatorServer
 from emulator.display import EmulatorDisplay
@@ -135,8 +135,6 @@ def select_model_interactive() -> str:
     print("\nAvailable Inverter Models:\n")
 
     # Group by series for better display
-    from custom_components.growatt_modbus.device_profiles import INVERTER_PROFILES
-
     series_groups = {
         'MIC': [],
         'MIN': [],
