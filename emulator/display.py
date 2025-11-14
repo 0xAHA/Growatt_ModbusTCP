@@ -32,9 +32,9 @@ class EmulatorDisplay:
         layout = Layout()
 
         layout.split_column(
-            Layout(name="header", size=3),
+            Layout(name="header", size=2),
             Layout(name="main"),
-            Layout(name="controls", size=5),
+            Layout(name="controls", size=2),
         )
 
         layout["main"].split_row(
@@ -56,14 +56,14 @@ class EmulatorDisplay:
         status_color = status_colors.get(status_code, "white")
 
         header_text = Text()
-        header_text.append(f"⚡ {self.simulator.model.name} Emulator", style="bold cyan")
-        header_text.append(f"\n🕐 {sim_time.strftime('%Y-%m-%d %H:%M:%S')}", style="white")
-        header_text.append(f"  Speed: {self.simulator.time_multiplier}x", style="yellow")
-        header_text.append(f"  Status: ", style="white")
+        header_text.append(f"⚡ {self.simulator.model.name}", style="bold cyan")
+        header_text.append(f" | {sim_time.strftime('%H:%M:%S')}", style="white")
+        header_text.append(f" | {self.simulator.time_multiplier}x", style="yellow")
+        header_text.append(f" | ", style="white")
         header_text.append(f"{status}", style=f"bold {status_color}")
-        header_text.append(f"  Port: {self.simulator.port}", style="cyan")
+        header_text.append(f" | Port {self.simulator.port}", style="cyan")
 
-        return Panel(header_text, style="bold")
+        return Panel(header_text, style="bold", padding=(0, 1))
 
     def generate_pv_panel(self) -> Panel:
         """Generate PV generation panel."""
@@ -71,11 +71,11 @@ class EmulatorDisplay:
         voltages = self.simulator.values.get('voltages', {})
         currents = self.simulator.values.get('currents', {})
 
-        table = Table(show_header=True, header_style="bold magenta", box=None, padding=(0, 1))
-        table.add_column("String", style="cyan", width=8)
-        table.add_column("Voltage", justify="right", width=10)
-        table.add_column("Current", justify="right", width=10)
-        table.add_column("Power", justify="right", width=12)
+        table = Table(show_header=True, header_style="bold magenta", box=None, padding=(0, 0), collapse_padding=True)
+        table.add_column("String", style="cyan", width=6)
+        table.add_column("Voltage", justify="right", width=8)
+        table.add_column("Current", justify="right", width=8)
+        table.add_column("Power", justify="right", width=10)
 
         # PV String 1
         table.add_row(
@@ -110,13 +110,13 @@ class EmulatorDisplay:
         )
 
         # Add irradiance info
-        irradiance_text = f"\n☀️  Irradiance: {self.simulator.solar_irradiance:.0f} W/m²"
-        cloud_text = f"  ☁️  Cloud: {self.simulator.cloud_cover * 100:.0f}%"
+        irradiance_text = f" ☀️ {self.simulator.solar_irradiance:.0f}W/m² ☁️ {self.simulator.cloud_cover * 100:.0f}%"
 
         return Panel(
-            Text.from_markup(str(table) + irradiance_text + cloud_text),
-            title="[bold]PV Generation[/bold]",
-            border_style="green"
+            Text.from_markup(str(table) + irradiance_text),
+            title="[bold]PV[/bold]",
+            border_style="green",
+            padding=(0, 1)
         )
 
     def generate_ac_panel(self) -> Panel:
@@ -125,16 +125,16 @@ class EmulatorDisplay:
         currents = self.simulator.values.get('currents', {})
         ac_power = self.simulator.values.get('ac_power', 0)
 
-        table = Table(show_header=False, box=None, padding=(0, 1))
-        table.add_column("Label", style="cyan", width=15)
-        table.add_column("Value", justify="right", width=20)
+        table = Table(show_header=False, box=None, padding=(0, 0), collapse_padding=True)
+        table.add_column("Label", style="cyan", width=12)
+        table.add_column("Value", justify="right", width=18)
 
         if self.simulator.model.is_three_phase:
             # Three-phase
             table.add_row("Phase R", f"{voltages.get('ac_r', 0):.1f}V @ {currents.get('ac_r', 0):.2f}A")
             table.add_row("Phase S", f"{voltages.get('ac_s', 0):.1f}V @ {currents.get('ac_s', 0):.2f}A")
             table.add_row("Phase T", f"{voltages.get('ac_t', 0):.1f}V @ {currents.get('ac_t', 0):.2f}A")
-            table.add_row("[bold]Total Power[/bold]", f"[bold yellow]{ac_power:.0f}W[/bold yellow]")
+            table.add_row("[bold]Total[/bold]", f"[bold yellow]{ac_power:.0f}W[/bold yellow]")
         else:
             # Single-phase
             table.add_row("Voltage", f"{voltages.get('ac', 0):.1f}V")
@@ -142,7 +142,7 @@ class EmulatorDisplay:
             table.add_row("Frequency", "50.0Hz")
             table.add_row("[bold]Power[/bold]", f"[bold yellow]{ac_power:.0f}W[/bold yellow]")
 
-        return Panel(table, title="[bold]AC Output[/bold]", border_style="yellow")
+        return Panel(table, title="[bold]AC[/bold]", border_style="yellow", padding=(0, 1))
 
     def generate_battery_panel(self) -> Optional[Panel]:
         """Generate battery panel (if model has battery)."""
@@ -153,42 +153,37 @@ class EmulatorDisplay:
         currents = self.simulator.values.get('currents', {})
         battery_power = self.simulator.values.get('battery_power', 0)
 
-        table = Table(show_header=False, box=None, padding=(0, 1))
-        table.add_column("Label", style="cyan", width=15)
-        table.add_column("Value", justify="right", width=20)
+        table = Table(show_header=False, box=None, padding=(0, 0), collapse_padding=True)
+        table.add_column("Label", style="cyan", width=12)
+        table.add_column("Value", justify="right", width=18)
 
         # SOC with bar
         soc = self.simulator.battery_soc
-        soc_bar = "█" * int(soc / 5) + "░" * (20 - int(soc / 5))
+        soc_bar = "█" * int(soc / 10) + "░" * (10 - int(soc / 10))
         soc_color = "green" if soc > 50 else "yellow" if soc > 20 else "red"
 
-        table.add_row("State of Charge", f"[{soc_color}]{soc_bar}[/{soc_color}] {soc:.0f}%")
-        table.add_row("Voltage", f"{voltages.get('battery', 0):.1f}V")
-        table.add_row("Current", f"{currents.get('battery', 0):.2f}A")
+        table.add_row("SOC", f"[{soc_color}]{soc_bar}[/{soc_color}] {soc:.0f}%")
 
         # Power with direction indicator
         if battery_power > 0:
-            power_text = f"[green]↑ +{battery_power:.0f}W (Charging)[/green]"
+            power_text = f"[green]↑{battery_power:.0f}W[/green]"
         elif battery_power < 0:
-            power_text = f"[yellow]↓ {battery_power:.0f}W (Discharging)[/yellow]"
+            power_text = f"[yellow]↓{abs(battery_power):.0f}W[/yellow]"
         else:
-            power_text = "0W (Idle)"
+            power_text = "0W"
 
-        table.add_row("[bold]Power[/bold]", power_text)
+        table.add_row("Power", power_text)
+        table.add_row("Ch/Disch", f"{self.simulator.battery_charge_today:.1f}/{self.simulator.battery_discharge_today:.1f}kWh")
 
-        # Energy totals
-        table.add_row("Charged Today", f"{self.simulator.battery_charge_today:.2f}kWh")
-        table.add_row("Discharged Today", f"{self.simulator.battery_discharge_today:.2f}kWh")
-
-        return Panel(table, title="[bold]Battery[/bold]", border_style="blue")
+        return Panel(table, title="[bold]Battery[/bold]", border_style="blue", padding=(0, 1))
 
     def generate_grid_panel(self) -> Panel:
         """Generate grid panel."""
         grid_power = self.simulator.values.get('grid_power', {})
 
-        table = Table(show_header=False, box=None, padding=(0, 1))
-        table.add_column("Label", style="cyan", width=15)
-        table.add_column("Value", justify="right", width=20)
+        table = Table(show_header=False, box=None, padding=(0, 0), collapse_padding=True)
+        table.add_column("Label", style="cyan", width=12)
+        table.add_column("Value", justify="right", width=18)
 
         grid_net = grid_power.get('grid', 0)
         grid_import = grid_power.get('import', 0)
@@ -204,43 +199,42 @@ class EmulatorDisplay:
         table.add_row("Status", status_text)
         table.add_row("Import", f"{grid_import:.0f}W")
         table.add_row("Export", f"{grid_export:.0f}W")
-        table.add_row("", "")
-        table.add_row("House Load", f"[magenta]{self.simulator.house_load:.0f}W[/magenta]")
+        table.add_row("Load", f"[magenta]{self.simulator.house_load:.0f}W[/magenta]")
 
-        return Panel(table, title="[bold]Grid & Load[/bold]", border_style="cyan")
+        return Panel(table, title="[bold]Grid[/bold]", border_style="cyan", padding=(0, 1))
 
     def generate_energy_panel(self) -> Panel:
         """Generate energy totals panel."""
-        table = Table(show_header=True, header_style="bold magenta", box=None, padding=(0, 1))
-        table.add_column("Metric", style="cyan", width=20)
-        table.add_column("Today", justify="right", width=12)
-        table.add_column("Total", justify="right", width=12)
+        table = Table(show_header=True, header_style="bold magenta", box=None, padding=(0, 0), collapse_padding=True)
+        table.add_column("Metric", style="cyan", width=16)
+        table.add_column("Today", justify="right", width=10)
+        table.add_column("Total", justify="right", width=10)
 
         table.add_row(
-            "PV Generated",
-            f"{self.simulator.energy_today:.2f}kWh",
-            f"{self.simulator.energy_total:.1f}kWh"
+            "PV Gen",
+            f"{self.simulator.energy_today:.1f}",
+            f"{self.simulator.energy_total:.0f}"
         )
 
         table.add_row(
-            "Exported to Grid",
-            f"{self.simulator.energy_to_grid_today:.2f}kWh",
-            f"{self.simulator.energy_to_grid_total:.1f}kWh"
+            "Grid Export",
+            f"{self.simulator.energy_to_grid_today:.1f}",
+            f"{self.simulator.energy_to_grid_total:.0f}"
         )
 
         table.add_row(
-            "Imported from Grid",
-            f"{self.simulator.grid_import_energy_today:.2f}kWh",
-            f"{self.simulator.grid_import_energy_total:.1f}kWh"
+            "Grid Import",
+            f"{self.simulator.grid_import_energy_today:.1f}",
+            f"{self.simulator.grid_import_energy_total:.0f}"
         )
 
         table.add_row(
-            "Load Consumption",
-            f"{self.simulator.load_energy_today:.2f}kWh",
-            f"{self.simulator.load_energy_total:.1f}kWh"
+            "Load",
+            f"{self.simulator.load_energy_today:.1f}",
+            f"{self.simulator.load_energy_total:.0f}"
         )
 
-        return Panel(table, title="[bold]Energy[/bold]", border_style="magenta")
+        return Panel(table, title="[bold]Energy (kWh)[/bold]", border_style="magenta", padding=(0, 1))
 
     def generate_temperature_panel(self) -> Panel:
         """Generate temperature panel."""
@@ -253,36 +247,34 @@ class EmulatorDisplay:
         inverter_temp = temps.get('inverter', 0)
         temp_color = "green" if inverter_temp < 50 else "yellow" if inverter_temp < 70 else "red"
 
-        table.add_row("Inverter", f"[{temp_color}]{inverter_temp:.1f}°C[/{temp_color}]")
-        table.add_row("IPM", f"{temps.get('ipm', 0):.1f}°C")
-        table.add_row("Boost", f"{temps.get('boost', 0):.1f}°C")
+        table.add_row("Inverter", f"[{temp_color}]{inverter_temp:.0f}°C[/{temp_color}]")
+        table.add_row("IPM", f"{temps.get('ipm', 0):.0f}°C")
+        table.add_row("Boost", f"{temps.get('boost', 0):.0f}°C")
 
-        return Panel(table, title="[bold]Temperatures[/bold]", border_style="red")
+        return Panel(table, title="[bold]Temp[/bold]", border_style="red", padding=(0, 1))
 
     def generate_controls_panel(self) -> Panel:
         """Generate controls help panel."""
         controls_text = Text()
-        controls_text.append("Controls: ", style="bold white")
         controls_text.append("[I]", style="bold cyan")
-        controls_text.append(" Irradiance  ", style="white")
+        controls_text.append("Irrad ", style="white")
         controls_text.append("[C]", style="bold cyan")
-        controls_text.append(" Clouds  ", style="white")
+        controls_text.append("Cloud ", style="white")
         controls_text.append("[L]", style="bold cyan")
-        controls_text.append(" Load  ", style="white")
+        controls_text.append("Load ", style="white")
         controls_text.append("[T]", style="bold cyan")
-        controls_text.append(" Time Speed  ", style="white")
+        controls_text.append("Speed ", style="white")
 
         if self.simulator.model.has_battery:
             controls_text.append("[B]", style="bold cyan")
-            controls_text.append(" Battery  ", style="white")
+            controls_text.append("Batt ", style="white")
 
-        controls_text.append("\n          ")
         controls_text.append("[R]", style="bold cyan")
-        controls_text.append(" Reset Day  ", style="white")
+        controls_text.append("Reset ", style="white")
         controls_text.append("[Q]", style="bold cyan")
-        controls_text.append(" Quit", style="white")
+        controls_text.append("Quit", style="white")
 
-        return Panel(controls_text, title="[bold]Keyboard Controls[/bold]", border_style="white")
+        return Panel(controls_text, border_style="white", padding=(0, 1))
 
     def render(self) -> Layout:
         """Render the complete display."""
