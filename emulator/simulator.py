@@ -614,12 +614,202 @@ class InverterSimulator:
 
         # Grid/load power
         elif 'grid_power' in reg_name or 'power_to_grid' in reg_name:
-            power = self.values['grid_power']['grid']
-            if is_signed:
-                return self._to_signed_16bit(int(power / scale))
-            return int(abs(power) / scale)
+            # Handle 32-bit pairs for power_to_grid
+            if '_high' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                # Positive = export, handle sign in 32-bit value
+                power_raw = int(self.values['grid_power']['export'] / combined_scale)
+                return (power_raw >> 16) & 0xFFFF
+            elif '_low' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                power_raw = int(self.values['grid_power']['export'] / combined_scale)
+                return power_raw & 0xFFFF
+            else:
+                # Single register
+                power = self.values['grid_power']['grid']
+                if is_signed:
+                    return self._to_signed_16bit(int(power / scale))
+                return int(abs(power) / scale)
+
         elif 'load_power' in reg_name or 'power_to_load' in reg_name:
-            return int(self.house_load / scale)
+            # Handle 32-bit pairs for power_to_load
+            if '_high' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                power_raw = int(self.house_load / combined_scale)
+                return (power_raw >> 16) & 0xFFFF
+            elif '_low' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                power_raw = int(self.house_load / combined_scale)
+                return power_raw & 0xFFFF
+            else:
+                # Single register
+                return int(self.house_load / scale)
+
+        # Battery charge/discharge power (SPH TL3 specific)
+        elif reg_name == 'discharge_power_high' and self.model.has_battery:
+            combined_scale = reg_def.get('combined_scale', 0.1)
+            discharge = abs(min(0, self.values['battery_power']))  # Only negative values
+            power_raw = int(discharge / combined_scale)
+            return (power_raw >> 16) & 0xFFFF
+        elif reg_name == 'discharge_power_low' and self.model.has_battery:
+            combined_scale = reg_def.get('combined_scale', 0.1)
+            discharge = abs(min(0, self.values['battery_power']))
+            power_raw = int(discharge / combined_scale)
+            return power_raw & 0xFFFF
+        elif reg_name == 'charge_power_high' and self.model.has_battery:
+            combined_scale = reg_def.get('combined_scale', 0.1)
+            charge = max(0, self.values['battery_power'])  # Only positive values
+            power_raw = int(charge / combined_scale)
+            return (power_raw >> 16) & 0xFFFF
+        elif reg_name == 'charge_power_low' and self.model.has_battery:
+            combined_scale = reg_def.get('combined_scale', 0.1)
+            charge = max(0, self.values['battery_power'])
+            power_raw = int(charge / combined_scale)
+            return power_raw & 0xFFFF
+
+        # Power flow (SPH TL3 specific)
+        elif 'power_to_user' in reg_name:
+            # Power to user = PV - battery charge
+            power_to_user = self.values['pv_power']['total'] - max(0, self.values['battery_power'])
+            if '_high' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                power_raw = int(power_to_user / combined_scale)
+                return (power_raw >> 16) & 0xFFFF
+            elif '_low' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                power_raw = int(power_to_user / combined_scale)
+                return power_raw & 0xFFFF
+
+        # Self consumption (SPH TL3 specific)
+        elif 'self_consumption_power' in reg_name:
+            # Self consumption = load - grid import
+            self_consumption = self.house_load - self.values['grid_power']['import']
+            if '_high' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                power_raw = int(max(0, self_consumption) / combined_scale)
+                return (power_raw >> 16) & 0xFFFF
+            elif '_low' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                power_raw = int(max(0, self_consumption) / combined_scale)
+                return power_raw & 0xFFFF
+        elif reg_name == 'self_consumption_percentage':
+            if self.house_load > 0:
+                self_consumption = self.house_load - self.values['grid_power']['import']
+                percentage = (max(0, self_consumption) / self.house_load) * 100
+                return int(min(100, percentage))
+            return 0
+
+        # Energy to user/grid (SPH TL3 specific)
+        elif 'energy_to_user' in reg_name:
+            # Use the same as PV generation for now
+            if 'today' in reg_name:
+                if '_high' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.energy_today / combined_scale)
+                    return (energy_raw >> 16) & 0xFFFF
+                elif '_low' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.energy_today / combined_scale)
+                    return energy_raw & 0xFFFF
+            elif 'total' in reg_name:
+                if '_high' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.energy_total / combined_scale)
+                    return (energy_raw >> 16) & 0xFFFF
+                elif '_low' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.energy_total / combined_scale)
+                    return energy_raw & 0xFFFF
+
+        elif 'energy_to_grid' in reg_name:
+            if 'today' in reg_name:
+                if '_high' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.energy_to_grid_today / combined_scale)
+                    return (energy_raw >> 16) & 0xFFFF
+                elif '_low' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.energy_to_grid_today / combined_scale)
+                    return energy_raw & 0xFFFF
+            elif 'total' in reg_name:
+                if '_high' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.energy_to_grid_total / combined_scale)
+                    return (energy_raw >> 16) & 0xFFFF
+                elif '_low' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.energy_to_grid_total / combined_scale)
+                    return energy_raw & 0xFFFF
+
+        # Battery charge/discharge energy (SPH TL3 specific)
+        elif 'discharge_energy' in reg_name and self.model.has_battery:
+            if 'today' in reg_name:
+                if '_high' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.battery_discharge_today / combined_scale)
+                    return (energy_raw >> 16) & 0xFFFF
+                elif '_low' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.battery_discharge_today / combined_scale)
+                    return energy_raw & 0xFFFF
+            elif 'total' in reg_name:
+                if '_high' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.battery_discharge_total / combined_scale)
+                    return (energy_raw >> 16) & 0xFFFF
+                elif '_low' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.battery_discharge_total / combined_scale)
+                    return energy_raw & 0xFFFF
+
+        elif 'charge_energy' in reg_name and self.model.has_battery:
+            if 'today' in reg_name:
+                if '_high' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.battery_charge_today / combined_scale)
+                    return (energy_raw >> 16) & 0xFFFF
+                elif '_low' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.battery_charge_today / combined_scale)
+                    return energy_raw & 0xFFFF
+            elif 'total' in reg_name:
+                if '_high' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.battery_charge_total / combined_scale)
+                    return (energy_raw >> 16) & 0xFFFF
+                elif '_low' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.battery_charge_total / combined_scale)
+                    return energy_raw & 0xFFFF
+
+        # Load energy (SPH TL3 specific)
+        elif 'load_energy' in reg_name:
+            if 'today' in reg_name:
+                if '_high' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.load_energy_today / combined_scale)
+                    return (energy_raw >> 16) & 0xFFFF
+                elif '_low' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.load_energy_today / combined_scale)
+                    return energy_raw & 0xFFFF
+            elif 'total' in reg_name:
+                if '_high' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.load_energy_total / combined_scale)
+                    return (energy_raw >> 16) & 0xFFFF
+                elif '_low' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    energy_raw = int(self.load_energy_total / combined_scale)
+                    return energy_raw & 0xFFFF
+
+        # System work mode
+        elif reg_name == 'system_work_mode':
+            return 1  # 1 = Normal operation
+
+        # Battery type
+        elif reg_name == 'battery_type':
+            return 1  # 1 = Li-ion
 
         # Backup output
         elif reg_name == 'backup_voltage':
