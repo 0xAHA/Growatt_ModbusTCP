@@ -31,56 +31,9 @@ class EmulatorDisplay:
 
     def _get_register_map(self) -> Dict[int, Dict[str, Any]]:
         """Get the register map for the current inverter model."""
-        # Import the profile module for this model
-        profile_name = self.simulator.model.register_map
-
-        # Map profile names to module names
-        module_map = {
-            'SPH_3000_6000': 'sph',
-            'SPH_7000_10000': 'sph',
-            'MID_15000_25000TL3_X': 'mid',
-            'MIN_3000_6000TL_X': 'min',
-            'MIN_7000_10000TL_X': 'min',
-            'TL_XH_3000_10000': 'tl_xh',
-            'MOD_3000_6000TLH_X': 'mod',
-            'MOD_5000_10000TL3_XH': 'mod',
-        }
-
-        module_name = module_map.get(profile_name, 'sph')
-
-        try:
-            # Get the register map from the profiles
-            import importlib
-            import sys
-            import os
-
-            profile_path = os.path.join(
-                os.path.dirname(os.path.dirname(__file__)),
-                'custom_components',
-                'growatt_modbus',
-                'profiles',
-                f'{module_name}.py'
-            )
-
-            spec = importlib.util.spec_from_file_location(f'profiles.{module_name}', profile_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-
-            # Get the register map dict
-            if hasattr(module, f'{profile_name.upper()}_REGISTER_MAPS'):
-                maps = getattr(module, f'{profile_name.upper()}_REGISTER_MAPS')
-                if profile_name in maps:
-                    return maps[profile_name].get('input_registers', {})
-
-            # Try direct profile name
-            if hasattr(module, profile_name):
-                return getattr(module, profile_name).get('input_registers', {})
-
-        except Exception as e:
-            # Fallback to empty map if we can't load it
-            pass
-
-        return {}
+        # Get the register map directly from the model
+        # The model already has loaded the register map from the profile
+        return self.simulator.model.get_input_registers()
 
     def _get_register_info(self, entity_name: str) -> tuple:
         """Get register address(es) for an entity name.
