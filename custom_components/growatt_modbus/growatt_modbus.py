@@ -454,9 +454,11 @@ class GrowattModbus:
         
         # Read 3000 range if needed - MIN/MOD models
         if has_3000_range:
-            logger.debug("Reading 3000 range (3000-3250)")
-            # Extended range to cover MOD battery registers up to 3250
-            registers = self.read_input_registers(3000, 251)
+            # Find the highest register in the 3000 range
+            max_3000_addr = max([addr for addr in addresses if 3000 <= addr < 4000])
+            count_3000 = (max_3000_addr - 3000) + 1
+            logger.debug(f"Reading 3000 range (3000-{max_3000_addr}, {count_3000} registers)")
+            registers = self.read_input_registers(3000, count_3000)
             if registers is None:
                 logger.error("Failed to read main input register block")
                 return None
@@ -467,15 +469,20 @@ class GrowattModbus:
 
         # Read 31000 range if needed - MOD extended battery/BMS range
         if has_31000_range:
-            logger.debug("Reading 31000 range (31100-31300)")
-            registers = self.read_input_registers(31100, 201)
+            # Find the min and max registers in the 31000 range
+            addrs_31000 = [addr for addr in addresses if 31000 <= addr < 32000]
+            min_31000_addr = min(addrs_31000)
+            max_31000_addr = max(addrs_31000)
+            count_31000 = (max_31000_addr - min_31000_addr) + 1
+            logger.debug(f"Reading 31000 range ({min_31000_addr}-{max_31000_addr}, {count_31000} registers)")
+            registers = self.read_input_registers(min_31000_addr, count_31000)
             if registers is None:
-                logger.warning("Failed to read extended battery register block (31100+)")
+                logger.warning("Failed to read extended battery register block (31000+)")
                 # Don't return None - continue with what we have
             else:
                 # Populate cache
                 for i, value in enumerate(registers):
-                    self._register_cache[31100 + i] = value
+                    self._register_cache[min_31000_addr + i] = value
 
         # Now extract values using the register map
         try:
