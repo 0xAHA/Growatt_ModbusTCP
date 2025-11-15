@@ -564,6 +564,17 @@ class InverterSimulator:
             phase = reg_name.split('_')[-1]
             power = self.values['ac_power'] / 3  # Distribute across phases
             return int(power / scale)
+        # Three-phase AC power (32-bit pairs)
+        elif reg_name in ['ac_power_r_high', 'ac_power_s_high', 'ac_power_t_high']:
+            combined_scale = reg_def.get('combined_scale', 0.1)
+            power = self.values['ac_power'] / 3  # Distribute across phases
+            power_raw = int(power / combined_scale)
+            return (power_raw >> 16) & 0xFFFF
+        elif reg_name in ['ac_power_r_low', 'ac_power_s_low', 'ac_power_t_low']:
+            combined_scale = reg_def.get('combined_scale', 0.1)
+            power = self.values['ac_power'] / 3  # Distribute across phases
+            power_raw = int(power / combined_scale)
+            return power_raw & 0xFFFF
         elif reg_name in ['ac_voltage_rs', 'ac_voltage_st', 'ac_voltage_tr']:
             phases = reg_name.split('_')[-1]
             return int(self.values['voltages'][f'ac_{phases}'] / scale)

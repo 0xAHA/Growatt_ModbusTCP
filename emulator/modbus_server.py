@@ -27,13 +27,44 @@ class DynamicModbusDataBlock(ModbusSequentialDataBlock):
         """
         self.simulator = simulator
         self.register_type = register_type
+        self.address_range = address_range
 
         # Initialize with zeros
         initial_values = [0] * address_range[1]
-        super().__init__(address_range[0], initial_values)
+        super().__init__(0, initial_values)
+        logger.info(f"DynamicModbusDataBlock initialized: type={register_type}, address=0, count={address_range[1]}")
 
-    def getValues(self, address, count=1):
-        """Get register values from simulator.
+    def update_from_simulator(self):
+        """Update internal storage from simulator values."""
+        # Get registers from model
+        if self.register_type == 'input':
+            registers = self.simulator.model.get_input_registers()
+        else:
+            registers = self.simulator.model.get_holding_registers()
+
+        # Update each mapped register
+        for addr, reg_def in registers.items():
+            value = self.simulator.get_register_value(self.register_type, addr)
+            if value is not None:
+                # WORKAROUND: pymodbus 3.x has an off-by-one quirk where reading address N
+                # returns the value stored at address N+1. To compensate, store value for
+                # register N at address N-1.
+                store_addr = addr - 1
+                if store_addr < 0:
+                    continue  # Skip register 0
+
+                # Debug logging for key registers
+                if addr in [38, 39, 1011, 1012, 1013, 1014]:
+                    logger.info(f"  Setting register {addr} to {value} (storing at {store_addr})")
+                # Use parent's setValues to update internal storage
+                result = super().setValues(store_addr, [value])
+                if addr in [38, 39, 1011, 1012, 1013, 1014]:
+                    # Verify it was set correctly
+                    verify = super().getValues(store_addr, 1)
+                    logger.info(f"    Verify: getValues({store_addr}) returns {verify}")
+
+    def _get_values_from_simulator(self, address, count):
+        """Helper to get values from simulator.
 
         Args:
             address: Starting register address
@@ -50,6 +81,44 @@ class DynamicModbusDataBlock(ModbusSequentialDataBlock):
                 value = 0  # Default for unmapped registers
             values.append(value)
         return values
+
+    def getValues(self, address, count=1):
+        """Get register values from simulator (sync).
+
+        Args:
+            address: Starting register address
+            count: Number of registers to read
+
+        Returns:
+            List of register values
+        """
+        return self._get_values_from_simulator(address, count)
+
+    async def async_getValues(self, address, count=1):
+        """Get register values from simulator (async).
+
+        Args:
+            address: Starting register address
+            count: Number of registers to read
+
+        Returns:
+            List of register values
+        """
+        return self._get_values_from_simulator(address, count)
+
+    def validate(self, address, count=1):
+        """Validate the request and return the address range.
+
+        Args:
+            address: Starting address
+            count: Number of registers
+
+        Returns:
+            Validation result
+        """
+        # Let the parent handle validation
+        result = super().validate(address, count)
+        return result
 
     def setValues(self, address, values):
         """Set register values (for holding registers).
@@ -101,8 +170,8 @@ class ModbusEmulatorServer:
             holding_range = (0, 100)
 
         # Create dynamic data blocks
-        input_block = DynamicModbusDataBlock(simulator, 'input', input_range)
-        holding_block = DynamicModbusDataBlock(simulator, 'holding', holding_range)
+        self.input_block = DynamicModbusDataBlock(simulator, 'input', input_range)
+        self.holding_block = DynamicModbusDataBlock(simulator, 'holding', holding_range)
 
         # Discrete and coil blocks (not used, but required)
         discrete_block = ModbusSequentialDataBlock(0, [0] * 100)
@@ -112,9 +181,13 @@ class ModbusEmulatorServer:
         self.device_context = ModbusDeviceContext(
             di=discrete_block,  # Discrete Inputs
             co=coil_block,      # Coils
-            hr=holding_block,   # Holding Registers
-            ir=input_block      # Input Registers
+            hr=self.holding_block,   # Holding Registers
+            ir=self.input_block      # Input Registers
         )
+
+        # Initial update
+        self.input_block.update_from_simulator()
+        self.holding_block.update_from_simulator()
 
         # Create server context
         self.server_context = ModbusServerContext(
@@ -141,6 +214,9 @@ class ModbusEmulatorServer:
                 """Callback to update simulator values."""
                 if self.running:
                     self.simulator.update()
+                    # Update Modbus register storage
+                    self.input_block.update_from_simulator()
+                    self.holding_block.update_from_simulator()
                     threading.Timer(2.0, update_callback).start()
 
             # Start update timer
