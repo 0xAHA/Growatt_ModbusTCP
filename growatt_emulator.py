@@ -58,7 +58,7 @@ class GrowattEmulator:
         self.simulator = InverterSimulator(self.model, port)
         self.modbus_server = ModbusEmulatorServer(self.simulator, port)
         self.display = EmulatorDisplay(self.simulator)
-        self.controls = ControlHandler(self.simulator, on_quit=self.stop)
+        self.controls = ControlHandler(self.simulator, display=self.display, on_quit=self.stop)
 
     def start(self) -> None:
         """Start the emulator."""
@@ -90,7 +90,7 @@ class GrowattEmulator:
             with self.display.start_live_display() as live:
                 while self.running:
                     live.update(self.display.render())
-                    time.sleep(1.0)  # Update every second
+                    time.sleep(5.0)  # Update every 5 seconds
 
         except KeyboardInterrupt:
             print("\n\n⚠️  Interrupted by user")

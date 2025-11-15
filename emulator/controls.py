@@ -37,14 +37,16 @@ else:
 class ControlHandler:
     """Handles keyboard controls for the emulator."""
 
-    def __init__(self, simulator, on_quit: Optional[Callable] = None):
+    def __init__(self, simulator, display=None, on_quit: Optional[Callable] = None):
         """Initialize control handler.
 
         Args:
             simulator: InverterSimulator instance
+            display: EmulatorDisplay instance (optional, for pausing)
             on_quit: Callback function when user quits
         """
         self.simulator = simulator
+        self.display = display
         self.on_quit = on_quit
         self.running = False
         self.input_thread = None
@@ -141,6 +143,8 @@ class ControlHandler:
 
     def _prompt_irradiance(self) -> None:
         """Prompt for irradiance value."""
+        if self.display:
+            self.display.pause()
         try:
             print("\n\n")
             print("=" * 50)
@@ -152,14 +156,19 @@ class ControlHandler:
             value = float(input())
             self.simulator.set_irradiance(value)
             print(f"✓ Irradiance set to {self.simulator.solar_irradiance:.0f} W/m²")
-            time.sleep(1)
+            time.sleep(2)
 
         except (ValueError, EOFError, KeyboardInterrupt):
             print("✗ Invalid input")
             time.sleep(1)
+        finally:
+            if self.display:
+                self.display.resume()
 
     def _prompt_clouds(self) -> None:
         """Prompt for cloud cover."""
+        if self.display:
+            self.display.pause()
         try:
             print("\n\n")
             print("=" * 50)
@@ -171,14 +180,19 @@ class ControlHandler:
             value = float(input()) / 100.0
             self.simulator.set_cloud_cover(value)
             print(f"✓ Cloud cover set to {self.simulator.cloud_cover * 100:.0f}%")
-            time.sleep(1)
+            time.sleep(2)
 
         except (ValueError, EOFError, KeyboardInterrupt):
             print("✗ Invalid input")
             time.sleep(1)
+        finally:
+            if self.display:
+                self.display.resume()
 
     def _prompt_load(self) -> None:
         """Prompt for house load."""
+        if self.display:
+            self.display.pause()
         try:
             print("\n\n")
             print("=" * 50)
@@ -190,14 +204,19 @@ class ControlHandler:
             value = float(input())
             self.simulator.set_house_load(value)
             print(f"✓ House load set to {self.simulator.house_load:.0f}W")
-            time.sleep(1)
+            time.sleep(2)
 
         except (ValueError, EOFError, KeyboardInterrupt):
             print("✗ Invalid input")
             time.sleep(1)
+        finally:
+            if self.display:
+                self.display.resume()
 
     def _prompt_time_speed(self) -> None:
         """Prompt for time multiplier."""
+        if self.display:
+            self.display.pause()
         try:
             print("\n\n")
             print("=" * 50)
@@ -209,14 +228,19 @@ class ControlHandler:
             value = float(input())
             self.simulator.set_time_multiplier(value)
             print(f"✓ Time speed set to {self.simulator.time_multiplier}x")
-            time.sleep(1)
+            time.sleep(2)
 
         except (ValueError, EOFError, KeyboardInterrupt):
             print("✗ Invalid input")
             time.sleep(1)
+        finally:
+            if self.display:
+                self.display.resume()
 
     def _prompt_battery(self) -> None:
         """Prompt for battery control."""
+        if self.display:
+            self.display.pause()
         try:
             print("\n\n")
             print("=" * 50)
@@ -250,8 +274,11 @@ class ControlHandler:
                 self.simulator.set_battery_override(0)
                 print("✓ Battery set to IDLE")
 
-            time.sleep(1)
+            time.sleep(2)
 
         except (ValueError, EOFError, KeyboardInterrupt):
             print("✗ Invalid input")
             time.sleep(1)
+        finally:
+            if self.display:
+                self.display.resume()

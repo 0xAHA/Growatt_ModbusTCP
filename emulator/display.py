@@ -32,9 +32,9 @@ class EmulatorDisplay:
         layout = Layout()
 
         layout.split_column(
-            Layout(name="header", size=2),
+            Layout(name="header", size=1),
             Layout(name="main"),
-            Layout(name="controls", size=2),
+            Layout(name="controls", size=1),
         )
 
         layout["main"].split_row(
@@ -63,7 +63,7 @@ class EmulatorDisplay:
         header_text.append(f"{status}", style=f"bold {status_color}")
         header_text.append(f" | Port {self.simulator.port}", style="cyan")
 
-        return Panel(header_text, style="bold", padding=(0, 1))
+        return Panel(header_text, style="bold", padding=(0, 0))
 
     def generate_pv_panel(self) -> Panel:
         """Generate PV generation panel."""
@@ -109,14 +109,14 @@ class EmulatorDisplay:
             f"[bold green]{pv.get('total', 0):.0f}W[/bold green]"
         )
 
-        # Add irradiance info below table
-        irradiance_text = Text.from_markup(f"☀️ {self.simulator.solar_irradiance:.0f}W/m² ☁️ {self.simulator.cloud_cover * 100:.0f}%")
+        # Add irradiance info below table (compact)
+        irradiance_text = Text.from_markup(f"☀️{self.simulator.solar_irradiance:.0f} ☁️{self.simulator.cloud_cover * 100:.0f}%")
 
         return Panel(
             Group(table, irradiance_text),
             title="[bold]PV[/bold]",
             border_style="green",
-            padding=(0, 1)
+            padding=(0, 0)
         )
 
     def generate_ac_panel(self) -> Panel:
@@ -142,7 +142,7 @@ class EmulatorDisplay:
             table.add_row("Frequency", "50.0Hz")
             table.add_row("[bold]Power[/bold]", f"[bold yellow]{ac_power:.0f}W[/bold yellow]")
 
-        return Panel(table, title="[bold]AC[/bold]", border_style="yellow", padding=(0, 1))
+        return Panel(table, title="[bold]AC[/bold]", border_style="yellow", padding=(0, 0))
 
     def generate_battery_panel(self) -> Optional[Panel]:
         """Generate battery panel (if model has battery)."""
@@ -175,7 +175,7 @@ class EmulatorDisplay:
         table.add_row("Power", power_text)
         table.add_row("Ch/Disch", f"{self.simulator.battery_charge_today:.1f}/{self.simulator.battery_discharge_today:.1f}kWh")
 
-        return Panel(table, title="[bold]Battery[/bold]", border_style="blue", padding=(0, 1))
+        return Panel(table, title="[bold]Battery[/bold]", border_style="blue", padding=(0, 0))
 
     def generate_grid_panel(self) -> Panel:
         """Generate grid panel."""
@@ -201,7 +201,7 @@ class EmulatorDisplay:
         table.add_row("Export", f"{grid_export:.0f}W")
         table.add_row("Load", f"[magenta]{self.simulator.house_load:.0f}W[/magenta]")
 
-        return Panel(table, title="[bold]Grid[/bold]", border_style="cyan", padding=(0, 1))
+        return Panel(table, title="[bold]Grid[/bold]", border_style="cyan", padding=(0, 0))
 
     def generate_energy_panel(self) -> Panel:
         """Generate energy totals panel."""
@@ -234,7 +234,7 @@ class EmulatorDisplay:
             f"{self.simulator.load_energy_total:.0f}"
         )
 
-        return Panel(table, title="[bold]Energy (kWh)[/bold]", border_style="magenta", padding=(0, 1))
+        return Panel(table, title="[bold]Energy (kWh)[/bold]", border_style="magenta", padding=(0, 0))
 
     def generate_temperature_panel(self) -> Panel:
         """Generate temperature panel."""
@@ -251,7 +251,7 @@ class EmulatorDisplay:
         table.add_row("IPM", f"{temps.get('ipm', 0):.0f}°C")
         table.add_row("Boost", f"{temps.get('boost', 0):.0f}°C")
 
-        return Panel(table, title="[bold]Temp[/bold]", border_style="red", padding=(0, 1))
+        return Panel(table, title="[bold]Temp[/bold]", border_style="red", padding=(0, 0))
 
     def generate_controls_panel(self) -> Panel:
         """Generate controls help panel."""
@@ -274,7 +274,7 @@ class EmulatorDisplay:
         controls_text.append("[Q]", style="bold cyan")
         controls_text.append("Quit", style="white")
 
-        return Panel(controls_text, border_style="white", padding=(0, 1))
+        return Panel(controls_text, border_style="white", padding=(0, 0))
 
     def render(self) -> Layout:
         """Render the complete display."""
@@ -319,10 +319,20 @@ class EmulatorDisplay:
 
     def start_live_display(self):
         """Start live updating display."""
-        self.live = Live(self.render(), console=self.console, refresh_per_second=1, screen=True)
+        self.live = Live(self.render(), console=self.console, refresh_per_second=0.5, screen=True)
         return self.live
 
     def stop_live_display(self):
         """Stop live display."""
         if self.live:
             self.live.stop()
+
+    def pause(self):
+        """Pause the live display for user input."""
+        if self.live:
+            self.live.stop()
+
+    def resume(self):
+        """Resume the live display after user input."""
+        if self.live:
+            self.live.start()
