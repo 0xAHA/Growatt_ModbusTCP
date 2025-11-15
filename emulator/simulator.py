@@ -496,17 +496,17 @@ class InverterSimulator:
 
         # PV values
         elif reg_name == 'pv1_voltage':
-            return int(self.values['voltages']['pv1'] / scale)
+            return round(self.values['voltages']['pv1'] / scale)
         elif reg_name == 'pv2_voltage':
-            return int(self.values['voltages']['pv2'] / scale)
+            return round(self.values['voltages']['pv2'] / scale)
         elif reg_name == 'pv3_voltage' and self.model.has_pv3:
-            return int(self.values['voltages']['pv3'] / scale)
+            return round(self.values['voltages']['pv3'] / scale)
         elif reg_name == 'pv1_current':
-            return int(self.values['currents']['pv1'] / scale)
+            return round(self.values['currents']['pv1'] / scale)
         elif reg_name == 'pv2_current':
-            return int(self.values['currents']['pv2'] / scale)
+            return round(self.values['currents']['pv2'] / scale)
         elif reg_name == 'pv3_current' and self.model.has_pv3:
-            return int(self.values['currents']['pv3'] / scale)
+            return round(self.values['currents']['pv3'] / scale)
 
         # PV power (32-bit pairs)
         elif 'pv1_power_high' in reg_name:
@@ -544,11 +544,11 @@ class InverterSimulator:
 
         # AC values
         elif reg_name == 'ac_voltage':
-            return int(self.values['voltages']['ac'] / scale)
+            return round(self.values['voltages']['ac'] / scale)
         elif reg_name == 'ac_current':
-            return int(self.values['currents']['ac'] / scale)
+            return round(self.values['currents']['ac'] / scale)
         elif reg_name == 'ac_frequency':
-            return int(50.0 / scale)  # 50 Hz
+            return round(50.0 / scale)  # 50 Hz
         elif 'ac_power_high' in reg_name:
             combined_scale = reg_def.get('combined_scale', 0.1)
             power_raw = int(self.values['ac_power'] / combined_scale)
@@ -561,14 +561,14 @@ class InverterSimulator:
         # Three-phase AC
         elif reg_name in ['ac_voltage_r', 'ac_voltage_s', 'ac_voltage_t']:
             phase = reg_name.split('_')[-1]
-            return int(self.values['voltages'][f'ac_{phase}'] / scale)
+            return round(self.values['voltages'][f'ac_{phase}'] / scale)
         elif reg_name in ['ac_current_r', 'ac_current_s', 'ac_current_t']:
             phase = reg_name.split('_')[-1]
-            return int(self.values['currents'][f'ac_{phase}'] / scale)
+            return round(self.values['currents'][f'ac_{phase}'] / scale)
         elif reg_name in ['ac_power_r', 'ac_power_s', 'ac_power_t']:
             phase = reg_name.split('_')[-1]
             power = self.values['ac_power'] / 3  # Distribute across phases
-            return int(power / scale)
+            return round(power / scale)
         # Three-phase AC power (32-bit pairs)
         elif reg_name in ['ac_power_r_high', 'ac_power_s_high', 'ac_power_t_high']:
             combined_scale = reg_def.get('combined_scale', 0.1)
@@ -582,33 +582,33 @@ class InverterSimulator:
             return power_raw & 0xFFFF
         elif reg_name in ['ac_voltage_rs', 'ac_voltage_st', 'ac_voltage_tr']:
             phases = reg_name.split('_')[-1]
-            return int(self.values['voltages'][f'ac_{phases}'] / scale)
+            return round(self.values['voltages'][f'ac_{phases}'] / scale)
 
         # Battery
         elif reg_name == 'battery_voltage' and self.model.has_battery:
-            return int(self.values['voltages']['battery'] / scale)
+            return round(self.values['voltages']['battery'] / scale)
         elif reg_name == 'battery_current' and self.model.has_battery:
             current = self.values['currents']['battery']
             if is_signed:
-                return self._to_signed_16bit(int(current / scale))
-            return int(abs(current) / scale)
+                return self._to_signed_16bit(round(current / scale))
+            return round(abs(current) / scale)
         elif reg_name == 'battery_power' and self.model.has_battery:
             power = self.values['battery_power']
             if is_signed:
-                return self._to_signed_16bit(int(power / scale))
-            return int(abs(power) / scale)
+                return self._to_signed_16bit(round(power / scale))
+            return round(abs(power) / scale)
         elif reg_name == 'battery_soc' and self.model.has_battery:
-            return int(self.battery_soc)
+            return round(self.battery_soc)
         elif reg_name == 'battery_temp' and self.model.has_battery:
-            return int(30.0 / scale)  # Fixed battery temp
+            return round(30.0 / scale)  # Fixed battery temp
 
         # Temperatures
         elif reg_name == 'inverter_temp':
-            return int(self.values['temperatures']['inverter'] / scale)
+            return round(self.values['temperatures']['inverter'] / scale)
         elif reg_name == 'ipm_temp':
-            return int(self.values['temperatures']['ipm'] / scale)
+            return round(self.values['temperatures']['ipm'] / scale)
         elif reg_name == 'boost_temp':
-            return int(self.values['temperatures']['boost'] / scale)
+            return round(self.values['temperatures']['boost'] / scale)
 
         # Energy (32-bit pairs)
         elif 'energy_today_high' in reg_name:
@@ -644,8 +644,8 @@ class InverterSimulator:
                 # Single register
                 power = self.values['grid_power']['grid']
                 if is_signed:
-                    return self._to_signed_16bit(int(power / scale))
-                return int(abs(power) / scale)
+                    return self._to_signed_16bit(round(power / scale))
+                return round(abs(power) / scale)
 
         elif 'load_power' in reg_name or 'power_to_load' in reg_name:
             # Handle 32-bit pairs for power_to_load
@@ -659,7 +659,7 @@ class InverterSimulator:
                 return power_raw & 0xFFFF
             else:
                 # Single register
-                return int(self.house_load / scale)
+                return round(self.house_load / scale)
 
         # Battery charge/discharge power (SPH TL3 specific)
         elif reg_name == 'discharge_power_high' and self.model.has_battery:
@@ -712,7 +712,7 @@ class InverterSimulator:
             if self.house_load > 0:
                 self_consumption = self.house_load - self.values['grid_power']['import']
                 percentage = (max(0, self_consumption) / self.house_load) * 100
-                return int(min(100, percentage))
+                return round(min(100, percentage))
             return 0
 
         # Energy to user/grid (SPH TL3 specific)
@@ -829,13 +829,13 @@ class InverterSimulator:
 
         # Backup output
         elif reg_name == 'backup_voltage':
-            return int(self.values['voltages'].get('backup', 240.0) / scale)
+            return round(self.values['voltages'].get('backup', 240.0) / scale)
         elif reg_name == 'backup_current':
-            return int(self.values['currents'].get('backup', 0) / scale)
+            return round(self.values['currents'].get('backup', 0) / scale)
         elif reg_name == 'backup_power':
-            return int(self.house_load / scale)
+            return round(self.house_load / scale)
         elif reg_name == 'backup_frequency':
-            return int(50.0 / scale)
+            return round(50.0 / scale)
 
         # Default
         return 0
