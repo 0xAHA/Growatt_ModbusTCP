@@ -410,6 +410,7 @@ class GrowattModbus:
         has_base_range = any(0 <= addr < 1000 for addr in addresses)
         has_storage_range = any(1000 <= addr < 2000 for addr in addresses)
         has_3000_range = any(3000 <= addr < 4000 for addr in addresses)
+        has_31000_range = any(31000 <= addr < 32000 for addr in addresses)
         
         # Read base range (0-124) if needed - SPH models
         if has_base_range:
@@ -435,18 +436,30 @@ class GrowattModbus:
                 for i, value in enumerate(registers):
                     self._register_cache[1000 + i] = value
         
-        # Read 3000 range if needed - MIN models
+        # Read 3000 range if needed - MIN/MOD models
         if has_3000_range:
             logger.debug("Reading 3000 range (3000-3110)")
             registers = self.read_input_registers(3000, 111)
             if registers is None:
                 logger.error("Failed to read main input register block")
                 return None
-            
+
             # Populate cache
             for i, value in enumerate(registers):
                 self._register_cache[3000 + i] = value
-        
+
+        # Read 31000 range if needed - MOD battery/BMS data
+        if has_31000_range:
+            logger.debug("Reading 31000 range (31100-31299)")
+            registers = self.read_input_registers(31100, 200)
+            if registers is None:
+                logger.warning("Failed to read 31000 register block (MOD battery data may be unavailable)")
+                # Don't return None - continue with what we have
+            else:
+                # Populate cache
+                for i, value in enumerate(registers):
+                    self._register_cache[31100 + i] = value
+
         # Now extract values using the register map
         try:
             # Status
