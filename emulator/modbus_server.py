@@ -60,11 +60,11 @@ class GrowattDataBlock(ModbusSparseDataBlock):
                 value = 0  # Default for unmapped registers
             values.append(value)
 
-        # Debug logging for key registers
-        if address >= 38 and address <= 50:
-            logger.info(f"getValues({self.register_type}, address={address}, count={count}) compensated to {address-1}-{address-1+count-1} -> {values}")
-        elif address >= 1010 and address <= 1064:
-            logger.info(f"getValues({self.register_type}, address={address}, count={count}) compensated to {address-1}-{address-1+count-1} -> {values}")
+        # Debug logging for key registers (can be disabled in production)
+        # if address >= 38 and address <= 50:
+        #     logger.debug(f"getValues({self.register_type}, address={address}, count={count}) compensated to {address-1}-{address-1+count-1} -> {values}")
+        # elif address >= 1010 and address <= 1064:
+        #     logger.debug(f"getValues({self.register_type}, address={address}, count={count}) compensated to {address-1}-{address-1+count-1} -> {values}")
 
         return values
 
