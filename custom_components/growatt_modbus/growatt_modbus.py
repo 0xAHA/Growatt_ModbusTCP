@@ -469,20 +469,35 @@ class GrowattModbus:
 
         # Read 31000 range if needed - MOD extended battery/BMS range
         if has_31000_range:
-            # Find the min and max registers in the 31000 range
-            addrs_31000 = [addr for addr in addresses if 31000 <= addr < 32000]
-            min_31000_addr = min(addrs_31000)
-            max_31000_addr = max(addrs_31000)
-            count_31000 = (max_31000_addr - min_31000_addr) + 1
-            logger.debug(f"Reading 31000 range ({min_31000_addr}-{max_31000_addr}, {count_31000} registers)")
-            registers = self.read_input_registers(min_31000_addr, count_31000)
-            if registers is None:
-                logger.warning("Failed to read extended battery register block (31000+)")
-                # Don't return None - continue with what we have
-            else:
-                # Populate cache
-                for i, value in enumerate(registers):
-                    self._register_cache[min_31000_addr + i] = value
+            # Split into contiguous blocks to avoid reading large gaps
+            # (e.g., 31126-31127 and 31200-31209 are separate blocks with a 73-register gap)
+            addrs_31000 = sorted([addr for addr in addresses if 31000 <= addr < 32000])
+
+            # Group into contiguous blocks (max gap of 10 registers)
+            blocks = []
+            current_block = [addrs_31000[0]]
+            for addr in addrs_31000[1:]:
+                if addr - current_block[-1] <= 10:
+                    current_block.append(addr)
+                else:
+                    blocks.append(current_block)
+                    current_block = [addr]
+            blocks.append(current_block)
+
+            # Read each block separately
+            for block in blocks:
+                min_addr_block = min(block)
+                max_addr_block = max(block)
+                count_block = (max_addr_block - min_addr_block) + 1
+                logger.debug(f"Reading 31000 sub-range ({min_addr_block}-{max_addr_block}, {count_block} registers)")
+                registers = self.read_input_registers(min_addr_block, count_block)
+                if registers is None:
+                    logger.warning(f"Failed to read extended battery register block ({min_addr_block}-{max_addr_block})")
+                    # Don't return None - continue with what we have
+                else:
+                    # Populate cache
+                    for i, value in enumerate(registers):
+                        self._register_cache[min_addr_block + i] = value
 
         # Now extract values using the register map
         try:
