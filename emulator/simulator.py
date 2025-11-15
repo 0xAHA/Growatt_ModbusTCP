@@ -32,6 +32,7 @@ class InverterSimulator:
 
         # Simulation state
         self.running = True
+        self.paused = False  # Pause simulation updates
         self.start_time = time.time()
         self.simulation_time = datetime.now().replace(hour=12, minute=0, second=0)  # Start at noon
         self.time_multiplier = 1.0  # Real-time by default
@@ -87,6 +88,10 @@ class InverterSimulator:
 
     def update(self) -> None:
         """Update all simulated values based on current state."""
+        # Skip updates if paused
+        if self.paused:
+            return
+
         now = time.time()
         dt = now - self.last_update  # Time delta in seconds
         sim_time = self.get_simulation_time()
@@ -867,3 +872,20 @@ class InverterSimulator:
     def set_time_multiplier(self, multiplier: float) -> None:
         """Set time acceleration multiplier."""
         self.time_multiplier = max(0.1, min(100, multiplier))
+
+    def toggle_pause(self) -> bool:
+        """Toggle pause state.
+
+        Returns:
+            New pause state (True if now paused)
+        """
+        self.paused = not self.paused
+        return self.paused
+
+    def pause(self) -> None:
+        """Pause the simulation."""
+        self.paused = True
+
+    def resume(self) -> None:
+        """Resume the simulation."""
+        self.paused = False

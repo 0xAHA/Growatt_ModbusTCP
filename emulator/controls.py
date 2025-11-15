@@ -141,6 +141,18 @@ class ControlHandler:
             # Reset daily totals
             self.simulator._reset_daily_totals()
 
+        elif key == 'p':
+            # Pause/unpause simulation
+            is_paused = self.simulator.toggle_pause()
+            # Show brief notification
+            if self.display:
+                self.display.pause()
+            status = "PAUSED" if is_paused else "RESUMED"
+            print(f"\n{'⏸' if is_paused else '▶'} Simulation {status}")
+            time.sleep(0.5)
+            if self.display:
+                self.display.resume()
+
     def _prompt_irradiance(self) -> None:
         """Prompt for irradiance value."""
         if self.display:

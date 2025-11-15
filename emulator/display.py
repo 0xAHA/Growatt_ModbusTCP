@@ -98,6 +98,12 @@ class EmulatorDisplay:
 
         output.append("Status: ", style="white")
         output.append(f"{status}", style=f"bold {status_color}")
+
+        # Show pause indicator
+        if self.simulator.paused:
+            output.append(" | ", style="white")
+            output.append("⏸ PAUSED", style="bold red blink")
+
         output.append(" | Uptime: ", style="white")
         output.append(f"{self._format_uptime()}\n", style="cyan")
 
@@ -514,6 +520,8 @@ class EmulatorDisplay:
             output.append("[B]", style="bold cyan")
             output.append("attery  ", style="white")
 
+        output.append("[P]", style="bold cyan")
+        output.append("ause  ", style="white")
         output.append("[R]", style="bold cyan")
         output.append("eset  ", style="white")
         output.append("[Q]", style="bold cyan")
