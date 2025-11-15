@@ -46,25 +46,11 @@ class DynamicModbusDataBlock(ModbusSequentialDataBlock):
         for addr, reg_def in registers.items():
             value = self.simulator.get_register_value(self.register_type, addr)
             if value is not None:
-                # WORKAROUND: pymodbus 3.x has an off-by-one quirk where reading address N
-                # returns the value stored at address N+1. To compensate, store value for
-                # register N at address N-1.
-                store_addr = addr - 1
-                if store_addr < 0:
-                    continue  # Skip register 0
+                # Store directly at the register address
+                super().setValues(addr, [value])
 
-                # Debug logging for key registers
-                if addr in [38, 39, 1011, 1012, 1013, 1014]:
-                    logger.info(f"  Setting register {addr} to {value} (storing at {store_addr})")
-                # Use parent's setValues to update internal storage
-                result = super().setValues(store_addr, [value])
-                if addr in [38, 39, 1011, 1012, 1013, 1014]:
-                    # Verify it was set correctly
-                    verify = super().getValues(store_addr, 1)
-                    logger.info(f"    Verify: getValues({store_addr}) returns {verify}")
-
-    def _get_values_from_simulator(self, address, count):
-        """Helper to get values from simulator.
+    def getValues(self, address, count=1):
+        """Get register values from simulator (sync).
 
         Args:
             address: Starting register address
@@ -82,18 +68,6 @@ class DynamicModbusDataBlock(ModbusSequentialDataBlock):
             values.append(value)
         return values
 
-    def getValues(self, address, count=1):
-        """Get register values from simulator (sync).
-
-        Args:
-            address: Starting register address
-            count: Number of registers to read
-
-        Returns:
-            List of register values
-        """
-        return self._get_values_from_simulator(address, count)
-
     async def async_getValues(self, address, count=1):
         """Get register values from simulator (async).
 
@@ -104,7 +78,21 @@ class DynamicModbusDataBlock(ModbusSequentialDataBlock):
         Returns:
             List of register values
         """
-        return self._get_values_from_simulator(address, count)
+        values = []
+        for i in range(count):
+            addr = address + i
+            value = self.simulator.get_register_value(self.register_type, addr)
+            if value is None:
+                value = 0  # Default for unmapped registers
+            values.append(value)
+
+        # Debug logging
+        if address >= 38 and address <= 49:
+            logger.info(f"async_getValues({address}, {count}) returning {values}")
+        elif address >= 1009 and address <= 1063:
+            logger.info(f"async_getValues({address}, {count}) returning {values}")
+
+        return values
 
     def validate(self, address, count=1):
         """Validate the request and return the address range.
