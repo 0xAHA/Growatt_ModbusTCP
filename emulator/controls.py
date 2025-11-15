@@ -143,142 +143,149 @@ class ControlHandler:
 
     def _prompt_irradiance(self) -> None:
         """Prompt for irradiance value."""
-        if self.display:
-            self.display.pause()
         try:
-            print("\n\n")
-            print("=" * 50)
-            print("Adjust Solar Irradiance")
-            print("=" * 50)
-            print(f"Current: {self.simulator.solar_irradiance:.0f} W/m²")
-            print("Enter new value (0-1000 W/m²): ", end='', flush=True)
+            if self.display and self.display.console:
+                self.display.console.print(f"\n[cyan]Solar Irradiance[/cyan] (current: {self.simulator.solar_irradiance:.0f} W/m²)")
+                self.display.console.print("[white]Enter new value (0-1000): [/white]", end='')
+            else:
+                print(f"\nSolar Irradiance (current: {self.simulator.solar_irradiance:.0f} W/m²)")
+                print("Enter new value (0-1000): ", end='', flush=True)
 
             value = float(input())
             self.simulator.set_irradiance(value)
-            print(f"✓ Irradiance set to {self.simulator.solar_irradiance:.0f} W/m²")
-            time.sleep(2)
+
+            if self.display and self.display.console:
+                self.display.console.print(f"[green]✓ Irradiance set to {self.simulator.solar_irradiance:.0f} W/m²[/green]")
+            else:
+                print(f"✓ Irradiance set to {self.simulator.solar_irradiance:.0f} W/m²")
 
         except (ValueError, EOFError, KeyboardInterrupt):
-            print("✗ Invalid input")
-            time.sleep(1)
-        finally:
-            if self.display:
-                self.display.resume()
+            if self.display and self.display.console:
+                self.display.console.print("[red]✗ Invalid input[/red]")
+            else:
+                print("✗ Invalid input")
 
     def _prompt_clouds(self) -> None:
         """Prompt for cloud cover."""
-        if self.display:
-            self.display.pause()
         try:
-            print("\n\n")
-            print("=" * 50)
-            print("Adjust Cloud Cover")
-            print("=" * 50)
-            print(f"Current: {self.simulator.cloud_cover * 100:.0f}%")
-            print("Enter new value (0-100%): ", end='', flush=True)
+            if self.display and self.display.console:
+                self.display.console.print(f"\n[cyan]Cloud Cover[/cyan] (current: {self.simulator.cloud_cover * 100:.0f}%)")
+                self.display.console.print("[white]Enter new value (0-100): [/white]", end='')
+            else:
+                print(f"\nCloud Cover (current: {self.simulator.cloud_cover * 100:.0f}%)")
+                print("Enter new value (0-100): ", end='', flush=True)
 
             value = float(input()) / 100.0
             self.simulator.set_cloud_cover(value)
-            print(f"✓ Cloud cover set to {self.simulator.cloud_cover * 100:.0f}%")
-            time.sleep(2)
+
+            if self.display and self.display.console:
+                self.display.console.print(f"[green]✓ Cloud cover set to {self.simulator.cloud_cover * 100:.0f}%[/green]")
+            else:
+                print(f"✓ Cloud cover set to {self.simulator.cloud_cover * 100:.0f}%")
 
         except (ValueError, EOFError, KeyboardInterrupt):
-            print("✗ Invalid input")
-            time.sleep(1)
-        finally:
-            if self.display:
-                self.display.resume()
+            if self.display and self.display.console:
+                self.display.console.print("[red]✗ Invalid input[/red]")
+            else:
+                print("✗ Invalid input")
 
     def _prompt_load(self) -> None:
         """Prompt for house load."""
-        if self.display:
-            self.display.pause()
         try:
-            print("\n\n")
-            print("=" * 50)
-            print("Adjust House Load")
-            print("=" * 50)
-            print(f"Current: {self.simulator.house_load:.0f}W")
-            print("Enter new value (W): ", end='', flush=True)
+            if self.display and self.display.console:
+                self.display.console.print(f"\n[cyan]House Load[/cyan] (current: {self.simulator.house_load:.0f}W)")
+                self.display.console.print("[white]Enter new value (W): [/white]", end='')
+            else:
+                print(f"\nHouse Load (current: {self.simulator.house_load:.0f}W)")
+                print("Enter new value (W): ", end='', flush=True)
 
             value = float(input())
             self.simulator.set_house_load(value)
-            print(f"✓ House load set to {self.simulator.house_load:.0f}W")
-            time.sleep(2)
+
+            if self.display and self.display.console:
+                self.display.console.print(f"[green]✓ House load set to {self.simulator.house_load:.0f}W[/green]")
+            else:
+                print(f"✓ House load set to {self.simulator.house_load:.0f}W")
 
         except (ValueError, EOFError, KeyboardInterrupt):
-            print("✗ Invalid input")
-            time.sleep(1)
-        finally:
-            if self.display:
-                self.display.resume()
+            if self.display and self.display.console:
+                self.display.console.print("[red]✗ Invalid input[/red]")
+            else:
+                print("✗ Invalid input")
 
     def _prompt_time_speed(self) -> None:
         """Prompt for time multiplier."""
-        if self.display:
-            self.display.pause()
         try:
-            print("\n\n")
-            print("=" * 50)
-            print("Adjust Time Speed")
-            print("=" * 50)
-            print(f"Current: {self.simulator.time_multiplier}x")
-            print("Enter new multiplier (0.1-100): ", end='', flush=True)
+            if self.display and self.display.console:
+                self.display.console.print(f"\n[cyan]Time Speed[/cyan] (current: {self.simulator.time_multiplier}x)")
+                self.display.console.print("[white]Enter new multiplier (0.1-100): [/white]", end='')
+            else:
+                print(f"\nTime Speed (current: {self.simulator.time_multiplier}x)")
+                print("Enter new multiplier (0.1-100): ", end='', flush=True)
 
             value = float(input())
             self.simulator.set_time_multiplier(value)
-            print(f"✓ Time speed set to {self.simulator.time_multiplier}x")
-            time.sleep(2)
+
+            if self.display and self.display.console:
+                self.display.console.print(f"[green]✓ Time speed set to {self.simulator.time_multiplier}x[/green]")
+            else:
+                print(f"✓ Time speed set to {self.simulator.time_multiplier}x")
 
         except (ValueError, EOFError, KeyboardInterrupt):
-            print("✗ Invalid input")
-            time.sleep(1)
-        finally:
-            if self.display:
-                self.display.resume()
+            if self.display and self.display.console:
+                self.display.console.print("[red]✗ Invalid input[/red]")
+            else:
+                print("✗ Invalid input")
 
     def _prompt_battery(self) -> None:
         """Prompt for battery control."""
-        if self.display:
-            self.display.pause()
         try:
-            print("\n\n")
-            print("=" * 50)
-            print("Battery Control")
-            print("=" * 50)
-            print("1. Auto (charge from PV, discharge to load)")
-            print("2. Manual charge rate")
-            print("3. Manual discharge rate")
-            print("4. Force idle")
-            print("Enter choice (1-4): ", end='', flush=True)
+            if self.display and self.display.console:
+                self.display.console.print("\n[cyan]Battery Control[/cyan]")
+                self.display.console.print("[white]1. Auto  2. Charge  3. Discharge  4. Idle[/white]")
+                self.display.console.print("[white]Enter choice (1-4): [/white]", end='')
+            else:
+                print("\nBattery Control")
+                print("1. Auto  2. Charge  3. Discharge  4. Idle")
+                print("Enter choice (1-4): ", end='', flush=True)
 
             choice = input().strip()
 
             if choice == '1':
                 self.simulator.set_battery_override(None)
-                print("✓ Battery set to AUTO mode")
+                msg = "✓ Battery set to AUTO mode"
 
             elif choice == '2':
-                print("Enter charge power (W): ", end='', flush=True)
+                if self.display and self.display.console:
+                    self.display.console.print("[white]Enter charge power (W): [/white]", end='')
+                else:
+                    print("Enter charge power (W): ", end='', flush=True)
                 power = float(input())
                 self.simulator.set_battery_override(abs(power))
-                print(f"✓ Battery charging at {abs(power):.0f}W")
+                msg = f"✓ Battery charging at {abs(power):.0f}W"
 
             elif choice == '3':
-                print("Enter discharge power (W): ", end='', flush=True)
+                if self.display and self.display.console:
+                    self.display.console.print("[white]Enter discharge power (W): [/white]", end='')
+                else:
+                    print("Enter discharge power (W): ", end='', flush=True)
                 power = float(input())
                 self.simulator.set_battery_override(-abs(power))
-                print(f"✓ Battery discharging at {abs(power):.0f}W")
+                msg = f"✓ Battery discharging at {abs(power):.0f}W"
 
             elif choice == '4':
                 self.simulator.set_battery_override(0)
-                print("✓ Battery set to IDLE")
+                msg = "✓ Battery set to IDLE"
+            else:
+                msg = "✗ Invalid choice"
 
-            time.sleep(2)
+            if self.display and self.display.console:
+                self.display.console.print(f"[green]{msg}[/green]")
+            else:
+                print(msg)
 
         except (ValueError, EOFError, KeyboardInterrupt):
-            print("✗ Invalid input")
-            time.sleep(1)
-        finally:
-            if self.display:
-                self.display.resume()
+            if self.display and self.display.console:
+                self.display.console.print("[red]✗ Invalid input[/red]")
+            else:
+                print("✗ Invalid input")

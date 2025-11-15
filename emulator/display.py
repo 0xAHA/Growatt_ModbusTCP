@@ -56,12 +56,12 @@ class EmulatorDisplay:
 
         if regs:
             if len(regs) == 2:
-                return f"[{min(regs):>3d}-{max(regs):<3d}]", entity_name
+                return f"[{min(regs):>4d}-{max(regs):<4d}]", entity_name
             else:
-                return f"[{regs[0]:>6d}]", entity_name
+                return f"[   {regs[0]:>4d}]", entity_name
 
         # No register found, return placeholder
-        return "[  n/a  ]", entity_name
+        return "[    n/a ]", entity_name
 
     def _format_uptime(self) -> str:
         """Format uptime as HH:MM:SS."""
@@ -133,10 +133,10 @@ class EmulatorDisplay:
         # Header
         output.append(f"{'String':<8}", style="cyan bold")
         output.append(f"{'Register':<12}", style="white bold")
-        output.append(f"{'Entity':<25}", style="white bold")
+        output.append(f"{'Entity':<30}", style="white bold")
         output.append(f"{'Voltage':>12}", style="white bold")
         output.append(f"{'Current':>12}", style="white bold")
-        output.append(f"{'Power':>15}\n", style="white bold")
+        output.append(f"{'Power':>12}\n", style="white bold")
 
         # PV1
         v_reg, _ = self._get_register_info('pv1_voltage')
@@ -145,17 +145,17 @@ class EmulatorDisplay:
 
         output.append(f"{'PV1':<8}", style="cyan")
         output.append(f"{v_reg:<12}", style="blue")
-        output.append(f"{'pv1_voltage':<25}", style="white")
+        output.append(f"{'pv1_voltage':<30}", style="white")
         output.append(f"{voltages.get('pv1', 0):>10.1f}V", style="yellow")
         output.append(f"{i_reg:>12}", style="blue")
         output.append(f"{currents.get('pv1', 0):>10.2f}A\n", style="yellow")
 
         output.append(f"{'':8}", style="cyan")
         output.append(f"{p_reg:<12}", style="blue")
-        output.append(f"{'pv1_power':<25}", style="white")
+        output.append(f"{'pv1_power':<30}", style="white")
         output.append(f"{'':>12}", style="white")
         output.append(f"{'':>12}", style="white")
-        output.append(f"{pv.get('pv1', 0):>13.0f}W\n", style="green")
+        output.append(f"{pv.get('pv1', 0):>10.0f}W\n", style="green")
 
         # PV2
         v_reg, _ = self._get_register_info('pv2_voltage')
@@ -164,17 +164,17 @@ class EmulatorDisplay:
 
         output.append(f"{'PV2':<8}", style="cyan")
         output.append(f"{v_reg:<12}", style="blue")
-        output.append(f"{'pv2_voltage':<25}", style="white")
+        output.append(f"{'pv2_voltage':<30}", style="white")
         output.append(f"{voltages.get('pv2', 0):>10.1f}V", style="yellow")
         output.append(f"{i_reg:>12}", style="blue")
         output.append(f"{currents.get('pv2', 0):>10.2f}A\n", style="yellow")
 
         output.append(f"{'':8}", style="cyan")
         output.append(f"{p_reg:<12}", style="blue")
-        output.append(f"{'pv2_power':<25}", style="white")
+        output.append(f"{'pv2_power':<30}", style="white")
         output.append(f"{'':>12}", style="white")
         output.append(f"{'':>12}", style="white")
-        output.append(f"{pv.get('pv2', 0):>13.0f}W\n", style="green")
+        output.append(f"{pv.get('pv2', 0):>10.0f}W\n", style="green")
 
         # PV3 if available
         if self.simulator.model.has_pv3:
@@ -184,26 +184,26 @@ class EmulatorDisplay:
 
             output.append(f"{'PV3':<8}", style="cyan")
             output.append(f"{v_reg:<12}", style="blue")
-            output.append(f"{'pv3_voltage':<25}", style="white")
+            output.append(f"{'pv3_voltage':<30}", style="white")
             output.append(f"{voltages.get('pv3', 0):>10.1f}V", style="yellow")
             output.append(f"{i_reg:>12}", style="blue")
             output.append(f"{currents.get('pv3', 0):>10.2f}A\n", style="yellow")
 
             output.append(f"{'':8}", style="cyan")
             output.append(f"{p_reg:<12}", style="blue")
-            output.append(f"{'pv3_power':<25}", style="white")
+            output.append(f"{'pv3_power':<30}", style="white")
             output.append(f"{'':>12}", style="white")
             output.append(f"{'':>12}", style="white")
-            output.append(f"{pv.get('pv3', 0):>13.0f}W\n", style="green")
+            output.append(f"{pv.get('pv3', 0):>10.0f}W\n", style="green")
 
         # Total
         total_reg, _ = self._get_register_info('pv_total_power')
         output.append(f"{'TOTAL':<8}", style="bold cyan")
         output.append(f"{total_reg:<12}", style="blue")
-        output.append(f"{'pv_total_power':<25}", style="white")
+        output.append(f"{'pv_total_power':<30}", style="white")
         output.append(f"{'':>12}", style="white")
         output.append(f"{'':>12}", style="white")
-        output.append(f"{pv.get('total', 0):>13.0f}W\n", style="bold green")
+        output.append(f"{pv.get('total', 0):>10.0f}W\n", style="bold green")
 
         # Solar conditions
         output.append(f"\nSolar Irradiance: ", style="white")
@@ -228,10 +228,18 @@ class EmulatorDisplay:
 
         if self.simulator.model.is_three_phase:
             # Three-phase output
-            # Phase R
-            v_reg, _ = self._get_register_info('grid_voltage_r')
-            i_reg, _ = self._get_register_info('grid_current_r')
-            p_reg, _ = self._get_register_info('grid_power_r')
+            # Phase R - try both naming conventions
+            v_reg, _ = self._get_register_info('ac_voltage_r')
+            if v_reg == "[    n/a ]":
+                v_reg, _ = self._get_register_info('grid_voltage_r')
+
+            i_reg, _ = self._get_register_info('ac_current_r')
+            if i_reg == "[    n/a ]":
+                i_reg, _ = self._get_register_info('grid_current_r')
+
+            p_reg, _ = self._get_register_info('ac_power_r')
+            if p_reg == "[    n/a ]":
+                p_reg, _ = self._get_register_info('grid_power_r')
 
             output.append(f"{'Phase R':<15}", style="cyan")
             output.append(f"{v_reg:<12}", style="blue")
@@ -243,10 +251,18 @@ class EmulatorDisplay:
             output.append(f"{'grid_power_r':<30}", style="white")
             output.append(f"{ac_power / 3:>18.0f}W\n", style="green")
 
-            # Phase S
-            v_reg, _ = self._get_register_info('grid_voltage_s')
-            i_reg, _ = self._get_register_info('grid_current_s')
-            p_reg, _ = self._get_register_info('grid_power_s')
+            # Phase S - try both naming conventions
+            v_reg, _ = self._get_register_info('ac_voltage_s')
+            if v_reg == "[    n/a ]":
+                v_reg, _ = self._get_register_info('grid_voltage_s')
+
+            i_reg, _ = self._get_register_info('ac_current_s')
+            if i_reg == "[    n/a ]":
+                i_reg, _ = self._get_register_info('grid_current_s')
+
+            p_reg, _ = self._get_register_info('ac_power_s')
+            if p_reg == "[    n/a ]":
+                p_reg, _ = self._get_register_info('grid_power_s')
 
             output.append(f"{'Phase S':<15}", style="cyan")
             output.append(f"{v_reg:<12}", style="blue")
@@ -258,10 +274,18 @@ class EmulatorDisplay:
             output.append(f"{'grid_power_s':<30}", style="white")
             output.append(f"{ac_power / 3:>18.0f}W\n", style="green")
 
-            # Phase T
-            v_reg, _ = self._get_register_info('grid_voltage_t')
-            i_reg, _ = self._get_register_info('grid_current_t')
-            p_reg, _ = self._get_register_info('grid_power_t')
+            # Phase T - try both naming conventions
+            v_reg, _ = self._get_register_info('ac_voltage_t')
+            if v_reg == "[    n/a ]":
+                v_reg, _ = self._get_register_info('grid_voltage_t')
+
+            i_reg, _ = self._get_register_info('ac_current_t')
+            if i_reg == "[    n/a ]":
+                i_reg, _ = self._get_register_info('grid_current_t')
+
+            p_reg, _ = self._get_register_info('ac_power_t')
+            if p_reg == "[    n/a ]":
+                p_reg, _ = self._get_register_info('grid_power_t')
 
             output.append(f"{'Phase T':<15}", style="cyan")
             output.append(f"{v_reg:<12}", style="blue")
@@ -356,11 +380,14 @@ class EmulatorDisplay:
         grid_color = "yellow" if grid_net > 0 else "green" if grid_net < 0 else "white"
         output.append(f"{grid_net:>18.0f}W\n", style=grid_color)
 
-        # Load
-        load_reg, _ = self._get_register_info('load_power')
+        # Load - try both naming conventions
+        load_reg, _ = self._get_register_info('power_to_load')
+        if load_reg == "[    n/a ]":
+            load_reg, _ = self._get_register_info('load_power')
+
         output.append(f"{'Load Power':<15}", style="cyan")
         output.append(f"{load_reg:<12}", style="blue")
-        output.append(f"{'load_power':<30}", style="white")
+        output.append(f"{'power_to_load / load_power':<30}", style="white")
         output.append(f"{self.simulator.house_load:>18.0f}W\n", style="magenta")
 
         # Battery section (if available)
@@ -442,22 +469,31 @@ class EmulatorDisplay:
         output.append(f"{self.simulator.energy_total:>15.0f}\n", style="green")
 
         # Grid Export
+        export_today_reg, _ = self._get_register_info('energy_to_grid_today')
+        export_total_reg, _ = self._get_register_info('energy_to_grid_total')
+
         output.append(f"{'Grid Export':<20}", style="cyan")
-        output.append(f"{'[  n/a  ]':<12}", style="blue")
+        output.append(f"{export_today_reg:<12}", style="blue")
         output.append(f"{'energy_to_grid_today / total':<35}", style="white")
         output.append(f"{self.simulator.energy_to_grid_today:>14.1f}", style="green")
         output.append(f"{self.simulator.energy_to_grid_total:>15.0f}\n", style="green")
 
         # Grid Import
+        import_today_reg, _ = self._get_register_info('grid_import_energy_today')
+        import_total_reg, _ = self._get_register_info('grid_import_energy_total')
+
         output.append(f"{'Grid Import':<20}", style="cyan")
-        output.append(f"{'[  n/a  ]':<12}", style="blue")
+        output.append(f"{import_today_reg:<12}", style="blue")
         output.append(f"{'grid_import_energy_today / total':<35}", style="white")
         output.append(f"{self.simulator.grid_import_energy_today:>14.1f}", style="yellow")
         output.append(f"{self.simulator.grid_import_energy_total:>15.0f}\n", style="yellow")
 
         # Load Consumption
+        load_today_reg, _ = self._get_register_info('load_energy_today')
+        load_total_reg, _ = self._get_register_info('load_energy_total')
+
         output.append(f"{'Load Consumption':<20}", style="cyan")
-        output.append(f"{'[  n/a  ]':<12}", style="blue")
+        output.append(f"{load_today_reg:<12}", style="blue")
         output.append(f"{'load_energy_today / load_energy_total':<35}", style="white")
         output.append(f"{self.simulator.load_energy_today:>14.1f}", style="magenta")
         output.append(f"{self.simulator.load_energy_total:>15.0f}\n", style="magenta")
