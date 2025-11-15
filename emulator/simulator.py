@@ -683,6 +683,28 @@ class InverterSimulator:
             power_raw = int(charge / combined_scale)
             return power_raw & 0xFFFF
 
+        # Battery power (MOD series - signed 32-bit at register 31126)
+        # Positive = charging, Negative = discharging
+        elif reg_name == 'battery_power_high' and self.model.has_battery:
+            combined_scale = reg_def.get('combined_scale', 0.1)
+            is_signed = reg_def.get('signed', False)
+            power = self.values['battery_power']
+            # For signed 32-bit, we need to handle negative values properly
+            power_raw = int(power / combined_scale)
+            if is_signed and power_raw < 0:
+                # Convert to 32-bit signed representation
+                power_raw = (1 << 32) + power_raw
+            return (power_raw >> 16) & 0xFFFF
+        elif reg_name == 'battery_power_low' and self.model.has_battery:
+            combined_scale = reg_def.get('combined_scale', 0.1)
+            is_signed = reg_def.get('signed', False)
+            power = self.values['battery_power']
+            power_raw = int(power / combined_scale)
+            if is_signed and power_raw < 0:
+                # Convert to 32-bit signed representation
+                power_raw = (1 << 32) + power_raw
+            return power_raw & 0xFFFF
+
         # Power flow (SPH TL3 specific)
         elif 'power_to_user' in reg_name:
             # Power to user = PV - battery charge
