@@ -779,8 +779,8 @@ class InverterSimulator:
                     energy_raw = int(self.energy_to_grid_total / combined_scale)
                     return energy_raw & 0xFFFF
 
-        # Battery charge/discharge energy (SPH TL3 specific)
-        elif 'discharge_energy' in reg_name and self.model.has_battery:
+        # Battery discharge energy (SPH TL3: discharge_energy, MOD: battery_discharge)
+        elif ('discharge_energy' in reg_name or 'battery_discharge' in reg_name) and self.model.has_battery:
             if 'today' in reg_name:
                 if '_high' in reg_name:
                     combined_scale = reg_def.get('combined_scale', 0.1)
@@ -800,7 +800,8 @@ class InverterSimulator:
                     energy_raw = int(self.battery_discharge_total / combined_scale)
                     return energy_raw & 0xFFFF
 
-        elif 'charge_energy' in reg_name and self.model.has_battery:
+        # Battery charge energy (SPH TL3: charge_energy, MOD: battery_charge)
+        elif ('charge_energy' in reg_name or 'battery_charge' in reg_name) and self.model.has_battery:
             if 'today' in reg_name:
                 if '_high' in reg_name:
                     combined_scale = reg_def.get('combined_scale', 0.1)
