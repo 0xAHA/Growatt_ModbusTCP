@@ -38,6 +38,7 @@ UNIVERSAL_SCAN_RANGES = [
     {"name": "Storage Range 1000-1124", "start": 1000, "count": 125},
     {"name": "MIN/MOD Range 3000-3124", "start": 3000, "count": 125},
     {"name": "MOD Extended 3125-3249", "start": 3125, "count": 125},
+    {"name": "MOD Battery/BMS 31100-31299", "start": 31100, "count": 200},  # Covers 31126 battery_power and extended BMS data
 ]
 
 # Service schema
