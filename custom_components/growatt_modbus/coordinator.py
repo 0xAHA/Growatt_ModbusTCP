@@ -527,25 +527,26 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
     def device_info(self):
         """Return device information for Home Assistant."""
         profile = REGISTER_MAPS[self._register_map_key]
-        
+
         # Use parsed model name if available, otherwise fall back to profile name
         model = self._model_name if self._model_name else profile.get("name", "Unknown Model")
-        
+
         device_info = {
-            "identifiers": {(DOMAIN, self._slave_id)},
+            # Use entry_id for unique device identification (not slave_id, which may be the same for multiple inverters)
+            "identifiers": {(DOMAIN, self.entry.entry_id)},
             "name": self.config[CONF_NAME],
             "manufacturer": "Growatt",
             "model": model,
         }
-        
+
         # Add serial number if available
         if self._serial_number:
             device_info["serial_number"] = self._serial_number
-        
+
         # Add firmware version if available
         if self._firmware_version:
             device_info["sw_version"] = self._firmware_version
-        
+
         return device_info
 
     @property
