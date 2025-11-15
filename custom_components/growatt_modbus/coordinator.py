@@ -532,7 +532,8 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         model = self._model_name if self._model_name else profile.get("name", "Unknown Model")
         
         device_info = {
-            "identifiers": {(DOMAIN, self._slave_id)},
+            # Use entry_id for unique device identification (not slave_id, which may be the same for multiple inverters)
+            "identifiers": {(DOMAIN, self.entry.entry_id)},
             "name": self.config[CONF_NAME],
             "manufacturer": "Growatt",
             "model": model,
