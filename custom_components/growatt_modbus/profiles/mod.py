@@ -109,14 +109,14 @@ MOD_6000_15000TL3_XH = {
         3086: {'name': 'battery_derating_mode', 'scale': 1, 'unit': ''},
         
         # Battery - Discharge/Charge Energy
-        3125: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 3126},
-        3126: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 3125, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3127: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 3128},
-        3128: {'name': 'battery_discharge_total_low', 'scale': 1, 'unit': '', 'pair': 3127, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3129: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 3130},
-        3130: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 3129, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3131: {'name': 'battery_charge_total_high', 'scale': 1, 'unit': '', 'pair': 3132},
-        3132: {'name': 'battery_charge_total_low', 'scale': 1, 'unit': '', 'pair': 3131, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3125: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3126},
+        3126: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3125, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3127: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3128},
+        3128: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3127, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3129: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3130},
+        3130: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3129, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3131: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3132},
+        3132: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3131, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         
         # Battery State
         3144: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'desc': '0=Load, 1=Battery, 2=Grid'},
@@ -125,13 +125,12 @@ MOD_6000_15000TL3_XH = {
         3171: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
         3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C'},
 
-        # NOTE: Registers 3178-3180 don't exist on some MOD hardware
-        # If your inverter doesn't have these, battery power will be calculated from V×I
-        # Battery Power (32-bit) - OPTIONAL, may not exist on all MOD hardware
-        3178: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 3179},
-        3179: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 3178, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        3180: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 3181},
-        3181: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 3180, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # NOTE: Old registers 3178-3181 don't work on most MOD hardware (always return 0)
+        # Growatt confirmed the correct register is 31126 (BDC/BMS Battery Information range)
+        # Battery Power (32-bit, signed) - Register 31126
+        # Positive = charging, Negative = discharging
+        31126: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31127},
+        31127: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31126, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
     },
     'holding_registers': {
         # Basic control

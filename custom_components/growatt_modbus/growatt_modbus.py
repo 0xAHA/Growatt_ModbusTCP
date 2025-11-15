@@ -426,6 +426,7 @@ class GrowattModbus:
         has_base_range = any(0 <= addr < 1000 for addr in addresses)
         has_storage_range = any(1000 <= addr < 2000 for addr in addresses)
         has_3000_range = any(3000 <= addr < 4000 for addr in addresses)
+        has_31000_range = any(31000 <= addr < 32000 for addr in addresses)
         
         # Read base range (0-124) if needed - SPH models
         if has_base_range:
@@ -451,18 +452,31 @@ class GrowattModbus:
                 for i, value in enumerate(registers):
                     self._register_cache[1000 + i] = value
         
-        # Read 3000 range if needed - MIN models
+        # Read 3000 range if needed - MIN/MOD models
         if has_3000_range:
-            logger.debug("Reading 3000 range (3000-3110)")
-            registers = self.read_input_registers(3000, 111)
+            logger.debug("Reading 3000 range (3000-3250)")
+            # Extended range to cover MOD battery registers up to 3250
+            registers = self.read_input_registers(3000, 251)
             if registers is None:
                 logger.error("Failed to read main input register block")
                 return None
-            
+
             # Populate cache
             for i, value in enumerate(registers):
                 self._register_cache[3000 + i] = value
-        
+
+        # Read 31000 range if needed - MOD extended battery/BMS range
+        if has_31000_range:
+            logger.debug("Reading 31000 range (31100-31300)")
+            registers = self.read_input_registers(31100, 201)
+            if registers is None:
+                logger.warning("Failed to read extended battery register block (31100+)")
+                # Don't return None - continue with what we have
+            else:
+                # Populate cache
+                for i, value in enumerate(registers):
+                    self._register_cache[31100 + i] = value
+
         # Now extract values using the register map
         try:
             # Status
@@ -743,31 +757,53 @@ class GrowattModbus:
                 data.battery_temp = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery temp from reg {addr}: {data.battery_temp}°C")
 
-            # Charge power (try to read from registers first)
-            addr = self._find_register_by_name('charge_power_low')
+            # Battery power (signed: positive=charging, negative=discharging)
+            # Try new signed battery_power register first (MOD series @ 31126)
+            addr = self._find_register_by_name('battery_power_low')
             if addr:
                 raw_low = self._register_cache.get(addr, 0)
-                pair_addr = self._find_register_by_name('charge_power_high')
+                pair_addr = self._find_register_by_name('battery_power_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                data.charge_power = self._get_register_value(addr) or 0.0
-                logger.debug(f"Charge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_power}W")
-            elif data.battery_voltage > 0 and data.battery_current < 0:
-                # Fallback: Calculate from V×I when charging (negative current)
-                data.charge_power = data.battery_voltage * abs(data.battery_current)
-                logger.debug(f"Charge power (calculated): {data.battery_voltage}V × {abs(data.battery_current)}A = {data.charge_power}W")
+                battery_power = self._get_register_value(addr) or 0.0
+                logger.debug(f"Battery power (signed): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {battery_power}W")
 
-            # Discharge power (try to read from registers first)
-            addr = self._find_register_by_name('discharge_power_low')
-            if addr:
-                raw_low = self._register_cache.get(addr, 0)
-                pair_addr = self._find_register_by_name('discharge_power_high')
-                raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                data.discharge_power = self._get_register_value(addr) or 0.0
-                logger.debug(f"Discharge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_power}W")
-            elif data.battery_voltage > 0 and data.battery_current > 0:
-                # Fallback: Calculate from V×I when discharging (positive current)
-                data.discharge_power = data.battery_voltage * data.battery_current
-                logger.debug(f"Discharge power (calculated): {data.battery_voltage}V × {data.battery_current}A = {data.discharge_power}W")
+                # Split into charge/discharge based on sign
+                if battery_power > 0:
+                    data.charge_power = battery_power
+                    data.discharge_power = 0.0
+                    logger.debug(f"  → Charging: {data.charge_power}W")
+                elif battery_power < 0:
+                    data.charge_power = 0.0
+                    data.discharge_power = abs(battery_power)
+                    logger.debug(f"  → Discharging: {data.discharge_power}W")
+                else:
+                    data.charge_power = 0.0
+                    data.discharge_power = 0.0
+            else:
+                # Fallback: Try old separate charge/discharge registers (SPH series)
+                addr = self._find_register_by_name('charge_power_low')
+                if addr:
+                    raw_low = self._register_cache.get(addr, 0)
+                    pair_addr = self._find_register_by_name('charge_power_high')
+                    raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
+                    data.charge_power = self._get_register_value(addr) or 0.0
+                    logger.debug(f"Charge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_power}W")
+                elif data.battery_voltage > 0 and data.battery_current < 0:
+                    # Fallback: Calculate from V×I when charging (negative current)
+                    data.charge_power = data.battery_voltage * abs(data.battery_current)
+                    logger.debug(f"Charge power (calculated): {data.battery_voltage}V × {abs(data.battery_current)}A = {data.charge_power}W")
+
+                addr = self._find_register_by_name('discharge_power_low')
+                if addr:
+                    raw_low = self._register_cache.get(addr, 0)
+                    pair_addr = self._find_register_by_name('discharge_power_high')
+                    raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
+                    data.discharge_power = self._get_register_value(addr) or 0.0
+                    logger.debug(f"Discharge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_power}W")
+                elif data.battery_voltage > 0 and data.battery_current > 0:
+                    # Fallback: Calculate from V×I when discharging (positive current)
+                    data.discharge_power = data.battery_voltage * data.battery_current
+                    logger.debug(f"Discharge power (calculated): {data.battery_voltage}V × {data.battery_current}A = {data.discharge_power}W")
             
             # Charge energy today
             addr = self._find_register_by_name('charge_energy_today_low')
