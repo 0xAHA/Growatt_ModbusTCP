@@ -454,18 +454,62 @@ class GrowattModbus:
         
         # Read 3000 range if needed - MIN/MOD models
         if has_3000_range:
-            # Find the highest register in the 3000 range
-            max_3000_addr = max([addr for addr in addresses if 3000 <= addr < 4000])
+            addrs_3000 = sorted([addr for addr in addresses if 3000 <= addr < 4000])
+            max_3000_addr = max(addrs_3000)
             count_3000 = (max_3000_addr - 3000) + 1
-            logger.debug(f"Reading 3000 range (3000-{max_3000_addr}, {count_3000} registers)")
-            registers = self.read_input_registers(3000, count_3000)
-            if registers is None:
-                logger.error("Failed to read main input register block")
-                return None
 
-            # Populate cache
-            for i, value in enumerate(registers):
-                self._register_cache[3000 + i] = value
+            # Check if we need to split the read (max 125 registers per read)
+            if count_3000 > 125:
+                # Split into contiguous blocks
+                logger.debug(f"Splitting 3000 range into blocks (total range: 3000-{max_3000_addr}, {count_3000} registers)")
+
+                blocks = []
+                current_block = [addrs_3000[0]]
+                for addr in addrs_3000[1:]:
+                    if addr - current_block[-1] <= 10:  # Group if gap is small
+                        current_block.append(addr)
+                    else:
+                        blocks.append(current_block)
+                        current_block = [addr]
+                blocks.append(current_block)
+
+                # Read each block separately
+                for block in blocks:
+                    min_addr_block = min(block)
+                    max_addr_block = max(block)
+                    count_block = (max_addr_block - min_addr_block) + 1
+
+                    # Further split if block still exceeds 125 registers
+                    if count_block > 125:
+                        # Read in 125-register chunks
+                        for chunk_start in range(min_addr_block, max_addr_block + 1, 125):
+                            chunk_count = min(125, max_addr_block - chunk_start + 1)
+                            logger.debug(f"Reading 3000 sub-chunk ({chunk_start}-{chunk_start+chunk_count-1}, {chunk_count} registers)")
+                            registers = self.read_input_registers(chunk_start, chunk_count)
+                            if registers is None:
+                                logger.warning(f"Failed to read 3000 chunk ({chunk_start}-{chunk_start+chunk_count-1})")
+                            else:
+                                for i, value in enumerate(registers):
+                                    self._register_cache[chunk_start + i] = value
+                    else:
+                        logger.debug(f"Reading 3000 sub-range ({min_addr_block}-{max_addr_block}, {count_block} registers)")
+                        registers = self.read_input_registers(min_addr_block, count_block)
+                        if registers is None:
+                            logger.warning(f"Failed to read 3000 block ({min_addr_block}-{max_addr_block})")
+                        else:
+                            for i, value in enumerate(registers):
+                                self._register_cache[min_addr_block + i] = value
+            else:
+                # Single read is sufficient
+                logger.debug(f"Reading 3000 range (3000-{max_3000_addr}, {count_3000} registers)")
+                registers = self.read_input_registers(3000, count_3000)
+                if registers is None:
+                    logger.error("Failed to read main input register block")
+                    return None
+
+                # Populate cache
+                for i, value in enumerate(registers):
+                    self._register_cache[3000 + i] = value
 
         # Read 31000 range if needed - MOD extended battery/BMS range
         if has_31000_range:
