@@ -163,30 +163,11 @@ MOD_6000_15000TL3_XH = {
         # Battery Temperature
         31223: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
 
-        # NOTE: Old registers 3178-3181 don't work on most MOD hardware (always return 0)
-        # Growatt confirmed the correct register is 31126 (BDC/BMS Battery Information range)
-        # Battery Power (32-bit, signed) - Register 31126
-        # Positive = charging, Negative = discharging
-        31126: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31127},
-        31127: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31126, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-
-        # Battery Power (alternative location) - Register 31200
-        # Charge/discharge power (INT32, signed)
-        # Positive = charging, Negative = discharging
-        31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201, 'alias': 'charge_discharge_power_high'},
-        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'alias': 'charge_discharge_power_low'},
-
-        # Battery - Charge Energy
-        31202: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 31203},
-        31203: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31204: {'name': 'battery_charge_total_high', 'scale': 1, 'unit': '', 'pair': 31205},
-        31205: {'name': 'battery_charge_total_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-
-        # Battery - Discharge Energy
-        31206: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 31207},
-        31207: {'name': 'battery_discharge_total_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31208: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 31209},
-        31209: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # Battery System Info
+        31225: {'name': 'battery_cluster_sum', 'scale': 1, 'unit': ''},
+        31226: {'name': 'battery_module_number', 'scale': 1, 'unit': ''},
+        31227: {'name': 'battery_module_rated_voltage', 'scale': 0.1, 'unit': 'V'},
+        31228: {'name': 'battery_module_rated_capacity', 'scale': 0.1, 'unit': 'Ah'},
     },
     'holding_registers': {
         # Basic control
