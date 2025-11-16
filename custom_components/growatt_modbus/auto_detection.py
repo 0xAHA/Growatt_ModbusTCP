@@ -269,8 +269,17 @@ async def async_detect_inverter_series(
             
             if phase_s_test and phase_t_test:
                 _LOGGER.info("Detected 3-phase hybrid - SPH TL3 or MOD series")
-                
-                # Check for register 1000 range (SPH TL3 uses 1000-1124, MOD may not)
+
+                # Check for MOD-specific 31200 range (battery power per VPP Protocol V2.01)
+                mod_test = await hass.async_add_executor_job(
+                    client.read_input_registers, 31200, 1
+                )
+                if mod_test is not None:
+                    _LOGGER.info("Detected 31200 range (VPP Protocol) - MOD series")
+                    await hass.async_add_executor_job(client.disconnect)
+                    return 'mod_6000_15000tl3_xh'
+
+                # Check for register 1000 range (SPH TL3 specific)
                 storage_test = await hass.async_add_executor_job(
                     client.read_input_registers, 1000, 1
                 )
@@ -279,7 +288,7 @@ async def async_detect_inverter_series(
                     await hass.async_add_executor_job(client.disconnect)
                     return 'sph_tl3_3000_10000'
                 else:
-                    _LOGGER.info("No storage range - MOD series")
+                    _LOGGER.info("No distinctive registers found - defaulting to MOD series")
                     await hass.async_add_executor_job(client.disconnect)
                     return 'mod_6000_15000tl3_xh'
             else:
