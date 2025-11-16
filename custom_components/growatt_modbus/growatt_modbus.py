@@ -161,14 +161,26 @@ class GrowattModbus:
         self.last_read_time = 0
         self.min_read_interval = 1.0  # 1 second minimum between reads
         self._timeout = timeout
-        
+
+        # Store connection details for logging
+        self.host = host
+        self.port = port
+        self.device = device
+
         # Load register map
         if register_map not in REGISTER_MAPS:
             raise ValueError(f"Unknown register map: {register_map}. Available: {list(REGISTER_MAPS.keys())}")
-        
+
         self.register_map = REGISTER_MAPS[register_map]
         self.register_map_name = register_map
-        logger.info(f"Using register map: {self.register_map['name']}")
+
+        # Build connection identifier for logs
+        if connection_type == 'tcp':
+            self.connection_id = f"{host}:{port}"
+        else:
+            self.connection_id = f"{device}"
+
+        logger.info(f"Initializing {self.register_map['name']} profile for {self.connection_id}")
         
         # Cache for raw register data
         self._register_cache = {}
@@ -225,19 +237,19 @@ class GrowattModbus:
         try:
             result = self.client.connect()
             if result:
-                logger.info("Successfully connected to Growatt inverter")
+                logger.info(f"[{self.register_map['name']}@{self.connection_id}] Successfully connected")
             else:
-                logger.error("Failed to connect to Growatt inverter")
+                logger.error(f"[{self.register_map['name']}@{self.connection_id}] Failed to connect")
             return result
         except Exception as e:
-            logger.error(f"Connection error: {e}")
+            logger.error(f"[{self.register_map['name']}@{self.connection_id}] Connection error: {e}")
             return False
     
     def disconnect(self):
         """Close connection"""
         if self.client:
             self.client.close()
-            logger.info("Disconnected from Growatt inverter")
+            logger.info(f"[{self.register_map['name']}@{self.connection_id}] Disconnected")
     
     def _enforce_read_interval(self):
         """Ensure minimum time between reads per Growatt spec"""
@@ -502,7 +514,7 @@ class GrowattModbus:
                                 self._register_cache[addr] = value
                                 # Log load_energy registers specifically
                                 if addr in [3075, 3076, 3077, 3078]:
-                                    logger.info(f"Cached 3000 range: reg {addr} = {value}")
+                                    logger.info(f"[{self.register_map['name']}@{self.connection_id}] Cached 3000 range: reg {addr} = {value}")
             else:
                 # Single read is sufficient
                 logger.debug(f"Reading 3000 range (3000-{max_3000_addr}, {count_3000} registers)")
@@ -672,7 +684,7 @@ class GrowattModbus:
             energy_today_addr = self._find_register_by_name('energy_today_low')
             if energy_today_addr:
                 data.energy_today = self._get_register_value(energy_today_addr) or 0.0
-                logger.info(f"Energy today from reg {energy_today_addr}: {data.energy_today} kWh (cache value: {self._register_cache.get(energy_today_addr)})")
+                logger.info(f"[{self.register_map['name']}@{self.connection_id}] Energy today from reg {energy_today_addr}: {data.energy_today} kWh (cache: {self._register_cache.get(energy_today_addr)})")
             
             # Energy Total
             energy_total_addr = self._find_register_by_name('energy_total_low')
@@ -793,14 +805,14 @@ class GrowattModbus:
             addr = self._find_register_by_name('load_energy_today_low')
             if addr:
                 data.load_energy_today = self._get_register_value(addr) or 0.0
-                logger.info(f"Load energy today from reg {addr}: {data.load_energy_today} kWh (cache value: {self._register_cache.get(addr)})")
+                logger.info(f"[{self.register_map['name']}@{self.connection_id}] Load energy today from reg {addr}: {data.load_energy_today} kWh (cache: {self._register_cache.get(addr)})")
             else:
-                logger.warning("load_energy_today_low register not found in profile")
+                logger.warning(f"[{self.register_map['name']}@{self.connection_id}] load_energy_today_low register not found")
 
             addr = self._find_register_by_name('load_energy_total_low')
             if addr:
                 data.load_energy_total = self._get_register_value(addr) or 0.0
-                logger.info(f"Load energy total from reg {addr}: {data.load_energy_total} kWh (cache value: {self._register_cache.get(addr)})")
+                logger.info(f"[{self.register_map['name']}@{self.connection_id}] Load energy total from reg {addr}: {data.load_energy_total} kWh (cache: {self._register_cache.get(addr)})")
                 
         except Exception as e:
             logger.debug(f"Energy breakdown not available: {e}")
