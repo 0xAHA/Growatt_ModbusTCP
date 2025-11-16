@@ -610,20 +610,20 @@ class InverterSimulator:
         elif reg_name == 'boost_temp':
             return round(self.values['temperatures']['boost'] / scale)
 
-        # Energy (32-bit pairs)
-        elif 'energy_today_high' in reg_name:
+        # Energy (32-bit pairs) - exclude load_energy which is handled separately
+        elif 'energy_today_high' in reg_name and 'load_energy' not in reg_name:
             combined_scale = reg_def.get('combined_scale', 0.1)
             energy_raw = int(self.energy_today / combined_scale)
             return (energy_raw >> 16) & 0xFFFF
-        elif 'energy_today_low' in reg_name:
+        elif 'energy_today_low' in reg_name and 'load_energy' not in reg_name:
             combined_scale = reg_def.get('combined_scale', 0.1)
             energy_raw = int(self.energy_today / combined_scale)
             return energy_raw & 0xFFFF
-        elif 'energy_total_high' in reg_name:
+        elif 'energy_total_high' in reg_name and 'load_energy' not in reg_name:
             combined_scale = reg_def.get('combined_scale', 0.1)
             energy_raw = int(self.energy_total / combined_scale)
             return (energy_raw >> 16) & 0xFFFF
-        elif 'energy_total_low' in reg_name:
+        elif 'energy_total_low' in reg_name and 'load_energy' not in reg_name:
             combined_scale = reg_def.get('combined_scale', 0.1)
             energy_raw = int(self.energy_total / combined_scale)
             return energy_raw & 0xFFFF
