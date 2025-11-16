@@ -59,9 +59,10 @@ STATUS_SENSORS: Set[str] = {
 }
 
 THREE_PHASE_SENSORS: Set[str] = {
+    "ac_voltage_r", "ac_voltage_s", "ac_voltage_t",  # Phase voltages
     "ac_voltage_rs", "ac_voltage_st", "ac_voltage_tr",  # Line-to-line voltages
-    "ac_current_r", "ac_current_s", "ac_current_t",
-    "ac_power_r", "ac_power_s", "ac_power_t",
+    "ac_current_r", "ac_current_s", "ac_current_t",  # Phase currents
+    "ac_power_r", "ac_power_s", "ac_power_t",  # Phase powers
     "ac_frequency",
 }
 
