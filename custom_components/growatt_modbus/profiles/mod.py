@@ -117,19 +117,56 @@ MOD_6000_15000TL3_XH = {
         3131: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3132},
         3132: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3131, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         
-        # Battery State
+        # Battery State (3000 range - legacy/alternative location)
         3144: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'desc': '0=Load, 1=Battery, 2=Grid'},
-        3169: {'name': 'battery_voltage', 'scale': 0.01, 'unit': 'V'},
-        3170: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
-        3171: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
-        3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C'},
+        3169: {'name': 'battery_voltage_legacy', 'scale': 0.01, 'unit': 'V'},
+        3170: {'name': 'battery_current_legacy', 'scale': 0.1, 'unit': 'A', 'signed': True},
+        3171: {'name': 'battery_soc_legacy', 'scale': 1, 'unit': '%'},
+        3176: {'name': 'battery_temp_legacy', 'scale': 0.1, 'unit': '°C'},
 
-        # NOTE: Old registers 3178-3181 don't work on most MOD hardware (always return 0)
-        # Growatt confirmed the correct register is 31126 (BDC/BMS Battery Information range)
-        # Battery Power (32-bit, signed) - Register 31126
-        # Positive = charging, Negative = discharging
-        31126: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31127},
-        31127: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31126, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        # === BATTERY INFORMATION 1 (31200-31299) - Official VPP Protocol V2.01 ===
+        # This is the official battery data range for MOD series per Growatt VPP Protocol
+        # Ref: GROWATT VPP COMMUNICATION PROTOCOL OF INVERTER V2.01 (2024.9.20)
+
+        # Battery Power (signed: positive=charging, negative=discharging)
+        31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
+        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+
+        # Battery Energy - Daily (Note: protocol lists charge first, then discharge)
+        31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203},
+        31203: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31204: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31205},
+        31205: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207},
+        31207: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31208: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31209},
+        31209: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Battery Power Limits
+        31210: {'name': 'battery_max_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31211},
+        31211: {'name': 'battery_max_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31210, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        31212: {'name': 'battery_max_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31213},
+        31213: {'name': 'battery_max_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31212, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Battery State
+        31214: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'signed': True},
+        31215: {'name': 'battery_current_high', 'scale': 1, 'unit': '', 'pair': 31216},
+        31216: {'name': 'battery_current_low', 'scale': 1, 'unit': '', 'pair': 31215, 'combined_scale': 0.1, 'combined_unit': 'A', 'signed': True},
+        31217: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
+        31218: {'name': 'battery_soh', 'scale': 1, 'unit': '%'},
+
+        # Battery Capacity
+        31219: {'name': 'battery_fcc_high', 'scale': 1, 'unit': '', 'pair': 31220},
+        31220: {'name': 'battery_fcc_low', 'scale': 1, 'unit': '', 'pair': 31219, 'combined_scale': 1, 'combined_unit': 'Ah'},
+
+        # Battery Temperature
+        31223: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+
+        # Battery System Info
+        31225: {'name': 'battery_cluster_sum', 'scale': 1, 'unit': ''},
+        31226: {'name': 'battery_module_number', 'scale': 1, 'unit': ''},
+        31227: {'name': 'battery_module_rated_voltage', 'scale': 0.1, 'unit': 'V'},
+        31228: {'name': 'battery_module_rated_capacity', 'scale': 0.1, 'unit': 'Ah'},
     },
     'holding_registers': {
         # Basic control
