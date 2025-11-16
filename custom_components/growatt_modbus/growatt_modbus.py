@@ -498,7 +498,11 @@ class GrowattModbus:
                             logger.warning(f"Failed to read 3000 block ({min_addr_block}-{max_addr_block})")
                         else:
                             for i, value in enumerate(registers):
-                                self._register_cache[min_addr_block + i] = value
+                                addr = min_addr_block + i
+                                self._register_cache[addr] = value
+                                # Log load_energy registers specifically
+                                if addr in [3075, 3076, 3077, 3078]:
+                                    logger.info(f"Cached 3000 range: reg {addr} = {value}")
             else:
                 # Single read is sufficient
                 logger.debug(f"Reading 3000 range (3000-{max_3000_addr}, {count_3000} registers)")
@@ -668,6 +672,7 @@ class GrowattModbus:
             energy_today_addr = self._find_register_by_name('energy_today_low')
             if energy_today_addr:
                 data.energy_today = self._get_register_value(energy_today_addr) or 0.0
+                logger.info(f"Energy today from reg {energy_today_addr}: {data.energy_today} kWh (cache value: {self._register_cache.get(energy_today_addr)})")
             
             # Energy Total
             energy_total_addr = self._find_register_by_name('energy_total_low')
@@ -788,10 +793,14 @@ class GrowattModbus:
             addr = self._find_register_by_name('load_energy_today_low')
             if addr:
                 data.load_energy_today = self._get_register_value(addr) or 0.0
-            
+                logger.info(f"Load energy today from reg {addr}: {data.load_energy_today} kWh (cache value: {self._register_cache.get(addr)})")
+            else:
+                logger.warning("load_energy_today_low register not found in profile")
+
             addr = self._find_register_by_name('load_energy_total_low')
             if addr:
                 data.load_energy_total = self._get_register_value(addr) or 0.0
+                logger.info(f"Load energy total from reg {addr}: {data.load_energy_total} kWh (cache value: {self._register_cache.get(addr)})")
                 
         except Exception as e:
             logger.debug(f"Energy breakdown not available: {e}")
