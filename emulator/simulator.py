@@ -860,7 +860,15 @@ class InverterSimulator:
         elif reg_name == 'backup_frequency':
             return round(50.0 / scale)
 
-        # Default
+        # Device identification (holding registers)
+        elif reg_name == 'dtc_code':
+            # Return default value if specified in register definition
+            return reg_def.get('default', 0)
+
+        # Default - check if register definition has a default value
+        default_value = reg_def.get('default')
+        if default_value is not None:
+            return default_value
         return 0
 
     def _to_signed_16bit(self, value: int) -> int:
