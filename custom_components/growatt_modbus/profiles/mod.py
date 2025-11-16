@@ -108,15 +108,16 @@ MOD_6000_15000TL3_XH = {
         # Battery Diagnostics
         3086: {'name': 'battery_derating_mode', 'scale': 1, 'unit': ''},
         
-        # Battery - Discharge/Charge Energy
-        3125: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3126},
-        3126: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3125, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3127: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3128},
-        3128: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3127, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3129: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3130},
-        3130: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3129, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3131: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3132},
-        3132: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3131, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # Battery - Discharge/Charge Energy (3000 range - legacy/alternative location)
+        # Note: Renamed with _legacy suffix to avoid conflict with official 31200 range
+        3125: {'name': 'discharge_energy_today_legacy_high', 'scale': 1, 'unit': '', 'pair': 3126},
+        3126: {'name': 'discharge_energy_today_legacy_low', 'scale': 1, 'unit': '', 'pair': 3125, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3127: {'name': 'discharge_energy_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 3128},
+        3128: {'name': 'discharge_energy_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 3127, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3129: {'name': 'charge_energy_today_legacy_high', 'scale': 1, 'unit': '', 'pair': 3130},
+        3130: {'name': 'charge_energy_today_legacy_low', 'scale': 1, 'unit': '', 'pair': 3129, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3131: {'name': 'charge_energy_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 3132},
+        3132: {'name': 'charge_energy_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 3131, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         
         # Battery State (3000 range - legacy/alternative location)
         3144: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'desc': '0=Load, 1=Battery, 2=Grid'},
