@@ -106,6 +106,7 @@ INVERTER_PROFILES = {
         "has_pv3": False,
         "has_battery": False,
         "max_power_kw": 6.0,
+        "protocol_version": "v1.39",
         "sensors": (
             BASIC_PV_SENSORS |
             BASIC_AC_SENSORS |
@@ -127,6 +128,53 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": False,
         "max_power_kw": 10.0,
+        "protocol_version": "v1.39",
+        "sensors": (
+            BASIC_PV_SENSORS |
+            PV3_SENSORS |
+            BASIC_AC_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
+            ENERGY_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
+    # MIN Series VPP Protocol V2.01 (adds 30000 range for DTC)
+    "min_3000_6000_tl_x_v201": {
+        "name": "MIN Series 3-6kW (V2.01)",
+        "description": "2 PV string inverter with VPP Protocol V2.01",
+        "register_map": "MIN_3000_6000TL_X_V201",
+        "phases": 1,
+        "has_pv3": False,
+        "has_battery": False,
+        "max_power_kw": 6.0,
+        "protocol_version": "v2.01",
+        "sensors": (
+            BASIC_PV_SENSORS |
+            BASIC_AC_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
+            ENERGY_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
+    "min_7000_10000_tl_x_v201": {
+        "name": "MIN Series 7-10kW (V2.01)",
+        "description": "3 PV string inverter with VPP Protocol V2.01",
+        "register_map": "MIN_7000_10000TL_X_V201",
+        "phases": 1,
+        "has_pv3": True,
+        "has_battery": False,
+        "max_power_kw": 10.0,
+        "protocol_version": "v2.01",
         "sensors": (
             BASIC_PV_SENSORS |
             PV3_SENSORS |

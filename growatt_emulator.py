@@ -120,6 +120,42 @@ class GrowattEmulator:
         print("✓ Emulator stopped")
 
 
+def select_protocol_for_min(base_key: str) -> str:
+    """Offer protocol selection for MIN series.
+
+    Args:
+        base_key: Base model key (e.g., 'min_3000_6000_tl_x')
+
+    Returns:
+        Selected model key with appropriate protocol
+    """
+    print("\n" + "-" * 60)
+    print("  MIN Series Protocol Selection")
+    print("-" * 60)
+    print("\n  Select protocol version:\n")
+    print("  [1] V2.01 VPP Protocol (30000+ range)")
+    print("      Modern protocol with DTC identification at register 30000")
+    print("      Includes power flow, energy breakdown, and diagnostics\n")
+    print("  [2] V1.39 Legacy Protocol (3000+ range)")
+    print("      Legacy protocol with 3000+ register range")
+    print("      Power flow, energy breakdown, diagnostics (no DTC)\n")
+    print("-" * 60)
+    print("\nSelect protocol [1-2]: ", end='', flush=True)
+
+    try:
+        choice = int(input().strip())
+        if choice == 1:
+            return base_key + "_v201"  # V2.01 VPP Protocol
+        elif choice == 2:
+            return base_key  # V1.39 Legacy
+        else:
+            print(f"❌ Invalid choice: {choice}, using V2.01 protocol")
+            return base_key + "_v201"
+    except (ValueError, EOFError, KeyboardInterrupt):
+        print("\n❌ Invalid input, using V2.01 protocol")
+        return base_key + "_v201"
+
+
 def select_model_interactive() -> str:
     """Interactive model selection menu.
 
@@ -135,6 +171,7 @@ def select_model_interactive() -> str:
     print("\nAvailable Inverter Models:\n")
 
     # Group by series for better display
+    # Filter out legacy profiles from main menu - they'll be offered as protocol selection
     series_groups = {
         'MIC': [],
         'MIN': [],
@@ -146,6 +183,10 @@ def select_model_interactive() -> str:
     }
 
     for key in model_list:
+        # Skip V2.01 profiles - they'll be offered via protocol selection
+        if '_v201' in key:
+            continue
+
         profile = INVERTER_PROFILES[key]
         name = profile['name']
 
@@ -192,7 +233,13 @@ def select_model_interactive() -> str:
     try:
         choice = int(input().strip())
         if choice in key_map:
-            return key_map[choice]
+            selected_key = key_map[choice]
+
+            # For MIN series, offer protocol selection
+            if selected_key.startswith('min_'):
+                return select_protocol_for_min(selected_key)
+
+            return selected_key
         else:
             print(f"❌ Invalid choice: {choice}")
             sys.exit(1)
@@ -215,8 +262,10 @@ Examples:
 
 Available Models:
   mic_600_3300tl_x         - MIC Series Micro Inverter
-  min_3000_6000_tl_x       - MIN Series 3-6kW (no battery)
-  min_7000_10000_tl_x      - MIN Series 7-10kW (no battery)
+  min_3000_6000_tl_x       - MIN Series 3-6kW V1.39 legacy (3000+ range)
+  min_7000_10000_tl_x      - MIN Series 7-10kW V1.39 legacy (3000+ range)
+  min_3000_6000_tl_x_v201  - MIN Series 3-6kW V2.01 VPP (30000+ range)
+  min_7000_10000_tl_x_v201 - MIN Series 7-10kW V2.01 VPP (30000+ range)
   tl_xh_3000_10000         - TL-XH Hybrid 3-10kW (with battery)
   tl_xh_us_3000_10000      - TL-XH US Hybrid 3-10kW (with battery)
   mid_15000_25000tl3_x     - MID Series 15-25kW 3-Phase

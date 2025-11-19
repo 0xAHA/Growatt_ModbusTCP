@@ -254,9 +254,37 @@ MIN_SERIES_BASE_RANGE = {
     }
 }
 
+# MIN-3000-6000TL-X V2.01 Protocol (adds 30000 range for DTC)
+MIN_3000_6000TL_X_V201 = {
+    'name': 'MIN Series 3-6kW (V2.01)',
+    'description': '2 PV string single-phase inverter with VPP Protocol V2.01',
+    'notes': 'Uses 3000-3124 register range plus 30000 DTC register.',
+    'input_registers': MIN_3000_6000TL_X['input_registers'].copy(),
+    'holding_registers': {
+        **MIN_3000_6000TL_X['holding_registers'],
+        # Device identification (VPP Protocol V2.01)
+        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 5200 for MIN 3-6kW', 'default': 5200},
+    }
+}
+
+# MIN-7000-10000TL-X V2.01 Protocol (adds 30000 range for DTC)
+MIN_7000_10000TL_X_V201 = {
+    'name': 'MIN Series 7-10kW (V2.01)',
+    'description': '3 PV string single-phase inverter with VPP Protocol V2.01',
+    'notes': 'Uses 3000-3124 register range plus 30000 DTC register. Includes PV3 string.',
+    'input_registers': MIN_7000_10000TL_X['input_registers'].copy(),
+    'holding_registers': {
+        **MIN_7000_10000TL_X['holding_registers'],
+        # Device identification (VPP Protocol V2.01)
+        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 5201 for MIN 7-10kW', 'default': 5201},
+    }
+}
+
 # Export all MIN profiles
 MIN_REGISTER_MAPS = {
     'MIN_3000_6000TL_X': MIN_3000_6000TL_X,
     'MIN_7000_10000TL_X': MIN_7000_10000TL_X,
+    'MIN_3000_6000TL_X_V201': MIN_3000_6000TL_X_V201,
+    'MIN_7000_10000TL_X_V201': MIN_7000_10000TL_X_V201,
     'MIN_SERIES_BASE_RANGE': MIN_SERIES_BASE_RANGE,
 }
