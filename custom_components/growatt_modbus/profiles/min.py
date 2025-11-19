@@ -254,29 +254,183 @@ MIN_SERIES_BASE_RANGE = {
     }
 }
 
-# MIN-3000-6000TL-X V2.01 Protocol (adds 30000 range for DTC)
+# MIN-3000-6000TL-X V2.01 Protocol (V1.39 + VPP 2.01 registers)
+# V2.01 adds 30000+ range on top of V1.39 for complete functionality
 MIN_3000_6000TL_X_V201 = {
     'name': 'MIN Series 3-6kW (V2.01)',
     'description': '2 PV string single-phase inverter with VPP Protocol V2.01',
-    'notes': 'Uses 3000-3124 register range plus 30000 DTC register.',
-    'input_registers': MIN_3000_6000TL_X['input_registers'].copy(),
+    'notes': 'Combines V1.39 (3000+ range) with V2.01 (30000+ range). Overlapping values served at both addresses.',
+    'input_registers': {
+        # === V1.39 REGISTERS (3000+ range) ===
+        **MIN_3000_6000TL_X['input_registers'],
+
+        # === V2.01 REGISTERS (31000+ range) ===
+        # Status
+        31000: {'name': 'equipment_status', 'scale': 1, 'unit': '', 'desc': 'Equipment running status'},
+        31001: {'name': 'system_fault_word0', 'scale': 1, 'unit': '', 'desc': 'System fault word 0'},
+        31002: {'name': 'system_fault_word1', 'scale': 1, 'unit': '', 'desc': 'System fault word 1'},
+        31003: {'name': 'system_fault_word2', 'scale': 1, 'unit': '', 'desc': 'System fault word 2'},
+        31004: {'name': 'grid_first_connected', 'scale': 1, 'unit': '', 'desc': 'Grid first connected status'},
+
+        # PV Data (overlaps with 3003-3010, same values served)
+        31010: {'name': 'pv1_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'desc': 'PV1 voltage (VPP)', 'maps_to': 'pv1_voltage'},
+        31011: {'name': 'pv1_current_vpp', 'scale': 0.1, 'unit': 'A', 'desc': 'PV1 current (VPP)', 'maps_to': 'pv1_current'},
+        31012: {'name': 'pv1_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31013, 'maps_to': 'pv1_power'},
+        31013: {'name': 'pv1_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31012, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        31014: {'name': 'pv2_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'desc': 'PV2 voltage (VPP)', 'maps_to': 'pv2_voltage'},
+        31015: {'name': 'pv2_current_vpp', 'scale': 0.1, 'unit': 'A', 'desc': 'PV2 current (VPP)', 'maps_to': 'pv2_current'},
+        31016: {'name': 'pv2_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31017, 'maps_to': 'pv2_power'},
+        31017: {'name': 'pv2_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31016, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Total PV Power
+        31018: {'name': 'pv_total_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31019, 'maps_to': 'pv_total_power'},
+        31019: {'name': 'pv_total_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31018, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # AC Output (overlaps with 3025-3029)
+        31100: {'name': 'ac_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'desc': 'AC voltage (VPP)', 'maps_to': 'ac_voltage'},
+        31101: {'name': 'ac_current_vpp', 'scale': 0.1, 'unit': 'A', 'desc': 'AC current (VPP)', 'maps_to': 'ac_current'},
+        31102: {'name': 'ac_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31103, 'maps_to': 'ac_power'},
+        31103: {'name': 'ac_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31102, 'combined_scale': 0.1, 'combined_unit': 'VA'},
+        31104: {'name': 'ac_reactive_power_high', 'scale': 1, 'unit': '', 'pair': 31105},
+        31105: {'name': 'ac_reactive_power_low', 'scale': 1, 'unit': '', 'pair': 31104, 'combined_scale': 0.1, 'combined_unit': 'var'},
+        31106: {'name': 'ac_frequency_vpp', 'scale': 0.01, 'unit': 'Hz', 'desc': 'AC frequency (VPP)', 'maps_to': 'ac_frequency'},
+
+        # Grid/Meter Power (same as PtoGrid - 3043/3044)
+        31112: {'name': 'meter_power_high', 'scale': 1, 'unit': '', 'pair': 31113, 'maps_to': 'power_to_grid', 'desc': 'Meter power (same as PtoGrid)'},
+        31113: {'name': 'meter_power_low', 'scale': 1, 'unit': '', 'pair': 31112, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+
+        # Load Power (same as PtoLoad - 3045/3046)
+        31118: {'name': 'load_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31119, 'maps_to': 'power_to_load'},
+        31119: {'name': 'load_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Energy Data (overlaps with 3049-3052)
+        31120: {'name': 'energy_today_high_vpp', 'scale': 1, 'unit': '', 'pair': 31121, 'maps_to': 'energy_today'},
+        31121: {'name': 'energy_today_low_vpp', 'scale': 1, 'unit': '', 'pair': 31120, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31122: {'name': 'energy_total_high_vpp', 'scale': 1, 'unit': '', 'pair': 31123, 'maps_to': 'energy_total'},
+        31123: {'name': 'energy_total_low_vpp', 'scale': 1, 'unit': '', 'pair': 31122, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Temperatures
+        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp'},
+        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp'},
+        31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp'},
+    },
     'holding_registers': {
+        # === V1.39 REGISTERS ===
         **MIN_3000_6000TL_X['holding_registers'],
-        # Device identification (VPP Protocol V2.01)
+
+        # === V2.01 REGISTERS (30000+ range) ===
+        # Device Identification
         30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 5200 for MIN 3-6kW', 'default': 5200},
+
+        # Control Authority
+        30100: {'name': 'control_authority', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable control'},
+        30101: {'name': 'remote_onoff', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On', 'maps_to': 'on_off'},
+
+        # System Time
+        30104: {'name': 'sys_year_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30105: {'name': 'sys_month_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30106: {'name': 'sys_day_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30107: {'name': 'sys_hour_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30108: {'name': 'sys_minute_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30109: {'name': 'sys_second_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
+
+        # Communication Settings (overlap with V1.39)
+        30112: {'name': 'modbus_address_vpp', 'scale': 1, 'unit': '', 'access': 'RW', 'maps_to': 'modbus_address'},
+        30113: {'name': 'baud_rate_vpp', 'scale': 1, 'unit': '', 'access': 'RW', 'maps_to': 'baud_rate'},
+
+        # Active Power Control
+        30114: {'name': 'active_power_rate_vpp', 'scale': 0.1, 'unit': '%', 'access': 'RW', 'maps_to': 'active_power_rate'},
+
+        # Export Limitation (V2.01 advanced features)
+        30200: {'name': 'export_limit_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
+        30201: {'name': 'export_limit_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW'},
+        30202: {'name': 'export_limit_super_mode', 'scale': 1, 'unit': '', 'access': 'RW'},
     }
 }
 
-# MIN-7000-10000TL-X V2.01 Protocol (adds 30000 range for DTC)
+# MIN-7000-10000TL-X V2.01 Protocol (V1.39 + VPP 2.01 registers)
 MIN_7000_10000TL_X_V201 = {
     'name': 'MIN Series 7-10kW (V2.01)',
     'description': '3 PV string single-phase inverter with VPP Protocol V2.01',
-    'notes': 'Uses 3000-3124 register range plus 30000 DTC register. Includes PV3 string.',
-    'input_registers': MIN_7000_10000TL_X['input_registers'].copy(),
+    'notes': 'Combines V1.39 (3000+ range) with V2.01 (30000+ range). Includes PV3 string.',
+    'input_registers': {
+        # === V1.39 REGISTERS (3000+ range) ===
+        **MIN_7000_10000TL_X['input_registers'],
+
+        # === V2.01 REGISTERS (31000+ range) ===
+        # Status
+        31000: {'name': 'equipment_status', 'scale': 1, 'unit': '', 'desc': 'Equipment running status'},
+        31001: {'name': 'system_fault_word0', 'scale': 1, 'unit': '', 'desc': 'System fault word 0'},
+        31002: {'name': 'system_fault_word1', 'scale': 1, 'unit': '', 'desc': 'System fault word 1'},
+        31003: {'name': 'system_fault_word2', 'scale': 1, 'unit': '', 'desc': 'System fault word 2'},
+        31004: {'name': 'grid_first_connected', 'scale': 1, 'unit': '', 'desc': 'Grid first connected status'},
+
+        # PV Data (including PV3)
+        31010: {'name': 'pv1_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'pv1_voltage'},
+        31011: {'name': 'pv1_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'pv1_current'},
+        31012: {'name': 'pv1_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31013, 'maps_to': 'pv1_power'},
+        31013: {'name': 'pv1_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31012, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        31014: {'name': 'pv2_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'pv2_voltage'},
+        31015: {'name': 'pv2_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'pv2_current'},
+        31016: {'name': 'pv2_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31017, 'maps_to': 'pv2_power'},
+        31017: {'name': 'pv2_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31016, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        31018: {'name': 'pv3_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'pv3_voltage'},
+        31019: {'name': 'pv3_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'pv3_current'},
+        31020: {'name': 'pv3_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31021, 'maps_to': 'pv3_power'},
+        31021: {'name': 'pv3_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31020, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Total PV Power
+        31022: {'name': 'pv_total_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31023, 'maps_to': 'pv_total_power'},
+        31023: {'name': 'pv_total_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31022, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # AC Output
+        31100: {'name': 'ac_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'ac_voltage'},
+        31101: {'name': 'ac_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'ac_current'},
+        31102: {'name': 'ac_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31103, 'maps_to': 'ac_power'},
+        31103: {'name': 'ac_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31102, 'combined_scale': 0.1, 'combined_unit': 'VA'},
+        31104: {'name': 'ac_reactive_power_high', 'scale': 1, 'unit': '', 'pair': 31105},
+        31105: {'name': 'ac_reactive_power_low', 'scale': 1, 'unit': '', 'pair': 31104, 'combined_scale': 0.1, 'combined_unit': 'var'},
+        31106: {'name': 'ac_frequency_vpp', 'scale': 0.01, 'unit': 'Hz', 'maps_to': 'ac_frequency'},
+
+        # Grid/Meter Power
+        31112: {'name': 'meter_power_high', 'scale': 1, 'unit': '', 'pair': 31113, 'maps_to': 'power_to_grid'},
+        31113: {'name': 'meter_power_low', 'scale': 1, 'unit': '', 'pair': 31112, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+
+        # Load Power
+        31118: {'name': 'load_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31119, 'maps_to': 'power_to_load'},
+        31119: {'name': 'load_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Energy Data
+        31120: {'name': 'energy_today_high_vpp', 'scale': 1, 'unit': '', 'pair': 31121, 'maps_to': 'energy_today'},
+        31121: {'name': 'energy_today_low_vpp', 'scale': 1, 'unit': '', 'pair': 31120, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31122: {'name': 'energy_total_high_vpp', 'scale': 1, 'unit': '', 'pair': 31123, 'maps_to': 'energy_total'},
+        31123: {'name': 'energy_total_low_vpp', 'scale': 1, 'unit': '', 'pair': 31122, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Temperatures
+        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp'},
+        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp'},
+        31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp'},
+    },
     'holding_registers': {
+        # === V1.39 REGISTERS ===
         **MIN_7000_10000TL_X['holding_registers'],
-        # Device identification (VPP Protocol V2.01)
+
+        # === V2.01 REGISTERS (30000+ range) ===
         30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 5201 for MIN 7-10kW', 'default': 5201},
+        30100: {'name': 'control_authority', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30101: {'name': 'remote_onoff', 'scale': 1, 'unit': '', 'access': 'RW', 'maps_to': 'on_off'},
+        30104: {'name': 'sys_year_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30105: {'name': 'sys_month_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30106: {'name': 'sys_day_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30107: {'name': 'sys_hour_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30108: {'name': 'sys_minute_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30109: {'name': 'sys_second_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30112: {'name': 'modbus_address_vpp', 'scale': 1, 'unit': '', 'access': 'RW', 'maps_to': 'modbus_address'},
+        30113: {'name': 'baud_rate_vpp', 'scale': 1, 'unit': '', 'access': 'RW', 'maps_to': 'baud_rate'},
+        30114: {'name': 'active_power_rate_vpp', 'scale': 0.1, 'unit': '%', 'access': 'RW', 'maps_to': 'active_power_rate'},
+        30200: {'name': 'export_limit_enable', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30201: {'name': 'export_limit_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW'},
+        30202: {'name': 'export_limit_super_mode', 'scale': 1, 'unit': '', 'access': 'RW'},
     }
 }
 

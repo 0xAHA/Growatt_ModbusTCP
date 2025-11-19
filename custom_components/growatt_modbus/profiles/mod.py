@@ -169,6 +169,42 @@ MOD_6000_15000TL3_XH = {
         31226: {'name': 'battery_module_number', 'scale': 1, 'unit': ''},
         31227: {'name': 'battery_module_rated_voltage', 'scale': 0.1, 'unit': 'V'},
         31228: {'name': 'battery_module_rated_capacity', 'scale': 0.1, 'unit': 'Ah'},
+
+        # === BATTERY CLUSTER 2 (31300-31399) - VPP Protocol V2.01 ===
+        # Battery 2 Power (signed: positive=charging, negative=discharging)
+        31300: {'name': 'battery2_power_high', 'scale': 1, 'unit': '', 'pair': 31301},
+        31301: {'name': 'battery2_power_low', 'scale': 1, 'unit': '', 'pair': 31300, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+
+        # Battery 2 Energy
+        31302: {'name': 'battery2_charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31303},
+        31303: {'name': 'battery2_charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31302, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31304: {'name': 'battery2_charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31305},
+        31305: {'name': 'battery2_charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31304, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31306: {'name': 'battery2_discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31307},
+        31307: {'name': 'battery2_discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31306, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31308: {'name': 'battery2_discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31309},
+        31309: {'name': 'battery2_discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31308, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Battery 2 State
+        31314: {'name': 'battery2_voltage', 'scale': 0.1, 'unit': 'V', 'signed': True},
+        31315: {'name': 'battery2_current_high', 'scale': 1, 'unit': '', 'pair': 31316},
+        31316: {'name': 'battery2_current_low', 'scale': 1, 'unit': '', 'pair': 31315, 'combined_scale': 0.1, 'combined_unit': 'A', 'signed': True},
+        31317: {'name': 'battery2_soc', 'scale': 1, 'unit': '%'},
+        31318: {'name': 'battery2_soh', 'scale': 1, 'unit': '%'},
+        31323: {'name': 'battery2_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+
+        # === V2.01 VPP ADDITIONAL REGISTERS ===
+        # Grid/Meter Power (same as PtoGrid at 3043/3044)
+        31112: {'name': 'meter_power_high', 'scale': 1, 'unit': '', 'pair': 31113, 'maps_to': 'power_to_grid', 'desc': 'Meter power (same as PtoGrid)'},
+        31113: {'name': 'meter_power_low', 'scale': 1, 'unit': '', 'pair': 31112, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+
+        # Load Power (same as PtoLoad at 3045/3046)
+        31118: {'name': 'load_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31119, 'maps_to': 'power_to_load'},
+        31119: {'name': 'load_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Status
+        31000: {'name': 'equipment_status', 'scale': 1, 'unit': '', 'desc': 'Equipment running status'},
+        31001: {'name': 'battery_working_status', 'scale': 1, 'unit': '', 'desc': '0=Idle, 1=Charge, 2=Discharge, 3=Fault, 4=Standby, 5=Shutdown'},
     },
     'holding_registers': {
         # Basic control

@@ -54,11 +54,21 @@ class InverterSimulator:
         self.energy_total = 1234.5  # kWh (start with some history)
         self.last_update = time.time()
 
-        # Battery energy tracking
+        # Battery 1 energy tracking
         self.battery_charge_today = 0.0  # kWh
         self.battery_discharge_today = 0.0  # kWh
         self.battery_charge_total = 567.8  # kWh (historical)
         self.battery_discharge_total = 456.2  # kWh (historical)
+
+        # Battery 2 state (for multi-battery systems)
+        # Set to 0 to indicate no battery 2 (detection via voltage register 31314)
+        self.has_battery2 = False  # Can be enabled for testing
+        self.battery2_soc = 0.0 if not self.has_battery2 else 55.0  # %
+        self.battery2_capacity_kwh = 0.0 if not self.has_battery2 else 10.0
+        self.battery2_charge_today = 0.0
+        self.battery2_discharge_today = 0.0
+        self.battery2_charge_total = 0.0 if not self.has_battery2 else 234.5
+        self.battery2_discharge_total = 0.0 if not self.has_battery2 else 189.3
 
         # Grid energy tracking
         self.grid_import_energy_today = 0.0
@@ -490,6 +500,19 @@ class InverterSimulator:
         scale = reg_def.get('scale', 1)
         is_signed = reg_def.get('signed', False)
 
+        # Check for maps_to field - use the mapped register's value logic
+        # This allows V2.01 registers (e.g., pv1_voltage_vpp) to return same value as V1.39 (pv1_voltage)
+        maps_to = reg_def.get('maps_to')
+        if maps_to:
+            # Strip any suffix like _high/_low from the maps_to name for base matching
+            base_name = maps_to
+            if '_high' in reg_name:
+                base_name = maps_to + '_high' if '_high' not in maps_to else maps_to
+            elif '_low' in reg_name:
+                base_name = maps_to + '_low' if '_low' not in maps_to else maps_to
+            # Use the mapped name for value lookup
+            reg_name = base_name
+
         # Status
         if 'status' in reg_name:
             return self._get_status()
@@ -601,6 +624,95 @@ class InverterSimulator:
             return round(self.battery_soc)
         elif reg_name == 'battery_temp' and self.model.has_battery:
             return round(30.0 / scale)  # Fixed battery temp
+
+        # Battery 2 (returns 0 if no battery 2, enabling detection via voltage)
+        elif 'battery2_voltage' in reg_name:
+            if self.has_battery2:
+                # Similar voltage calculation as battery 1
+                base_voltage = 48.0
+                voltage = base_voltage + (self.battery2_soc - 50) * 0.12
+                return round(voltage / scale)
+            return 0  # No battery 2 - detection value
+        elif 'battery2_soc' in reg_name:
+            return round(self.battery2_soc) if self.has_battery2 else 0
+        elif 'battery2_soh' in reg_name:
+            return 95 if self.has_battery2 else 0
+        elif 'battery2_temp' in reg_name:
+            return round(28.0 / scale) if self.has_battery2 else 0
+        elif 'battery2_power_high' in reg_name:
+            if self.has_battery2:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                # Battery 2 runs at ~50% of battery 1 power for simulation
+                power = self.values['battery_power'] * 0.5
+                power_raw = int(power / combined_scale)
+                if power_raw < 0:
+                    power_raw = (1 << 32) + power_raw
+                return (power_raw >> 16) & 0xFFFF
+            return 0
+        elif 'battery2_power_low' in reg_name:
+            if self.has_battery2:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                power = self.values['battery_power'] * 0.5
+                power_raw = int(power / combined_scale)
+                if power_raw < 0:
+                    power_raw = (1 << 32) + power_raw
+                return power_raw & 0xFFFF
+            return 0
+        elif 'battery2_charge_energy_today' in reg_name:
+            if '_high' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                energy_raw = int(self.battery2_charge_today / combined_scale)
+                return (energy_raw >> 16) & 0xFFFF
+            elif '_low' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                energy_raw = int(self.battery2_charge_today / combined_scale)
+                return energy_raw & 0xFFFF
+        elif 'battery2_discharge_energy_today' in reg_name:
+            if '_high' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                energy_raw = int(self.battery2_discharge_today / combined_scale)
+                return (energy_raw >> 16) & 0xFFFF
+            elif '_low' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                energy_raw = int(self.battery2_discharge_today / combined_scale)
+                return energy_raw & 0xFFFF
+        elif 'battery2_charge_energy_total' in reg_name:
+            if '_high' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                energy_raw = int(self.battery2_charge_total / combined_scale)
+                return (energy_raw >> 16) & 0xFFFF
+            elif '_low' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                energy_raw = int(self.battery2_charge_total / combined_scale)
+                return energy_raw & 0xFFFF
+        elif 'battery2_discharge_energy_total' in reg_name:
+            if '_high' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                energy_raw = int(self.battery2_discharge_total / combined_scale)
+                return (energy_raw >> 16) & 0xFFFF
+            elif '_low' in reg_name:
+                combined_scale = reg_def.get('combined_scale', 0.1)
+                energy_raw = int(self.battery2_discharge_total / combined_scale)
+                return energy_raw & 0xFFFF
+        elif 'battery2_current' in reg_name:
+            if self.has_battery2:
+                # Calculate current from power/voltage
+                voltage = 48.0 + (self.battery2_soc - 50) * 0.12
+                power = self.values['battery_power'] * 0.5
+                current = power / voltage if voltage > 0 else 0
+                if '_high' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    current_raw = int(current / combined_scale)
+                    if current_raw < 0:
+                        current_raw = (1 << 32) + current_raw
+                    return (current_raw >> 16) & 0xFFFF
+                elif '_low' in reg_name:
+                    combined_scale = reg_def.get('combined_scale', 0.1)
+                    current_raw = int(current / combined_scale)
+                    if current_raw < 0:
+                        current_raw = (1 << 32) + current_raw
+                    return current_raw & 0xFFFF
+            return 0
 
         # Temperatures
         elif reg_name == 'inverter_temp':
