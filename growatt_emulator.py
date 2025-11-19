@@ -120,25 +120,26 @@ class GrowattEmulator:
         print("✓ Emulator stopped")
 
 
-def select_protocol_for_min(base_key: str) -> str:
-    """Offer protocol selection for MIN series.
+def select_protocol(base_key: str, series_name: str, legacy_desc: str = "Legacy protocol") -> str:
+    """Offer protocol selection for any series.
 
     Args:
         base_key: Base model key (e.g., 'min_3000_6000_tl_x')
+        series_name: Display name for the series (e.g., 'MIN Series')
+        legacy_desc: Description of the legacy protocol
 
     Returns:
         Selected model key with appropriate protocol
     """
     print("\n" + "-" * 60)
-    print("  MIN Series Protocol Selection")
+    print(f"  {series_name} Protocol Selection")
     print("-" * 60)
     print("\n  Select protocol version:\n")
     print("  [1] V2.01 VPP Protocol (Complete)")
-    print("      V1.39 registers (3000+ range) PLUS V2.01 registers (30000+ range)")
+    print("      Legacy registers PLUS V2.01 registers (30000+ range)")
     print("      Serves both protocol ranges for full VPP/smart grid functionality")
     print("      Same values served at overlapping addresses (e.g., grid power)\n")
-    print("  [2] V1.39 Legacy Protocol (3000+ range only)")
-    print("      Legacy protocol with 3000+ register range")
+    print(f"  [2] {legacy_desc}")
     print("      No DTC or VPP features\n")
     print("-" * 60)
     print("\nSelect protocol [1-2]: ", end='', flush=True)
@@ -148,7 +149,7 @@ def select_protocol_for_min(base_key: str) -> str:
         if choice == 1:
             return base_key + "_v201"  # V2.01 VPP Protocol
         elif choice == 2:
-            return base_key  # V1.39 Legacy
+            return base_key  # Legacy
         else:
             print(f"❌ Invalid choice: {choice}, using V2.01 protocol")
             return base_key + "_v201"
@@ -236,9 +237,19 @@ def select_model_interactive() -> str:
         if choice in key_map:
             selected_key = key_map[choice]
 
-            # For MIN series, offer protocol selection
+            # Offer protocol selection for series that have V2.01 versions
             if selected_key.startswith('min_'):
-                return select_protocol_for_min(selected_key)
+                return select_protocol(selected_key, "MIN Series", "V1.39 Legacy Protocol (3000+ range only)")
+            elif selected_key.startswith('mic_'):
+                return select_protocol(selected_key, "MIC Series", "V3.05 Legacy Protocol (0-179 range only)")
+            elif selected_key.startswith('sph_tl3_'):
+                return select_protocol(selected_key, "SPH-TL3 Series", "Legacy Protocol (0-124, 1000+ range only)")
+            elif selected_key.startswith('sph_'):
+                return select_protocol(selected_key, "SPH Series", "Legacy Protocol (0-124 range only)")
+            elif selected_key.startswith('tl_xh_'):
+                return select_protocol(selected_key, "TL-XH Series", "Legacy Protocol (0-124 range only)")
+            elif selected_key.startswith('mid_'):
+                return select_protocol(selected_key, "MID Series", "Legacy Protocol (0-124 range only)")
 
             return selected_key
         else:
