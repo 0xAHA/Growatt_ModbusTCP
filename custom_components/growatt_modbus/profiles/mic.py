@@ -131,6 +131,7 @@ MIC_600_3300TL_X_V201 = {
 
         # === V2.01 REGISTERS (30000+ range) ===
         30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 6000 for MIC', 'default': 6000},
+        30099: {'name': 'protocol_version', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'VPP Protocol version (201 = V2.01)', 'default': 201},
         30100: {'name': 'control_authority', 'scale': 1, 'unit': '', 'access': 'RW'},
         30101: {'name': 'remote_onoff', 'scale': 1, 'unit': '', 'access': 'RW', 'maps_to': 'on_off'},
         30104: {'name': 'sys_year_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},

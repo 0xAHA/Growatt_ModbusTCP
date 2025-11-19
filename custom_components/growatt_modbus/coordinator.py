@@ -81,9 +81,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         
         # Device identification (populated during first refresh)
         self._serial_number = None
-        self._firmware_version = None  
+        self._firmware_version = None
         self._inverter_type = None
         self._model_name = None
+        self._protocol_version = None  # VPP Protocol version (from register 30099)
 
         # Handle register map key (might be dict or string due to old bug)
         raw_register_map = entry.data.get(CONF_REGISTER_MAP, 'MIN_7000_10000TL_X')
@@ -453,14 +454,37 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 if not result.isError():
                     self._inverter_type = self._registers_to_ascii(result.registers)
                     _LOGGER.info(f"Read inverter type: {self._inverter_type}")
-                    
+
                     # Parse model name from inverter type
                     self._model_name = self._parse_model_name(self._inverter_type, profile)
             except Exception as e:
                 _LOGGER.debug(f"Could not read inverter type: {e}")
                 # Fallback to profile name
                 self._model_name = profile.get("name", "Unknown Model")
-            
+
+            # Read VPP Protocol version (register 30099)
+            # If readable, this indicates V2.01 protocol support
+            try:
+                result = self._client.client.read_holding_registers(address=30099, count=1, device_id=self._slave_id)
+                if not result.isError() and len(result.registers) > 0:
+                    version_value = result.registers[0]
+                    if version_value > 0:
+                        # Format as version string (e.g., 201 -> "2.01")
+                        major = version_value // 100
+                        minor = version_value % 100
+                        self._protocol_version = f"VPP {major}.{minor:02d}"
+                        _LOGGER.info(f"Read protocol version: {self._protocol_version}")
+                    else:
+                        self._protocol_version = "Legacy"
+                        _LOGGER.info("Protocol version register returned 0, using Legacy")
+                else:
+                    # Register not available - likely legacy protocol
+                    self._protocol_version = "Legacy"
+                    _LOGGER.debug("Could not read register 30099, assuming Legacy protocol")
+            except Exception as e:
+                _LOGGER.debug(f"Could not read protocol version (30099): {e}")
+                self._protocol_version = "Legacy"
+
         except Exception as e:
             _LOGGER.error(f"Error reading device identification: {e}")
 
@@ -542,11 +566,15 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # Add serial number if available
         if self._serial_number:
             device_info["serial_number"] = self._serial_number
-        
+
         # Add firmware version if available
         if self._firmware_version:
             device_info["sw_version"] = self._firmware_version
-        
+
+        # Add protocol version (VPP 2.01 or Legacy)
+        if self._protocol_version:
+            device_info["hw_version"] = self._protocol_version
+
         return device_info
 
     @property
