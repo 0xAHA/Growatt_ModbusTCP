@@ -212,21 +212,23 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                 errors["base"] = "unknown"
         
         # Build manual selection schema
-        available_profiles = get_available_profiles()
-        
+        # Only show legacy profiles (V2.01 profiles excluded)
+        # If auto-detection failed, the inverter doesn't support register 30000+ (V2.01)
+        available_profiles = get_available_profiles(legacy_only=True)
+
         schema = vol.Schema({
             vol.Required(
-                CONF_INVERTER_SERIES, 
+                CONF_INVERTER_SERIES,
                 default="min_7000_10000_tl_x"
             ): vol.In(available_profiles),
         })
-        
+
         return self.async_show_form(
             step_id="manual",
             data_schema=schema,
             errors=errors,
             description_placeholders={
-                "info": "Auto-detection failed. Please manually select your inverter model."
+                "info": "Auto-detection failed (V2.01 not supported). Please select your inverter series - Legacy protocol will be used."
             }
         )
 

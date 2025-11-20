@@ -553,12 +553,19 @@ def get_profile(series: str):
     return INVERTER_PROFILES.get(series, INVERTER_PROFILES["min_7000_10000_tl_x"])
 
 
-def get_available_profiles() -> Dict[str, str]:
-    """Get dict of available profiles for UI selection."""
-    return {
-        series: profile["name"]
-        for series, profile in INVERTER_PROFILES.items()
-    }
+def get_available_profiles(legacy_only: bool = False) -> Dict[str, str]:
+    """Get dict of available profiles for UI selection.
+
+    Args:
+        legacy_only: If True, exclude V2.01 profiles (for manual selection after failed auto-detection)
+    """
+    profiles = {}
+    for series, profile in INVERTER_PROFILES.items():
+        # Filter out V2.01 profiles if legacy_only is True
+        if legacy_only and '_v201' in series:
+            continue
+        profiles[series] = profile["name"]
+    return profiles
 
 
 def get_sensors_for_profile(series: str) -> Set[str]:
