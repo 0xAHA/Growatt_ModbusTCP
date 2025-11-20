@@ -250,6 +250,8 @@ def select_model_interactive() -> str:
                 return select_protocol(selected_key, "TL-XH Series", "Legacy Protocol (0-124 range only)")
             elif selected_key.startswith('mid_'):
                 return select_protocol(selected_key, "MID Series", "Legacy Protocol (0-124 range only)")
+            elif selected_key.startswith('mod_'):
+                return select_protocol(selected_key, "MOD Series", "Legacy Protocol (0-124, 3000+ range only)")
 
             return selected_key
         else:

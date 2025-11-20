@@ -517,6 +517,30 @@ INVERTER_PROFILES = {
             STATUS_SENSORS
         ),
     },
+
+    "mod_6000_15000tl3_xh_v201": {
+        "name": "MOD 6000-15000TL3-XH (V2.01)",
+        "description": "Modular three-phase hybrid with VPP Protocol V2.01 (6-15kW)",
+        "register_map": "MOD_6000_15000TL3_XH",  # Same map, already includes V2.01 registers
+        "protocol_version": "v2.01",
+        "phases": 3,
+        "has_pv3": True,
+        "has_battery": True,
+        "max_power_kw": 15.0,
+        "sensors": (
+            BASIC_PV_SENSORS |
+            PV3_SENSORS |
+            THREE_PHASE_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
+            ENERGY_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
+            BATTERY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
 }
 
 
