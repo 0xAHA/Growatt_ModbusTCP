@@ -266,6 +266,7 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
     - WIS 215KTL3: 5800
 
     NOTE: DTC code presence indicates V2.01 protocol support, so we return V2.01 profiles.
+    Only official DTC codes from Growatt VPP 2.01 Protocol Table 3-1 are included.
 
     Args:
         dtc_code: DTC code from register 30000
@@ -273,36 +274,23 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
     Returns:
         Profile key (V2.01 variant) or None if no match
     """
-    # DTC codes map to V2.01 profiles since DTC register is only available in V2.01
+    # Only official DTC codes from Growatt VPP 2.01 Protocol documentation Table 3-1
     dtc_map = {
-        # SPH series - V2.01
-        1000: 'sph_3000_6000_v201',       # SPH 3000-6000 (custom DTC from our profiles)
-        1001: 'sph_7000_10000_v201',      # SPH 7000-10000 (custom DTC from our profiles)
-        3502: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL (official Growatt DTC)
+        # SPH series - Official Growatt DTCs
+        3502: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL
         3735: 'sph_3000_6000_v201',       # SPA 3000-6000TL BL (similar to SPH)
         3601: 'sph_tl3_3000_10000_v201',  # SPH 4000-10000TL3 BH-UP
         3725: 'sph_tl3_3000_10000_v201',  # SPA 4000-10000TL3 BH-UP
-        2000: 'sph_tl3_3000_10000_v201',  # SPH TL3 (custom DTC from our profiles)
 
-        # MIN series - V2.01
+        # MIN series - Official Growatt DTCs
         5100: 'min_3000_6000_tl_x_v201',  # MIN 2500-6000TL-XH/XH(P)
         5200: 'min_3000_6000_tl_x_v201',  # MIC/MIN 2500-6000TL-X/X2
         5201: 'min_7000_10000_tl_x_v201', # MIN 7000-10000TL-X/X2
 
-        # MIC series - V2.01
-        6000: 'mic_600_3300tl_x_v201',    # MIC (custom DTC from our profiles)
+        # MOD series - Official Growatt DTC
+        5400: 'mod_6000_15000tl3_xh_v201', # MOD-XH\MID-XH
 
-        # TL-XH series - V2.01
-        4000: 'tl_xh_3000_10000_v201',    # TL-XH (custom DTC from our profiles)
-        4001: 'tl_xh_us_3000_10000_v201', # TL-XH US (custom DTC from our profiles)
-
-        # MID series - V2.01
-        3000: 'mid_15000_25000tl3_x_v201', # MID (custom DTC from our profiles)
-
-        # MOD/MID series - V2.01
-        5400: 'mod_6000_15000tl3_xh_v201', # MOD-XH\MID-XH (official Growatt DTC)
-
-        # WIT/WIS series (not currently profiled, use MID as fallback)
+        # WIT/WIS series - Official Growatt DTCs (fallback to MID profile)
         5601: 'mid_15000_25000tl3_x_v201', # WIT 100KTL3-H
         5800: 'mid_15000_25000tl3_x_v201', # WIS 215KTL3
     }
