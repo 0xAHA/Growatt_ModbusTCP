@@ -517,6 +517,30 @@ INVERTER_PROFILES = {
             STATUS_SENSORS
         ),
     },
+
+    "mod_6000_15000tl3_xh_v201": {
+        "name": "MOD 6000-15000TL3-XH (V2.01)",
+        "description": "Modular three-phase hybrid with VPP Protocol V2.01 (6-15kW)",
+        "register_map": "MOD_6000_15000TL3_XH",  # Same map, already includes V2.01 registers
+        "protocol_version": "v2.01",
+        "phases": 3,
+        "has_pv3": True,
+        "has_battery": True,
+        "max_power_kw": 15.0,
+        "sensors": (
+            BASIC_PV_SENSORS |
+            PV3_SENSORS |
+            THREE_PHASE_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
+            ENERGY_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
+            BATTERY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
 }
 
 
@@ -529,12 +553,19 @@ def get_profile(series: str):
     return INVERTER_PROFILES.get(series, INVERTER_PROFILES["min_7000_10000_tl_x"])
 
 
-def get_available_profiles() -> Dict[str, str]:
-    """Get dict of available profiles for UI selection."""
-    return {
-        series: profile["name"]
-        for series, profile in INVERTER_PROFILES.items()
-    }
+def get_available_profiles(legacy_only: bool = False) -> Dict[str, str]:
+    """Get dict of available profiles for UI selection.
+
+    Args:
+        legacy_only: If True, exclude V2.01 profiles (for manual selection after failed auto-detection)
+    """
+    profiles = {}
+    for series, profile in INVERTER_PROFILES.items():
+        # Filter out V2.01 profiles if legacy_only is True
+        if legacy_only and '_v201' in series:
+            continue
+        profiles[series] = profile["name"]
+    return profiles
 
 
 def get_sensors_for_profile(series: str) -> Set[str]:
