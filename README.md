@@ -7,119 +7,67 @@
 
 A native Home Assistant integration for Growatt solar inverters using direct Modbus RTU/TCP communication. Get real-time data straight from your inverter without relying on cloud services! 🚀
 
-Based on the official **[Growatt Modbus RTU Protocol V1.39](https://shop.frankensolar.ca/content/documentation/Growatt/AppNote_Growatt_WIT-Modbus-RTU-Protocol-II-V1.39-English-20240416_%28frankensolar%29.pdf)** (2024.04.16) documentation.
+**Protocol Support:**
+- **Primary:** Growatt VPP Protocol V2.01 with automatic model detection via Device Type Code (DTC)
+- **Fallback:** Legacy protocols (V1.39, V3.05) with manual model selection for older inverters
+- **Smart Detection:** Automatically uses best available protocol based on inverter capabilities
 
 ---
 
 ## ✨ Features
 
+- 🎯 **Auto-detection** - VPP 2.01 inverters detected automatically via DTC code (no manual selection needed!)
 - 📊 **Real-time monitoring** - Direct Modbus communication with your inverter
 - 🌙 **Night-time friendly** - Sensors stay available when inverter is offline (no sun)
 - ⚡ **Smart power flow** - Automatic calculation of export, import, and self-consumption
 - 🔌 **TCP connection** - WiFi/Ethernet adapters for reliable communication
 - 📈 **Energy dashboard ready** - Automatic integration with HA Energy Dashboard
-- 🎯 **Official registers** - Uses verified Growatt protocol documentation
 - 🌡️ **Complete diagnostics** - Temperatures, fault codes, derating status
 - 💾 **No cloud dependency** - Local polling, your data stays yours
 - 🔄 **Grid power inversion** - Fix backwards CT clamp installations with one click
 - 🏠 **Residential focus** - Optimized profiles for home solar systems (3-25kW)
 - 🔍 **Universal scanner** - One-click diagnostic tool auto-detects your inverter model
-- 📱 **Device identification** - Automatic serial number, firmware version, and exact model detection
+- 📱 **Device identification** - Automatic serial number, firmware version, exact model, and protocol version
 
 ---
 
 ## 🔌 Supported Inverter Models
 
-The integration focuses on **residential and small commercial** Growatt inverters with dedicated register maps:
+The integration supports **residential and small commercial** Growatt inverters (3-25kW range):
 
-### Single-Phase Grid-Tied Inverters
+**Single-Phase Grid-Tied:** MIC (0.6-3.3kW), MIN 3-6kW, MIN 7-10kW ✅
+**Single-Phase Hybrid:** SPH 3-6kW, SPH 7-10kW, TL-XH 3-10kW, TL-XH US 3-10kW
+**Three-Phase:** MID 15-25kW, MOD 6-15kW, SPH-TL3 3-10kW
 
+✅ = Tested with real hardware | Most models created from official documentation (validation needed)
 
-| Inverter Series        | Model Range    | PV Strings | Tested        | Notes                             |
-| ------------------------ | ---------------- | ------------ | --------------- | ----------------------------------- |
-| **MIC 600-3300TL-X**   | 600-3300TL-X   | 1          | ⚠️ Untested | Micro inverter, 0.6-3.3kW (V3.05) |
-| **MIN 3000-6000TL-X**  | 3000-6000TL-X  | 2          | ⚠️ Untested | Grid-tied, 3-6kW                  |
-| **MIN 7000-10000TL-X** | 7000-10000TL-X | 3          | ✅**Tested**  | Grid-tied, 7-10kW                 |
+📖 **[View detailed model specifications, protocol support, and sensor availability →](docs/MODELS.md)**
 
-### Single-Phase Hybrid Inverters (with Battery)
-
-
-| Inverter Series         | Model Range         | PV Strings | Tested        | Notes                       |
-| ------------------------- | --------------------- | ------------ | --------------- | ----------------------------- |
-| **TL-XH 3000-10000**    | TL-XH 3000-10000    | 3          | ⚠️ Untested | Hybrid with battery, 3-10kW |
-| **TL-XH US 3000-10000** | TL-XH US 3000-10000 | 3          | ⚠️ Untested | US version hybrid, 3-10kW   |
-| **SPH 3000-6000**       | SPH 3000-6000       | 2          | ⚠️ Untested | Storage hybrid, 3-6kW       |
-| **SPH 7000-10000**      | SPH 7000-10000      | 2          | ⚠️ Untested | Storage hybrid, 7-10kW      |
-
-### Three-Phase Inverters
-
-
-| Inverter Series          | Model Range          | PV Strings | Battery | Tested        | Notes                       |
-| -------------------------- | ---------------------- | ------------ | --------- | --------------- | ----------------------------- |
-| **MID 15000-25000TL3-X** | 15000-25000TL3-X     | 2          | No      | ⚠️ Untested | Grid-tied, 15-25kW          |
-| **MOD 6000-15000TL3-XH** | MOD 6000-15000TL3-XH | 3          | Yes     | ⚠️ Untested | Hybrid with battery, 6-15kW |
-| **SPH-TL3 3000-10000**   | SPH-TL3 3000-10000   | 2          | Yes     | ⚠️ Untested | Three-phase hybrid, 3-10kW  |
-
-**Legend:**
-
-- ✅ **Tested** - Confirmed working with real hardware
-- ⚠️ **Untested** - Profile created from official documentation, needs validation
-
-> 💡 **Help us test!** If you have a model marked as untested and can confirm it works, please open an issue or PR to update the documentation!
-
-> 🏭 **Commercial/Industrial Models:** Large commercial inverters (MAC, MAX, WIT 30-150kW) have been removed from this integration to maintain focus on residential systems. If you need these profiles, see legacy v0.0.3 release.
+> 💡 **VPP 2.01 inverters** are auto-detected via DTC code. Legacy inverters require manual selection.
 
 ---
 
-## 📊 Sensor Availability by Model
+## 📊 What Sensors Will I Get?
 
-Different inverter models create different sensors based on their capabilities:
+Sensors created depend on your inverter's hardware capabilities:
 
+**All Models:**
+- Solar PV strings (voltage, current, power per string)
+- AC output (single-phase or three-phase depending on model)
+- Energy totals (today, lifetime)
+- Grid power (export/import, calculated or from registers)
+- System diagnostics (temperatures, status, faults)
 
-| Sensor                          | MIC | MIN 3-6k | MIN 7-10k | TL-XH | SPH 3-6k | SPH 7-10k | SPH-TL3 | MID | MOD |
-| --------------------------------- | :---: | :--------: | :---------: | :-----: | :--------: | :---------: | :-------: | :---: | :---: |
-| **Solar Input**                 |    |          |          |      |          |          |        |    |    |
-| PV1 Voltage/Current/Power       | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| PV2 Voltage/Current/Power       | ❌ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| PV3 Voltage/Current/Power       | ❌ |    ❌    |    ✅    |  ✅  |    ❌    |    ❌    |   ❌   | ❌ | ✅ |
-| Solar Total Power               | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| **AC Output (Single-Phase)**    |    |          |          |      |          |          |        |    |    |
-| AC Voltage/Current/Power        | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ❌   | ❌ | ❌ |
-| AC Frequency                    | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ❌   | ❌ | ❌ |
-| **AC Output (Three-Phase)**     |    |          |          |      |          |          |        |    |    |
-| AC Phase R/S/T Voltage          | ❌ |    ❌    |    ❌    |  ❌  |    ❌    |    ❌    |   ✅   | ✅ | ✅ |
-| AC Phase R/S/T Current          | ❌ |    ❌    |    ❌    |  ❌  |    ❌    |    ❌    |   ✅   | ✅ | ✅ |
-| AC Phase R/S/T Power            | ❌ |    ❌    |    ❌    |  ❌  |    ❌    |    ❌    |   ✅   | ✅ | ✅ |
-| AC Total Power                  | ❌ |    ❌    |    ❌    |  ❌  |    ❌    |    ❌    |   ✅   | ✅ | ✅ |
-| **Grid Power (Calculated)**     |    |          |          |      |          |          |        |    |    |
-| Grid Export Power               | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| Grid Import Power               | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| Self Consumption                | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| House Consumption               | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| **Grid Power (From Registers)** |    |          |          |      |          |          |        |    |    |
-| Power to Grid                   | ❌ |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
-| Power to Load                   | ❌ |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
-| Power to User                   | ❌ |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
-| **Battery (Hybrid Only)**       |    |          |          |      |          |          |        |    |    |
-| Battery Voltage/Current/Power   | ❌ |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
-| Battery SOC                     | ❌ |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
-| Battery Temperature             | ❌ |    ❌    |    ❌    |  ✅  |    ✅    |    ✅    |   ✅   | ❌ | ✅ |
-| **Energy Totals**               |    |          |          |      |          |          |        |    |    |
-| Energy Today/Total              | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| Energy to Grid Today/Total      | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| Load Energy Today/Total         | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| **System & Diagnostics**        |    |          |          |      |          |          |        |    |    |
-| Inverter Temperature            | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| IPM Temperature                 | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| Boost Temperature               | ❌ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
-| Status/Derating/Faults          | ✅ |    ✅    |    ✅    |  ✅  |    ✅    |    ✅    |   ✅   | ✅ | ✅ |
+**Hybrid Models Only** (TL-XH, SPH, SPH-TL3, MOD):
+- Battery voltage, current, power, SOC, temperature
+- Direct power flow measurements (to grid, to load, to user)
 
-**Legend:**
+**Model-Specific Details:**
+- **1 PV string:** MIC only
+- **2 PV strings:** MIN 3-6kW, SPH 3-6kW/7-10kW, SPH-TL3, MID
+- **3 PV strings:** MIN 7-10kW, TL-XH, MOD
 
-- ✅ Available for this model
-- ❌ Not available (hardware limitation)
-
-> 📝 **Note:** Hybrid models (TL-XH, SPH, SPH-TL3, MOD) have power flow measured directly from registers. Grid-tied models (MIN, MID) calculate power flow from solar production vs AC output.
+📖 **[View complete sensor availability table by model →](docs/MODELS.md#-sensor-availability-by-model)**
 
 ---
 
@@ -239,6 +187,24 @@ Choose the profile that matches your inverter model:
 - **Host**: IP address of your RS485-TCP adapter (e.g., `192.168.1.100`)
 - **Port**: `502` (standard Modbus TCP port)
 - **Slave ID**: `1` (check inverter display if unsure)
+
+---
+
+## 🎯 Auto-Detection
+
+**VPP 2.01 Inverters** (newer models) are automatically detected:
+1. Integration reads Device Type Code (DTC) from register 30000
+2. Identifies your exact model (e.g., "MOD 6000-15000TL3-XH")
+3. Shows confirmation screen - accept or manually override
+4. Protocol version displayed in device info (e.g., "Protocol 2.01")
+
+**Legacy Inverters** (older models without V2.01 support):
+1. Auto-detection fails (DTC not available)
+2. Manual model selection required
+3. Choose based on PV strings, phase, and battery capability
+4. Legacy protocol used automatically
+
+📖 **[Learn how auto-detection works, DTC codes, and troubleshooting →](docs/AUTODETECTION.md)**
 
 ---
 
