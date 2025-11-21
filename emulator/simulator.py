@@ -615,6 +615,21 @@ class InverterSimulator:
             if is_signed:
                 return self._to_signed_16bit(round(current / scale))
             return round(abs(current) / scale)
+        elif reg_name == 'battery_current_legacy' and self.model.has_battery:
+            current = self.values['currents']['battery']
+            return self._to_signed_16bit(round(current / scale))
+        elif reg_name in ['battery_current_high', 'battery_current_low'] and self.model.has_battery:
+            # 32-bit signed battery current
+            current = self.values['currents']['battery']
+            combined_scale = reg_info.get('combined_scale', scale) if reg_info.get('pair') else scale
+            current_raw = round(current / combined_scale)
+            # Handle signed 32-bit
+            if current_raw < 0:
+                current_raw = (1 << 32) + current_raw  # Two's complement for 32-bit
+            if 'high' in reg_name:
+                return (current_raw >> 16) & 0xFFFF
+            else:  # low
+                return current_raw & 0xFFFF
         elif reg_name == 'battery_power' and self.model.has_battery:
             power = self.values['battery_power']
             if is_signed:
