@@ -29,6 +29,7 @@ INVERTER_PROFILES = device_profiles.INVERTER_PROFILES
 
 from emulator.simulator import InverterSimulator
 from emulator.modbus_server import ModbusEmulatorServer
+from emulator.models import InverterModel
 
 logging.basicConfig(
     level=logging.INFO,
@@ -85,6 +86,12 @@ def start_emulator():
     selected_profile = profile_key
     profile = INVERTER_PROFILES[profile_key]
 
+    # Debug logging
+    _LOGGER.info(f"Profile lookup: key={profile_key}, type={type(profile).__name__}")
+    if isinstance(profile, dict):
+        _LOGGER.info(f"  Profile name: {profile.get('name', 'N/A')}")
+        _LOGGER.info(f"  Has battery: {profile.get('has_battery', 'N/A')}")
+
     # Determine which register map to use
     if protocol_version == 'v201' and f"{profile_key}_v201" in INVERTER_PROFILES:
         actual_profile_key = f"{profile_key}_v201"
@@ -95,9 +102,13 @@ def start_emulator():
             # Remove _v201 suffix for legacy
             actual_profile_key = actual_profile_key.replace('_v201', '')
 
+    _LOGGER.info(f"Creating simulator with profile: {actual_profile_key}")
+
     try:
-        # Create simulator
-        simulator = InverterSimulator(actual_profile_key)
+        # Create model and simulator
+        model = InverterModel(actual_profile_key)
+        simulator = InverterSimulator(model, port=port)
+        _LOGGER.info("Simulator created successfully")
 
         # Start Modbus server
         modbus_server = ModbusEmulatorServer(
@@ -147,7 +158,7 @@ def get_status():
             'has_battery': profile.get('has_battery', False),
             'has_pv3': profile.get('pv3_supported', False),
             'is_three_phase': profile.get('is_three_phase', False),
-            'protocol_version': 'v201' if simulator.profile_key.endswith('_v201') else 'legacy',
+            'protocol_version': 'v201' if simulator.model.profile_key.endswith('_v201') else 'legacy',
         },
 
         # Solar generation
@@ -230,7 +241,7 @@ def get_registers():
         return jsonify({'error': 'Emulator not started'}), 400
 
     # Get register map using already-loaded device_profiles module
-    profile = device_profiles.get_profile(simulator.profile_key)
+    profile = device_profiles.get_profile(simulator.model.profile_key)
 
     if not profile:
         return jsonify({'error': 'Profile not found'}), 400
@@ -343,12 +354,15 @@ def switch_model():
             modbus_server.stop()
             modbus_server = None
 
-        # Create new simulator with new profile
+        # Get port
+        port = data.get('port', 5020)
+
+        # Create new model and simulator with new profile
         selected_profile = profile_key
-        simulator = InverterSimulator(actual_profile_key)
+        model = InverterModel(actual_profile_key)
+        simulator = InverterSimulator(model, port=port)
 
         # Restart Modbus server with same port
-        port = data.get('port', 5020)
         modbus_server = ModbusEmulatorServer(
             simulator=simulator,
             port=port
