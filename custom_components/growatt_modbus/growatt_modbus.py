@@ -514,7 +514,7 @@ class GrowattModbus:
                                 self._register_cache[addr] = value
                                 # Log load_energy registers specifically
                                 if addr in [3075, 3076, 3077, 3078]:
-                                    logger.info(f"[{self.register_map['name']}@{self.connection_id}] Cached 3000 range: reg {addr} = {value}")
+                                    logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Cached 3000 range: reg {addr} = {value}")
             else:
                 # Single read is sufficient
                 logger.debug(f"Reading 3000 range (3000-{max_3000_addr}, {count_3000} registers)")
@@ -684,7 +684,7 @@ class GrowattModbus:
             energy_today_addr = self._find_register_by_name('energy_today_low')
             if energy_today_addr:
                 data.energy_today = self._get_register_value(energy_today_addr) or 0.0
-                logger.info(f"[{self.register_map['name']}@{self.connection_id}] Energy today from reg {energy_today_addr}: {data.energy_today} kWh (cache: {self._register_cache.get(energy_today_addr)})")
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from reg {energy_today_addr}: {data.energy_today} kWh (cache: {self._register_cache.get(energy_today_addr)})")
             
             # Energy Total
             energy_total_addr = self._find_register_by_name('energy_total_low')
@@ -805,14 +805,14 @@ class GrowattModbus:
             addr = self._find_register_by_name('load_energy_today_low')
             if addr:
                 data.load_energy_today = self._get_register_value(addr) or 0.0
-                logger.info(f"[{self.register_map['name']}@{self.connection_id}] Load energy today from reg {addr}: {data.load_energy_today} kWh (cache: {self._register_cache.get(addr)})")
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Load energy today from reg {addr}: {data.load_energy_today} kWh (cache: {self._register_cache.get(addr)})")
             else:
                 logger.warning(f"[{self.register_map['name']}@{self.connection_id}] load_energy_today_low register not found")
 
             addr = self._find_register_by_name('load_energy_total_low')
             if addr:
                 data.load_energy_total = self._get_register_value(addr) or 0.0
-                logger.info(f"[{self.register_map['name']}@{self.connection_id}] Load energy total from reg {addr}: {data.load_energy_total} kWh (cache: {self._register_cache.get(addr)})")
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Load energy total from reg {addr}: {data.load_energy_total} kWh (cache: {self._register_cache.get(addr)})")
                 
         except Exception as e:
             logger.debug(f"Energy breakdown not available: {e}")
@@ -927,9 +927,9 @@ class GrowattModbus:
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.discharge_energy_total = self._get_register_value(addr) or 0.0
                 logger.debug(f"Discharge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_energy_total} kWh")
-            
+
             if data.battery_voltage > 0:
-                logger.info(f"Battery summary: {data.battery_voltage}V, {data.battery_current}A, {data.battery_soc}%, {data.battery_temp}°C, Charge={data.charge_power}W, Discharge={data.discharge_power}W")
+                logger.debug(f"Battery summary: {data.battery_voltage}V, {data.battery_current}A, {data.battery_soc}%, {data.battery_temp}°C, Charge={data.charge_power}W, Discharge={data.discharge_power}W")
             
         except Exception as e:
             logger.debug(f"Battery data not available: {e}")
