@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Growatt Emulator - Select Model</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>☀️ Growatt Inverter Emulator</h1>
+            <p>Select your inverter model to start the emulator</p>
+        </header>
+
+        <div class="model-selection">
+            <h2>Inverter Model</h2>
+            <select id="modelSelect" class="model-select">
+                <option value="">-- Select Model --</option>
+                {% for key, profile in profiles.items() %}
+                    {% if not key.endswith('_v201') %}
+                    <option value="{{ key }}">{{ profile.name }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+
+            <h2>Protocol Version</h2>
+            <div class="protocol-select">
+                <label>
+                    <input type="radio" name="protocol" value="v201" checked>
+                    <span>VPP 2.01 (Auto-Detection Enabled)</span>
+                </label>
+                <label>
+                    <input type="radio" name="protocol" value="legacy">
+                    <span>Legacy (V1.39 / V3.05)</span>
+                </label>
+            </div>
+
+            <h2>Modbus TCP Port</h2>
+            <input type="number" id="portInput" value="5020" min="1024" max="65535" class="port-input">
+            <p class="hint">Port 502 requires sudo/root. Use 5020 or higher for non-privileged access.</p>
+
+            <button id="startBtn" class="start-btn" disabled>Start Emulator</button>
+
+            <div id="status" class="status"></div>
+        </div>
+    </div>
+
+    <script>
+        const modelSelect = document.getElementById('modelSelect');
+        const portInput = document.getElementById('portInput');
+        const startBtn = document.getElementById('startBtn');
+        const status = document.getElementById('status');
+
+        modelSelect.addEventListener('change', () => {
+            startBtn.disabled = !modelSelect.value;
+        });
+
+        startBtn.addEventListener('click', async () => {
+            const profileKey = modelSelect.value;
+            const protocol = document.querySelector('input[name="protocol"]:checked').value;
+            const port = parseInt(portInput.value);
+
+            if (!profileKey) {
+                showStatus('Please select a model', 'error');
+                return;
+            }
+
+            startBtn.disabled = true;
+            showStatus('Starting emulator...', 'info');
+
+            try {
+                const response = await fetch('/api/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        profile_key: profileKey,
+                        protocol_version: protocol,
+                        port: port
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showStatus(`Started ${data.model} on port ${data.port}`, 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    showStatus(`Error: ${data.error}`, 'error');
+                    startBtn.disabled = false;
+                }
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+                startBtn.disabled = false;
+            }
+        });
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+    </script>
+</body>
+</html>

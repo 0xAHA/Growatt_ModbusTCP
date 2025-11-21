@@ -31,14 +31,39 @@ pip3 install -r requirements_emulator.txt
 Or manually:
 
 ```bash
-pip3 install pymodbus rich
+pip3 install pymodbus rich flask
 ```
 
 ## Usage
 
-### Quick Start
+The emulator supports two interfaces: **Terminal UI** (command-line) and **Web UI** (browser-based).
 
-Run the emulator with interactive model selection:
+### Web UI (Recommended)
+
+Run the web-based interface for a visual dashboard with energy flow diagram:
+
+```bash
+python3 growatt_emulator_web.py
+```
+
+Then open your browser to: **http://localhost:5000**
+
+Features:
+- 🌐 Browser-based interface (no terminal needed)
+- 📊 Live energy flow diagram (like Home Assistant's energy dashboard)
+- 🎛️ Interactive sliders for simulation controls
+- 📝 Real-time register display
+- 📈 Live sensor values and graphs
+- 🔄 Auto-refresh (1 second updates)
+
+**Custom web port:**
+```bash
+python3 growatt_emulator_web.py --web-port 8080
+```
+
+### Terminal UI (Classic)
+
+Run the emulator with interactive terminal UI:
 
 ```bash
 python3 growatt_emulator.py

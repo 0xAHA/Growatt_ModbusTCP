@@ -1,0 +1,401 @@
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #1f2937;
+}
+
+/* Container for model selection */
+.container {
+    max-width: 600px;
+    margin: 50px auto;
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+header h1 {
+    font-size: 32px;
+    margin-bottom: 10px;
+    color: #4F46E5;
+}
+
+header p {
+    color: #6b7280;
+    margin-bottom: 30px;
+}
+
+.model-selection h2 {
+    font-size: 18px;
+    margin: 20px 0 10px;
+    color: #374151;
+}
+
+.model-select,
+.port-input {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: border-color 0.2s;
+}
+
+.model-select:focus,
+.port-input:focus {
+    outline: none;
+    border-color: #4F46E5;
+}
+
+.protocol-select {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.protocol-select label {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.protocol-select label:hover {
+    border-color: #4F46E5;
+    background: #f3f4f6;
+}
+
+.protocol-select input[type="radio"] {
+    margin-right: 10px;
+}
+
+.hint {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: -5px;
+    margin-bottom: 20px;
+}
+
+.start-btn,
+.stop-btn,
+.reset-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+    background: #4F46E5;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.start-btn:hover:not(:disabled),
+.stop-btn:hover,
+.reset-btn:hover {
+    background: #4338CA;
+}
+
+.start-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.stop-btn {
+    width: auto;
+    padding: 8px 20px;
+    font-size: 14px;
+}
+
+.reset-btn {
+    margin-top: 15px;
+    background: #EF4444;
+}
+
+.reset-btn:hover {
+    background: #DC2626;
+}
+
+.status {
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.status.info {
+    background: #DBEAFE;
+    color: #1E40AF;
+}
+
+.status.success {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.status.error {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+/* Dashboard */
+.dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.dashboard-header {
+    background: white;
+    padding: 20px 30px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-header h1 {
+    font-size: 28px;
+    color: #4F46E5;
+}
+
+.header-info {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.time {
+    font-size: 20px;
+    font-weight: 600;
+    color: #374151;
+    font-family: 'Courier New', monospace;
+}
+
+.status-badge {
+    padding: 6px 14px;
+    background: #10B981;
+    color: white;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card h2 {
+    font-size: 18px;
+    margin-bottom: 20px;
+    color: #374151;
+    border-bottom: 2px solid #f3f4f6;
+    padding-bottom: 10px;
+}
+
+.energy-flow-card {
+    grid-column: 1 / -1;
+}
+
+.controls-card {
+    grid-column: 1 / -1;
+}
+
+.registers-card {
+    grid-column: 1 / -1;
+}
+
+/* Energy Flow Diagram */
+.energy-flow-diagram {
+    width: 100%;
+    height: 400px;
+}
+
+.energy-flow-diagram .icon {
+    font-size: 24px;
+}
+
+.energy-flow-diagram .label {
+    font-size: 14px;
+    font-weight: 600;
+    fill: #374151;
+}
+
+.energy-flow-diagram .value {
+    font-size: 13px;
+    font-weight: 700;
+    fill: #1f2937;
+}
+
+.energy-flow-diagram .flow-value {
+    font-size: 12px;
+    font-weight: 600;
+    fill: #6b7280;
+}
+
+/* Controls */
+.control-group {
+    margin-bottom: 20px;
+}
+
+.control-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.control-group input[type="range"] {
+    width: 100%;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    outline: none;
+}
+
+.control-group input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #4F46E5;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.control-group input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #4F46E5;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+/* Sensors */
+.sensor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+}
+
+.sensor {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border-left: 4px solid #4F46E5;
+}
+
+.sensor-label {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.sensor-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 2px;
+}
+
+.sensor-detail {
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+/* Registers */
+.registers-list {
+    display: grid;
+    gap: 10px;
+}
+
+.register {
+    display: grid;
+    grid-template-columns: 80px 1fr 100px 60px;
+    gap: 10px;
+    padding: 10px;
+    background: #f9fafb;
+    border-radius: 6px;
+    font-size: 13px;
+    align-items: center;
+}
+
+.register-addr {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #4F46E5;
+}
+
+.register-name {
+    color: #374151;
+    font-weight: 500;
+}
+
+.register-value {
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.register-unit {
+    color: #6b7280;
+    text-align: right;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .energy-flow-card,
+    .controls-card,
+    .registers-card {
+        grid-column: auto;
+    }
+
+    .register {
+        grid-template-columns: 60px 1fr 80px;
+    }
+
+    .register-unit {
+        grid-column: 3;
+        grid-row: 2;
+    }
+}

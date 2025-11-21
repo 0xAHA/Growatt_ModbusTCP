@@ -6,6 +6,9 @@ pymodbus>=3.0.0
 # Terminal UI
 rich>=13.0.0
 
+# Web UI (optional)
+flask>=2.0.0
+
 # Standard library dependencies (usually included)
 # - threading
 # - datetime
