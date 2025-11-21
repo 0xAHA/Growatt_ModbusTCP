@@ -11,7 +11,6 @@ from typing import Optional
 from pymodbus.server import StartTcpServer, ServerStop
 from pymodbus.datastore import ModbusServerContext, ModbusDeviceContext
 from pymodbus.datastore import ModbusSparseDataBlock
-from pymodbus.framer import ModbusSocketFramer
 
 logger = logging.getLogger(__name__)
 
