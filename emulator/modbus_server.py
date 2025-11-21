@@ -162,7 +162,9 @@ class ModbusEmulatorServer:
             # no need to update internal storage
             StartTcpServer(
                 context=self.server_context,
-                address=("0.0.0.0", self.port)
+                address=("0.0.0.0", self.port),
+                allow_reuse_address=True,
+                defer_start=False
             )
         except Exception as e:
             logger.error(f"Server error: {e}")
