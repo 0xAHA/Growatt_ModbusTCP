@@ -28,44 +28,34 @@ from flask_cors import CORS
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Import models module directly to avoid triggering emulator/__init__.py which requires pymodbus
-import importlib.util
+# Import models (safe - doesn't require pymodbus thanks to lazy imports in __init__.py)
+from emulator.models import InverterModel, get_available_models, INVERTER_PROFILES
 
-_models_spec = importlib.util.spec_from_file_location(
-    'emulator_models',
-    os.path.join(os.path.dirname(__file__), 'emulator', 'models.py')
-)
-_models_module = importlib.util.module_from_spec(_models_spec)
-_models_spec.loader.exec_module(_models_module)
-
-# Export what we need from models
-InverterModel = _models_module.InverterModel
-get_available_models = _models_module.get_available_models
-INVERTER_PROFILES = _models_module.INVERTER_PROFILES
-
-# Lazy imports for components that require pymodbus (only when starting emulator)
+# These will be lazy-loaded when needed
 InverterSimulator = None
 ModbusEmulatorServer = None
 
 def lazy_import_emulator_components():
-    """Lazy import components that require pymodbus."""
+    """Lazy import components that require pymodbus.
+
+    This function is only called when actually starting an emulator,
+    at which point pymodbus and other dependencies should be installed.
+    """
     global InverterSimulator, ModbusEmulatorServer
     if InverterSimulator is None:
-        _simulator_spec = importlib.util.spec_from_file_location(
-            'emulator_simulator',
-            os.path.join(os.path.dirname(__file__), 'emulator', 'simulator.py')
-        )
-        _simulator_module = importlib.util.module_from_spec(_simulator_spec)
-        _simulator_spec.loader.exec_module(_simulator_module)
-        InverterSimulator = _simulator_module.InverterSimulator
+        try:
+            from emulator.simulator import InverterSimulator as _InverterSimulator
+            from emulator.modbus_server import ModbusEmulatorServer as _ModbusEmulatorServer
 
-        _server_spec = importlib.util.spec_from_file_location(
-            'emulator_server',
-            os.path.join(os.path.dirname(__file__), 'emulator', 'modbus_server.py')
-        )
-        _server_module = importlib.util.module_from_spec(_server_spec)
-        _server_spec.loader.exec_module(_server_module)
-        ModbusEmulatorServer = _server_module.ModbusEmulatorServer
+            InverterSimulator = _InverterSimulator
+            ModbusEmulatorServer = _ModbusEmulatorServer
+
+        except ImportError as e:
+            raise ImportError(
+                f"Failed to import emulator components: {e}\n\n"
+                "Please install required dependencies:\n"
+                "  pip install pymodbus>=3.0.0 rich>=13.0.0"
+            )
 
 # Configure logging
 logging.basicConfig(

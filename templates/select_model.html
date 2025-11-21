@@ -271,11 +271,25 @@
             try {
                 const response = await fetch('/api/models');
                 const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to load models');
+                }
+
+                if (!data.models || data.models.length === 0) {
+                    throw new Error('No models available');
+                }
+
                 models = data.models;
                 populateModelSelect();
+                console.log(`Loaded ${models.length} models`);
             } catch (error) {
                 console.error('Failed to load models:', error);
-                showError('Failed to load models. Please refresh the page.');
+                showError(`Failed to load models: ${error.message}. Check browser console for details.`);
+
+                // Still try to populate with empty list
+                const select = document.getElementById('model-select');
+                select.innerHTML = '<option value="">Error loading models - check console</option>';
             }
         }
 
