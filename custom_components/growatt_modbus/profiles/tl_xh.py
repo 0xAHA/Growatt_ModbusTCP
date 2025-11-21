@@ -188,7 +188,7 @@ TL_XH_3000_10000_V201 = {
         **TL_XH_3000_10000['holding_registers'],
 
         # === V2.01 REGISTERS (30000+ range) ===
-        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 4000 for TL-XH', 'default': 4000},
+        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 4000 for TL-XH', 'default': 5100},
         30099: {'name': 'protocol_version', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'VPP Protocol version (201 = V2.01)', 'default': 201},
         30100: {'name': 'control_authority', 'scale': 1, 'unit': '', 'access': 'RW'},
         30101: {'name': 'remote_onoff', 'scale': 1, 'unit': '', 'access': 'RW', 'maps_to': 'on_off'},
@@ -215,7 +215,7 @@ TL_XH_US_3000_10000_V201 = {
 # Update DTC code for US version
 TL_XH_US_3000_10000_V201['holding_registers'][30000] = {
     'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO',
-    'desc': 'Device Type Code: 4001 for TL-XH US', 'default': 4001
+    'desc': 'Device Type Code: 4001 for TL-XH US', 'default': 5100
 }
 
 # Export all TL-XH profiles
