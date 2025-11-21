@@ -32,12 +32,14 @@ _LOGGER = logging.getLogger(__name__)
 SERVICE_EXPORT_DUMP = "export_register_dump"
 
 # Universal scan ranges - covers all Growatt series
+# Split into chunks of max 125 registers to respect Modbus limits
 UNIVERSAL_SCAN_RANGES = [
     {"name": "Base Range 0-124", "start": 0, "count": 125},
     {"name": "Extended Range 125-249", "start": 125, "count": 125},
     {"name": "Storage Range 1000-1124", "start": 1000, "count": 125},
     {"name": "MIN/MOD Range 3000-3124", "start": 3000, "count": 125},
     {"name": "MOD Extended 3125-3249", "start": 3125, "count": 125},
+    {"name": "MOD Battery Info 1: 31200-31299", "start": 31200, "count": 100},  # VPP Protocol V2.01 battery data (respects 125-reg limit)
 ]
 
 # Service schema
