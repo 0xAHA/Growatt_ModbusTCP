@@ -284,26 +284,33 @@ header p {
     height: 400px;
 }
 
-.energy-flow-diagram .icon {
-    font-size: 24px;
-}
-
-.energy-flow-diagram .label {
+.energy-flow-diagram .node-label {
     font-size: 14px;
     font-weight: 600;
-    fill: #374151;
-}
-
-.energy-flow-diagram .value {
-    font-size: 13px;
-    font-weight: 700;
     fill: #1f2937;
 }
 
-.energy-flow-diagram .flow-value {
+.energy-flow-diagram .node-value {
     font-size: 12px;
-    font-weight: 600;
-    fill: #6b7280;
+    font-weight: 700;
+    fill: #374151;
+}
+
+.energy-flow-diagram circle {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    transition: all 0.3s ease;
+}
+
+.energy-flow-diagram circle:hover {
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+}
+
+.energy-flow-diagram line {
+    transition: all 0.3s ease;
+}
+
+.energy-flow-diagram .flow-arrow {
+    transition: all 0.3s ease;
 }
 
 /* Controls */

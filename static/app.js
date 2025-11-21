@@ -288,47 +288,50 @@ function updateEnergyFlow(data) {
     const housePower = data.load.power;
     const batteryPower = data.battery ? data.battery.power : 0;
 
-    // Update flow values
-    setValue('flowSolarValue', formatPower(solarPower));
+    // Update node values
+    setValue('solarValue', `${(solarPower / 1000).toFixed(1)} kW`);
+    setValue('houseValue', `${(housePower / 1000).toFixed(1)} kW`);
 
+    // Grid value with arrow showing direction
     if (gridPower > 0) {
-        setValue('flowGridValue', `${formatPower(gridPower)} →`);
-        updateArrow('flowInverterGrid', true);
+        setValue('gridValue', `← ${(gridPower / 1000).toFixed(1)} kW`);
     } else if (gridPower < 0) {
-        setValue('flowGridValue', `← ${formatPower(-gridPower)}`);
-        updateArrow('flowInverterGrid', false);
+        setValue('gridValue', `→ ${(-gridPower / 1000).toFixed(1)} kW`);
     } else {
-        setValue('flowGridValue', '0 W');
+        setValue('gridValue', `0.0 kW`);
     }
 
-    setValue('flowHouseValue', formatPower(housePower));
+    // Battery (if equipped)
+    if (data.battery) {
+        setValue('batteryValue', `${data.battery.soc.toFixed(0)}%`);
+    }
+
+    // Update line thickness and color based on power flow
+    updateFlowLine('lineSolarHome', solarPower * 0.5, '#F59E0B'); // Assume ~50% to home
+    updateFlowLine('lineSolarGrid', Math.abs(gridPower), gridPower < 0 ? '#8B5CF6' : '#E5E7EB');
 
     if (data.battery) {
-        if (batteryPower > 0) {
-            setValue('flowBatteryValue', `${formatPower(batteryPower)} ↓`);
-        } else if (batteryPower < 0) {
-            setValue('flowBatteryValue', `↑ ${formatPower(-batteryPower)}`);
-        } else {
-            setValue('flowBatteryValue', '0 W');
-        }
+        updateFlowLine('lineSolarBattery', Math.abs(batteryPower), batteryPower > 0 ? '#10B981' : '#E5E7EB');
     }
+}
 
-    // Update arrow thickness based on power
-    updateArrowThickness('flowSolarInverter', solarPower);
-    updateArrowThickness('flowInverterGrid', Math.abs(gridPower));
-    updateArrowThickness('flowInverterHouse', housePower);
-    if (data.battery) {
-        updateArrowThickness('flowBattery', Math.abs(batteryPower));
-    }
+// Update flow line appearance based on power
+function updateFlowLine(lineId, power, activeColor) {
+    const line = document.getElementById(lineId);
+    if (!line) return;
 
-    // Update colors based on status
-    updateStatusColor('solar', solarPower > 100);
-    updateStatusColor('inverter', solarPower > 100);
-    updateStatusColor('grid', Math.abs(gridPower) > 100);
-    updateStatusColor('house', housePower > 0);
-    if (data.battery) {
-        updateStatusColor('battery', data.battery.soc > 10);
-    }
+    const maxPower = 10000; // 10kW max for scaling
+    const minWidth = 2;
+    const maxWidth = 8;
+
+    // Calculate width based on power (logarithmic scale for better visualization)
+    const width = power > 100 ?
+        minWidth + (Math.log(power) / Math.log(maxPower)) * (maxWidth - minWidth) :
+        minWidth;
+
+    line.setAttribute('stroke-width', width);
+    line.setAttribute('stroke', power > 100 ? activeColor : '#E5E7EB');
+    line.setAttribute('opacity', power > 100 ? '1' : '0.3');
 }
 
 // Load and display registers
@@ -383,38 +386,6 @@ function formatPower(watts) {
         return `${(watts / 1000).toFixed(2)} kW`;
     }
     return `${watts.toFixed(0)} W`;
-}
-
-function updateArrow(id, forward) {
-    const arrow = document.getElementById(id);
-    if (arrow) {
-        if (forward) {
-            arrow.setAttribute('marker-end', 'url(#arrowhead)');
-            arrow.setAttribute('marker-start', '');
-        } else {
-            arrow.setAttribute('marker-start', 'url(#arrowhead)');
-            arrow.setAttribute('marker-end', '');
-        }
-    }
-}
-
-function updateArrowThickness(id, power) {
-    const arrow = document.getElementById(id);
-    if (arrow) {
-        const thickness = Math.min(Math.max(power / 500, 2), 8);
-        arrow.setAttribute('stroke-width', thickness);
-
-        // Update opacity based on power
-        const opacity = power > 100 ? 1 : 0.3;
-        arrow.setAttribute('opacity', opacity);
-    }
-}
-
-function updateStatusColor(id, active) {
-    const element = document.getElementById(id);
-    if (element) {
-        element.style.opacity = active ? '1' : '0.5';
-    }
 }
 
 // Clean up on page unload

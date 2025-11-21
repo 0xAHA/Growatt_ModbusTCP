@@ -36,73 +36,69 @@
         <div class="dashboard-grid">
             <!-- Energy Flow Diagram -->
             <div class="card energy-flow-card">
-                <h2>Energy Flow</h2>
-                <svg id="energyFlow" viewBox="0 0 800 400" class="energy-flow-diagram">
-                    <!-- Solar -->
+                <h2>Energy Distribution</h2>
+                <svg id="energyFlow" viewBox="0 0 500 400" class="energy-flow-diagram">
+                    <!-- Flow Lines (behind circles) -->
+                    <g id="flowLines">
+                        <!-- Solar to Grid -->
+                        <line id="lineSolarGrid" x1="250" y1="120" x2="130" y2="280" stroke="#E5E7EB" stroke-width="3" />
+                        <!-- Solar to Home -->
+                        <line id="lineSolarHome" x1="250" y1="120" x2="370" y2="280" stroke="#E5E7EB" stroke-width="3" />
+                        {% if has_battery %}
+                        <!-- Solar to Battery -->
+                        <line id="lineSolarBattery" x1="250" y1="150" x2="250" y2="240" stroke="#E5E7EB" stroke-width="3" />
+                        {% endif %}
+                    </g>
+
+                    <!-- Solar (Top Center) -->
                     <g id="solar">
-                        <circle cx="100" cy="200" r="50" fill="#FDB813" stroke="#F59E0B" stroke-width="3"/>
-                        <text x="100" y="195" text-anchor="middle" class="icon">☀️</text>
-                        <text x="100" y="220" text-anchor="middle" class="label">Solar</text>
-                        <text x="100" y="240" text-anchor="middle" class="value" id="solarValue">0 W</text>
+                        <circle cx="250" cy="100" r="60" fill="#FDB813" stroke="#F59E0B" stroke-width="4"/>
+                        <text x="250" y="95" text-anchor="middle" font-size="32">☀️</text>
+                        <text x="250" y="118" text-anchor="middle" class="node-label">Solar</text>
+                        <text x="250" y="145" text-anchor="middle" class="node-value" id="solarValue">0.0 kWh</text>
                     </g>
 
-                    <!-- Inverter -->
-                    <g id="inverter">
-                        <rect x="325" y="150" width="150" height="100" rx="10" fill="#6366F1" stroke="#4F46E5" stroke-width="3"/>
-                        <text x="400" y="195" text-anchor="middle" class="label" fill="white">Inverter</text>
-                        <text x="400" y="215" text-anchor="middle" class="value" fill="white" id="inverterValue">0 W</text>
+                    <!-- Grid (Bottom Left) -->
+                    <g id="grid">
+                        <circle cx="130" cy="300" r="60" fill="#8B5CF6" stroke="#7C3AED" stroke-width="4"/>
+                        <text x="130" y="295" text-anchor="middle" font-size="32">🔌</text>
+                        <text x="130" y="318" text-anchor="middle" class="node-label">Grid</text>
+                        <text x="130" y="345" text-anchor="middle" class="node-value" id="gridValue">← 0.0 kWh</text>
                     </g>
 
-                    <!-- Battery (if equipped) -->
+                    <!-- Home (Bottom Right) -->
+                    <g id="home">
+                        <circle cx="370" cy="300" r="60" fill="#3B82F6" stroke="#2563EB" stroke-width="4"/>
+                        <text x="370" y="295" text-anchor="middle" font-size="32">🏠</text>
+                        <text x="370" y="318" text-anchor="middle" class="node-label">Home</text>
+                        <text x="370" y="345" text-anchor="middle" class="node-value" id="houseValue">0.0 kWh</text>
+                    </g>
+
+                    <!-- Battery (Center, if equipped) -->
                     {% if has_battery %}
                     <g id="battery">
-                        <rect x="325" y="290" width="150" height="80" rx="10" fill="#10B981" stroke="#059669" stroke-width="3"/>
-                        <text x="400" y="320" text-anchor="middle" class="icon">🔋</text>
-                        <text x="400" y="340" text-anchor="middle" class="label">Battery</text>
-                        <text x="400" y="360" text-anchor="middle" class="value" id="batteryValue">0%</text>
+                        <circle cx="250" cy="260" r="50" fill="#10B981" stroke="#059669" stroke-width="4"/>
+                        <text x="250" y="258" text-anchor="middle" font-size="28">🔋</text>
+                        <text x="250" y="280" text-anchor="middle" class="node-label" font-size="12">Battery</text>
+                        <text x="250" y="300" text-anchor="middle" class="node-value" id="batteryValue">50%</text>
                     </g>
                     {% endif %}
 
-                    <!-- Grid -->
-                    <g id="grid">
-                        <rect x="600" y="75" width="100" height="100" rx="10" fill="#8B5CF6" stroke="#7C3AED" stroke-width="3"/>
-                        <text x="650" y="115" text-anchor="middle" class="icon">🔌</text>
-                        <text x="650" y="135" text-anchor="middle" class="label">Grid</text>
-                        <text x="650" y="155" text-anchor="middle" class="value" id="gridValue">0 W</text>
+                    <!-- Flow Arrows (on top) -->
+                    <g id="flowArrows">
+                        <defs>
+                            <marker id="arrowSolar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                <polygon points="0 0, 8 4, 0 8" fill="#F59E0B" />
+                            </marker>
+                            <marker id="arrowGrid" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                <polygon points="0 0, 8 4, 0 8" fill="#8B5CF6" />
+                            </marker>
+                            <marker id="arrowBattery" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                <polygon points="0 0, 8 4, 0 8" fill="#10B981" />
+                            </marker>
+                        </defs>
+                        <!-- Arrows will be added dynamically by JavaScript based on power flow -->
                     </g>
-
-                    <!-- House Load -->
-                    <g id="house">
-                        <rect x="600" y="225" width="100" height="100" rx="10" fill="#EC4899" stroke="#DB2777" stroke-width="3"/>
-                        <text x="650" y="265" text-anchor="middle" class="icon">🏠</text>
-                        <text x="650" y="285" text-anchor="middle" class="label">House</text>
-                        <text x="650" y="305" text-anchor="middle" class="value" id="houseValue">0 W</text>
-                    </g>
-
-                    <!-- Flow Arrows -->
-                    <defs>
-                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                            <polygon points="0 0, 10 3, 0 6" fill="#64748B" />
-                        </marker>
-                    </defs>
-
-                    <!-- Solar → Inverter -->
-                    <path id="flowSolarInverter" d="M 150 200 L 325 200" stroke="#64748B" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="237" y="190" text-anchor="middle" class="flow-value" id="flowSolarValue">0 W</text>
-
-                    <!-- Inverter → Grid -->
-                    <path id="flowInverterGrid" d="M 475 175 L 600 125" stroke="#64748B" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="537" y="140" text-anchor="middle" class="flow-value" id="flowGridValue">0 W</text>
-
-                    <!-- Inverter → House -->
-                    <path id="flowInverterHouse" d="M 475 225 L 600 275" stroke="#64748B" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="537" y="260" text-anchor="middle" class="flow-value" id="flowHouseValue">0 W</text>
-
-                    {% if has_battery %}
-                    <!-- Inverter ↔ Battery -->
-                    <path id="flowBattery" d="M 400 250 L 400 290" stroke="#64748B" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="420" y="275" text-anchor="middle" class="flow-value" id="flowBatteryValue">0 W</text>
-                    {% endif %}
                 </svg>
             </div>
 
