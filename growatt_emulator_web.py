@@ -52,10 +52,18 @@ def index():
         return render_template('select_model.html',
                              profiles=INVERTER_PROFILES)
 
-    profile = INVERTER_PROFILES[selected_profile]
+    # Get the base profile (without _v201 suffix)
+    base_profile_key = selected_profile.replace('_v201', '') if selected_profile else None
+
+    if not base_profile_key or base_profile_key not in INVERTER_PROFILES:
+        _LOGGER.error(f"Invalid profile key: {selected_profile} (base: {base_profile_key})")
+        return render_template('select_model.html',
+                             profiles=INVERTER_PROFILES)
+
+    profile = INVERTER_PROFILES[base_profile_key]
     return render_template('dashboard.html',
                          model_name=profile['name'],
-                         profile_key=selected_profile,
+                         profile_key=base_profile_key,
                          has_battery=profile.get('has_battery', False),
                          is_three_phase=profile.get('is_three_phase', False),
                          INVERTER_PROFILES=INVERTER_PROFILES)
@@ -120,7 +128,10 @@ def get_status():
         return jsonify({'error': 'Emulator not started'}), 400
 
     state = simulator.get_state()
-    profile = INVERTER_PROFILES[selected_profile]
+
+    # Get the base profile (without _v201 suffix)
+    base_profile_key = selected_profile.replace('_v201', '') if selected_profile else None
+    profile = INVERTER_PROFILES.get(base_profile_key, {})
 
     # Build response
     response = {
@@ -218,9 +229,8 @@ def get_registers():
     if simulator is None:
         return jsonify({'error': 'Emulator not started'}), 400
 
-    # Get register map
-    from growatt_modbus.device_profiles import get_profile
-    profile = get_profile(simulator.profile_key)
+    # Get register map using already-loaded device_profiles module
+    profile = device_profiles.get_profile(simulator.profile_key)
 
     if not profile:
         return jsonify({'error': 'Profile not found'}), 400
