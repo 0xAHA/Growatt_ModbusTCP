@@ -827,7 +827,11 @@ class GrowattModbus:
                 logger.debug(f"Battery voltage from reg {addr}: {data.battery_voltage}V")
 
             # Battery current (signed: positive=discharge, negative=charge)
-            addr = self._find_register_by_name('battery_current')
+            # Try VPP protocol first (31216 - low register of 32-bit pair)
+            addr = self._find_register_by_name('battery_current_low')
+            if not addr:
+                # Fallback to legacy register (3170)
+                addr = self._find_register_by_name('battery_current_legacy')
             if addr:
                 data.battery_current = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery current from reg {addr}: {data.battery_current}A")
