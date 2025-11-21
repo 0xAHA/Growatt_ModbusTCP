@@ -164,7 +164,6 @@ class ModbusEmulatorServer:
             StartTcpServer(
                 context=self.server_context,
                 address=("0.0.0.0", self.port),
-                framer=ModbusSocketFramer,
                 allow_reuse_address=True,
                 defer_start=False
             )
