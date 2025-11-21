@@ -6,8 +6,9 @@ Serves simulated register values via Modbus TCP protocol.
 
 import logging
 import threading
+import socket
 from typing import Optional
-from pymodbus.server import StartTcpServer
+from pymodbus.server import StartTcpServer, ServerStop
 from pymodbus.datastore import ModbusServerContext, ModbusDeviceContext
 from pymodbus.datastore import ModbusSparseDataBlock
 from pymodbus.framer import ModbusSocketFramer
@@ -111,6 +112,7 @@ class ModbusEmulatorServer:
         self.slave_id = slave_id
         self.server_thread = None
         self.update_thread = None
+        self.server_instance = None
         self.running = False
 
         # Create custom data blocks that fetch directly from simulator
