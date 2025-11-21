@@ -16,6 +16,50 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from .models import InverterModel
 
+# DTC (Device Type Code) mapping by profile key series
+# These codes are returned at register 30000 for device identification
+DTC_CODES = {
+    # MIC series
+    'mic_600_3300tl_x': 5200,
+    'mic_600_3300tl_x_v201': 5200,
+
+    # MIN series
+    'min_3000_6000_tl_x': 5200,
+    'min_3000_6000_tl_x_v201': 5200,
+    'min_7000_10000_tl_x': 5201,
+    'min_7000_10000_tl_x_v201': 5201,
+
+    # TL-XH series
+    'tl_xh_3000_10000': 5100,
+    'tl_xh_3000_10000_v201': 5100,
+    'tl_xh_us_3000_10000': 5100,
+    'tl_xh_us_3000_10000_v201': 5100,
+
+    # MID series
+    'mid_15000_25000tl3_x': 5400,
+    'mid_15000_25000tl3_x_v201': 5400,
+
+    # SPH single-phase series
+    'sph_3000_6000': 3502,
+    'sph_3000_6000_v201': 3502,
+    'sph_7000_10000': 3502,
+    'sph_7000_10000_v201': 3502,
+
+    # SPH-TL3 three-phase series
+    'sph_tl3_3000_10000': 3601,
+    'sph_tl3_3000_10000_v201': 3601,
+
+    # MOD series
+    'mod_6000_15000tl3_xh': 5400,
+    'mod_6000_15000tl3_xh_v201': 5400,
+}
+
+# Firmware version mapping by protocol version
+FIRMWARE_VERSIONS = {
+    'v1.39': '1.39',
+    'v2.01': '2.01',
+}
+
 
 class InverterSimulator:
     """Simulates a Growatt inverter with realistic behavior."""
@@ -45,7 +89,9 @@ class InverterSimulator:
 
         # Static parameters
         self.serial_number = self._generate_serial()
-        self.firmware_version = "1.39"
+        # Set firmware version based on profile's protocol version
+        protocol_version = getattr(model, 'profile', {}).get('protocol_version', 'v1.39')
+        self.firmware_version = FIRMWARE_VERSIONS.get(protocol_version, '1.39')
 
         # State variables
         self.battery_soc = 50.0  # %
@@ -477,6 +523,17 @@ class InverterSimulator:
             registers = self.model.get_input_registers()
         else:
             registers = self.model.get_holding_registers()
+
+        # Special handling for DTC code (register 30000) - always provide a value
+        # This allows all profiles (including non-V2.01) to return proper DTC codes
+        if register_type == 'holding' and address == 30000:
+            dtc = DTC_CODES.get(self.model.profile_key)
+            if dtc is not None:
+                return dtc
+            # If profile defines the register, use its default
+            if address in registers:
+                return registers[address].get('default', 0)
+            return 0
 
         if address not in registers:
             return None
@@ -993,7 +1050,10 @@ class InverterSimulator:
 
         # Device identification (holding registers)
         elif reg_name == 'dtc_code':
-            # Return default value if specified in register definition
+            # Use DTC_CODES mapping based on profile key, fallback to register default
+            dtc = DTC_CODES.get(self.model.profile_key)
+            if dtc is not None:
+                return dtc
             return reg_def.get('default', 0)
 
         # Default - check if register definition has a default value
