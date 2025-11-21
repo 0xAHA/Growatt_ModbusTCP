@@ -97,7 +97,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             # Update config entry to store string key instead of dict
             new_data = {**entry.data, CONF_REGISTER_MAP: self._register_map_key}
             hass.config_entries.async_update_entry(entry, data=new_data)
-            _LOGGER.info(f"Fixed config entry to store register map key: {self._register_map_key}")
+            _LOGGER.debug(f"Fixed config entry to store register map key: {self._register_map_key}")
         else:
             # Normal case - it's a string key, use it directly
             self._register_map_key = raw_register_map
@@ -149,7 +149,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             # Try to find which register map this is by comparing
             for map_name, map_data in REGISTER_MAPS.items():
                 if map_data == register_map or map_data.get('name') == register_map.get('name'):
-                    _LOGGER.info("Identified register map as: %s", map_name)
+                    _LOGGER.debug("Identified register map as: %s", map_name)
                     register_map = map_name
                     break
             else:
@@ -190,7 +190,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 timeout=timeout  # Pass timeout
             )
                 
-            _LOGGER.info("Initialized Growatt client with register map: %s", register_map)
+            _LOGGER.debug("Initialized Growatt client with register map: %s", register_map)
             
         except Exception as err:
             _LOGGER.error("Failed to initialize Growatt client: %s", err)
@@ -205,7 +205,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             minute=0,
             second=0
         )
-        _LOGGER.info("Midnight callback registered for daily total resets")
+        _LOGGER.debug("Midnight callback registered for daily total resets")
 
     async def _handle_midnight_reset(self, now=None):
         """Handle midnight reset of daily totals."""
@@ -230,7 +230,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         
         # If inverter is offline, zero out the daily totals now
         if not self._inverter_online and self.data is not None:
-            _LOGGER.info("Inverter offline at midnight - resetting daily totals to 0")
+            _LOGGER.debug("Inverter offline at midnight - resetting daily totals to 0")
             # Create modified data with zeroed daily totals
             self.data.energy_today = 0
             self.data.energy_to_grid_today = 0
@@ -303,7 +303,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     # Check if we crossed midnight while offline
                     current_date = datetime.now().date()
                     if current_date > self._current_date:
-                        _LOGGER.info("Date changed while inverter offline - resetting daily totals")
+                        _LOGGER.debug("Date changed while inverter offline - resetting daily totals")
                         # Reset daily totals to 0
                         self.data.energy_today = 0
                         self.data.energy_to_grid_today = 0
@@ -330,7 +330,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             # Check for date transition (inverter came back online on new day)
             current_date = datetime.now().date()
             if was_offline and current_date > self._current_date:
-                _LOGGER.info("Inverter back online after date change - daily totals already reset by inverter")
+                _LOGGER.debug("Inverter back online after date change - daily totals already reset by inverter")
                 self._current_date = current_date
                 # Inverter's daily totals are already at new day values (small amounts from morning production)
             
@@ -435,7 +435,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 
                 if not result.isError():
                     self._serial_number = self._registers_to_ascii(result.registers)
-                    _LOGGER.info(f"Read serial number: {self._serial_number}")
+                    _LOGGER.debug(f"Read serial number: {self._serial_number}")
             except Exception as e:
                 _LOGGER.debug(f"Could not read serial number: {e}")
             
@@ -444,7 +444,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 result = self._client.client.read_holding_registers(address=9, count=3, device_id=self._slave_id)
                 if not result.isError():
                     self._firmware_version = self._registers_to_ascii(result.registers)
-                    _LOGGER.info(f"Read firmware version: {self._firmware_version}")
+                    _LOGGER.debug(f"Read firmware version: {self._firmware_version}")
             except Exception as e:
                 _LOGGER.debug(f"Could not read firmware version: {e}")
             
@@ -453,7 +453,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 result = self._client.client.read_holding_registers(address=125, count=8, device_id=self._slave_id)
                 if not result.isError():
                     self._inverter_type = self._registers_to_ascii(result.registers)
-                    _LOGGER.info(f"Read inverter type: {self._inverter_type}")
+                    _LOGGER.debug(f"Read inverter type: {self._inverter_type}")
 
                     # Parse model name from inverter type
                     self._model_name = self._parse_model_name(self._inverter_type, profile)

@@ -131,8 +131,7 @@ async def async_read_serial_number(
     try:
         # Read 10 registers starting at address 23
         result = await hass.async_add_executor_job(
-            client.client.read_holding_registers,
-            23, 10
+            lambda: client.client.read_holding_registers(address=23, count=10)
         )
         
         if result.isError():
@@ -150,7 +149,7 @@ async def async_read_serial_number(
         serial_number = bytes(serial_bytes).decode('ascii', errors='ignore').strip('\x00').strip()
         
         if serial_number:
-            _LOGGER.info(f"Read serial number: {serial_number}")
+            _LOGGER.debug(f"Read serial number: {serial_number}")
             return serial_number
         
         return None
@@ -179,8 +178,7 @@ async def async_read_model_name(
     try:
         # Read 5 registers starting at address 0
         result = await hass.async_add_executor_job(
-            client.client.read_holding_registers,
-            0, 5
+            lambda: client.client.read_holding_registers(address=0, count=5)
         )
         
         if result.isError():
@@ -198,7 +196,7 @@ async def async_read_model_name(
         model_name = bytes(model_bytes).decode('ascii', errors='ignore').strip('\x00').strip()
         
         if model_name:
-            _LOGGER.info(f"Read model name: {model_name}")
+            _LOGGER.debug(f"Read model name: {model_name}")
             return model_name
         
         return None
@@ -229,23 +227,23 @@ async def async_read_dtc_code(
     try:
         # Read DTC from holding register 30000
         result = await hass.async_add_executor_job(
-            client.client.read_holding_registers,
-            30000, 1, device_id
+            lambda: client.client.read_holding_registers(address=30000, count=1)
         )
 
         if result.isError():
-            _LOGGER.debug(f"Error reading DTC code: {result}")
+            _LOGGER.warning(f"Failed to read DTC code from register 30000: {result}")
             return None
 
         dtc_code = result.registers[0]
         if dtc_code and dtc_code > 0:
-            _LOGGER.info(f"Read DTC code: {dtc_code}")
+            _LOGGER.info(f"✓ DTC Detection - Read DTC code: {dtc_code} from holding register 30000")
             return dtc_code
-
-        return None
+        else:
+            _LOGGER.warning(f"DTC code register 30000 returned 0 or invalid value: {dtc_code}")
+            return None
 
     except Exception as e:
-        _LOGGER.debug(f"Exception reading DTC code: {str(e)}")
+        _LOGGER.warning(f"Exception reading DTC code from register 30000: {str(e)}")
         return None
 
 
@@ -300,7 +298,7 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
         _LOGGER.info(f"Matched DTC code {dtc_code} to V2.01 profile '{profile_key}'")
         return profile_key
 
-    _LOGGER.warning(f"Unknown DTC code: {dtc_code}")
+    _LOGGER.warning(f"✗ DTC Detection - Unknown DTC code: {dtc_code} (not in supported models)")
     return None
 
 
@@ -332,18 +330,18 @@ async def async_detect_inverter_series(
             client.read_input_registers, 3003, 1
         )
         if min_test is not None:
-            _LOGGER.info("Detected 3000-range registers - MIN series inverter")
+            _LOGGER.debug("Detected 3000-range registers - MIN series inverter")
             
             # Test for PV3 at register 3011 (MIN 7-10k has 3 strings)
             pv3_test = await hass.async_add_executor_job(
                 client.read_input_registers, 3011, 1
             )
             if pv3_test is not None:  # Register exists, even if value is 0
-                _LOGGER.info("Detected PV3 register - MIN 7000-10000TL-X")
+                _LOGGER.debug("Detected PV3 register - MIN 7000-10000TL-X")
                 await hass.async_add_executor_job(client.disconnect)
                 return 'min_7000_10000_tl_x'
             else:
-                _LOGGER.info("No PV3 register - MIN 3000-6000TL-X")
+                _LOGGER.debug("No PV3 register - MIN 3000-6000TL-X")
                 await hass.async_add_executor_job(client.disconnect)
                 return 'min_3000_6000_tl_x'
         
@@ -352,7 +350,7 @@ async def async_detect_inverter_series(
             client.read_input_registers, 3169, 1
         )
         if result is not None:
-            _LOGGER.info("Detected battery voltage register returns value")
+            _LOGGER.debug("Detected battery voltage register returns value")
             
             # Check for 3-phase at register 42 (S-phase voltage)
             phase_s_test = await hass.async_add_executor_job(
@@ -364,14 +362,14 @@ async def async_detect_inverter_series(
             )
             
             if phase_s_test and phase_t_test:
-                _LOGGER.info("Detected 3-phase hybrid - SPH TL3 or MOD series")
+                _LOGGER.debug("Detected 3-phase hybrid - SPH TL3 or MOD series")
 
                 # Check for MOD-specific 31200 range (battery power per VPP Protocol V2.01)
                 mod_test = await hass.async_add_executor_job(
                     client.read_input_registers, 31200, 1
                 )
                 if mod_test is not None:
-                    _LOGGER.info("Detected 31200 range (VPP Protocol) - MOD series")
+                    _LOGGER.debug("Detected 31200 range (VPP Protocol) - MOD series")
                     await hass.async_add_executor_job(client.disconnect)
                     return 'mod_6000_15000tl3_xh'
 
@@ -380,7 +378,7 @@ async def async_detect_inverter_series(
                     client.read_input_registers, 1000, 1
                 )
                 if storage_test is not None:
-                    _LOGGER.info("Detected storage range - SPH TL3 series")
+                    _LOGGER.debug("Detected storage range - SPH TL3 series")
                     await hass.async_add_executor_job(client.disconnect)
                     return 'sph_tl3_3000_10000'
                 else:
@@ -388,7 +386,7 @@ async def async_detect_inverter_series(
                     await hass.async_add_executor_job(client.disconnect)
                     return 'mod_6000_15000tl3_xh'
             else:
-                _LOGGER.info("Detected single-phase hybrid - SPH or TL-XH series")
+                _LOGGER.debug("Detected single-phase hybrid - SPH or TL-XH series")
                 await hass.async_add_executor_job(client.disconnect)
                 return 'sph_7000_10000'  # Default to SPH 7-10k
         
@@ -402,7 +400,7 @@ async def async_detect_inverter_series(
                 client.read_input_registers, 42, 1
             )
             if phase2:
-                _LOGGER.info("Detected 3-phase grid-tied inverter - MID/MAX series")
+                _LOGGER.debug("Detected 3-phase grid-tied inverter - MID/MAX series")
                 await hass.async_add_executor_job(client.disconnect)
                 return 'mid_15000_25000tl3_x'  # Default to MID
         

@@ -3,256 +3,1129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Growatt Emulator - {{ model_name }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Growatt Emulator Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            background: #161b22;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-left h1 {
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+
+        .header-left .subtitle {
+            font-size: 0.9em;
+            color: #8b949e;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .status-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .btn-stop {
+            padding: 8px 20px;
+            background: rgba(248, 81, 73, 0.2);
+            color: #f85149;
+            border: 1px solid #f85149;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-stop:hover {
+            background: rgba(248, 81, 73, 0.3);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #58a6ff;
+        }
+
+        /* Energy Flow Diagram */
+        .energy-flow {
+            position: relative;
+            width: 100%;
+            height: 400px;
+        }
+
+        .energy-node {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .node-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid;
+            background: #0d1117;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .node-icon {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        .node-power {
+            font-size: 1em;
+            font-weight: 700;
+        }
+
+        .node-label {
+            font-size: 0.9em;
+            color: #8b949e;
+        }
+
+        /* Node positions */
+        .node-solar {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .node-solar .node-circle {
+            border-color: #ffc107;
+            color: #ffc107;
+        }
+
+        .node-battery {
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+        }
+
+        .node-battery .node-circle {
+            border-color: #9c27b0;
+            color: #9c27b0;
+        }
+
+        .node-home {
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+        }
+
+        .node-home .node-circle {
+            border-color: #2196f3;
+            color: #2196f3;
+        }
+
+        .node-grid {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .node-grid .node-circle {
+            border-color: #4caf50;
+            color: #4caf50;
+        }
+
+        /* Energy flow lines (SVG) */
+        #flow-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .flow-line {
+            stroke-width: 3;
+            fill: none;
+            opacity: 0.6;
+        }
+
+        .flow-arrow {
+            font-size: 1.2em;
+        }
+
+        /* Info Tiles */
+        .info-section {
+            margin-bottom: 20px;
+        }
+
+        .section-header {
+            font-size: 1em;
+            font-weight: 600;
+            color: #58a6ff;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        /* Tabular grid for organized rows */
+        .info-grid-tabular {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        /* Dynamic column count based on number of items */
+        .info-grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .info-grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+        .info-grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+        .info-grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+
+        .info-tile {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 8px;
+        }
+
+        .info-tile-label {
+            font-size: 0.7em;
+            color: #8b949e;
+            margin-bottom: 4px;
+        }
+
+        .info-tile-value {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #58a6ff;
+        }
+
+        .info-tile-unit {
+            font-size: 0.8em;
+            color: #8b949e;
+            margin-left: 3px;
+        }
+
+        /* Controls */
+        .control-group {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #0d1117;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: #c9d1d9;
+        }
+
+        .control-value {
+            font-weight: 700;
+            color: #58a6ff;
+        }
+
+        .control-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #30363d;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .control-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #58a6ff;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #58a6ff;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn-control {
+            padding: 8px;
+            background: #30363d;
+            border: 1px solid #484f58;
+            border-radius: 6px;
+            color: #c9d1d9;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+
+        .btn-control:hover {
+            background: #484f58;
+        }
+
+        .btn-control.active {
+            background: #1f6feb;
+            border-color: #1f6feb;
+        }
+
+        /* Time controls */
+        .time-info {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .time-display {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #58a6ff;
+            margin-bottom: 5px;
+        }
+
+        .time-label {
+            font-size: 0.85em;
+            color: #8b949e;
+        }
+
+        .soc-display {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(156, 39, 176, 0.1);
+            border-radius: 6px;
+        }
+
+        .soc-bar {
+            width: 100%;
+            height: 8px;
+            background: #30363d;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .soc-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #9c27b0, #e91e63);
+            transition: width 0.5s ease;
+        }
+
+        /* Dropdown fix - prevent reset */
+        select:focus {
+            outline: 2px solid #58a6ff;
+            outline-offset: 2px;
+        }
+
+        .dropdown-wrapper {
+            position: relative;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        select option {
+            background: #161b22;
+            padding: 8px;
+        }
+
+        /* Battery indicator */
+        .battery-indicator {
+            display: none;
+        }
+
+        .has-battery .battery-indicator {
+            display: block;
+        }
+    </style>
 </head>
 <body>
-    <div class="dashboard">
-        <header class="dashboard-header">
+    <div class="container">
+        <div class="header">
             <div class="header-left">
-                <h1>☀️ <span id="modelName">{{ model_name }}</span></h1>
-                <div class="model-switcher">
-                    <select id="modelSwitcher" class="model-switch-select">
-                        {% for key, profile in INVERTER_PROFILES.items() %}
-                            {% if not key.endswith('_v201') %}
-                            <option value="{{ key }}" {% if key == profile_key %}selected{% endif %}>{{ profile.name }}</option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
-                    <select id="protocolSwitcher" class="protocol-switch-select">
-                        <option value="v201">V2.01</option>
-                        <option value="legacy">Legacy</option>
-                    </select>
-                    <button id="switchBtn" class="switch-btn">Switch Model</button>
+                <h1 id="model-name">Loading...</h1>
+                <div class="subtitle">
+                    <span id="serial">Serial: -</span> |
+                    <span id="firmware">Firmware: -</span> |
+                    <span id="modbus-info">Modbus TCP: port -</span>
                 </div>
             </div>
-            <div class="header-info">
-                <span id="time" class="time">--:--</span>
-                <span id="status" class="status-badge">Normal</span>
-                <button id="stopBtn" class="stop-btn">Stop Emulator</button>
+            <div class="header-right">
+                <div class="status-badge">Running</div>
+                <button class="btn-stop" onclick="stopEmulator()">Stop</button>
             </div>
-        </header>
+        </div>
 
-        <div class="dashboard-grid">
-            <!-- Energy Flow Diagram -->
-            <div class="card energy-flow-card">
-                <h2>Energy Distribution</h2>
-                <svg id="energyFlow" viewBox="0 0 500 400" class="energy-flow-diagram">
-                    <!-- Flow Lines (behind circles) -->
-                    <g id="flowLines">
-                        <!-- Solar to Grid -->
-                        <line id="lineSolarGrid" x1="250" y1="120" x2="130" y2="280" stroke="#E5E7EB" stroke-width="3" />
-                        <!-- Solar to Home -->
-                        <line id="lineSolarHome" x1="250" y1="120" x2="370" y2="280" stroke="#E5E7EB" stroke-width="3" />
-                        {% if has_battery %}
-                        <!-- Solar to Battery -->
-                        <line id="lineSolarBattery" x1="250" y1="150" x2="250" y2="240" stroke="#E5E7EB" stroke-width="3" />
-                        {% endif %}
-                    </g>
+        <div class="main-grid">
+            <!-- Left column: Energy Flow -->
+            <div>
+                <div class="card">
+                    <h2 class="card-title">Energy Distribution</h2>
+                    <div class="energy-flow">
+                        <svg id="flow-svg">
+                            <!-- Lines will be drawn dynamically -->
+                        </svg>
 
-                    <!-- Solar (Top Center) -->
-                    <g id="solar">
-                        <circle cx="250" cy="100" r="60" fill="#FDB813" stroke="#F59E0B" stroke-width="4"/>
-                        <text x="250" y="95" text-anchor="middle" font-size="32">☀️</text>
-                        <text x="250" y="118" text-anchor="middle" class="node-label">Solar</text>
-                        <text x="250" y="145" text-anchor="middle" class="node-value" id="solarValue">0.0 kWh</text>
-                    </g>
+                        <div class="energy-node node-solar">
+                            <div class="node-circle">
+                                <div class="node-icon">☀️</div>
+                                <div class="node-power" id="power-solar">0 W</div>
+                            </div>
+                            <div class="node-label">Solar</div>
+                        </div>
 
-                    <!-- Grid (Bottom Left) -->
-                    <g id="grid">
-                        <circle cx="130" cy="300" r="60" fill="#8B5CF6" stroke="#7C3AED" stroke-width="4"/>
-                        <text x="130" y="295" text-anchor="middle" font-size="32">🔌</text>
-                        <text x="130" y="318" text-anchor="middle" class="node-label">Grid</text>
-                        <text x="130" y="345" text-anchor="middle" class="node-value" id="gridValue">← 0.0 kWh</text>
-                    </g>
+                        <div class="energy-node node-battery battery-indicator">
+                            <div class="node-circle">
+                                <div class="node-icon">🔋</div>
+                                <div class="node-power" id="power-battery">0 W</div>
+                            </div>
+                            <div class="node-label">Battery</div>
+                        </div>
 
-                    <!-- Home (Bottom Right) -->
-                    <g id="home">
-                        <circle cx="370" cy="300" r="60" fill="#3B82F6" stroke="#2563EB" stroke-width="4"/>
-                        <text x="370" y="295" text-anchor="middle" font-size="32">🏠</text>
-                        <text x="370" y="318" text-anchor="middle" class="node-label">Home</text>
-                        <text x="370" y="345" text-anchor="middle" class="node-value" id="houseValue">0.0 kWh</text>
-                    </g>
+                        <div class="energy-node node-home">
+                            <div class="node-circle">
+                                <div class="node-icon">🏠</div>
+                                <div class="node-power" id="power-home">0 W</div>
+                            </div>
+                            <div class="node-label">Home</div>
+                        </div>
 
-                    <!-- Battery (Center, if equipped) -->
-                    {% if has_battery %}
-                    <g id="battery">
-                        <circle cx="250" cy="260" r="50" fill="#10B981" stroke="#059669" stroke-width="4"/>
-                        <text x="250" y="258" text-anchor="middle" font-size="28">🔋</text>
-                        <text x="250" y="280" text-anchor="middle" class="node-label" font-size="12">Battery</text>
-                        <text x="250" y="300" text-anchor="middle" class="node-value" id="batteryValue">50%</text>
-                    </g>
-                    {% endif %}
-
-                    <!-- Flow Arrows (on top) -->
-                    <g id="flowArrows">
-                        <defs>
-                            <marker id="arrowSolar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-                                <polygon points="0 0, 8 4, 0 8" fill="#F59E0B" />
-                            </marker>
-                            <marker id="arrowGrid" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-                                <polygon points="0 0, 8 4, 0 8" fill="#8B5CF6" />
-                            </marker>
-                            <marker id="arrowBattery" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-                                <polygon points="0 0, 8 4, 0 8" fill="#10B981" />
-                            </marker>
-                        </defs>
-                        <!-- Arrows will be added dynamically by JavaScript based on power flow -->
-                    </g>
-                </svg>
-            </div>
-
-            <!-- Controls -->
-            <div class="card controls-card">
-                <h2>Simulation Controls</h2>
-
-                <div class="control-group">
-                    <label for="timeOfDay">🕐 Time of Day: <span id="timeOfDayVal">12:00</span></label>
-                    <input type="range" id="timeOfDay" min="0" max="24" value="12" step="0.25">
-                    <div class="time-markers">
-                        <span>00:00</span>
-                        <span>06:00</span>
-                        <span>12:00</span>
-                        <span>18:00</span>
-                        <span>24:00</span>
+                        <div class="energy-node node-grid">
+                            <div class="node-circle">
+                                <div class="node-icon">⚡</div>
+                                <div class="node-power" id="power-grid">0 W</div>
+                            </div>
+                            <div class="node-label">Grid</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="control-group">
-                    <label for="irradiance">☀️ Solar Irradiance: <span id="irradianceVal">1000</span> W/m²</label>
-                    <input type="range" id="irradiance" min="0" max="1000" value="1000" step="50">
-                </div>
-
-                <div class="control-group">
-                    <label for="cloudCover">☁️ Cloud Cover: <span id="cloudCoverVal">0</span>%</label>
-                    <input type="range" id="cloudCover" min="0" max="100" value="0" step="5">
-                </div>
-
-                <div class="control-group">
-                    <label for="houseLoad">🏠 House Load: <span id="houseLoadVal">0</span> W</label>
-                    <input type="range" id="houseLoad" min="0" max="10000" value="0" step="100">
-                </div>
-
-                <div class="control-group">
-                    <label for="timeSpeed">⏱️ Time Speed: <span id="timeSpeedVal">1.0</span>x</label>
-                    <input type="range" id="timeSpeed" min="0.1" max="10" value="1" step="0.1">
-                </div>
-
-                <button id="resetEnergy" class="reset-btn">Reset Energy Totals</button>
-            </div>
-
-            <!-- Solar Generation -->
-            <div class="card">
-                <h2>☀️ Solar Generation</h2>
-                <div class="sensor-grid">
-                    <div class="sensor">
-                        <span class="sensor-label">PV1</span>
-                        <span class="sensor-value" id="pv1Power">0 W</span>
-                        <span class="sensor-detail" id="pv1Detail">0.0V / 0.0A</span>
-                    </div>
-                    <div class="sensor">
-                        <span class="sensor-label">PV2</span>
-                        <span class="sensor-value" id="pv2Power">0 W</span>
-                        <span class="sensor-detail" id="pv2Detail">0.0V / 0.0A</span>
-                    </div>
-                    <div class="sensor" id="pv3Sensor">
-                        <span class="sensor-label">PV3</span>
-                        <span class="sensor-value" id="pv3Power">0 W</span>
-                        <span class="sensor-detail" id="pv3Detail">0.0V / 0.0A</span>
-                    </div>
-                    <div class="sensor">
-                        <span class="sensor-label">Total</span>
-                        <span class="sensor-value" id="totalSolar">0 W</span>
+                <!-- Battery SOC indicator -->
+                <div class="card battery-indicator" style="margin-top: 15px;">
+                    <div class="soc-display">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span style="font-size: 0.9em; color: #8b949e;">Battery State of Charge</span>
+                            <span style="font-weight: 700; color: #9c27b0;" id="battery-soc">50%</span>
+                        </div>
+                        <div class="soc-bar">
+                            <div class="soc-fill" id="soc-fill" style="width: 50%;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- AC Output -->
-            <div class="card">
-                <h2>⚡ AC Output</h2>
-                <div class="sensor-grid">
-                    <div class="sensor">
-                        <span class="sensor-label">Power</span>
-                        <span class="sensor-value" id="acPower">0 W</span>
+            <!-- Right column: Controls and Info -->
+            <div>
+                <!-- Time and Status -->
+                <div class="card" style="margin-bottom: 15px;">
+                    <div class="time-info">
+                        <div class="time-display" id="sim-time">--:--:--</div>
+                        <div class="time-label">Simulation Time</div>
                     </div>
-                    <div class="sensor">
-                        <span class="sensor-label">Voltage</span>
-                        <span class="sensor-value" id="acVoltage">0.0 V</span>
-                    </div>
-                    <div class="sensor">
-                        <span class="sensor-label">Frequency</span>
-                        <span class="sensor-value" id="acFrequency">50.0 Hz</span>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Battery -->
-            <div class="card" id="batterySensor">
-                <h2>🔋 Battery</h2>
-                <div class="sensor-grid">
-                    <div class="sensor">
-                        <span class="sensor-label">SOC</span>
-                        <span class="sensor-value" id="batterySoc">0%</span>
-                    </div>
-                    <div class="sensor">
-                        <span class="sensor-label">Power</span>
-                        <span class="sensor-value" id="batteryPower">0 W</span>
-                    </div>
-                    <div class="sensor">
-                        <span class="sensor-label">Voltage</span>
-                        <span class="sensor-value" id="batteryVoltage">0.0 V</span>
-                    </div>
+                    <!-- Info tiles - Dynamically Generated Based on Profile -->
+                    <div id="info-tiles-container"></div>
                 </div>
-            </div>
 
-            <!-- Energy Totals -->
-            <div class="card">
-                <h2>📊 Energy Totals</h2>
-                <div class="sensor-grid">
-                    <div class="sensor">
-                        <span class="sensor-label">Today</span>
-                        <span class="sensor-value" id="energyToday">0.0 kWh</span>
-                    </div>
-                    <div class="sensor">
-                        <span class="sensor-label">Total</span>
-                        <span class="sensor-value" id="energyTotal">0.0 kWh</span>
-                    </div>
-                    <div class="sensor">
-                        <span class="sensor-label">To Grid Today</span>
-                        <span class="sensor-value" id="gridToday">0.0 kWh</span>
-                    </div>
-                </div>
-            </div>
+                <!-- Controls -->
+                <div class="card">
+                    <h2 class="card-title">Controls</h2>
 
-            <!-- Temperatures -->
-            <div class="card">
-                <h2>🌡️ Temperatures</h2>
-                <div class="sensor-grid">
-                    <div class="sensor">
-                        <span class="sensor-label">Inverter</span>
-                        <span class="sensor-value" id="tempInverter">25°C</span>
+                    <!-- Solar Irradiance -->
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Solar Irradiance</span>
+                            <span class="control-value">
+                                <span id="irradiance-value">800</span> W/m²
+                            </span>
+                        </div>
+                        <input type="range" class="control-slider" id="irradiance-slider"
+                               min="0" max="1000" step="10" value="800">
+                        <div class="control-buttons">
+                            <button class="btn-control" onclick="setIrradiance(0)">Night</button>
+                            <button class="btn-control" onclick="setIrradiance(300)">Dawn</button>
+                            <button class="btn-control" onclick="setIrradiance(800)">Day</button>
+                            <button class="btn-control" onclick="setIrradiance(1000)">Peak</button>
+                        </div>
                     </div>
-                    <div class="sensor">
-                        <span class="sensor-label">IPM</span>
-                        <span class="sensor-value" id="tempIpm">30°C</span>
-                    </div>
-                    <div class="sensor">
-                        <span class="sensor-label">Boost</span>
-                        <span class="sensor-value" id="tempBoost">28°C</span>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Key Registers -->
-            <div class="card registers-card">
-                <h2>📝 Key Registers</h2>
-                <div id="registersList" class="registers-list">
-                    Loading...
+                    <!-- Cloud Cover -->
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Cloud Cover</span>
+                            <span class="control-value">
+                                <span id="cloud-value">0</span>%
+                            </span>
+                        </div>
+                        <input type="range" class="control-slider" id="cloud-slider"
+                               min="0" max="100" step="5" value="0">
+                        <div class="control-buttons">
+                            <button class="btn-control" onclick="setCloud(0)">Clear</button>
+                            <button class="btn-control" onclick="setCloud(30)">Partly</button>
+                            <button class="btn-control" onclick="setCloud(70)">Cloudy</button>
+                            <button class="btn-control" onclick="setCloud(100)">Overcast</button>
+                        </div>
+                    </div>
+
+                    <!-- House Load -->
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>House Load</span>
+                            <span class="control-value">
+                                <span id="load-value">2000</span> W
+                            </span>
+                        </div>
+                        <input type="range" class="control-slider" id="load-slider"
+                               min="0" max="10000" step="100" value="2000">
+                        <div class="control-buttons">
+                            <button class="btn-control" onclick="setLoad(500)">Low</button>
+                            <button class="btn-control" onclick="setLoad(2000)">Normal</button>
+                            <button class="btn-control" onclick="setLoad(5000)">High</button>
+                            <button class="btn-control" onclick="setLoad(8000)">Peak</button>
+                        </div>
+                    </div>
+
+                    <!-- Time Multiplier -->
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Time Speed</span>
+                            <span class="control-value">
+                                <span id="speed-value">1</span>x
+                            </span>
+                        </div>
+                        <input type="range" class="control-slider" id="speed-slider"
+                               min="0.1" max="100" step="0.1" value="1">
+                        <div class="control-buttons">
+                            <button class="btn-control" onclick="setSpeed(1)">1x</button>
+                            <button class="btn-control" onclick="setSpeed(10)">10x</button>
+                            <button class="btn-control" onclick="setSpeed(60)">60x</button>
+                            <button class="btn-control" onclick="setSpeed(300)">300x</button>
+                        </div>
+                    </div>
+
+                    <!-- Battery Override (for testing) -->
+                    <div class="control-group battery-indicator">
+                        <div class="control-label">
+                            <span>Battery Override</span>
+                            <span class="control-value">
+                                <span id="battery-override-value">Auto</span>
+                            </span>
+                        </div>
+                        <div class="control-buttons">
+                            <button class="btn-control active" onclick="setBatteryOverride(null)">Auto</button>
+                            <button class="btn-control" onclick="setBatteryOverride(-2000)">Discharge</button>
+                            <button class="btn-control" onclick="setBatteryOverride(0)">Idle</button>
+                            <button class="btn-control" onclick="setBatteryOverride(2000)">Charge</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script>
+        let currentStatus = null;
+        let tilesGenerated = false;
+        let updateInterval = null;
+        let hasBattery = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStatus();
+            updateInterval = setInterval(updateStatus, 60000);  // Update every 60 seconds to match HA
+
+            // Setup slider listeners
+            setupSlider('irradiance-slider', 'irradiance-value', updateIrradiance);
+            setupSlider('cloud-slider', 'cloud-value', (v) => updateControl('cloud_cover', v / 100));
+            setupSlider('load-slider', 'load-value', (v) => updateControl('house_load', v));
+            setupSlider('speed-slider', 'speed-value', (v) => updateControl('time_multiplier', v));
+        });
+
+        function setupSlider(sliderId, valueId, callback) {
+            const slider = document.getElementById(sliderId);
+            const valueDisplay = document.getElementById(valueId);
+
+            slider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                valueDisplay.textContent = Math.round(value * 10) / 10;
+            });
+
+            slider.addEventListener('change', (e) => {
+                const value = parseFloat(e.target.value);
+                callback(value);
+            });
+        }
+
+
+function generateTilesForModel(model) {
+            const container = document.getElementById('info-tiles-container');
+            container.innerHTML = ''; // Clear existing
+
+            let html = '';
+
+            // === PV INPUT SECTION (TABULAR) ===
+            html += '<div class="info-section">';
+            html += '<div class="section-header">☀️ PV Input</div>';
+
+            // Determine number of PV strings
+            const numPV = model.has_pv3 ? 3 : 2;
+            const pvCols = `info-grid-tabular info-grid-cols-${numPV}`;
+
+            // Voltage row
+            html += `<div class="${pvCols}">`;
+            html += '<div class="info-tile"><div class="info-tile-label">PV1 Voltage</div><div class="info-tile-value"><span id="pv1-voltage">0</span> <span class="info-tile-unit">V</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">PV2 Voltage</div><div class="info-tile-value"><span id="pv2-voltage">0</span> <span class="info-tile-unit">V</span></div></div>';
+            if (model.has_pv3) {
+                html += '<div class="info-tile"><div class="info-tile-label">PV3 Voltage</div><div class="info-tile-value"><span id="pv3-voltage">0</span> <span class="info-tile-unit">V</span></div></div>';
+            }
+            html += '</div>';
+
+            // Current row
+            html += `<div class="${pvCols}">`;
+            html += '<div class="info-tile"><div class="info-tile-label">PV1 Current</div><div class="info-tile-value"><span id="pv1-current">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">PV2 Current</div><div class="info-tile-value"><span id="pv2-current">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+            if (model.has_pv3) {
+                html += '<div class="info-tile"><div class="info-tile-label">PV3 Current</div><div class="info-tile-value"><span id="pv3-current">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+            }
+            html += '</div>';
+
+            // Power row
+            html += `<div class="${pvCols}">`;
+            html += '<div class="info-tile"><div class="info-tile-label">PV1 Power</div><div class="info-tile-value"><span id="pv1-power">0</span> <span class="info-tile-unit">W</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">PV2 Power</div><div class="info-tile-value"><span id="pv2-power">0</span> <span class="info-tile-unit">W</span></div></div>';
+            if (model.has_pv3) {
+                html += '<div class="info-tile"><div class="info-tile-label">PV3 Power</div><div class="info-tile-value"><span id="pv3-power">0</span> <span class="info-tile-unit">W</span></div></div>';
+            }
+            html += '</div>';
+
+            // PV Total row
+            html += '<div class="info-grid-tabular info-grid-cols-2" style="margin-top: 8px;">';
+            html += '<div class="info-tile"><div class="info-tile-label">PV Total Power</div><div class="info-tile-value"><span id="pv-total-power">0</span> <span class="info-tile-unit">W</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">Grid Frequency</div><div class="info-tile-value"><span id="grid-freq">50.0</span> <span class="info-tile-unit">Hz</span></div></div>';
+            html += '</div>';
+            html += '</div>'; // Close info-section
+
+            // === AC OUTPUT SECTION (TABULAR) ===
+            if (model.phases === 3) {
+                html += '<div class="info-section">';
+                html += '<div class="section-header">⚡ AC Output (3-Phase)</div>';
+
+                // Voltage row
+                html += '<div class="info-grid-tabular info-grid-cols-3">';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase R Voltage</div><div class="info-tile-value"><span id="ac-voltage-r">230</span> <span class="info-tile-unit">V</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase S Voltage</div><div class="info-tile-value"><span id="ac-voltage-s">230</span> <span class="info-tile-unit">V</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase T Voltage</div><div class="info-tile-value"><span id="ac-voltage-t">230</span> <span class="info-tile-unit">V</span></div></div>';
+                html += '</div>';
+
+                // Current row
+                html += '<div class="info-grid-tabular info-grid-cols-3">';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase R Current</div><div class="info-tile-value"><span id="ac-current-r">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase S Current</div><div class="info-tile-value"><span id="ac-current-s">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase T Current</div><div class="info-tile-value"><span id="ac-current-t">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+                html += '</div>';
+
+                // Power row
+                html += '<div class="info-grid-tabular info-grid-cols-3">';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase R Power</div><div class="info-tile-value"><span id="ac-power-r">0</span> <span class="info-tile-unit">W</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase S Power</div><div class="info-tile-value"><span id="ac-power-s">0</span> <span class="info-tile-unit">W</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase T Power</div><div class="info-tile-value"><span id="ac-power-t">0</span> <span class="info-tile-unit">W</span></div></div>';
+                html += '</div>';
+
+                // Total row
+                html += '<div class="info-grid-tabular info-grid-cols-2" style="margin-top: 8px;">';
+                html += '<div class="info-tile"><div class="info-tile-label">AC Power Total</div><div class="info-tile-value"><span id="ac-power-total">0</span> <span class="info-tile-unit">W</span></div></div>';
+                html += '</div>';
+                html += '</div>'; // Close info-section
+            } else {
+                // Single-phase
+                html += '<div class="info-section">';
+                html += '<div class="section-header">⚡ AC Output</div>';
+                html += '<div class="info-grid-tabular info-grid-cols-3">';
+                html += '<div class="info-tile"><div class="info-tile-label">Grid Voltage</div><div class="info-tile-value"><span id="ac-voltage-r">230</span> <span class="info-tile-unit">V</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Grid Current</div><div class="info-tile-value"><span id="ac-current-r">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">AC Power Total</div><div class="info-tile-value"><span id="ac-power-total">0</span> <span class="info-tile-unit">W</span></div></div>';
+                html += '</div></div>';
+            }
+
+            // === PV ENERGY SECTION ===
+            html += '<div class="info-section">';
+            html += '<div class="section-header">📊 PV Energy</div>';
+            html += '<div class="info-grid-tabular info-grid-cols-2">';
+            html += '<div class="info-tile"><div class="info-tile-label">PV Today</div><div class="info-tile-value"><span id="energy-today">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">PV Total</div><div class="info-tile-value"><span id="energy-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+            html += '</div></div>';
+
+            // === BATTERY SECTIONS (only if has_battery) ===
+            if (model.has_battery) {
+                html += '<div class="info-section battery-indicator">';
+                html += '<div class="section-header">🔋 Battery State</div>';
+                html += '<div class="info-grid-tabular info-grid-cols-3">';
+                html += '<div class="info-tile"><div class="info-tile-label">Battery Voltage</div><div class="info-tile-value"><span id="battery-voltage">0</span> <span class="info-tile-unit">V</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Battery Current</div><div class="info-tile-value"><span id="battery-current">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Battery Power</div><div class="info-tile-value"><span id="battery-power">0</span> <span class="info-tile-unit">W</span></div></div>';
+                html += '</div>';
+                html += '<div class="info-grid-tabular info-grid-cols-2">';
+                html += '<div class="info-tile"><div class="info-tile-label">Battery SOC</div><div class="info-tile-value"><span id="battery-soc-tile">0</span> <span class="info-tile-unit">%</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Battery Temp</div><div class="info-tile-value"><span id="battery-temp">25</span> <span class="info-tile-unit">°C</span></div></div>';
+                html += '</div></div>';
+
+                // === BATTERY ENERGY SECTION ===
+                html += '<div class="info-section battery-indicator">';
+                html += '<div class="section-header">🔋 Battery Energy</div>';
+                // Today row
+                html += '<div class="info-grid-tabular info-grid-cols-2">';
+                html += '<div class="info-tile"><div class="info-tile-label">Charge Today</div><div class="info-tile-value"><span id="battery-charge-today">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Discharge Today</div><div class="info-tile-value"><span id="battery-discharge-today">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+                html += '</div>';
+                // Total row
+                html += '<div class="info-grid-tabular info-grid-cols-2">';
+                html += '<div class="info-tile"><div class="info-tile-label">Charge Total</div><div class="info-tile-value"><span id="battery-charge-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Discharge Total</div><div class="info-tile-value"><span id="battery-discharge-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+                html += '</div></div>';
+            }
+
+            // === POWER FLOW SECTION ===
+            html += '<div class="info-section">';
+            html += '<div class="section-header">🔄 Power Flow</div>';
+            html += '<div class="info-grid-tabular info-grid-cols-3">';
+            html += '<div class="info-tile"><div class="info-tile-label">To Grid</div><div class="info-tile-value"><span id="power-to-grid">0</span> <span class="info-tile-unit">W</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">To Load</div><div class="info-tile-value"><span id="power-to-load">0</span> <span class="info-tile-unit">W</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">To User</div><div class="info-tile-value"><span id="power-to-user">0</span> <span class="info-tile-unit">W</span></div></div>';
+            html += '</div></div>';
+
+            // === GRID & LOAD ENERGY SECTION ===
+            html += '<div class="info-section">';
+            html += '<div class="section-header">🌐 Grid & Load Energy</div>';
+            // Export row
+            html += '<div class="info-grid-tabular info-grid-cols-2">';
+            html += '<div class="info-tile"><div class="info-tile-label">Grid Export Today</div><div class="info-tile-value"><span id="grid-export-today">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">Grid Export Total</div><div class="info-tile-value"><span id="grid-export-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+            html += '</div>';
+            // Import row
+            html += '<div class="info-grid-tabular info-grid-cols-2">';
+            html += '<div class="info-tile"><div class="info-tile-label">Grid Import Today</div><div class="info-tile-value"><span id="grid-import-today">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">Grid Import Total</div><div class="info-tile-value"><span id="grid-import-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+            html += '</div>';
+            // Load row
+            html += '<div class="info-grid-tabular info-grid-cols-2">';
+            html += '<div class="info-tile"><div class="info-tile-label">Load Today</div><div class="info-tile-value"><span id="load-today">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">Load Total</div><div class="info-tile-value"><span id="load-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+            html += '</div></div>';
+
+            // === TEMPERATURES SECTION ===
+            html += '<div class="info-section">';
+            html += '<div class="section-header">🌡️ Temperatures</div>';
+            html += '<div class="info-grid-tabular info-grid-cols-3">';
+            html += '<div class="info-tile"><div class="info-tile-label">Inverter Temp</div><div class="info-tile-value"><span id="inverter-temp">25</span> <span class="info-tile-unit">°C</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">IPM Temp</div><div class="info-tile-value"><span id="ipm-temp">25</span> <span class="info-tile-unit">°C</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">Boost Temp</div><div class="info-tile-value"><span id="boost-temp">25</span> <span class="info-tile-unit">°C</span></div></div>';
+            html += '</div></div>';
+
+            // === SYSTEM STATUS SECTION ===
+            html += '<div class="info-section">';
+            html += '<div class="section-header">📡 System Status</div>';
+            html += '<div class="info-grid-tabular info-grid-cols-4">';
+            html += '<div class="info-tile"><div class="info-tile-label">Inverter Status</div><div class="info-tile-value"><span id="inverter-status">0</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">Power Factor</div><div class="info-tile-value"><span id="power-factor">1.0</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">Fault Code</div><div class="info-tile-value"><span id="fault-code">0</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">Warning Code</div><div class="info-tile-value"><span id="warning-code">0</span></div></div>';
+            html += '</div></div>';
+
+            container.innerHTML = html;
+        }
+
+
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+
+                if (!status.running) {
+                    window.location.href = '/';
+                    return;
+                }
+
+                currentStatus = status;
+                
+                // Generate tiles on first load
+                if (!tilesGenerated) {
+                    generateTilesForModel(status.model);
+                    tilesGenerated = true;
+                }
+                hasBattery = status.model.has_battery;
+
+                // Update UI
+                updateDisplay(status);
+                drawEnergyFlow(status);
+            } catch (error) {
+                console.error('Status update error:', error);
+            }
+        }
+
+        function updateDisplay(status) {
+            // Header
+            document.getElementById('model-name').textContent = status.model.name;
+            document.getElementById('serial').textContent = `Serial: ${status.serial}`;
+            document.getElementById('firmware').textContent = `Firmware: ${status.firmware}`;
+            document.getElementById('modbus-info').textContent = `Modbus TCP: port ${status.modbus.port}`;
+
+            // Time
+            document.getElementById('sim-time').textContent = status.runtime.time.split(' ')[1];
+
+            // Energy Flow diagram values
+            const pvTotal = Math.round(status.power.pv_total);
+            const grid = Math.round(status.power.grid);
+            const load = Math.round(status.power.load);
+            const battery = status.power.battery ? Math.round(status.power.battery) : 0;
+
+            document.getElementById('power-solar').textContent = formatPower(pvTotal);
+            document.getElementById('power-home').textContent = formatPower(load);
+            document.getElementById('power-grid').textContent = formatPower(Math.abs(grid));
+
+            if (hasBattery) {
+                document.getElementById('power-battery').textContent = formatPower(Math.abs(battery));
+                document.getElementById('battery-soc').textContent = `${Math.round(status.battery.soc)}%`;
+                document.getElementById('soc-fill').style.width = `${status.battery.soc}%`;
+
+                // Show battery elements
+                document.querySelectorAll('.battery-indicator').forEach(el => {
+                    el.style.display = el.classList.contains('energy-node') ? 'flex' : 'block';
+                });
+            }
+
+            // === PV INPUT TILES ===
+            if (status.pv.pv3_voltage !== null) {
+                document.getElementById('pv3-voltage').textContent = status.pv.pv3_voltage.toFixed(1);
+                document.getElementById('pv3-current').textContent = status.pv.pv3_current.toFixed(1);
+                document.getElementById('pv3-power').textContent = Math.round(status.pv.pv3_power);
+            }
+            
+            document.getElementById('pv1-voltage').textContent = status.pv.pv1_voltage.toFixed(1);
+            document.getElementById('pv1-current').textContent = status.pv.pv1_current.toFixed(1);
+            document.getElementById('pv1-power').textContent = Math.round(status.pv.pv1_power);
+            document.getElementById('pv2-voltage').textContent = status.pv.pv2_voltage.toFixed(1);
+            document.getElementById('pv2-current').textContent = status.pv.pv2_current.toFixed(1);
+            document.getElementById('pv2-power').textContent = Math.round(status.pv.pv2_power);
+            document.getElementById('pv-total-power').textContent = Math.round(status.pv.pv_total_power);
+
+            // === AC OUTPUT TILES ===
+            document.getElementById('ac-power-total').textContent = Math.round(status.ac.output_power_total);
+            document.getElementById('grid-freq').textContent = status.ac.frequency.toFixed(2);
+
+            if (status.model.phases === 3) {
+                document.getElementById('ac-voltage-r').textContent = Math.round(status.ac.voltage_r);
+                document.getElementById('ac-current-r').textContent = status.ac.current_r.toFixed(1);
+                document.getElementById('ac-power-r').textContent = Math.round(status.ac.power_r);
+                document.getElementById('ac-voltage-s').textContent = Math.round(status.ac.voltage_s);
+                document.getElementById('ac-current-s').textContent = status.ac.current_s.toFixed(1);
+                document.getElementById('ac-power-s').textContent = Math.round(status.ac.power_s);
+                document.getElementById('ac-voltage-t').textContent = Math.round(status.ac.voltage_t);
+                document.getElementById('ac-current-t').textContent = status.ac.current_t.toFixed(1);
+                document.getElementById('ac-power-t').textContent = Math.round(status.ac.power_t);
+            }
+
+            // === PV ENERGY TILES ===
+            document.getElementById('energy-today').textContent = status.energy.today.toFixed(1);
+            document.getElementById('energy-total').textContent = status.energy.total.toFixed(1);
+
+            // === BATTERY STATE TILES ===
+            if (hasBattery) {
+                document.getElementById('battery-power').textContent = Math.round(status.power.battery);
+                document.getElementById('battery-voltage').textContent = status.battery.voltage?.toFixed(1) || '0.0';
+                document.getElementById('battery-current').textContent = status.battery.current?.toFixed(1) || '0.0';
+                document.getElementById('battery-soc-tile').textContent = Math.round(status.battery.soc);
+                document.getElementById('battery-temp').textContent = Math.round(status.battery.temperature);
+            }
+
+            // === BATTERY ENERGY TILES ===
+            if (hasBattery) {
+                document.getElementById('battery-charge-today').textContent = status.energy.battery_charge_today?.toFixed(1) || '0.0';
+                document.getElementById('battery-charge-total').textContent = status.energy.battery_charge_total?.toFixed(1) || '0.0';
+                document.getElementById('battery-discharge-today').textContent = status.energy.battery_discharge_today?.toFixed(1) || '0.0';
+                document.getElementById('battery-discharge-total').textContent = status.energy.battery_discharge_total?.toFixed(1) || '0.0';
+            }
+
+            // === POWER FLOW TILES ===
+            document.getElementById('power-to-grid').textContent = Math.round(status.power.to_grid);
+            document.getElementById('power-to-load').textContent = Math.round(status.power.to_load);
+            document.getElementById('power-to-user').textContent = Math.round(status.power.to_user);
+
+            // === GRID & LOAD ENERGY TILES ===
+            document.getElementById('grid-export-today').textContent = status.energy.grid_export_today.toFixed(1);
+            document.getElementById('grid-export-total').textContent = status.energy.grid_export_total?.toFixed(1) || '0.0';
+            document.getElementById('grid-import-today').textContent = status.energy.grid_import_today.toFixed(1);
+            document.getElementById('grid-import-total').textContent = status.energy.grid_import_total?.toFixed(1) || '0.0';
+            document.getElementById('load-today').textContent = status.energy.load_today.toFixed(1);
+            document.getElementById('load-total').textContent = status.energy.load_total?.toFixed(1) || '0.0';
+
+            // === TEMPERATURE TILES ===
+            document.getElementById('inverter-temp').textContent = Math.round(status.temperatures.inverter);
+            document.getElementById('ipm-temp').textContent = Math.round(status.temperatures.ipm);
+            document.getElementById('boost-temp').textContent = Math.round(status.temperatures.boost);
+
+            // === STATUS TILES ===
+            document.getElementById('inverter-status').textContent = status.status.inverter_status;
+            document.getElementById('power-factor').textContent = (status.status.power_factor / 1000).toFixed(2);
+            document.getElementById('fault-code').textContent = status.status.fault_code;
+            document.getElementById('warning-code').textContent = status.status.warning_code;
+
+            // Update control sliders (only if not being actively changed)
+            updateSliderIfNotActive('irradiance-slider', status.controls.solar_irradiance);
+            updateSliderIfNotActive('cloud-slider', status.controls.cloud_cover * 100);
+            updateSliderIfNotActive('load-slider', status.controls.house_load);
+            updateSliderIfNotActive('speed-slider', status.runtime.time_multiplier);
+        }
+
+        function updateSliderIfNotActive(id, value) {
+            const slider = document.getElementById(id);
+            if (document.activeElement !== slider) {
+                slider.value = value;
+            }
+        }
+
+        function formatPower(watts) {
+            if (watts >= 1000) {
+                return `${(watts / 1000).toFixed(2)} kW`;
+            }
+            return `${watts} W`;
+        }
+
+        function drawEnergyFlow(status) {
+            const svg = document.getElementById('flow-svg');
+            svg.innerHTML = '';
+
+            const width = 400;
+            const height = 400;
+
+            // Define node positions
+            const solar = { x: width / 2, y: 60 };
+            const battery = { x: 60, y: height / 2 };
+            const home = { x: width - 60, y: height / 2 };
+            const grid = { x: width / 2, y: height - 60 };
+
+            const pvPower = status.power.pv_total;
+            const gridPower = status.power.grid;
+            const loadPower = status.power.load;
+            const batteryPower = status.power.battery || 0;
+
+            // Draw lines based on power flow
+            if (pvPower > 10) {
+                // Solar to Home
+                drawLine(svg, solar, home, '#ffc107', 2);
+            }
+
+            if (hasBattery) {
+                if (batteryPower > 10) {
+                    // Battery charging (from solar/grid)
+                    drawLine(svg, solar, battery, '#9c27b0', 2);
+                } else if (batteryPower < -10) {
+                    // Battery discharging (to home)
+                    drawLine(svg, battery, home, '#9c27b0', 2);
+                }
+            }
+
+            if (gridPower > 10) {
+                // Importing from grid
+                drawLine(svg, grid, home, '#4caf50', 2);
+            } else if (gridPower < -10) {
+                // Exporting to grid
+                drawLine(svg, home, grid, '#4caf50', 2);
+            }
+        }
+
+        function drawLine(svg, from, to, color, width) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+            // Create curved path
+            const midX = (from.x + to.x) / 2;
+            const midY = (from.y + to.y) / 2;
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+            const curve = Math.sqrt(dx * dx + dy * dy) * 0.2;
+
+            const path = `M ${from.x} ${from.y} Q ${midX + (dy > 0 ? -curve : curve)} ${midY + (dx > 0 ? curve : -curve)} ${to.x} ${to.y}`;
+
+            line.setAttribute('d', path);
+            line.setAttribute('class', 'flow-line');
+            line.setAttribute('stroke', color);
+            line.setAttribute('stroke-width', width);
+
+            svg.appendChild(line);
+        }
+
+        // Control functions
+        function setIrradiance(value) {
+            document.getElementById('irradiance-slider').value = value;
+            document.getElementById('irradiance-value').textContent = value;
+            updateIrradiance(value);
+        }
+
+        function updateIrradiance(value) {
+            updateControl('solar_irradiance', value);
+        }
+
+        function setCloud(value) {
+            document.getElementById('cloud-slider').value = value;
+            document.getElementById('cloud-value').textContent = value;
+            updateControl('cloud_cover', value / 100);
+        }
+
+        function setLoad(value) {
+            document.getElementById('load-slider').value = value;
+            document.getElementById('load-value').textContent = value;
+            updateControl('house_load', value);
+        }
+
+        function setSpeed(value) {
+            document.getElementById('speed-slider').value = value;
+            document.getElementById('speed-value').textContent = value;
+            updateControl('time_multiplier', value);
+        }
+
+        function setBatteryOverride(value) {
+            updateControl('battery_override', value === null ? 0 : value);
+            document.getElementById('battery-override-value').textContent = value === null ? 'Auto' : `${value} W`;
+
+            // Update button states
+            document.querySelectorAll('.control-group:last-child .btn-control').forEach((btn, idx) => {
+                btn.classList.toggle('active',
+                    (value === null && idx === 0) ||
+                    (value === -2000 && idx === 1) ||
+                    (value === 0 && idx === 2) ||
+                    (value === 2000 && idx === 3)
+                );
+            });
+        }
+
+        async function updateControl(param, value) {
+            try {
+                await fetch('/api/control', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ param, value })
+                });
+            } catch (error) {
+                console.error('Control update error:', error);
+            }
+        }
+
+        async function stopEmulator() {
+            if (confirm('Stop the emulator?')) {
+                try {
+                    await fetch('/api/stop', { method: 'POST' });
+                    clearInterval(updateInterval);
+                    window.location.href = '/';
+                } catch (error) {
+                    console.error('Stop error:', error);
+                }
+            }
+        }
+    </script>
 </body>
 </html>
