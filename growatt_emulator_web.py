@@ -309,6 +309,9 @@ def api_models():
             profile = INVERTER_PROFILES[key]
             series = get_series_from_name(profile['name'])
 
+            # Check if this model has a V2.01 variant
+            has_v201 = (key + '_v201') in INVERTER_PROFILES
+
             model_list.append({
                 'key': key,
                 'name': profile['name'],
@@ -317,6 +320,7 @@ def api_models():
                 'has_pv3': profile['has_pv3'],
                 'phases': profile['phases'],
                 'max_power_kw': profile['max_power_kw'],
+                'has_v201': has_v201,
             })
 
         # Sort by series then name
@@ -340,10 +344,12 @@ def api_start():
     if not model_key:
         return jsonify({'error': 'Model not specified'}), 400
 
-    # Validate model
-    models = get_available_models()
-    if model_key not in models:
-        return jsonify({'error': f'Unknown model: {model_key}'}), 400
+    # Validate model (check INVERTER_PROFILES which includes v201 variants)
+    if model_key not in INVERTER_PROFILES:
+        available = ', '.join(sorted([k for k in INVERTER_PROFILES.keys() if '_v201' not in k])[:5])
+        return jsonify({
+            'error': f'Unknown model: {model_key}. Available models include: {available}...'
+        }), 400
 
     # Stop existing emulator if running
     with emulator_lock:

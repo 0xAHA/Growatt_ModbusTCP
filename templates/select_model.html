@@ -361,10 +361,9 @@
             document.getElementById('info-phases').textContent = model.phases;
             document.getElementById('info-pv').textContent = model.has_pv3 ? '3 strings' : '2 strings';
 
-            // Show protocol selector for series that support V2.01
-            const supportedSeries = ['MIN', 'MIC', 'SPH', 'SPH-TL3', 'TL-XH', 'MID', 'MOD'];
+            // Show protocol selector only if model has V2.01 variant
             const protocolGroup = document.getElementById('protocol-group');
-            if (supportedSeries.includes(model.series)) {
+            if (model.has_v201) {
                 protocolGroup.style.display = 'block';
             } else {
                 protocolGroup.style.display = 'none';
