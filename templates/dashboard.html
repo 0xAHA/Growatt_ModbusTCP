@@ -227,29 +227,42 @@
         }
 
         /* Info Tiles */
+        .info-section {
+            margin-bottom: 20px;
+        }
+
+        .section-header {
+            font-size: 1em;
+            font-weight: 600;
+            color: #58a6ff;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #30363d;
+        }
+
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 10px;
-            margin-bottom: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
         }
 
         .info-tile {
             background: #0d1117;
             border: 1px solid #30363d;
-            border-radius: 6px;
-            padding: 10px;
+            border-radius: 4px;
+            padding: 8px;
         }
 
         .info-tile-label {
-            font-size: 0.75em;
+            font-size: 0.7em;
             color: #8b949e;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
 
         .info-tile-value {
-            font-size: 1.1em;
-            font-weight: 700;
+            font-size: 0.95em;
+            font-weight: 600;
             color: #58a6ff;
         }
 
@@ -503,128 +516,251 @@
                         <div class="time-label">Simulation Time</div>
                     </div>
 
-                    <!-- Info tiles -->
-                    <div class="info-grid">
-                        <div class="info-tile">
-                            <div class="info-tile-label">PV Today</div>
-                            <div class="info-tile-value">
-                                <span id="energy-today">0.0</span>
-                                <span class="info-tile-unit">kWh</span>
+                    <!-- Info tiles - Grouped by Register Category -->
+
+                    <!-- PV Input -->
+                    <div class="info-section">
+                        <div class="section-header">☀️ PV Input</div>
+                        <div class="info-grid">
+                            <div class="info-tile">
+                                <div class="info-tile-label">PV1 Voltage</div>
+                                <div class="info-tile-value"><span id="pv1-voltage">0</span> <span class="info-tile-unit">V</span></div>
                             </div>
-                        </div>
-                        <div class="info-tile">
-                            <div class="info-tile-label">PV Total</div>
-                            <div class="info-tile-value">
-                                <span id="energy-total">0.0</span>
-                                <span class="info-tile-unit">kWh</span>
+                            <div class="info-tile">
+                                <div class="info-tile-label">PV1 Current</div>
+                                <div class="info-tile-value"><span id="pv1-current">0.0</span> <span class="info-tile-unit">A</span></div>
                             </div>
-                        </div>
-                        <div class="info-tile battery-indicator">
-                            <div class="info-tile-label">Battery ⚡ Today</div>
-                            <div class="info-tile-value">
-                                <span id="battery-charge-today">0.0</span>
-                                <span class="info-tile-unit">kWh</span>
+                            <div class="info-tile">
+                                <div class="info-tile-label">PV1 Power</div>
+                                <div class="info-tile-value"><span id="pv1-power">0</span> <span class="info-tile-unit">W</span></div>
                             </div>
-                        </div>
-                        <div class="info-tile battery-indicator">
-                            <div class="info-tile-label">Battery ⬇ Today</div>
-                            <div class="info-tile-value">
-                                <span id="battery-discharge-today">0.0</span>
-                                <span class="info-tile-unit">kWh</span>
+                            <div class="info-tile">
+                                <div class="info-tile-label">PV2 Voltage</div>
+                                <div class="info-tile-value"><span id="pv2-voltage">0</span> <span class="info-tile-unit">V</span></div>
                             </div>
-                        </div>
-                        <div class="info-tile">
-                            <div class="info-tile-label">Grid Import</div>
-                            <div class="info-tile-value">
-                                <span id="grid-import-today">0.0</span>
-                                <span class="info-tile-unit">kWh</span>
+                            <div class="info-tile">
+                                <div class="info-tile-label">PV2 Current</div>
+                                <div class="info-tile-value"><span id="pv2-current">0.0</span> <span class="info-tile-unit">A</span></div>
                             </div>
-                        </div>
-                        <div class="info-tile">
-                            <div class="info-tile-label">Grid Export</div>
-                            <div class="info-tile-value">
-                                <span id="grid-export-today">0.0</span>
-                                <span class="info-tile-unit">kWh</span>
+                            <div class="info-tile">
+                                <div class="info-tile-label">PV2 Power</div>
+                                <div class="info-tile-value"><span id="pv2-power">0</span> <span class="info-tile-unit">W</span></div>
                             </div>
-                        </div>
-                        <div class="info-tile">
-                            <div class="info-tile-label">Load Today</div>
-                            <div class="info-tile-value">
-                                <span id="load-today">0.0</span>
-                                <span class="info-tile-unit">kWh</span>
-                            </div>
-                        </div>
-                        <div class="info-tile">
-                            <div class="info-tile-label">Load Total</div>
-                            <div class="info-tile-value">
-                                <span id="load-total">0.0</span>
-                                <span class="info-tile-unit">kWh</span>
-                            </div>
-                        </div>
-                        <div class="info-tile">
-                            <div class="info-tile-label">Grid Import Total</div>
-                            <div class="info-tile-value">
-                                <span id="grid-import-total">0.0</span>
-                                <span class="info-tile-unit">kWh</span>
-                            </div>
-                        </div>
-                        <div class="info-tile">
-                            <div class="info-tile-label">Grid Export Total</div>
-                            <div class="info-tile-value">
-                                <span id="grid-export-total">0.0</span>
-                                <span class="info-tile-unit">kWh</span>
-                            </div>
-                        </div>
-                        <div class="info-tile">
-                            <div class="info-tile-label">PV1 Power</div>
-                            <div class="info-tile-value">
-                                <span id="pv1-power">0</span>
-                                <span class="info-tile-unit">W</span>
-                            </div>
-                        </div>
-                        <div class="info-tile">
-                            <div class="info-tile-label">PV2 Power</div>
-                            <div class="info-tile-value">
-                                <span id="pv2-power">0</span>
-                                <span class="info-tile-unit">W</span>
-                            </div>
-                        </div>
-                        <div class="info-tile battery-indicator" style="display: none;">
-                            <div class="info-tile-label">Battery Voltage</div>
-                            <div class="info-tile-value">
-                                <span id="battery-voltage">0</span>
-                                <span class="info-tile-unit">V</span>
-                            </div>
-                        </div>
-                        <div class="info-tile battery-indicator" style="display: none;">
-                            <div class="info-tile-label">Battery Current</div>
-                            <div class="info-tile-value">
-                                <span id="battery-current">0.0</span>
-                                <span class="info-tile-unit">A</span>
-                            </div>
-                        </div>
-                        <div class="info-tile">
-                            <div class="info-tile-label">Grid Frequency</div>
-                            <div class="info-tile-value">
-                                <span id="grid-freq">50.0</span>
-                                <span class="info-tile-unit">Hz</span>
-                            </div>
-                        </div>
-                        <div class="info-tile">
-                            <div class="info-tile-label">Grid Voltage</div>
-                            <div class="info-tile-value">
-                                <span id="grid-voltage">230</span>
-                                <span class="info-tile-unit">V</span>
-                            </div>
-                        </div>
-                        <div class="info-tile">
-                            <div class="info-tile-label">Inverter Temp</div>
-                            <div class="info-tile-value">
-                                <span id="inverter-temp">25</span>
-                                <span class="info-tile-unit">°C</span>
+                            <div class="info-tile">
+                                <div class="info-tile-label">PV Total Power</div>
+                                <div class="info-tile-value"><span id="pv-total-power">0</span> <span class="info-tile-unit">W</span></div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- AC Output (3-Phase) -->
+                    <div class="info-section">
+                        <div class="section-header">⚡ AC Output</div>
+                        <div class="info-grid">
+                            <div class="info-tile">
+                                <div class="info-tile-label">AC Power Total</div>
+                                <div class="info-tile-value"><span id="ac-power-total">0</span> <span class="info-tile-unit">W</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Grid Frequency</div>
+                                <div class="info-tile-value"><span id="grid-freq">50.0</span> <span class="info-tile-unit">Hz</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Phase R Voltage</div>
+                                <div class="info-tile-value"><span id="ac-voltage-r">230</span> <span class="info-tile-unit">V</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Phase R Current</div>
+                                <div class="info-tile-value"><span id="ac-current-r">0.0</span> <span class="info-tile-unit">A</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Phase R Power</div>
+                                <div class="info-tile-value"><span id="ac-power-r">0</span> <span class="info-tile-unit">W</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Phase S Voltage</div>
+                                <div class="info-tile-value"><span id="ac-voltage-s">230</span> <span class="info-tile-unit">V</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Phase S Current</div>
+                                <div class="info-tile-value"><span id="ac-current-s">0.0</span> <span class="info-tile-unit">A</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Phase S Power</div>
+                                <div class="info-tile-value"><span id="ac-power-s">0</span> <span class="info-tile-unit">W</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Phase T Voltage</div>
+                                <div class="info-tile-value"><span id="ac-voltage-t">230</span> <span class="info-tile-unit">V</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Phase T Current</div>
+                                <div class="info-tile-value"><span id="ac-current-t">0.0</span> <span class="info-tile-unit">A</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Phase T Power</div>
+                                <div class="info-tile-value"><span id="ac-power-t">0</span> <span class="info-tile-unit">W</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PV Energy -->
+                    <div class="info-section">
+                        <div class="section-header">📊 PV Energy</div>
+                        <div class="info-grid">
+                            <div class="info-tile">
+                                <div class="info-tile-label">PV Today</div>
+                                <div class="info-tile-value"><span id="energy-today">0.0</span> <span class="info-tile-unit">kWh</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">PV Total</div>
+                                <div class="info-tile-value"><span id="energy-total">0.0</span> <span class="info-tile-unit">kWh</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Battery State (only if has_battery) -->
+                    <div class="info-section battery-indicator" style="display: none;">
+                        <div class="section-header">🔋 Battery State</div>
+                        <div class="info-grid">
+                            <div class="info-tile">
+                                <div class="info-tile-label">Battery Power</div>
+                                <div class="info-tile-value"><span id="battery-power">0</span> <span class="info-tile-unit">W</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Battery Voltage</div>
+                                <div class="info-tile-value"><span id="battery-voltage">0</span> <span class="info-tile-unit">V</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Battery Current</div>
+                                <div class="info-tile-value"><span id="battery-current">0.0</span> <span class="info-tile-unit">A</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Battery SOC</div>
+                                <div class="info-tile-value"><span id="battery-soc-tile">0</span> <span class="info-tile-unit">%</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Battery Temp</div>
+                                <div class="info-tile-value"><span id="battery-temp">25</span> <span class="info-tile-unit">°C</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Battery Energy (only if has_battery) -->
+                    <div class="info-section battery-indicator" style="display: none;">
+                        <div class="section-header">🔋 Battery Energy</div>
+                        <div class="info-grid">
+                            <div class="info-tile">
+                                <div class="info-tile-label">Charge Today</div>
+                                <div class="info-tile-value"><span id="battery-charge-today">0.0</span> <span class="info-tile-unit">kWh</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Charge Total</div>
+                                <div class="info-tile-value"><span id="battery-charge-total">0.0</span> <span class="info-tile-unit">kWh</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Discharge Today</div>
+                                <div class="info-tile-value"><span id="battery-discharge-today">0.0</span> <span class="info-tile-unit">kWh</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Discharge Total</div>
+                                <div class="info-tile-value"><span id="battery-discharge-total">0.0</span> <span class="info-tile-unit">kWh</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Power Flow -->
+                    <div class="info-section">
+                        <div class="section-header">🔄 Power Flow</div>
+                        <div class="info-grid">
+                            <div class="info-tile">
+                                <div class="info-tile-label">To Grid</div>
+                                <div class="info-tile-value"><span id="power-to-grid">0</span> <span class="info-tile-unit">W</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">To Load</div>
+                                <div class="info-tile-value"><span id="power-to-load">0</span> <span class="info-tile-unit">W</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">To User</div>
+                                <div class="info-tile-value"><span id="power-to-user">0</span> <span class="info-tile-unit">W</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grid Energy -->
+                    <div class="info-section">
+                        <div class="section-header">🌐 Grid & Load Energy</div>
+                        <div class="info-grid">
+                            <div class="info-tile">
+                                <div class="info-tile-label">Grid Export Today</div>
+                                <div class="info-tile-value"><span id="grid-export-today">0.0</span> <span class="info-tile-unit">kWh</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Grid Export Total</div>
+                                <div class="info-tile-value"><span id="grid-export-total">0.0</span> <span class="info-tile-unit">kWh</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Grid Import Today</div>
+                                <div class="info-tile-value"><span id="grid-import-today">0.0</span> <span class="info-tile-unit">kWh</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Grid Import Total</div>
+                                <div class="info-tile-value"><span id="grid-import-total">0.0</span> <span class="info-tile-unit">kWh</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Load Today</div>
+                                <div class="info-tile-value"><span id="load-today">0.0</span> <span class="info-tile-unit">kWh</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Load Total</div>
+                                <div class="info-tile-value"><span id="load-total">0.0</span> <span class="info-tile-unit">kWh</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Temperatures -->
+                    <div class="info-section">
+                        <div class="section-header">🌡️ Temperatures</div>
+                        <div class="info-grid">
+                            <div class="info-tile">
+                                <div class="info-tile-label">Inverter Temp</div>
+                                <div class="info-tile-value"><span id="inverter-temp">25</span> <span class="info-tile-unit">°C</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">IPM Temp</div>
+                                <div class="info-tile-value"><span id="ipm-temp">25</span> <span class="info-tile-unit">°C</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Boost Temp</div>
+                                <div class="info-tile-value"><span id="boost-temp">25</span> <span class="info-tile-unit">°C</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="info-section">
+                        <div class="section-header">📡 System Status</div>
+                        <div class="info-grid">
+                            <div class="info-tile">
+                                <div class="info-tile-label">Inverter Status</div>
+                                <div class="info-tile-value"><span id="inverter-status">0</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Power Factor</div>
+                                <div class="info-tile-value"><span id="power-factor">1.0</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Fault Code</div>
+                                <div class="info-tile-value"><span id="fault-code">0</span></div>
+                            </div>
+                            <div class="info-tile">
+                                <div class="info-tile-label">Warning Code</div>
+                                <div class="info-tile-value"><span id="warning-code">0</span></div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- Controls -->
@@ -786,7 +922,7 @@
             // Time
             document.getElementById('sim-time').textContent = status.runtime.time.split(' ')[1];
 
-            // Power values
+            // Energy Flow diagram values
             const pvTotal = Math.round(status.power.pv_total);
             const grid = Math.round(status.power.grid);
             const load = Math.round(status.power.load);
@@ -807,33 +943,75 @@
                 });
             }
 
-            // Energy (matching HA entity names)
-            document.getElementById('energy-today').textContent = status.energy.today.toFixed(1);
-            document.getElementById('energy-total').textContent = status.energy.total.toFixed(1);
-            document.getElementById('grid-import-today').textContent = status.energy.grid_import_today.toFixed(1);
-            document.getElementById('grid-export-today').textContent = status.energy.grid_export_today.toFixed(1);
-            document.getElementById('load-today').textContent = status.energy.load_today.toFixed(1);
+            // === PV INPUT TILES ===
+            document.getElementById('pv1-voltage').textContent = status.pv.pv1_voltage.toFixed(1);
+            document.getElementById('pv1-current').textContent = status.pv.pv1_current.toFixed(1);
+            document.getElementById('pv1-power').textContent = Math.round(status.pv.pv1_power);
+            document.getElementById('pv2-voltage').textContent = status.pv.pv2_voltage.toFixed(1);
+            document.getElementById('pv2-current').textContent = status.pv.pv2_current.toFixed(1);
+            document.getElementById('pv2-power').textContent = Math.round(status.pv.pv2_power);
+            document.getElementById('pv-total-power').textContent = Math.round(status.pv.pv_total_power);
 
-            // Total energy values
-            document.getElementById('load-total').textContent = status.energy.load_total?.toFixed(1) || '0.0';
-            document.getElementById('grid-import-total').textContent = status.energy.grid_import_total?.toFixed(1) || '0.0';
-            document.getElementById('grid-export-total').textContent = status.energy.grid_export_total?.toFixed(1) || '0.0';
+            // === AC OUTPUT TILES ===
+            document.getElementById('ac-power-total').textContent = Math.round(status.ac.output_power_total);
+            document.getElementById('grid-freq').textContent = status.ac.frequency.toFixed(2);
 
-            // Individual PV string powers
-            document.getElementById('pv1-power').textContent = Math.round(status.power.pv1);
-            document.getElementById('pv2-power').textContent = Math.round(status.power.pv2);
-
-            if (hasBattery) {
-                document.getElementById('battery-charge-today').textContent = status.energy.battery_charge_today?.toFixed(1) || '0.0';
-                document.getElementById('battery-discharge-today').textContent = status.energy.battery_discharge_today?.toFixed(1) || '0.0';
-                document.getElementById('battery-voltage').textContent = status.battery.voltage?.toFixed(1) || '0.0';
-                document.getElementById('battery-current').textContent = status.battery.current?.toFixed(1) || '0.0';
+            if (status.model.phases === 3) {
+                document.getElementById('ac-voltage-r').textContent = Math.round(status.ac.voltage_r);
+                document.getElementById('ac-current-r').textContent = status.ac.current_r.toFixed(1);
+                document.getElementById('ac-power-r').textContent = Math.round(status.ac.power_r);
+                document.getElementById('ac-voltage-s').textContent = Math.round(status.ac.voltage_s);
+                document.getElementById('ac-current-s').textContent = status.ac.current_s.toFixed(1);
+                document.getElementById('ac-power-s').textContent = Math.round(status.ac.power_s);
+                document.getElementById('ac-voltage-t').textContent = Math.round(status.ac.voltage_t);
+                document.getElementById('ac-current-t').textContent = status.ac.current_t.toFixed(1);
+                document.getElementById('ac-power-t').textContent = Math.round(status.ac.power_t);
             }
 
-            // Inverter info
-            document.getElementById('grid-freq').textContent = status.inverter.frequency.toFixed(2);
-            document.getElementById('grid-voltage').textContent = Math.round(status.inverter.grid_voltage);
-            document.getElementById('inverter-temp').textContent = Math.round(status.inverter.temperature);
+            // === PV ENERGY TILES ===
+            document.getElementById('energy-today').textContent = status.energy.today.toFixed(1);
+            document.getElementById('energy-total').textContent = status.energy.total.toFixed(1);
+
+            // === BATTERY STATE TILES ===
+            if (hasBattery) {
+                document.getElementById('battery-power').textContent = Math.round(status.power.battery);
+                document.getElementById('battery-voltage').textContent = status.battery.voltage?.toFixed(1) || '0.0';
+                document.getElementById('battery-current').textContent = status.battery.current?.toFixed(1) || '0.0';
+                document.getElementById('battery-soc-tile').textContent = Math.round(status.battery.soc);
+                document.getElementById('battery-temp').textContent = Math.round(status.battery.temperature);
+            }
+
+            // === BATTERY ENERGY TILES ===
+            if (hasBattery) {
+                document.getElementById('battery-charge-today').textContent = status.energy.battery_charge_today?.toFixed(1) || '0.0';
+                document.getElementById('battery-charge-total').textContent = status.energy.battery_charge_total?.toFixed(1) || '0.0';
+                document.getElementById('battery-discharge-today').textContent = status.energy.battery_discharge_today?.toFixed(1) || '0.0';
+                document.getElementById('battery-discharge-total').textContent = status.energy.battery_discharge_total?.toFixed(1) || '0.0';
+            }
+
+            // === POWER FLOW TILES ===
+            document.getElementById('power-to-grid').textContent = Math.round(status.power.to_grid);
+            document.getElementById('power-to-load').textContent = Math.round(status.power.to_load);
+            document.getElementById('power-to-user').textContent = Math.round(status.power.to_user);
+
+            // === GRID & LOAD ENERGY TILES ===
+            document.getElementById('grid-export-today').textContent = status.energy.grid_export_today.toFixed(1);
+            document.getElementById('grid-export-total').textContent = status.energy.grid_export_total?.toFixed(1) || '0.0';
+            document.getElementById('grid-import-today').textContent = status.energy.grid_import_today.toFixed(1);
+            document.getElementById('grid-import-total').textContent = status.energy.grid_import_total?.toFixed(1) || '0.0';
+            document.getElementById('load-today').textContent = status.energy.load_today.toFixed(1);
+            document.getElementById('load-total').textContent = status.energy.load_total?.toFixed(1) || '0.0';
+
+            // === TEMPERATURE TILES ===
+            document.getElementById('inverter-temp').textContent = Math.round(status.temperatures.inverter);
+            document.getElementById('ipm-temp').textContent = Math.round(status.temperatures.ipm);
+            document.getElementById('boost-temp').textContent = Math.round(status.temperatures.boost);
+
+            // === STATUS TILES ===
+            document.getElementById('inverter-status').textContent = status.status.inverter_status;
+            document.getElementById('power-factor').textContent = (status.status.power_factor / 1000).toFixed(2);
+            document.getElementById('fault-code').textContent = status.status.fault_code;
+            document.getElementById('warning-code').textContent = status.status.warning_code;
 
             // Update control sliders (only if not being actively changed)
             updateSliderIfNotActive('irradiance-slider', status.controls.solar_irradiance);
