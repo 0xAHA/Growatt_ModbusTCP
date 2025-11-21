@@ -28,7 +28,7 @@ spec.loader.exec_module(device_profiles)
 INVERTER_PROFILES = device_profiles.INVERTER_PROFILES
 
 from emulator.simulator import InverterSimulator
-from emulator.modbus_server import ModbusServerThread
+from emulator.modbus_server import ModbusEmulatorServer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -92,10 +92,9 @@ def start_emulator():
         simulator = InverterSimulator(actual_profile_key)
 
         # Start Modbus server
-        modbus_server = ModbusServerThread(
+        modbus_server = ModbusEmulatorServer(
             simulator=simulator,
-            port=port,
-            profile_key=actual_profile_key
+            port=port
         )
         modbus_server.start()
 
@@ -340,10 +339,9 @@ def switch_model():
 
         # Restart Modbus server with same port
         port = data.get('port', 5020)
-        modbus_server = ModbusServerThread(
+        modbus_server = ModbusEmulatorServer(
             simulator=simulator,
-            port=port,
-            profile_key=actual_profile_key
+            port=port
         )
         modbus_server.start()
 
