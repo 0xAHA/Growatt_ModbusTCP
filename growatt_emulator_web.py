@@ -206,20 +206,20 @@ class WebGrowattEmulator:
                 'running': self.modbus_server.is_running(),
             },
             'power': {
-                'pv1': values.get('pv1_power', 0),
-                'pv2': values.get('pv2_power', 0),
-                'pv3': values.get('pv3_power', 0) if self.model.has_pv3 else None,
-                'pv_total': values.get('pv_power', 0),
+                'pv1': values.get('pv_power', {}).get('pv1', 0),
+                'pv2': values.get('pv_power', {}).get('pv2', 0),
+                'pv3': values.get('pv_power', {}).get('pv3', 0) if self.model.has_pv3 else None,
+                'pv_total': values.get('pv_power', {}).get('total', 0),
                 'battery': values.get('battery_power', 0) if self.model.has_battery else None,
-                'grid': values.get('grid_power', 0),
-                'load': values.get('load_power', 0),
-                'inverter_output': values.get('output_power', 0),
+                'grid': values.get('grid_power', {}).get('grid', 0),
+                'load': sim.house_load,
+                'inverter_output': values.get('ac_power', 0),
             },
             'battery': {
                 'soc': sim.battery_soc if self.model.has_battery else None,
-                'voltage': values.get('battery_voltage', 0) if self.model.has_battery else None,
-                'current': values.get('battery_current', 0) if self.model.has_battery else None,
-                'temperature': values.get('battery_temperature', 0) if self.model.has_battery else None,
+                'voltage': values.get('voltages', {}).get('battery', 0) if self.model.has_battery else None,
+                'current': values.get('currents', {}).get('battery', 0) if self.model.has_battery else None,
+                'temperature': values.get('temperatures', {}).get('battery', 25) if self.model.has_battery else None,
                 'capacity_kwh': sim.battery_capacity_kwh if self.model.has_battery else None,
             } if self.model.has_battery else None,
             'energy': {
@@ -238,9 +238,9 @@ class WebGrowattEmulator:
                 'battery_override': sim.battery_override,
             },
             'inverter': {
-                'temperature': values.get('inverter_temperature', 0),
-                'frequency': values.get('grid_frequency', 0),
-                'grid_voltage': values.get('grid_voltage', 0),
+                'temperature': values.get('temperatures', {}).get('inverter', 25),
+                'frequency': 50.0,  # Hardcoded like in simulator
+                'grid_voltage': values.get('voltages', {}).get('ac', 240) if not self.model.is_three_phase else values.get('voltages', {}).get('ac_r', 230),
             },
         }
 

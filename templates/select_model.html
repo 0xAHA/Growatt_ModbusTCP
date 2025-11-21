@@ -251,6 +251,17 @@
                 </div>
             </div>
 
+            <div class="form-group" id="protocol-group" style="display: none;">
+                <label for="protocol-select">Protocol Version</label>
+                <select id="protocol-select">
+                    <option value="v201">V2.01 VPP Protocol (30000+ registers, DTC support)</option>
+                    <option value="legacy">Legacy Protocol (3000+ registers only)</option>
+                </select>
+                <div style="margin-top: 8px; font-size: 0.85em; color: #8b949e;">
+                    V2.01 serves both legacy and new VPP registers for full smart grid functionality
+                </div>
+            </div>
+
             <div class="form-group">
                 <label for="port-input">Modbus TCP Port</label>
                 <input type="number" id="port-input" value="502" min="1" max="65535">
@@ -349,6 +360,15 @@
             document.getElementById('info-power').textContent = `${model.max_power_kw} kW`;
             document.getElementById('info-phases').textContent = model.phases;
             document.getElementById('info-pv').textContent = model.has_pv3 ? '3 strings' : '2 strings';
+
+            // Show protocol selector for series that support V2.01
+            const supportedSeries = ['MIN', 'MIC', 'SPH', 'SPH-TL3', 'TL-XH', 'MID', 'MOD'];
+            const protocolGroup = document.getElementById('protocol-group');
+            if (supportedSeries.includes(model.series)) {
+                protocolGroup.style.display = 'block';
+            } else {
+                protocolGroup.style.display = 'none';
+            }
         }
 
         // Start emulator
@@ -364,6 +384,18 @@
                 return;
             }
 
+            // Determine final model key based on protocol selection
+            let modelKey = selectedModel.key;
+            const protocolGroup = document.getElementById('protocol-group');
+            if (protocolGroup.style.display !== 'none') {
+                const protocol = document.getElementById('protocol-select').value;
+                if (protocol === 'v201') {
+                    // Append _v201 suffix for V2.01 protocol
+                    modelKey = selectedModel.key + '_v201';
+                }
+                // else use legacy (no suffix)
+            }
+
             const btn = document.getElementById('start-btn');
             btn.disabled = true;
             btn.innerHTML = '<div class="spinner"></div> Starting...';
@@ -374,7 +406,7 @@
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        model: selectedModel.key,
+                        model: modelKey,
                         port: port
                     })
                 });
