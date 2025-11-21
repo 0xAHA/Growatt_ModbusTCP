@@ -131,8 +131,7 @@ async def async_read_serial_number(
     try:
         # Read 10 registers starting at address 23
         result = await hass.async_add_executor_job(
-            client.client.read_holding_registers,
-            23, 10
+            lambda: client.client.read_holding_registers(address=23, count=10)
         )
         
         if result.isError():
@@ -179,8 +178,7 @@ async def async_read_model_name(
     try:
         # Read 5 registers starting at address 0
         result = await hass.async_add_executor_job(
-            client.client.read_holding_registers,
-            0, 5
+            lambda: client.client.read_holding_registers(address=0, count=5)
         )
         
         if result.isError():
@@ -229,8 +227,7 @@ async def async_read_dtc_code(
     try:
         # Read DTC from holding register 30000
         result = await hass.async_add_executor_job(
-            client.client.read_holding_registers,
-            30000, 1
+            lambda: client.client.read_holding_registers(address=30000, count=1)
         )
 
         if result.isError():
