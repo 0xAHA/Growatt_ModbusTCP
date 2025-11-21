@@ -555,6 +555,55 @@
                             </div>
                         </div>
                         <div class="info-tile">
+                            <div class="info-tile-label">Load Total</div>
+                            <div class="info-tile-value">
+                                <span id="load-total">0.0</span>
+                                <span class="info-tile-unit">kWh</span>
+                            </div>
+                        </div>
+                        <div class="info-tile">
+                            <div class="info-tile-label">Grid Import Total</div>
+                            <div class="info-tile-value">
+                                <span id="grid-import-total">0.0</span>
+                                <span class="info-tile-unit">kWh</span>
+                            </div>
+                        </div>
+                        <div class="info-tile">
+                            <div class="info-tile-label">Grid Export Total</div>
+                            <div class="info-tile-value">
+                                <span id="grid-export-total">0.0</span>
+                                <span class="info-tile-unit">kWh</span>
+                            </div>
+                        </div>
+                        <div class="info-tile">
+                            <div class="info-tile-label">PV1 Power</div>
+                            <div class="info-tile-value">
+                                <span id="pv1-power">0</span>
+                                <span class="info-tile-unit">W</span>
+                            </div>
+                        </div>
+                        <div class="info-tile">
+                            <div class="info-tile-label">PV2 Power</div>
+                            <div class="info-tile-value">
+                                <span id="pv2-power">0</span>
+                                <span class="info-tile-unit">W</span>
+                            </div>
+                        </div>
+                        <div class="info-tile battery-indicator" style="display: none;">
+                            <div class="info-tile-label">Battery Voltage</div>
+                            <div class="info-tile-value">
+                                <span id="battery-voltage">0</span>
+                                <span class="info-tile-unit">V</span>
+                            </div>
+                        </div>
+                        <div class="info-tile battery-indicator" style="display: none;">
+                            <div class="info-tile-label">Battery Current</div>
+                            <div class="info-tile-value">
+                                <span id="battery-current">0.0</span>
+                                <span class="info-tile-unit">A</span>
+                            </div>
+                        </div>
+                        <div class="info-tile">
                             <div class="info-tile-label">Grid Frequency</div>
                             <div class="info-tile-value">
                                 <span id="grid-freq">50.0</span>
@@ -682,7 +731,7 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             updateStatus();
-            updateInterval = setInterval(updateStatus, 1000);
+            updateInterval = setInterval(updateStatus, 60000);  // Update every 60 seconds to match HA
 
             // Setup slider listeners
             setupSlider('irradiance-slider', 'irradiance-value', updateIrradiance);
@@ -758,16 +807,27 @@
                 });
             }
 
-            // Energy
+            // Energy (matching HA entity names)
             document.getElementById('energy-today').textContent = status.energy.today.toFixed(1);
             document.getElementById('energy-total').textContent = status.energy.total.toFixed(1);
             document.getElementById('grid-import-today').textContent = status.energy.grid_import_today.toFixed(1);
             document.getElementById('grid-export-today').textContent = status.energy.grid_export_today.toFixed(1);
             document.getElementById('load-today').textContent = status.energy.load_today.toFixed(1);
 
+            // Total energy values
+            document.getElementById('load-total').textContent = status.energy.load_total?.toFixed(1) || '0.0';
+            document.getElementById('grid-import-total').textContent = status.energy.grid_import_total?.toFixed(1) || '0.0';
+            document.getElementById('grid-export-total').textContent = status.energy.grid_export_total?.toFixed(1) || '0.0';
+
+            // Individual PV string powers
+            document.getElementById('pv1-power').textContent = Math.round(status.power.pv1);
+            document.getElementById('pv2-power').textContent = Math.round(status.power.pv2);
+
             if (hasBattery) {
                 document.getElementById('battery-charge-today').textContent = status.energy.battery_charge_today?.toFixed(1) || '0.0';
                 document.getElementById('battery-discharge-today').textContent = status.energy.battery_discharge_today?.toFixed(1) || '0.0';
+                document.getElementById('battery-voltage').textContent = status.battery.voltage?.toFixed(1) || '0.0';
+                document.getElementById('battery-current').textContent = status.battery.current?.toFixed(1) || '0.0';
             }
 
             // Inverter info

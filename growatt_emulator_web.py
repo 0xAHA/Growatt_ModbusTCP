@@ -230,6 +230,10 @@ class WebGrowattEmulator:
                 'grid_import_today': sim.grid_import_energy_today,
                 'grid_export_today': sim.energy_to_grid_today,
                 'load_today': sim.load_energy_today,
+                # Total energy values (matching HA entities)
+                'grid_import_total': sim.grid_import_energy_total,
+                'grid_export_total': sim.energy_to_grid_total,
+                'load_total': sim.load_energy_total,
             },
             'controls': {
                 'solar_irradiance': sim.solar_irradiance,
