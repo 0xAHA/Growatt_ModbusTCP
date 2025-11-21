@@ -73,6 +73,27 @@ emulator = None
 emulator_lock = threading.Lock()
 
 
+def get_series_from_name(name: str) -> str:
+    """Derive series from model name."""
+    name_upper = name.upper()
+    if 'MIC' in name_upper:
+        return 'MIC'
+    elif 'MIN' in name_upper:
+        return 'MIN'
+    elif 'TL-XH' in name_upper or 'TL XH' in name_upper:
+        return 'TL-XH'
+    elif 'MID' in name_upper:
+        return 'MID'
+    elif 'SPH-TL3' in name_upper or 'SPH TL3' in name_upper:
+        return 'SPH-TL3'
+    elif 'SPH' in name_upper:
+        return 'SPH'
+    elif 'MOD' in name_upper:
+        return 'MOD'
+    else:
+        return 'Other'
+
+
 class WebGrowattEmulator:
     """Web-based emulator application."""
 
@@ -165,7 +186,7 @@ class WebGrowattEmulator:
             'model': {
                 'key': self.model_key,
                 'name': self.model.name,
-                'series': self.model.series,
+                'series': get_series_from_name(self.model.name),
                 'has_battery': self.model.has_battery,
                 'has_pv3': self.model.has_pv3,
                 'phases': self.model.phases,
@@ -270,27 +291,6 @@ def dashboard():
     if not emulator:
         return "Emulator not started", 503
     return render_template('dashboard.html')
-
-
-def get_series_from_name(name: str) -> str:
-    """Derive series from model name."""
-    name_upper = name.upper()
-    if 'MIC' in name_upper:
-        return 'MIC'
-    elif 'MIN' in name_upper:
-        return 'MIN'
-    elif 'TL-XH' in name_upper or 'TL XH' in name_upper:
-        return 'TL-XH'
-    elif 'MID' in name_upper:
-        return 'MID'
-    elif 'SPH-TL3' in name_upper or 'SPH TL3' in name_upper:
-        return 'SPH-TL3'
-    elif 'SPH' in name_upper:
-        return 'SPH'
-    elif 'MOD' in name_upper:
-        return 'MOD'
-    else:
-        return 'Other'
 
 
 @app.route('/api/models')
