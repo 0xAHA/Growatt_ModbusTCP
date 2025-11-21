@@ -9,6 +9,7 @@ import logging
 import sys
 import os
 import json
+import time
 import importlib.util
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime
@@ -138,7 +139,9 @@ def get_status():
     if simulator is None:
         return jsonify({'error': 'Emulator not started'}), 400
 
-    state = simulator.get_state()
+    # Get values from simulator
+    vals = simulator.values
+    sim_time = simulator.get_simulation_time()
 
     # Get the base profile (without _v201 suffix)
     base_profile_key = selected_profile.replace('_v201', '') if selected_profile else None
@@ -147,11 +150,11 @@ def get_status():
     # Build response
     response = {
         'timestamp': datetime.now().isoformat(),
-        'model': profile['name'],
+        'model': profile.get('name', 'Unknown'),
         'profile_key': selected_profile,
-        'status': state.get('status', 'Unknown'),
-        'time': state.get('simulated_time', '00:00'),
-        'time_hour': state.get('hour', 12),  # Current hour (0-24)
+        'status': vals.get('status', 0),
+        'time': sim_time.strftime('%H:%M'),
+        'time_hour': sim_time.hour + sim_time.minute / 60.0,
 
         # Model capabilities
         'capabilities': {
@@ -163,35 +166,35 @@ def get_status():
 
         # Solar generation
         'solar': {
-            'pv1_voltage': state.get('pv1_voltage', 0),
-            'pv1_current': state.get('pv1_current', 0),
-            'pv1_power': state.get('pv1_power', 0),
-            'pv2_voltage': state.get('pv2_voltage', 0),
-            'pv2_current': state.get('pv2_current', 0),
-            'pv2_power': state.get('pv2_power', 0),
-            'pv3_voltage': state.get('pv3_voltage', 0) if profile.get('pv3_supported') else None,
-            'pv3_current': state.get('pv3_current', 0) if profile.get('pv3_supported') else None,
-            'pv3_power': state.get('pv3_power', 0) if profile.get('pv3_supported') else None,
-            'total_power': state.get('solar_power', 0),
+            'pv1_voltage': vals['voltages'].get('pv1', 0),
+            'pv1_current': vals['currents'].get('pv1', 0),
+            'pv1_power': vals['pv_power'].get('pv1', 0),
+            'pv2_voltage': vals['voltages'].get('pv2', 0),
+            'pv2_current': vals['currents'].get('pv2', 0),
+            'pv2_power': vals['pv_power'].get('pv2', 0),
+            'pv3_voltage': vals['voltages'].get('pv3', 0) if profile.get('pv3_supported') else None,
+            'pv3_current': vals['currents'].get('pv3', 0) if profile.get('pv3_supported') else None,
+            'pv3_power': vals['pv_power'].get('pv3', 0) if profile.get('pv3_supported') else None,
+            'total_power': vals['pv_power'].get('total', 0),
         },
 
         # AC output
         'ac': {
-            'voltage': state.get('ac_voltage', 0),
-            'current': state.get('ac_current', 0),
-            'power': state.get('ac_power', 0),
-            'frequency': state.get('ac_frequency', 50.0),
+            'voltage': vals['voltages'].get('ac', 0),
+            'current': vals['currents'].get('ac', 0),
+            'power': vals.get('ac_power', 0),
+            'frequency': 50.0,
         },
 
         # Power flow
         'grid': {
-            'power': state.get('grid_power', 0),
-            'export': max(0, state.get('grid_power', 0)),
-            'import': max(0, -state.get('grid_power', 0)),
+            'power': vals.get('grid_power', 0),
+            'export': max(0, vals.get('grid_power', 0)),
+            'import': max(0, -vals.get('grid_power', 0)),
         },
 
         'load': {
-            'power': state.get('house_load', 0),
+            'power': simulator.house_load,
         },
 
         # Battery (if equipped)
@@ -199,36 +202,36 @@ def get_status():
 
         # Energy totals
         'energy': {
-            'today': state.get('energy_today', 0),
-            'total': state.get('energy_total', 0),
-            'to_grid_today': state.get('energy_to_grid_today', 0),
-            'load_today': state.get('load_energy_today', 0),
+            'today': simulator.energy_today,
+            'total': simulator.energy_total,
+            'to_grid_today': simulator.energy_to_grid_today,
+            'load_today': simulator.load_energy_today,
         },
 
         # Temperatures
         'temperatures': {
-            'inverter': state.get('inverter_temp', 25),
-            'ipm': state.get('ipm_temp', 30),
-            'boost': state.get('boost_temp', 28),
+            'inverter': vals['temperatures'].get('inverter', 25),
+            'ipm': vals['temperatures'].get('ipm', 30),
+            'boost': vals['temperatures'].get('boost', 28),
         },
 
         # Simulation controls
         'controls': {
-            'irradiance': state.get('irradiance', 1000),
-            'cloud_cover': state.get('cloud_cover', 0),
-            'time_speed': state.get('time_speed', 1.0),
+            'irradiance': simulator.solar_irradiance,
+            'cloud_cover': simulator.cloud_cover * 100,  # Convert to percentage
+            'time_speed': simulator.time_multiplier,
         }
     }
 
     # Add battery if equipped
     if profile.get('has_battery', False):
         response['battery'] = {
-            'voltage': state.get('battery_voltage', 0),
-            'current': state.get('battery_current', 0),
-            'power': state.get('battery_power', 0),
-            'soc': state.get('battery_soc', 0),
-            'temp': state.get('battery_temp', 25),
-            'charging': state.get('battery_power', 0) > 0,
+            'voltage': vals['voltages'].get('battery', 0),
+            'current': vals['currents'].get('battery', 0),
+            'power': vals.get('battery_power', 0),
+            'soc': simulator.battery_soc,
+            'temp': 30.0,
+            'charging': vals.get('battery_power', 0) > 0,
         }
 
     return jsonify(response)
@@ -240,13 +243,8 @@ def get_registers():
     if simulator is None:
         return jsonify({'error': 'Emulator not started'}), 400
 
-    # Get register map using already-loaded device_profiles module
-    profile = device_profiles.get_profile(simulator.model.profile_key)
-
-    if not profile:
-        return jsonify({'error': 'Profile not found'}), 400
-
-    register_map = profile.get('register_map', {})
+    # Get input registers from model
+    input_registers = simulator.model.get_input_registers()
 
     # Get current register values
     registers = {}
@@ -268,19 +266,20 @@ def get_registers():
     ]
 
     for addr in key_registers:
-        if addr in register_map:
-            reg_info = register_map[addr]
-            value = simulator.get_register_value(addr)
+        if addr in input_registers:
+            reg_info = input_registers[addr]
+            value = simulator.get_register_value('input', addr)
 
-            registers[addr] = {
-                'address': addr,
-                'name': reg_info.get('name', f'Register {addr}'),
-                'value': value,
-                'scaled_value': value * reg_info.get('scale', 1),
-                'unit': reg_info.get('unit', ''),
-                'description': reg_info.get('desc', ''),
-                'access': reg_info.get('access', 'RO'),
-            }
+            if value is not None:
+                registers[addr] = {
+                    'address': addr,
+                    'name': reg_info.get('name', f'Register {addr}'),
+                    'value': value,
+                    'scaled_value': value * reg_info.get('scale', 1),
+                    'unit': reg_info.get('unit', ''),
+                    'description': reg_info.get('desc', ''),
+                    'access': 'RO',
+                }
 
     return jsonify(registers)
 
@@ -298,10 +297,10 @@ def control_simulator():
         irradiance = float(data['irradiance'])
         simulator.set_irradiance(max(0, min(1000, irradiance)))
 
-    # Update cloud cover
+    # Update cloud cover (convert from percentage to 0-1)
     if 'cloud_cover' in data:
-        cloud = float(data['cloud_cover'])
-        simulator.set_cloud_cover(max(0, min(100, cloud)))
+        cloud = float(data['cloud_cover']) / 100.0
+        simulator.set_cloud_cover(max(0, min(1, cloud)))
 
     # Update house load
     if 'house_load' in data:
@@ -311,15 +310,23 @@ def control_simulator():
     # Update time speed
     if 'time_speed' in data:
         speed = float(data['time_speed'])
-        simulator.set_time_speed(max(0.1, min(100, speed)))
+        simulator.set_time_multiplier(max(0.1, min(100, speed)))
 
     # Set time of day (0-24 hours)
     if 'time_of_day' in data:
         hour = float(data['time_of_day'])
-        simulator.set_time_of_day(max(0, min(24, hour)))
+        # Set the simulation_time to the specified hour
+        new_time = datetime.now().replace(
+            hour=int(hour),
+            minute=int((hour % 1) * 60),
+            second=0,
+            microsecond=0
+        )
+        simulator.simulation_time = new_time
+        simulator.start_time = time.time()  # Reset start time
 
-    # Reset energy totals
-    if data.get('reset_energy'):
+    # Reset energy totals (if method exists)
+    if data.get('reset_energy') and hasattr(simulator, 'reset_energy_totals'):
         simulator.reset_energy_totals()
 
     return jsonify({'success': True})
