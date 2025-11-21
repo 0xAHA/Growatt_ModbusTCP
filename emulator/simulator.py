@@ -621,7 +621,7 @@ class InverterSimulator:
         elif reg_name in ['battery_current_high', 'battery_current_low'] and self.model.has_battery:
             # 32-bit signed battery current
             current = self.values['currents']['battery']
-            combined_scale = reg_info.get('combined_scale', scale) if reg_info.get('pair') else scale
+            combined_scale = reg_def.get('combined_scale', scale) if reg_def.get('pair') else scale
             current_raw = round(current / combined_scale)
             # Handle signed 32-bit
             if current_raw < 0:
