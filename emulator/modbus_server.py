@@ -6,9 +6,8 @@ Serves simulated register values via Modbus TCP protocol.
 
 import logging
 import threading
-import socket
 from typing import Optional
-from pymodbus.server import StartTcpServer, ServerStop
+from pymodbus.server import StartTcpServer
 from pymodbus.datastore import ModbusServerContext, ModbusDeviceContext
 from pymodbus.datastore import ModbusSparseDataBlock
 
@@ -166,8 +165,6 @@ class ModbusEmulatorServer:
     def _run_server(self) -> None:
         """Run the Modbus server (blocking)."""
         try:
-            # Start Modbus server
-            # Values are fetched directly from simulator on each read
             StartTcpServer(
                 context=self.server_context,
                 address=("0.0.0.0", self.port)
