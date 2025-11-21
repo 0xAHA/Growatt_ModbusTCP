@@ -188,9 +188,9 @@ def get_status():
 
         # Power flow
         'grid': {
-            'power': vals.get('grid_power', 0),
-            'export': max(0, vals.get('grid_power', 0)),
-            'import': max(0, -vals.get('grid_power', 0)),
+            'power': vals['grid_power']['grid'],
+            'export': vals['grid_power']['export'],
+            'import': vals['grid_power']['import'],
         },
 
         'load': {
