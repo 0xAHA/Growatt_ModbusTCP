@@ -110,6 +110,7 @@ class ModbusEmulatorServer:
         self.port = port
         self.slave_id = slave_id
         self.server_thread = None
+        self.update_thread = None
         self.running = False
 
         # Create custom data blocks that fetch directly from simulator
@@ -141,31 +142,34 @@ class ModbusEmulatorServer:
             return
 
         self.running = True
+
+        # Start simulator update thread
+        self.update_thread = threading.Thread(target=self._update_loop, daemon=True)
+        self.update_thread.start()
+
+        # Start Modbus server thread
         self.server_thread = threading.Thread(target=self._run_server, daemon=True)
         self.server_thread.start()
         logger.info(f"Modbus server started on port {self.port}")
 
+    def _update_loop(self) -> None:
+        """Continuously update simulator values (runs in separate thread)."""
+        import time
+        while self.running:
+            try:
+                self.simulator.update()
+                time.sleep(2.0)  # Update every 2 seconds
+            except Exception as e:
+                logger.error(f"Simulator update error: {e}")
+
     def _run_server(self) -> None:
         """Run the Modbus server (blocking)."""
         try:
-            # Update simulator periodically (every 2 seconds)
-            def update_callback():
-                """Callback to update simulator values."""
-                if self.running:
-                    self.simulator.update()
-                    threading.Timer(2.0, update_callback).start()
-
-            # Start update timer
-            update_callback()
-
             # Start Modbus server
-            # Values are fetched directly from simulator on each read,
-            # no need to update internal storage
+            # Values are fetched directly from simulator on each read
             StartTcpServer(
                 context=self.server_context,
-                address=("0.0.0.0", self.port),
-                allow_reuse_address=True,
-                defer_start=False
+                address=("0.0.0.0", self.port)
             )
         except Exception as e:
             logger.error(f"Server error: {e}")
@@ -174,6 +178,8 @@ class ModbusEmulatorServer:
     def stop(self) -> None:
         """Stop the Modbus server."""
         self.running = False
+        if self.update_thread:
+            self.update_thread.join(timeout=2.0)
         if self.server_thread:
             self.server_thread.join(timeout=2.0)
         logger.info("Modbus server stopped")
