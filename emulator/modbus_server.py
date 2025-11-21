@@ -10,6 +10,7 @@ from typing import Optional
 from pymodbus.server import StartTcpServer
 from pymodbus.datastore import ModbusServerContext, ModbusDeviceContext
 from pymodbus.datastore import ModbusSparseDataBlock
+from pymodbus.framer import ModbusSocketFramer
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +163,10 @@ class ModbusEmulatorServer:
             # no need to update internal storage
             StartTcpServer(
                 context=self.server_context,
-                address=("0.0.0.0", self.port)
+                address=("0.0.0.0", self.port),
+                framer=ModbusSocketFramer,
+                allow_reuse_address=True,
+                defer_start=False
             )
         except Exception as e:
             logger.error(f"Server error: {e}")
