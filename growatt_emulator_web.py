@@ -183,6 +183,7 @@ class WebGrowattEmulator:
 
         # Build status response
         status = {
+            'running': self.running,  # Top-level for easy access
             'model': {
                 'key': self.model_key,
                 'name': self.model.name,
