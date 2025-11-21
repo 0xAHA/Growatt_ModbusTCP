@@ -31,6 +31,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Import models (safe - doesn't require pymodbus thanks to lazy imports in __init__.py)
 from emulator.models import InverterModel, get_available_models, INVERTER_PROFILES
 
+# DTC code will be lazy loaded
+DTC_CODES = None
+
 # These will be lazy-loaded when needed
 InverterSimulator = None
 ModbusEmulatorServer = None
@@ -41,14 +44,16 @@ def lazy_import_emulator_components():
     This function is only called when actually starting an emulator,
     at which point pymodbus and other dependencies should be installed.
     """
-    global InverterSimulator, ModbusEmulatorServer
+    global InverterSimulator, ModbusEmulatorServer, DTC_CODES
     if InverterSimulator is None:
         try:
             from emulator.simulator import InverterSimulator as _InverterSimulator
+            from emulator.simulator import DTC_CODES as _DTC_CODES
             from emulator.modbus_server import ModbusEmulatorServer as _ModbusEmulatorServer
 
             InverterSimulator = _InverterSimulator
             ModbusEmulatorServer = _ModbusEmulatorServer
+            DTC_CODES = _DTC_CODES
 
         except ImportError as e:
             raise ImportError(
@@ -192,6 +197,8 @@ class WebGrowattEmulator:
                 'has_pv3': self.model.has_pv3,
                 'phases': self.model.phases,
                 'max_power_kw': self.model.max_power_kw,
+                'protocol_version': self.model.profile.get('protocol_version', 'v1.39'),
+                'dtc_code': DTC_CODES.get(self.model_key, 0) if DTC_CODES else 0,
             },
             'runtime': {
                 'running': self.running,
