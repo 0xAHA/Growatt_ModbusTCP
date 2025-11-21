@@ -475,6 +475,10 @@ class InverterSimulator:
         Returns:
             16-bit register value or None
         """
+        # Debug: Log battery current register requests
+        if address in [3170, 31215, 31216]:
+            print(f"[DEBUG] get_register_value called: type={register_type}, address={address}")
+
         # Get register definition
         if register_type == 'input':
             registers = self.model.get_input_registers()
@@ -482,10 +486,16 @@ class InverterSimulator:
             registers = self.model.get_holding_registers()
 
         if address not in registers:
+            if address in [3170, 31215, 31216]:
+                print(f"[DEBUG] Address {address} NOT FOUND in {register_type} registers!")
             return None
 
         reg_def = registers[address]
         reg_name = reg_def['name']
+
+        # Debug: Log found register
+        if address in [3170, 31215, 31216]:
+            print(f"[DEBUG] Found register {address}: name='{reg_name}', def={reg_def}")
 
         # Map register name to simulated value
         return self._map_register_to_value(reg_name, reg_def)
@@ -500,6 +510,10 @@ class InverterSimulator:
         Returns:
             Raw 16-bit register value
         """
+        # Debug: Log battery current register requests
+        if 'battery_current' in reg_name:
+            print(f"[DEBUG] _map_register_to_value called for: reg_name='{reg_name}'")
+
         scale = reg_def.get('scale', 1)
         is_signed = reg_def.get('signed', False)
 
