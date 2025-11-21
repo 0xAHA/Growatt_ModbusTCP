@@ -28,9 +28,44 @@ from flask_cors import CORS
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from emulator.models import InverterModel, get_available_models, INVERTER_PROFILES
-from emulator.simulator import InverterSimulator
-from emulator.modbus_server import ModbusEmulatorServer
+# Import models module directly to avoid triggering emulator/__init__.py which requires pymodbus
+import importlib.util
+
+_models_spec = importlib.util.spec_from_file_location(
+    'emulator_models',
+    os.path.join(os.path.dirname(__file__), 'emulator', 'models.py')
+)
+_models_module = importlib.util.module_from_spec(_models_spec)
+_models_spec.loader.exec_module(_models_module)
+
+# Export what we need from models
+InverterModel = _models_module.InverterModel
+get_available_models = _models_module.get_available_models
+INVERTER_PROFILES = _models_module.INVERTER_PROFILES
+
+# Lazy imports for components that require pymodbus (only when starting emulator)
+InverterSimulator = None
+ModbusEmulatorServer = None
+
+def lazy_import_emulator_components():
+    """Lazy import components that require pymodbus."""
+    global InverterSimulator, ModbusEmulatorServer
+    if InverterSimulator is None:
+        _simulator_spec = importlib.util.spec_from_file_location(
+            'emulator_simulator',
+            os.path.join(os.path.dirname(__file__), 'emulator', 'simulator.py')
+        )
+        _simulator_module = importlib.util.module_from_spec(_simulator_spec)
+        _simulator_spec.loader.exec_module(_simulator_module)
+        InverterSimulator = _simulator_module.InverterSimulator
+
+        _server_spec = importlib.util.spec_from_file_location(
+            'emulator_server',
+            os.path.join(os.path.dirname(__file__), 'emulator', 'modbus_server.py')
+        )
+        _server_module = importlib.util.module_from_spec(_server_spec)
+        _server_spec.loader.exec_module(_server_module)
+        ModbusEmulatorServer = _server_module.ModbusEmulatorServer
 
 # Configure logging
 logging.basicConfig(
@@ -58,6 +93,9 @@ class WebGrowattEmulator:
             model_key: Inverter model profile key
             port: Modbus TCP port
         """
+        # Lazy import components that require pymodbus
+        lazy_import_emulator_components()
+
         self.model_key = model_key
         self.port = port
         self.running = False
@@ -244,32 +282,59 @@ def dashboard():
     return render_template('dashboard.html')
 
 
+def get_series_from_name(name: str) -> str:
+    """Derive series from model name."""
+    name_upper = name.upper()
+    if 'MIC' in name_upper:
+        return 'MIC'
+    elif 'MIN' in name_upper:
+        return 'MIN'
+    elif 'TL-XH' in name_upper or 'TL XH' in name_upper:
+        return 'TL-XH'
+    elif 'MID' in name_upper:
+        return 'MID'
+    elif 'SPH-TL3' in name_upper or 'SPH TL3' in name_upper:
+        return 'SPH-TL3'
+    elif 'SPH' in name_upper:
+        return 'SPH'
+    elif 'MOD' in name_upper:
+        return 'MOD'
+    else:
+        return 'Other'
+
+
 @app.route('/api/models')
 def api_models():
     """Get available models."""
-    models = get_available_models()
-    model_list = []
+    try:
+        models = get_available_models()
+        model_list = []
 
-    for key, model in models.items():
-        # Skip V2.01 profiles for now (can add protocol selection later)
-        if '_v201' in key:
-            continue
+        for key, model in models.items():
+            # Skip V2.01 profiles for now (can add protocol selection later)
+            if '_v201' in key:
+                continue
 
-        profile = INVERTER_PROFILES[key]
-        model_list.append({
-            'key': key,
-            'name': profile['name'],
-            'series': profile.get('series', 'Unknown'),
-            'has_battery': profile['has_battery'],
-            'has_pv3': profile['has_pv3'],
-            'phases': profile['phases'],
-            'max_power_kw': profile['max_power_kw'],
-        })
+            profile = INVERTER_PROFILES[key]
+            series = get_series_from_name(profile['name'])
 
-    # Sort by series then name
-    model_list.sort(key=lambda x: (x['series'], x['name']))
+            model_list.append({
+                'key': key,
+                'name': profile['name'],
+                'series': series,
+                'has_battery': profile['has_battery'],
+                'has_pv3': profile['has_pv3'],
+                'phases': profile['phases'],
+                'max_power_kw': profile['max_power_kw'],
+            })
 
-    return jsonify({'models': model_list})
+        # Sort by series then name
+        model_list.sort(key=lambda x: (x['series'], x['name']))
+
+        return jsonify({'models': model_list})
+    except Exception as e:
+        logger.error(f"Error loading models: {e}")
+        return jsonify({'error': str(e), 'models': []}), 500
 
 
 @app.route('/api/start', methods=['POST'])
