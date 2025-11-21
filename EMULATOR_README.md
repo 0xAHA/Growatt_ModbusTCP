@@ -5,8 +5,11 @@ A realistic Modbus TCP emulator for testing Growatt inverter integrations withou
 ## Features
 
 - **10 Inverter Models** - Supports all major Growatt series (MIC, MIN, TL-XH, MID, SPH, SPH-TL3, MOD)
+- **VPP Protocol V2.01** - Full support for V2.01 register ranges (30000+, 31000+) with DTC codes
+- **Legacy Protocol Support** - Also supports V1.39 and V3.05 register ranges for older models
+- **Auto-Detection Ready** - Serves official DTC codes (Device Type Code) for automatic model identification
 - **Realistic Simulation** - Day/night cycles, solar generation, battery charging/discharging
-- **Live Terminal UI** - Real-time display of all inverter parameters
+- **Live Terminal UI** - Real-time display of all inverter parameters including protocol info
 - **Interactive Controls** - Adjust solar irradiance, cloud cover, house load, battery behavior, and time speed
 - **Full Modbus TCP** - Implements complete register maps for each model
 - **Battery Simulation** - Automatic charging from PV excess, discharging to cover loads
@@ -28,14 +31,39 @@ pip3 install -r requirements_emulator.txt
 Or manually:
 
 ```bash
-pip3 install pymodbus rich
+pip3 install pymodbus rich flask
 ```
 
 ## Usage
 
-### Quick Start
+The emulator supports two interfaces: **Terminal UI** (command-line) and **Web UI** (browser-based).
 
-Run the emulator with interactive model selection:
+### Web UI (Recommended)
+
+Run the web-based interface for a visual dashboard with energy flow diagram:
+
+```bash
+python3 growatt_emulator_web.py
+```
+
+Then open your browser to: **http://localhost:5000**
+
+Features:
+- 🌐 Browser-based interface (no terminal needed)
+- 📊 Live energy flow diagram (like Home Assistant's energy dashboard)
+- 🎛️ Interactive sliders for simulation controls
+- 📝 Real-time register display
+- 📈 Live sensor values and graphs
+- 🔄 Auto-refresh (1 second updates)
+
+**Custom web port:**
+```bash
+python3 growatt_emulator_web.py --web-port 8080
+```
+
+### Terminal UI (Classic)
+
+Run the emulator with interactive terminal UI:
 
 ```bash
 python3 growatt_emulator.py
@@ -55,18 +83,26 @@ python3 growatt_emulator.py --list-models
 
 ### Available Models
 
-| Model Key | Name | Type | Battery | Phases | PV Strings | Power |
-|-----------|------|------|---------|--------|------------|-------|
-| `mic_600_3300tl_x` | MIC 600-3300TL-X | Micro | No | 1 | 2 | 3.3kW |
-| `min_3000_6000_tl_x` | MIN 3000-6000TL-X | String | No | 1 | 2 | 6.0kW |
-| `min_7000_10000_tl_x` | MIN 7000-10000TL-X | String | No | 1 | 3 | 10.0kW |
-| `tl_xh_3000_10000` | TL-XH 3000-10000 | Hybrid | Yes | 1 | 3 | 10.0kW |
-| `tl_xh_us_3000_10000` | TL-XH US 3000-10000 | Hybrid (US) | Yes | 1 | 3 | 10.0kW |
-| `mid_15000_25000tl3_x` | MID 15000-25000TL3-X | Commercial | No | 3 | 2 | 25.0kW |
-| `sph_3000_6000` | SPH 3000-6000 | Hybrid Storage | Yes | 1 | 2 | 6.0kW |
-| `sph_7000_10000` | SPH 7000-10000 | Hybrid Storage | Yes | 1 | 2 | 10.0kW |
-| `sph_tl3_3000_10000` | SPH-TL3 3000-10000 | Hybrid 3-Phase | Yes | 3 | 2 | 10.0kW |
-| `mod_6000_15000tl3_xh` | MOD 6000-15000TL3-XH | Modular Hybrid | Yes | 3 | 3 | 15.0kW |
+When running interactively, you can choose between **V2.01** (with DTC auto-detection) or **Legacy** protocol for each model.
+
+| Model Key | Name | Type | Battery | Phases | PV Strings | Power | DTC Code |
+|-----------|------|------|---------|--------|------------|-------|----------|
+| `mic_600_3300tl_x` | MIC 600-3300TL-X | Micro | No | 1 | 1 | 3.3kW | 5200* |
+| `min_3000_6000_tl_x` | MIN 3000-6000TL-X | String | No | 1 | 2 | 6.0kW | 5200* |
+| `min_7000_10000_tl_x` | MIN 7000-10000TL-X | String | No | 1 | 3 | 10.0kW | 5201 |
+| `tl_xh_3000_10000` | TL-XH 3000-10000 | Hybrid | Yes | 1 | 3 | 10.0kW | 5100 |
+| `tl_xh_us_3000_10000` | TL-XH US 3000-10000 | Hybrid (US) | Yes | 1 | 3 | 10.0kW | 5100 |
+| `mid_15000_25000tl3_x` | MID 15000-25000TL3-X | Commercial | No | 3 | 2 | 25.0kW | 5400* |
+| `sph_3000_6000` | SPH 3000-6000 | Hybrid Storage | Yes | 1 | 2 | 6.0kW | 3502* |
+| `sph_7000_10000` | SPH 7000-10000 | Hybrid Storage | Yes | 1 | 2 | 10.0kW | 3502* |
+| `sph_tl3_3000_10000` | SPH-TL3 3000-10000 | Hybrid 3-Phase | Yes | 3 | 2 | 10.0kW | 3601 |
+| `mod_6000_15000tl3_xh` | MOD 6000-15000TL3-XH | Modular Hybrid | Yes | 3 | 3 | 15.0kW | 5400* |
+
+**\* DTC codes marked with asterisk are shared** - Additional register checks differentiate exact model during auto-detection.
+
+**Protocol Versions:**
+- **V2.01 Mode:** Serves register 30099 with value 201 (protocol version), register 30000 with DTC code
+- **Legacy Mode:** V2.01 registers not readable (simulates older inverter firmware)
 
 ## Keyboard Controls
 
@@ -84,13 +120,18 @@ While the emulator is running, you can use these keys:
 
 The terminal UI shows:
 
-1. **Header** - Model name, time, status, port
-2. **PV Generation** - Voltage, current, and power for each string
-3. **AC Output** - Voltage, current, frequency, power
-4. **Battery** (if equipped) - SOC, voltage, current, charging status
-5. **Grid & Load** - Import/export status, house consumption
-6. **Energy Totals** - Today and lifetime energy statistics
-7. **Temperatures** - Inverter, IPM, and boost converter temps
+1. **Header** - Model name, time, status, port, protocol version
+2. **Protocol Info** - DTC code (register 30000), Protocol version (register 30099)
+3. **PV Generation** - Voltage, current, and power for each string
+4. **AC Output** - Voltage, current, frequency, power
+5. **Battery** (if equipped) - SOC, voltage, current, charging status
+6. **Grid & Load** - Import/export status, house consumption
+7. **Energy Totals** - Today and lifetime energy statistics
+8. **Temperatures** - Inverter, IPM, and boost converter temps
+
+**Protocol Info Display:**
+- **V2.01 Mode:** Shows "DTC: 5201 | Protocol: 2.01"
+- **Legacy Mode:** Shows "DTC: Not Available | Protocol: Legacy"
 
 ## Connecting to the Emulator
 
@@ -169,14 +210,25 @@ python3 growatt_emulator.py --model sph_3000_6000 --port 5020
 
 ## Testing Your Integration
 
-1. Start the emulator with your target model
+1. Start the emulator with your target model (choose V2.01 or Legacy when prompted)
 2. Connect your integration (Home Assistant, script, etc.)
-3. Use keyboard controls to simulate different conditions:
+3. **Test Auto-Detection (V2.01 Mode):**
+   - Run Universal Register Scanner service
+   - Verify DTC code is read correctly from register 30000
+   - Confirm protocol version shows "2.01" from register 30099
+   - Check that model is auto-detected with "HIGH" confidence
+   - Verify integration setup doesn't require manual selection
+4. **Test Legacy Mode:**
+   - Restart emulator and select Legacy protocol
+   - Verify DTC register (30000) returns error/not readable
+   - Confirm manual model selection is required during setup
+   - Check that protocol version shows "Legacy" in device info
+5. Use keyboard controls to simulate different conditions:
    - High sun: `[I]` → 1000 W/m²
    - Cloudy day: `[C]` → 70%
    - Heavy load: `[L]` → 5000W
    - Fast time: `[T]` → 10x (see full day in minutes)
-4. Verify your integration correctly:
+6. Verify your integration correctly:
    - Reads all sensor values
    - Handles zero values at night
    - Processes battery data (if applicable)

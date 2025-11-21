@@ -90,7 +90,11 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                     else:
                         # Auto-detection failed, go to manual selection
                         _LOGGER.warning("Auto-detection failed, falling back to manual selection")
-                        self._discovered_data = user_input
+                        self._discovered_data = {
+                            **user_input,
+                            "auto_detection_failed": True,
+                            "dtc_result": "Not readable (inverter uses legacy protocol)"
+                        }
                         return await self.async_step_manual()
                     
             except Exception as err:
@@ -212,21 +216,36 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                 errors["base"] = "unknown"
         
         # Build manual selection schema
-        available_profiles = get_available_profiles()
-        
+        # Only show legacy profiles (V2.01 profiles excluded)
+        # If auto-detection failed, the inverter doesn't support register 30000+ (V2.01)
+        available_profiles = get_available_profiles(legacy_only=True)
+
         schema = vol.Schema({
             vol.Required(
-                CONF_INVERTER_SERIES, 
+                CONF_INVERTER_SERIES,
                 default="min_7000_10000_tl_x"
             ): vol.In(available_profiles),
         })
-        
+
+        # Prepare description based on whether auto-detection was attempted
+        if self._discovered_data and self._discovered_data.get("auto_detection_failed"):
+            dtc_result = self._discovered_data.get("dtc_result", "Unknown")
+            info_text = (
+                f"⚠️ Auto-Detection Results:\n"
+                f"• DTC Code (register 30000): {dtc_result}\n"
+                f"• Conclusion: V2.01 protocol not supported\n\n"
+                f"Please manually select your inverter series below.\n"
+                f"Legacy protocol will be used automatically."
+            )
+        else:
+            info_text = "Please select your inverter series. Legacy protocol will be used."
+
         return self.async_show_form(
             step_id="manual",
             data_schema=schema,
             errors=errors,
             description_placeholders={
-                "info": "Auto-detection failed. Please manually select your inverter model."
+                "info": info_text
             }
         )
 

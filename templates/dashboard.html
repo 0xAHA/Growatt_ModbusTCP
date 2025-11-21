@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Growatt Emulator - {{ model_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="dashboard">
+        <header class="dashboard-header">
+            <div class="header-left">
+                <h1>☀️ <span id="modelName">{{ model_name }}</span></h1>
+                <div class="model-switcher">
+                    <select id="modelSwitcher" class="model-switch-select">
+                        {% for key, profile in INVERTER_PROFILES.items() %}
+                            {% if not key.endswith('_v201') %}
+                            <option value="{{ key }}" {% if key == profile_key %}selected{% endif %}>{{ profile.name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <select id="protocolSwitcher" class="protocol-switch-select">
+                        <option value="v201">V2.01</option>
+                        <option value="legacy">Legacy</option>
+                    </select>
+                    <button id="switchBtn" class="switch-btn">Switch Model</button>
+                </div>
+            </div>
+            <div class="header-info">
+                <span id="time" class="time">--:--</span>
+                <span id="status" class="status-badge">Normal</span>
+                <button id="stopBtn" class="stop-btn">Stop Emulator</button>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Energy Flow Diagram -->
+            <div class="card energy-flow-card">
+                <h2>Energy Distribution</h2>
+                <svg id="energyFlow" viewBox="0 0 500 400" class="energy-flow-diagram">
+                    <!-- Flow Lines (behind circles) -->
+                    <g id="flowLines">
+                        <!-- Solar to Grid -->
+                        <line id="lineSolarGrid" x1="250" y1="120" x2="130" y2="280" stroke="#E5E7EB" stroke-width="3" />
+                        <!-- Solar to Home -->
+                        <line id="lineSolarHome" x1="250" y1="120" x2="370" y2="280" stroke="#E5E7EB" stroke-width="3" />
+                        {% if has_battery %}
+                        <!-- Solar to Battery -->
+                        <line id="lineSolarBattery" x1="250" y1="150" x2="250" y2="240" stroke="#E5E7EB" stroke-width="3" />
+                        {% endif %}
+                    </g>
+
+                    <!-- Solar (Top Center) -->
+                    <g id="solar">
+                        <circle cx="250" cy="100" r="60" fill="#FDB813" stroke="#F59E0B" stroke-width="4"/>
+                        <text x="250" y="95" text-anchor="middle" font-size="32">☀️</text>
+                        <text x="250" y="118" text-anchor="middle" class="node-label">Solar</text>
+                        <text x="250" y="145" text-anchor="middle" class="node-value" id="solarValue">0.0 kWh</text>
+                    </g>
+
+                    <!-- Grid (Bottom Left) -->
+                    <g id="grid">
+                        <circle cx="130" cy="300" r="60" fill="#8B5CF6" stroke="#7C3AED" stroke-width="4"/>
+                        <text x="130" y="295" text-anchor="middle" font-size="32">🔌</text>
+                        <text x="130" y="318" text-anchor="middle" class="node-label">Grid</text>
+                        <text x="130" y="345" text-anchor="middle" class="node-value" id="gridValue">← 0.0 kWh</text>
+                    </g>
+
+                    <!-- Home (Bottom Right) -->
+                    <g id="home">
+                        <circle cx="370" cy="300" r="60" fill="#3B82F6" stroke="#2563EB" stroke-width="4"/>
+                        <text x="370" y="295" text-anchor="middle" font-size="32">🏠</text>
+                        <text x="370" y="318" text-anchor="middle" class="node-label">Home</text>
+                        <text x="370" y="345" text-anchor="middle" class="node-value" id="houseValue">0.0 kWh</text>
+                    </g>
+
+                    <!-- Battery (Center, if equipped) -->
+                    {% if has_battery %}
+                    <g id="battery">
+                        <circle cx="250" cy="260" r="50" fill="#10B981" stroke="#059669" stroke-width="4"/>
+                        <text x="250" y="258" text-anchor="middle" font-size="28">🔋</text>
+                        <text x="250" y="280" text-anchor="middle" class="node-label" font-size="12">Battery</text>
+                        <text x="250" y="300" text-anchor="middle" class="node-value" id="batteryValue">50%</text>
+                    </g>
+                    {% endif %}
+
+                    <!-- Flow Arrows (on top) -->
+                    <g id="flowArrows">
+                        <defs>
+                            <marker id="arrowSolar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                <polygon points="0 0, 8 4, 0 8" fill="#F59E0B" />
+                            </marker>
+                            <marker id="arrowGrid" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                <polygon points="0 0, 8 4, 0 8" fill="#8B5CF6" />
+                            </marker>
+                            <marker id="arrowBattery" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                <polygon points="0 0, 8 4, 0 8" fill="#10B981" />
+                            </marker>
+                        </defs>
+                        <!-- Arrows will be added dynamically by JavaScript based on power flow -->
+                    </g>
+                </svg>
+            </div>
+
+            <!-- Controls -->
+            <div class="card controls-card">
+                <h2>Simulation Controls</h2>
+
+                <div class="control-group">
+                    <label for="timeOfDay">🕐 Time of Day: <span id="timeOfDayVal">12:00</span></label>
+                    <input type="range" id="timeOfDay" min="0" max="24" value="12" step="0.25">
+                    <div class="time-markers">
+                        <span>00:00</span>
+                        <span>06:00</span>
+                        <span>12:00</span>
+                        <span>18:00</span>
+                        <span>24:00</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="irradiance">☀️ Solar Irradiance: <span id="irradianceVal">1000</span> W/m²</label>
+                    <input type="range" id="irradiance" min="0" max="1000" value="1000" step="50">
+                </div>
+
+                <div class="control-group">
+                    <label for="cloudCover">☁️ Cloud Cover: <span id="cloudCoverVal">0</span>%</label>
+                    <input type="range" id="cloudCover" min="0" max="100" value="0" step="5">
+                </div>
+
+                <div class="control-group">
+                    <label for="houseLoad">🏠 House Load: <span id="houseLoadVal">0</span> W</label>
+                    <input type="range" id="houseLoad" min="0" max="10000" value="0" step="100">
+                </div>
+
+                <div class="control-group">
+                    <label for="timeSpeed">⏱️ Time Speed: <span id="timeSpeedVal">1.0</span>x</label>
+                    <input type="range" id="timeSpeed" min="0.1" max="10" value="1" step="0.1">
+                </div>
+
+                <button id="resetEnergy" class="reset-btn">Reset Energy Totals</button>
+            </div>
+
+            <!-- Solar Generation -->
+            <div class="card">
+                <h2>☀️ Solar Generation</h2>
+                <div class="sensor-grid">
+                    <div class="sensor">
+                        <span class="sensor-label">PV1</span>
+                        <span class="sensor-value" id="pv1Power">0 W</span>
+                        <span class="sensor-detail" id="pv1Detail">0.0V / 0.0A</span>
+                    </div>
+                    <div class="sensor">
+                        <span class="sensor-label">PV2</span>
+                        <span class="sensor-value" id="pv2Power">0 W</span>
+                        <span class="sensor-detail" id="pv2Detail">0.0V / 0.0A</span>
+                    </div>
+                    <div class="sensor" id="pv3Sensor">
+                        <span class="sensor-label">PV3</span>
+                        <span class="sensor-value" id="pv3Power">0 W</span>
+                        <span class="sensor-detail" id="pv3Detail">0.0V / 0.0A</span>
+                    </div>
+                    <div class="sensor">
+                        <span class="sensor-label">Total</span>
+                        <span class="sensor-value" id="totalSolar">0 W</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AC Output -->
+            <div class="card">
+                <h2>⚡ AC Output</h2>
+                <div class="sensor-grid">
+                    <div class="sensor">
+                        <span class="sensor-label">Power</span>
+                        <span class="sensor-value" id="acPower">0 W</span>
+                    </div>
+                    <div class="sensor">
+                        <span class="sensor-label">Voltage</span>
+                        <span class="sensor-value" id="acVoltage">0.0 V</span>
+                    </div>
+                    <div class="sensor">
+                        <span class="sensor-label">Frequency</span>
+                        <span class="sensor-value" id="acFrequency">50.0 Hz</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Battery -->
+            <div class="card" id="batterySensor">
+                <h2>🔋 Battery</h2>
+                <div class="sensor-grid">
+                    <div class="sensor">
+                        <span class="sensor-label">SOC</span>
+                        <span class="sensor-value" id="batterySoc">0%</span>
+                    </div>
+                    <div class="sensor">
+                        <span class="sensor-label">Power</span>
+                        <span class="sensor-value" id="batteryPower">0 W</span>
+                    </div>
+                    <div class="sensor">
+                        <span class="sensor-label">Voltage</span>
+                        <span class="sensor-value" id="batteryVoltage">0.0 V</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Energy Totals -->
+            <div class="card">
+                <h2>📊 Energy Totals</h2>
+                <div class="sensor-grid">
+                    <div class="sensor">
+                        <span class="sensor-label">Today</span>
+                        <span class="sensor-value" id="energyToday">0.0 kWh</span>
+                    </div>
+                    <div class="sensor">
+                        <span class="sensor-label">Total</span>
+                        <span class="sensor-value" id="energyTotal">0.0 kWh</span>
+                    </div>
+                    <div class="sensor">
+                        <span class="sensor-label">To Grid Today</span>
+                        <span class="sensor-value" id="gridToday">0.0 kWh</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Temperatures -->
+            <div class="card">
+                <h2>🌡️ Temperatures</h2>
+                <div class="sensor-grid">
+                    <div class="sensor">
+                        <span class="sensor-label">Inverter</span>
+                        <span class="sensor-value" id="tempInverter">25°C</span>
+                    </div>
+                    <div class="sensor">
+                        <span class="sensor-label">IPM</span>
+                        <span class="sensor-value" id="tempIpm">30°C</span>
+                    </div>
+                    <div class="sensor">
+                        <span class="sensor-label">Boost</span>
+                        <span class="sensor-value" id="tempBoost">28°C</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Registers -->
+            <div class="card registers-card">
+                <h2>📝 Key Registers</h2>
+                <div id="registersList" class="registers-list">
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

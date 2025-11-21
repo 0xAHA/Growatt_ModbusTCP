@@ -265,35 +265,39 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
     - WIT 100KTL3-H: 5601
     - WIS 215KTL3: 5800
 
+    NOTE: DTC code presence indicates V2.01 protocol support, so we return V2.01 profiles.
+    Only official DTC codes from Growatt VPP 2.01 Protocol Table 3-1 are included.
+
     Args:
         dtc_code: DTC code from register 30000
 
     Returns:
-        Profile key or None if no match
+        Profile key (V2.01 variant) or None if no match
     """
+    # Only official DTC codes from Growatt VPP 2.01 Protocol documentation Table 3-1
     dtc_map = {
-        # SPH series
-        3502: 'sph_3000_6000',       # SPH 3000-6000TL BL
-        3735: 'sph_3000_6000',       # SPA 3000-6000TL BL (similar to SPH)
-        3601: 'sph_tl3_3000_10000',  # SPH 4000-10000TL3 BH-UP
-        3725: 'sph_tl3_3000_10000',  # SPA 4000-10000TL3 BH-UP
+        # SPH series - Official Growatt DTCs
+        3502: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL
+        3735: 'sph_3000_6000_v201',       # SPA 3000-6000TL BL (similar to SPH)
+        3601: 'sph_tl3_3000_10000_v201',  # SPH 4000-10000TL3 BH-UP
+        3725: 'sph_tl3_3000_10000_v201',  # SPA 4000-10000TL3 BH-UP
 
-        # MIN series
-        5100: 'min_3000_6000_tl_x',  # MIN 2500-6000TL-XH/XH(P)
-        5200: 'min_3000_6000_tl_x',  # MIC/MIN 2500-6000TL-X/X2
-        5201: 'min_7000_10000_tl_x', # MIN 7000-10000TL-X/X2
+        # MIN/TL-XH/MIC series - Official Growatt DTCs
+        5100: 'tl_xh_3000_10000_v201',    # MIN 2500-6000TL-XH/XH(P) - covers TL-XH
+        5200: 'min_3000_6000_tl_x_v201',  # MIC/MIN 2500-6000TL-X/X2 - shared code, prioritize MIN
+        5201: 'min_7000_10000_tl_x_v201', # MIN 7000-10000TL-X/X2
 
-        # MOD/MID series
-        5400: 'mod_6000_15000tl3_xh', # MOD-XH\MID-XH
+        # MOD/MID series - Official Growatt DTC
+        5400: 'mod_6000_15000tl3_xh_v201', # MOD-XH\MID-XH - covers both MOD and MID
 
-        # WIT/WIS series (not currently profiled, use MID as fallback)
-        5601: 'mid_15000_25000tl3_x', # WIT 100KTL3-H
-        5800: 'mid_15000_25000tl3_x', # WIS 215KTL3
+        # WIT/WIS series - Official Growatt DTCs (fallback to MID profile)
+        5601: 'mid_15000_25000tl3_x_v201', # WIT 100KTL3-H
+        5800: 'mid_15000_25000tl3_x_v201', # WIS 215KTL3
     }
 
     profile_key = dtc_map.get(dtc_code)
     if profile_key:
-        _LOGGER.info(f"Matched DTC code {dtc_code} to profile '{profile_key}'")
+        _LOGGER.info(f"Matched DTC code {dtc_code} to V2.01 profile '{profile_key}'")
         return profile_key
 
     _LOGGER.warning(f"Unknown DTC code: {dtc_code}")
@@ -415,6 +419,105 @@ async def async_detect_inverter_series(
             pass
         return None
 
+async def async_refine_dtc_detection(
+    hass: HomeAssistant,
+    client: GrowattModbus,
+    dtc_code: int,
+    initial_profile_key: str,
+    device_id: int = 1
+) -> str:
+    """
+    Refine DTC detection for models that share the same DTC code.
+
+    Uses additional V2.01 register checks to differentiate (with legacy fallback):
+    - SPH 3-6kW vs 7-10kW (DTC 3502): Check PV3 presence (31018 or 11)
+    - MOD vs MID (DTC 5400): Check battery SOC (31217) or voltage (3169)
+    - MIC vs MIN (DTC 5200): Check MIN range (31010 or 3003)
+
+    Since DTC exists, prefer V2.01 registers (30000+ range) first, then
+    fallback to legacy registers for robustness.
+
+    Args:
+        hass: HomeAssistant instance
+        client: GrowattModbus client
+        dtc_code: DTC code from register 30000
+        initial_profile_key: Initial profile from DTC mapping
+        device_id: Modbus device ID
+
+    Returns:
+        Refined profile key
+    """
+    try:
+        # DTC 3502: SPH 3-6kW vs 7-10kW - Check for PV3 (3PV = 7-10kW, 2PV = 3-6kW)
+        if dtc_code == 3502:
+            # Check V2.01 PV3 voltage register first (31018)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 31018, 1  # V2.01 PV3 voltage
+            )
+            if result is not None and len(result) > 0 and result[0] > 0:
+                _LOGGER.info("Detected PV3 in V2.01 range (3PV) - SPH 7-10kW")
+                return 'sph_7000_10000_v201'
+
+            # Fallback to legacy register 11 (base range)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 11, 1  # Legacy PV3 voltage
+            )
+            if result is not None and len(result) > 0 and result[0] > 0:
+                _LOGGER.info("Detected PV3 in legacy range (3PV) - SPH 7-10kW")
+                return 'sph_7000_10000_v201'
+            else:
+                _LOGGER.info("No PV3 string (2PV) - SPH 3-6kW")
+                return 'sph_3000_6000_v201'
+
+        # DTC 5400: MOD vs MID - Check V2.01 battery registers (MOD has battery, MID doesn't)
+        elif dtc_code == 5400:
+            # Try V2.01 battery SOC register (31217)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 31217, 1  # V2.01 Battery SOC
+            )
+            if result is not None and len(result) > 0:
+                _LOGGER.info("Detected V2.01 battery SOC register (31217) - MOD series")
+                return 'mod_6000_15000tl3_xh_v201'
+
+            # Fallback to legacy battery register (3169)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 3169, 1  # Legacy battery voltage
+            )
+            if result is not None and len(result) > 0:
+                _LOGGER.info("Detected legacy battery voltage register (3169) - MOD series")
+                return 'mod_6000_15000tl3_xh_v201'
+            else:
+                _LOGGER.info("No battery registers - MID series")
+                return 'mid_15000_25000tl3_x_v201'
+
+        # DTC 5200: MIC vs MIN - Check register range (MIC uses 0-179, MIN uses 3000+)
+        elif dtc_code == 5200:
+            # Try V2.01 MIN range first (31010 - PV1 voltage in V2.01)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 31010, 1  # V2.01 MIN PV1 voltage
+            )
+            if result is not None:
+                _LOGGER.info("Detected V2.01 31000+ range - MIN series")
+                return 'min_3000_6000_tl_x_v201'
+
+            # Fallback to legacy MIN's 3000 range
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 3003, 1  # Legacy MIN PV1 voltage
+            )
+            if result is not None:
+                _LOGGER.info("Detected legacy 3000+ range - MIN series")
+                return 'min_3000_6000_tl_x_v201'
+            else:
+                _LOGGER.info("No 3000+ range - MIC series")
+                return 'mic_600_3300tl_x_v201'
+
+    except Exception as e:
+        _LOGGER.debug(f"Error during DTC refinement: {e}")
+
+    # Return initial profile if refinement fails or not applicable
+    return initial_profile_key
+
+
 async def async_determine_inverter_type(
     hass: HomeAssistant,
     client: GrowattModbus,
@@ -425,9 +528,10 @@ async def async_determine_inverter_type(
 
     Process:
     1. Read DTC (Device Type Code) from register 30000 - most reliable
-    2. Read model name from holding registers and match
-    3. If no match, detect series by probing registers
-    4. Return the appropriate profile
+    2. For ambiguous DTCs (shared codes), refine with additional register checks
+    3. Read model name from holding registers and match
+    4. If no match, detect series by probing registers
+    5. Return the appropriate profile
 
     Args:
         hass: HomeAssistant instance
@@ -446,6 +550,9 @@ async def async_determine_inverter_type(
         profile_key = detect_profile_from_dtc(dtc_code)
 
         if profile_key:
+            # Step 1.5: Refine DTC detection for ambiguous codes
+            profile_key = await async_refine_dtc_detection(hass, client, dtc_code, profile_key, device_id)
+
             profile = get_profile(profile_key)
             if profile:
                 _LOGGER.info(f"✓ Auto-detected from DTC code {dtc_code}: {profile['name']}")
