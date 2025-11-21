@@ -4,9 +4,9 @@ The integration automatically detects your inverter model using the Growatt VPP 
 
 ## 🎯 How It Works
 
-Auto-detection follows a **3-step priority system**:
+Auto-detection follows a **4-step priority system**:
 
-### Step 1: DTC Code Detection (Primary)
+### Step 1: DTC Code Detection (Primary - V2.01 Inverters)
 Reads the **Device Type Code** from register `30000` (VPP 2.01 Protocol).
 
 ✅ **Advantages:**
@@ -28,8 +28,23 @@ For models sharing the same DTC code, additional register checks differentiate t
 | **5400** | MOD<br>MID | 31217 (V2.01 Battery SOC)<br>3169 (Legacy Battery voltage) | Readable → MOD<br>Not readable → MID |
 | **5100** | TL-XH<br>TL-XH US | N/A | Both use same profile |
 
-### Step 3: Legacy Fallback
-If DTC is not available (legacy protocol), manual model selection is required.
+### Step 3: Model Name Detection
+If DTC unavailable, reads model name string from holding registers and pattern-matches against known models.
+
+### Step 4: Register Range Probing (Legacy Fallback)
+If DTC and model name unavailable, probes different register ranges to identify the inverter series:
+
+**Detection Patterns:**
+- **MIN Series:** Tests register 3003 (PV1 voltage in 3000 range)
+  - If readable → MIN detected
+  - Tests register 3011 (PV3): Readable = 7-10kW, Not readable = 3-6kW
+- **Hybrid Models:** Tests register 3169 (battery voltage)
+  - If readable → Hybrid model (SPH/TL-XH/MOD)
+  - Tests 3-phase registers: Determines MOD/SPH-TL3 vs single-phase hybrid
+- **MID Series:** Tests 3-phase grid-tied registers (38, 42)
+- **MIC Series:** Tests base range (0-124) without 3000 range
+
+**Result:** Logs medium/low confidence detection - works for most legacy inverters!
 
 ---
 
@@ -72,13 +87,26 @@ Based on **Growatt VPP Protocol V2.01 - Table 3-1**:
 5. Protocol version: "Protocol 2.01"
 ```
 
-### Example 3: Legacy MIN (No V2.01)
+### Example 3: Legacy MIN (Register Probing)
 ```
 1. Read register 30000 → Not readable (No DTC)
-2. Auto-detection fails → Manual selection required
-3. User selects: MIN 7-10kW from legacy profile list
+2. Try model name detection → Not readable
+3. Start register probing:
+   - Test register 3003 → Readable (MIN series confirmed)
+   - Test register 3011 → Readable (PV3 present = 7-10kW)
 4. Result: MIN Series 7-10kW (Legacy) ✅
 5. Protocol version: "Protocol Legacy"
+6. Confidence: Medium (register probing)
+```
+
+### Example 4: Manual Selection Required (Rare)
+```
+1. Read register 30000 → Not readable (No DTC)
+2. Try model name detection → Not readable
+3. Register probing → Inconclusive
+4. Manual selection required → User selects from legacy profile list
+5. Result: Selected model ✅
+6. Protocol version: "Protocol Legacy"
 ```
 
 ---
@@ -94,13 +122,20 @@ Connect → Read DTC → Identify Model → Show Confirmation
                             [✅ Accept] or [🔧 Choose Different]
 ```
 
-### Auto-Detection Failure
+### Auto-Detection Fallback (Legacy)
 ```
-Connect → Read DTC → Failed → Show Manual Selection
+Connect → Read DTC → Failed → Try Model Name → Failed
                                          ↓
-                     "Auto-detection failed (V2.01 not supported)"
+                              Register Probing
                                          ↓
-                          [Select series from legacy profiles]
+                       ┌─────────────────┴─────────────────┐
+                       ↓                                   ↓
+                  Success (Medium confidence)         Failed (Rare)
+                       ↓                                   ↓
+         Show Confirmation Screen              Show Manual Selection
+"Detected: MIN 7-10kW (Legacy)"         "Please select your model"
+         ↓                                         ↓
+[✅ Accept] or [🔧 Choose Different]     [Select from legacy profiles]
 ```
 
 The manual selection list **only shows legacy profiles** because:
