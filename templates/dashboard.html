@@ -638,7 +638,7 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             updateStatus();
-            updateInterval = setInterval(updateStatus, 5000);  // Update every 5 seconds for testing
+            updateInterval = setInterval(updateStatus, 60000);  // Update every 60 seconds to match HA
 
             // Setup slider listeners
             setupSlider('irradiance-slider', 'irradiance-value', updateIrradiance);
