@@ -429,10 +429,13 @@ async def async_refine_dtc_detection(
     """
     Refine DTC detection for models that share the same DTC code.
 
-    Uses additional register checks to differentiate:
-    - SPH 3-6kW vs 7-10kW (DTC 3502): Check PV3 presence
-    - MOD vs MID (DTC 5400): Check battery presence
-    - MIC vs MIN (DTC 5200): Check register range
+    Uses additional V2.01 register checks to differentiate (with legacy fallback):
+    - SPH 3-6kW vs 7-10kW (DTC 3502): Check PV3 presence (31018 or 11)
+    - MOD vs MID (DTC 5400): Check battery SOC (31217) or voltage (3169)
+    - MIC vs MIN (DTC 5200): Check MIN range (31010 or 3003)
+
+    Since DTC exists, prefer V2.01 registers (30000+ range) first, then
+    fallback to legacy registers for robustness.
 
     Args:
         hass: HomeAssistant instance
@@ -447,23 +450,41 @@ async def async_refine_dtc_detection(
     try:
         # DTC 3502: SPH 3-6kW vs 7-10kW - Check for PV3 (3PV = 7-10kW, 2PV = 3-6kW)
         if dtc_code == 3502:
+            # Check V2.01 PV3 voltage register first (31018)
             result = await hass.async_add_executor_job(
-                client.read_input_registers, 11, 1  # PV3 voltage at register 11
+                client.read_input_registers, 31018, 1  # V2.01 PV3 voltage
             )
             if result is not None and len(result) > 0 and result[0] > 0:
-                _LOGGER.info("Detected PV3 string (3PV) - SPH 7-10kW")
+                _LOGGER.info("Detected PV3 in V2.01 range (3PV) - SPH 7-10kW")
+                return 'sph_7000_10000_v201'
+
+            # Fallback to legacy register 11 (base range)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 11, 1  # Legacy PV3 voltage
+            )
+            if result is not None and len(result) > 0 and result[0] > 0:
+                _LOGGER.info("Detected PV3 in legacy range (3PV) - SPH 7-10kW")
                 return 'sph_7000_10000_v201'
             else:
                 _LOGGER.info("No PV3 string (2PV) - SPH 3-6kW")
                 return 'sph_3000_6000_v201'
 
-        # DTC 5400: MOD vs MID - Check battery registers (MOD has battery, MID doesn't)
+        # DTC 5400: MOD vs MID - Check V2.01 battery registers (MOD has battery, MID doesn't)
         elif dtc_code == 5400:
+            # Try V2.01 battery SOC register (31217)
             result = await hass.async_add_executor_job(
-                client.read_input_registers, 3169, 1  # Battery voltage
+                client.read_input_registers, 31217, 1  # V2.01 Battery SOC
             )
             if result is not None and len(result) > 0:
-                _LOGGER.info("Detected battery registers - MOD series")
+                _LOGGER.info("Detected V2.01 battery SOC register (31217) - MOD series")
+                return 'mod_6000_15000tl3_xh_v201'
+
+            # Fallback to legacy battery register (3169)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 3169, 1  # Legacy battery voltage
+            )
+            if result is not None and len(result) > 0:
+                _LOGGER.info("Detected legacy battery voltage register (3169) - MOD series")
                 return 'mod_6000_15000tl3_xh_v201'
             else:
                 _LOGGER.info("No battery registers - MID series")
@@ -471,12 +492,20 @@ async def async_refine_dtc_detection(
 
         # DTC 5200: MIC vs MIN - Check register range (MIC uses 0-179, MIN uses 3000+)
         elif dtc_code == 5200:
-            # Try reading MIN's 3000 range first
+            # Try V2.01 MIN range first (31010 - PV1 voltage in V2.01)
             result = await hass.async_add_executor_job(
-                client.read_input_registers, 3003, 1  # MIN PV1 voltage
+                client.read_input_registers, 31010, 1  # V2.01 MIN PV1 voltage
             )
             if result is not None:
-                _LOGGER.info("Detected 3000+ range - MIN series")
+                _LOGGER.info("Detected V2.01 31000+ range - MIN series")
+                return 'min_3000_6000_tl_x_v201'
+
+            # Fallback to legacy MIN's 3000 range
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 3003, 1  # Legacy MIN PV1 voltage
+            )
+            if result is not None:
+                _LOGGER.info("Detected legacy 3000+ range - MIN series")
                 return 'min_3000_6000_tl_x_v201'
             else:
                 _LOGGER.info("No 3000+ range - MIC series")
