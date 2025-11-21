@@ -230,7 +230,7 @@ async def async_read_dtc_code(
         # Read DTC from holding register 30000
         result = await hass.async_add_executor_job(
             client.client.read_holding_registers,
-            30000, 1, device_id
+            30000, 1
         )
 
         if result.isError():
