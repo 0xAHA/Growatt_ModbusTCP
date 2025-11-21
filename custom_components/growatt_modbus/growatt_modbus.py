@@ -300,17 +300,18 @@ class GrowattModbus:
             # Handle different pymodbus versions for error checking
             if hasattr(response, 'isError'):
                 if response.isError():
-                    logger.debug(f"Modbus error reading input registers {start_address}-{start_address+count-1}")
+                    logger.warning(f"Modbus error reading input registers {start_address}-{start_address+count-1}: {response}")
                     return None
             elif hasattr(response, 'is_error') and callable(response.is_error):
                 if response.is_error():
-                    logger.debug(f"Modbus error reading input registers {start_address}-{start_address+count-1}")
+                    logger.warning(f"Modbus error reading input registers {start_address}-{start_address+count-1}: {response}")
                     return None
-            
+
             if hasattr(response, 'registers'):
+                logger.debug(f"Successfully read {len(response.registers)} registers from {start_address}")
                 return response.registers
-            
-            logger.debug(f"Unknown response type: {type(response)}")
+
+            logger.warning(f"Unknown response type: {type(response)}, response: {response}")
             return None
             
         except Exception as e:

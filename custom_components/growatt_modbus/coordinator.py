@@ -368,9 +368,13 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 if data is not None:  # Success!
                     self._client.disconnect()
                     return data
-                
-                # Read failed but connection was ok - retry without disconnecting
+
+                # Read failed - disconnect before retrying to avoid stale connections
                 _LOGGER.warning("Read returned None (attempt %d/%d)", attempt + 1, max_retries)
+                try:
+                    self._client.disconnect()
+                except:
+                    pass
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     continue
