@@ -9,14 +9,24 @@ import logging
 import sys
 import os
 import json
+import importlib.util
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime
 import threading
 
-# Add custom_components to path
+# Add custom_components to path for emulator imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'custom_components'))
 
-from growatt_modbus.device_profiles import INVERTER_PROFILES
+# Import device_profiles directly without triggering package __init__.py
+# This avoids the homeassistant dependency required by the HA integration
+spec = importlib.util.spec_from_file_location(
+    "device_profiles",
+    os.path.join(os.path.dirname(__file__), 'custom_components', 'growatt_modbus', 'device_profiles.py')
+)
+device_profiles = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(device_profiles)
+INVERTER_PROFILES = device_profiles.INVERTER_PROFILES
+
 from emulator.simulator import InverterSimulator
 from emulator.modbus_server import ModbusServerThread
 
