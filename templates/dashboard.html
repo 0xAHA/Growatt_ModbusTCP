@@ -247,6 +247,19 @@
             margin-bottom: 10px;
         }
 
+        /* Tabular grid for organized rows */
+        .info-grid-tabular {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        /* Dynamic column count based on number of items */
+        .info-grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .info-grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+        .info-grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+        .info-grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+
         .info-tile {
             background: #0d1117;
             border: 1px solid #30363d;
@@ -650,82 +663,114 @@
         }
 
 
-        function generateTilesForModel(model) {
+function generateTilesForModel(model) {
             const container = document.getElementById('info-tiles-container');
             container.innerHTML = ''; // Clear existing
 
             let html = '';
 
-            // === PV INPUT SECTION ===
+            // === PV INPUT SECTION (TABULAR) ===
             html += '<div class="info-section">';
             html += '<div class="section-header">☀️ PV Input</div>';
-            html += '<div class="info-grid">';
 
-            // PV1 (always present)
+            // Determine number of PV strings
+            const numPV = model.has_pv3 ? 3 : 2;
+            const pvCols = `info-grid-tabular info-grid-cols-${numPV}`;
+
+            // Voltage row
+            html += `<div class="${pvCols}">`;
             html += '<div class="info-tile"><div class="info-tile-label">PV1 Voltage</div><div class="info-tile-value"><span id="pv1-voltage">0</span> <span class="info-tile-unit">V</span></div></div>';
-            html += '<div class="info-tile"><div class="info-tile-label">PV1 Current</div><div class="info-tile-value"><span id="pv1-current">0.0</span> <span class="info-tile-unit">A</span></div></div>';
-            html += '<div class="info-tile"><div class="info-tile-label">PV1 Power</div><div class="info-tile-value"><span id="pv1-power">0</span> <span class="info-tile-unit">W</span></div></div>';
-
-            // PV2 (always present)
             html += '<div class="info-tile"><div class="info-tile-label">PV2 Voltage</div><div class="info-tile-value"><span id="pv2-voltage">0</span> <span class="info-tile-unit">V</span></div></div>';
-            html += '<div class="info-tile"><div class="info-tile-label">PV2 Current</div><div class="info-tile-value"><span id="pv2-current">0.0</span> <span class="info-tile-unit">A</span></div></div>';
-            html += '<div class="info-tile"><div class="info-tile-label">PV2 Power</div><div class="info-tile-value"><span id="pv2-power">0</span> <span class="info-tile-unit">W</span></div></div>';
-
-            // PV3 (only if has_pv3)
             if (model.has_pv3) {
                 html += '<div class="info-tile"><div class="info-tile-label">PV3 Voltage</div><div class="info-tile-value"><span id="pv3-voltage">0</span> <span class="info-tile-unit">V</span></div></div>';
+            }
+            html += '</div>';
+
+            // Current row
+            html += `<div class="${pvCols}">`;
+            html += '<div class="info-tile"><div class="info-tile-label">PV1 Current</div><div class="info-tile-value"><span id="pv1-current">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">PV2 Current</div><div class="info-tile-value"><span id="pv2-current">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+            if (model.has_pv3) {
                 html += '<div class="info-tile"><div class="info-tile-label">PV3 Current</div><div class="info-tile-value"><span id="pv3-current">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+            }
+            html += '</div>';
+
+            // Power row
+            html += `<div class="${pvCols}">`;
+            html += '<div class="info-tile"><div class="info-tile-label">PV1 Power</div><div class="info-tile-value"><span id="pv1-power">0</span> <span class="info-tile-unit">W</span></div></div>';
+            html += '<div class="info-tile"><div class="info-tile-label">PV2 Power</div><div class="info-tile-value"><span id="pv2-power">0</span> <span class="info-tile-unit">W</span></div></div>';
+            if (model.has_pv3) {
                 html += '<div class="info-tile"><div class="info-tile-label">PV3 Power</div><div class="info-tile-value"><span id="pv3-power">0</span> <span class="info-tile-unit">W</span></div></div>';
             }
+            html += '</div>';
 
-            // PV Total
+            // PV Total row
+            html += '<div class="info-grid-tabular info-grid-cols-2" style="margin-top: 8px;">';
             html += '<div class="info-tile"><div class="info-tile-label">PV Total Power</div><div class="info-tile-value"><span id="pv-total-power">0</span> <span class="info-tile-unit">W</span></div></div>';
-            html += '</div></div>'; // Close info-grid and info-section
-
-            // === AC OUTPUT SECTION ===
-            html += '<div class="info-section">';
-            html += '<div class="section-header">⚡ AC Output</div>';
-            html += '<div class="info-grid">';
-            html += '<div class="info-tile"><div class="info-tile-label">AC Power Total</div><div class="info-tile-value"><span id="ac-power-total">0</span> <span class="info-tile-unit">W</span></div></div>';
             html += '<div class="info-tile"><div class="info-tile-label">Grid Frequency</div><div class="info-tile-value"><span id="grid-freq">50.0</span> <span class="info-tile-unit">Hz</span></div></div>';
+            html += '</div>';
+            html += '</div>'; // Close info-section
 
-            // 3-Phase details (only if phases === 3)
+            // === AC OUTPUT SECTION (TABULAR) ===
             if (model.phases === 3) {
-                // Phase R
+                html += '<div class="info-section">';
+                html += '<div class="section-header">⚡ AC Output (3-Phase)</div>';
+
+                // Voltage row
+                html += '<div class="info-grid-tabular info-grid-cols-3">';
                 html += '<div class="info-tile"><div class="info-tile-label">Phase R Voltage</div><div class="info-tile-value"><span id="ac-voltage-r">230</span> <span class="info-tile-unit">V</span></div></div>';
-                html += '<div class="info-tile"><div class="info-tile-label">Phase R Current</div><div class="info-tile-value"><span id="ac-current-r">0.0</span> <span class="info-tile-unit">A</span></div></div>';
-                html += '<div class="info-tile"><div class="info-tile-label">Phase R Power</div><div class="info-tile-value"><span id="ac-power-r">0</span> <span class="info-tile-unit">W</span></div></div>';
-                // Phase S
                 html += '<div class="info-tile"><div class="info-tile-label">Phase S Voltage</div><div class="info-tile-value"><span id="ac-voltage-s">230</span> <span class="info-tile-unit">V</span></div></div>';
-                html += '<div class="info-tile"><div class="info-tile-label">Phase S Current</div><div class="info-tile-value"><span id="ac-current-s">0.0</span> <span class="info-tile-unit">A</span></div></div>';
-                html += '<div class="info-tile"><div class="info-tile-label">Phase S Power</div><div class="info-tile-value"><span id="ac-power-s">0</span> <span class="info-tile-unit">W</span></div></div>';
-                // Phase T
                 html += '<div class="info-tile"><div class="info-tile-label">Phase T Voltage</div><div class="info-tile-value"><span id="ac-voltage-t">230</span> <span class="info-tile-unit">V</span></div></div>';
+                html += '</div>';
+
+                // Current row
+                html += '<div class="info-grid-tabular info-grid-cols-3">';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase R Current</div><div class="info-tile-value"><span id="ac-current-r">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase S Current</div><div class="info-tile-value"><span id="ac-current-s">0.0</span> <span class="info-tile-unit">A</span></div></div>';
                 html += '<div class="info-tile"><div class="info-tile-label">Phase T Current</div><div class="info-tile-value"><span id="ac-current-t">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+                html += '</div>';
+
+                // Power row
+                html += '<div class="info-grid-tabular info-grid-cols-3">';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase R Power</div><div class="info-tile-value"><span id="ac-power-r">0</span> <span class="info-tile-unit">W</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Phase S Power</div><div class="info-tile-value"><span id="ac-power-s">0</span> <span class="info-tile-unit">W</span></div></div>';
                 html += '<div class="info-tile"><div class="info-tile-label">Phase T Power</div><div class="info-tile-value"><span id="ac-power-t">0</span> <span class="info-tile-unit">W</span></div></div>';
+                html += '</div>';
+
+                // Total row
+                html += '<div class="info-grid-tabular info-grid-cols-2" style="margin-top: 8px;">';
+                html += '<div class="info-tile"><div class="info-tile-label">AC Power Total</div><div class="info-tile-value"><span id="ac-power-total">0</span> <span class="info-tile-unit">W</span></div></div>';
+                html += '</div>';
+                html += '</div>'; // Close info-section
             } else {
                 // Single-phase
+                html += '<div class="info-section">';
+                html += '<div class="section-header">⚡ AC Output</div>';
+                html += '<div class="info-grid-tabular info-grid-cols-3">';
                 html += '<div class="info-tile"><div class="info-tile-label">Grid Voltage</div><div class="info-tile-value"><span id="ac-voltage-r">230</span> <span class="info-tile-unit">V</span></div></div>';
                 html += '<div class="info-tile"><div class="info-tile-label">Grid Current</div><div class="info-tile-value"><span id="ac-current-r">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">AC Power Total</div><div class="info-tile-value"><span id="ac-power-total">0</span> <span class="info-tile-unit">W</span></div></div>';
+                html += '</div></div>';
             }
-            html += '</div></div>'; // Close info-grid and info-section
 
             // === PV ENERGY SECTION ===
             html += '<div class="info-section">';
             html += '<div class="section-header">📊 PV Energy</div>';
-            html += '<div class="info-grid">';
+            html += '<div class="info-grid-tabular info-grid-cols-2">';
             html += '<div class="info-tile"><div class="info-tile-label">PV Today</div><div class="info-tile-value"><span id="energy-today">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
             html += '<div class="info-tile"><div class="info-tile-label">PV Total</div><div class="info-tile-value"><span id="energy-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
             html += '</div></div>';
 
-            // === BATTERY STATE SECTION (only if has_battery) ===
+            // === BATTERY SECTIONS (only if has_battery) ===
             if (model.has_battery) {
                 html += '<div class="info-section battery-indicator">';
                 html += '<div class="section-header">🔋 Battery State</div>';
-                html += '<div class="info-grid">';
-                html += '<div class="info-tile"><div class="info-tile-label">Battery Power</div><div class="info-tile-value"><span id="battery-power">0</span> <span class="info-tile-unit">W</span></div></div>';
+                html += '<div class="info-grid-tabular info-grid-cols-3">';
                 html += '<div class="info-tile"><div class="info-tile-label">Battery Voltage</div><div class="info-tile-value"><span id="battery-voltage">0</span> <span class="info-tile-unit">V</span></div></div>';
                 html += '<div class="info-tile"><div class="info-tile-label">Battery Current</div><div class="info-tile-value"><span id="battery-current">0.0</span> <span class="info-tile-unit">A</span></div></div>';
+                html += '<div class="info-tile"><div class="info-tile-label">Battery Power</div><div class="info-tile-value"><span id="battery-power">0</span> <span class="info-tile-unit">W</span></div></div>';
+                html += '</div>';
+                html += '<div class="info-grid-tabular info-grid-cols-2">';
                 html += '<div class="info-tile"><div class="info-tile-label">Battery SOC</div><div class="info-tile-value"><span id="battery-soc-tile">0</span> <span class="info-tile-unit">%</span></div></div>';
                 html += '<div class="info-tile"><div class="info-tile-label">Battery Temp</div><div class="info-tile-value"><span id="battery-temp">25</span> <span class="info-tile-unit">°C</span></div></div>';
                 html += '</div></div>';
@@ -733,10 +778,14 @@
                 // === BATTERY ENERGY SECTION ===
                 html += '<div class="info-section battery-indicator">';
                 html += '<div class="section-header">🔋 Battery Energy</div>';
-                html += '<div class="info-grid">';
+                // Today row
+                html += '<div class="info-grid-tabular info-grid-cols-2">';
                 html += '<div class="info-tile"><div class="info-tile-label">Charge Today</div><div class="info-tile-value"><span id="battery-charge-today">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
-                html += '<div class="info-tile"><div class="info-tile-label">Charge Total</div><div class="info-tile-value"><span id="battery-charge-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
                 html += '<div class="info-tile"><div class="info-tile-label">Discharge Today</div><div class="info-tile-value"><span id="battery-discharge-today">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+                html += '</div>';
+                // Total row
+                html += '<div class="info-grid-tabular info-grid-cols-2">';
+                html += '<div class="info-tile"><div class="info-tile-label">Charge Total</div><div class="info-tile-value"><span id="battery-charge-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
                 html += '<div class="info-tile"><div class="info-tile-label">Discharge Total</div><div class="info-tile-value"><span id="battery-discharge-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
                 html += '</div></div>';
             }
@@ -744,7 +793,7 @@
             // === POWER FLOW SECTION ===
             html += '<div class="info-section">';
             html += '<div class="section-header">🔄 Power Flow</div>';
-            html += '<div class="info-grid">';
+            html += '<div class="info-grid-tabular info-grid-cols-3">';
             html += '<div class="info-tile"><div class="info-tile-label">To Grid</div><div class="info-tile-value"><span id="power-to-grid">0</span> <span class="info-tile-unit">W</span></div></div>';
             html += '<div class="info-tile"><div class="info-tile-label">To Load</div><div class="info-tile-value"><span id="power-to-load">0</span> <span class="info-tile-unit">W</span></div></div>';
             html += '<div class="info-tile"><div class="info-tile-label">To User</div><div class="info-tile-value"><span id="power-to-user">0</span> <span class="info-tile-unit">W</span></div></div>';
@@ -753,11 +802,18 @@
             // === GRID & LOAD ENERGY SECTION ===
             html += '<div class="info-section">';
             html += '<div class="section-header">🌐 Grid & Load Energy</div>';
-            html += '<div class="info-grid">';
+            // Export row
+            html += '<div class="info-grid-tabular info-grid-cols-2">';
             html += '<div class="info-tile"><div class="info-tile-label">Grid Export Today</div><div class="info-tile-value"><span id="grid-export-today">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
             html += '<div class="info-tile"><div class="info-tile-label">Grid Export Total</div><div class="info-tile-value"><span id="grid-export-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+            html += '</div>';
+            // Import row
+            html += '<div class="info-grid-tabular info-grid-cols-2">';
             html += '<div class="info-tile"><div class="info-tile-label">Grid Import Today</div><div class="info-tile-value"><span id="grid-import-today">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
             html += '<div class="info-tile"><div class="info-tile-label">Grid Import Total</div><div class="info-tile-value"><span id="grid-import-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
+            html += '</div>';
+            // Load row
+            html += '<div class="info-grid-tabular info-grid-cols-2">';
             html += '<div class="info-tile"><div class="info-tile-label">Load Today</div><div class="info-tile-value"><span id="load-today">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
             html += '<div class="info-tile"><div class="info-tile-label">Load Total</div><div class="info-tile-value"><span id="load-total">0.0</span> <span class="info-tile-unit">kWh</span></div></div>';
             html += '</div></div>';
@@ -765,7 +821,7 @@
             // === TEMPERATURES SECTION ===
             html += '<div class="info-section">';
             html += '<div class="section-header">🌡️ Temperatures</div>';
-            html += '<div class="info-grid">';
+            html += '<div class="info-grid-tabular info-grid-cols-3">';
             html += '<div class="info-tile"><div class="info-tile-label">Inverter Temp</div><div class="info-tile-value"><span id="inverter-temp">25</span> <span class="info-tile-unit">°C</span></div></div>';
             html += '<div class="info-tile"><div class="info-tile-label">IPM Temp</div><div class="info-tile-value"><span id="ipm-temp">25</span> <span class="info-tile-unit">°C</span></div></div>';
             html += '<div class="info-tile"><div class="info-tile-label">Boost Temp</div><div class="info-tile-value"><span id="boost-temp">25</span> <span class="info-tile-unit">°C</span></div></div>';
@@ -774,7 +830,7 @@
             // === SYSTEM STATUS SECTION ===
             html += '<div class="info-section">';
             html += '<div class="section-header">📡 System Status</div>';
-            html += '<div class="info-grid">';
+            html += '<div class="info-grid-tabular info-grid-cols-4">';
             html += '<div class="info-tile"><div class="info-tile-label">Inverter Status</div><div class="info-tile-value"><span id="inverter-status">0</span></div></div>';
             html += '<div class="info-tile"><div class="info-tile-label">Power Factor</div><div class="info-tile-value"><span id="power-factor">1.0</span></div></div>';
             html += '<div class="info-tile"><div class="info-tile-label">Fault Code</div><div class="info-tile-value"><span id="fault-code">0</span></div></div>';
