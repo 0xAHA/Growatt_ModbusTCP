@@ -9,7 +9,23 @@
 <body>
     <div class="dashboard">
         <header class="dashboard-header">
-            <h1>☀️ {{ model_name }}</h1>
+            <div class="header-left">
+                <h1>☀️ <span id="modelName">{{ model_name }}</span></h1>
+                <div class="model-switcher">
+                    <select id="modelSwitcher" class="model-switch-select">
+                        {% for key, profile in INVERTER_PROFILES.items() %}
+                            {% if not key.endswith('_v201') %}
+                            <option value="{{ key }}" {% if key == profile_key %}selected{% endif %}>{{ profile.name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <select id="protocolSwitcher" class="protocol-switch-select">
+                        <option value="v201">V2.01</option>
+                        <option value="legacy">Legacy</option>
+                    </select>
+                    <button id="switchBtn" class="switch-btn">Switch Model</button>
+                </div>
+            </div>
             <div class="header-info">
                 <span id="time" class="time">--:--</span>
                 <span id="status" class="status-badge">Normal</span>
@@ -95,6 +111,18 @@
                 <h2>Simulation Controls</h2>
 
                 <div class="control-group">
+                    <label for="timeOfDay">🕐 Time of Day: <span id="timeOfDayVal">12:00</span></label>
+                    <input type="range" id="timeOfDay" min="0" max="24" value="12" step="0.25">
+                    <div class="time-markers">
+                        <span>00:00</span>
+                        <span>06:00</span>
+                        <span>12:00</span>
+                        <span>18:00</span>
+                        <span>24:00</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
                     <label for="irradiance">☀️ Solar Irradiance: <span id="irradianceVal">1000</span> W/m²</label>
                     <input type="range" id="irradiance" min="0" max="1000" value="1000" step="50">
                 </div>
@@ -131,6 +159,11 @@
                         <span class="sensor-value" id="pv2Power">0 W</span>
                         <span class="sensor-detail" id="pv2Detail">0.0V / 0.0A</span>
                     </div>
+                    <div class="sensor" id="pv3Sensor">
+                        <span class="sensor-label">PV3</span>
+                        <span class="sensor-value" id="pv3Power">0 W</span>
+                        <span class="sensor-detail" id="pv3Detail">0.0V / 0.0A</span>
+                    </div>
                     <div class="sensor">
                         <span class="sensor-label">Total</span>
                         <span class="sensor-value" id="totalSolar">0 W</span>
@@ -157,9 +190,8 @@
                 </div>
             </div>
 
-            {% if has_battery %}
             <!-- Battery -->
-            <div class="card">
+            <div class="card" id="batterySensor">
                 <h2>🔋 Battery</h2>
                 <div class="sensor-grid">
                     <div class="sensor">
@@ -176,7 +208,6 @@
                     </div>
                 </div>
             </div>
-            {% endif %}
 
             <!-- Energy Totals -->
             <div class="card">

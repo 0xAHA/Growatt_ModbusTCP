@@ -47,7 +47,8 @@ def index():
                          model_name=profile['name'],
                          profile_key=selected_profile,
                          has_battery=profile.get('has_battery', False),
-                         is_three_phase=profile.get('is_three_phase', False))
+                         is_three_phase=profile.get('is_three_phase', False),
+                         INVERTER_PROFILES=INVERTER_PROFILES)
 
 
 @app.route('/api/start', methods=['POST'])
@@ -116,8 +117,18 @@ def get_status():
     response = {
         'timestamp': datetime.now().isoformat(),
         'model': profile['name'],
+        'profile_key': selected_profile,
         'status': state.get('status', 'Unknown'),
         'time': state.get('simulated_time', '00:00'),
+        'time_hour': state.get('hour', 12),  # Current hour (0-24)
+
+        # Model capabilities
+        'capabilities': {
+            'has_battery': profile.get('has_battery', False),
+            'has_pv3': profile.get('pv3_supported', False),
+            'is_three_phase': profile.get('is_three_phase', False),
+            'protocol_version': 'v201' if simulator.profile_key.endswith('_v201') else 'legacy',
+        },
 
         # Solar generation
         'solar': {
@@ -272,11 +283,72 @@ def control_simulator():
         speed = float(data['time_speed'])
         simulator.set_time_speed(max(0.1, min(100, speed)))
 
+    # Set time of day (0-24 hours)
+    if 'time_of_day' in data:
+        hour = float(data['time_of_day'])
+        simulator.set_time_of_day(max(0, min(24, hour)))
+
     # Reset energy totals
     if data.get('reset_energy'):
         simulator.reset_energy_totals()
 
     return jsonify({'success': True})
+
+
+@app.route('/api/switch_model', methods=['POST'])
+def switch_model():
+    """Switch to a different model without restarting."""
+    global simulator, modbus_server, selected_profile
+
+    if simulator is None:
+        return jsonify({'error': 'Emulator not started'}), 400
+
+    data = request.json
+    profile_key = data.get('profile_key')
+    protocol_version = data.get('protocol_version', 'v201')
+
+    if profile_key not in INVERTER_PROFILES:
+        return jsonify({'error': 'Invalid profile'}), 400
+
+    try:
+        # Determine which register map to use
+        if protocol_version == 'v201' and f"{profile_key}_v201" in INVERTER_PROFILES:
+            actual_profile_key = f"{profile_key}_v201"
+        else:
+            actual_profile_key = profile_key
+            if actual_profile_key.endswith('_v201'):
+                actual_profile_key = actual_profile_key.replace('_v201', '')
+
+        # Stop current Modbus server
+        if modbus_server:
+            modbus_server.stop()
+            modbus_server = None
+
+        # Create new simulator with new profile
+        selected_profile = profile_key
+        simulator = InverterSimulator(actual_profile_key)
+
+        # Restart Modbus server with same port
+        port = data.get('port', 5020)
+        modbus_server = ModbusServerThread(
+            simulator=simulator,
+            port=port,
+            profile_key=actual_profile_key
+        )
+        modbus_server.start()
+
+        profile = INVERTER_PROFILES[profile_key]
+        _LOGGER.info(f"Switched to: {profile['name']} ({protocol_version.upper()})")
+
+        return jsonify({
+            'success': True,
+            'model': profile['name'],
+            'protocol': protocol_version
+        })
+
+    except Exception as e:
+        _LOGGER.error(f"Failed to switch model: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/stop', methods=['POST'])

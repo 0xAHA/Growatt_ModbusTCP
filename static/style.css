@@ -171,9 +171,56 @@ header p {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+.header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 .dashboard-header h1 {
     font-size: 28px;
     color: #4F46E5;
+    margin: 0;
+}
+
+.model-switcher {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.model-switch-select,
+.protocol-switch-select {
+    padding: 6px 10px;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    cursor: pointer;
+}
+
+.model-switch-select {
+    min-width: 250px;
+}
+
+.protocol-switch-select {
+    min-width: 80px;
+}
+
+.switch-btn {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    background: #10B981;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.switch-btn:hover {
+    background: #059669;
 }
 
 .header-info {
@@ -297,6 +344,14 @@ header p {
     border: none;
 }
 
+.time-markers {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 4px;
+}
+
 /* Sensors */
 .sensor-grid {
     display: grid;
@@ -330,6 +385,21 @@ header p {
 .sensor-detail {
     font-size: 11px;
     color: #9ca3af;
+}
+
+/* Disabled sensors */
+.sensor.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+.sensor.disabled .sensor-label {
+    text-decoration: line-through;
+}
+
+#batterySensor.disabled,
+#pv3Sensor.disabled {
+    opacity: 0.3;
 }
 
 /* Registers */
@@ -372,12 +442,29 @@ header p {
     text-align: right;
 }
 
+/* SVG element disabled state */
+#pv3Group.disabled,
+#batteryGroup.disabled {
+    opacity: 0.2;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .dashboard-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
+    }
+
+    .model-switcher {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .model-switch-select,
+    .protocol-switch-select,
+    .switch-btn {
+        width: 100%;
     }
 
     .dashboard-grid {

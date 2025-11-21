@@ -1,12 +1,66 @@
 // Dashboard JavaScript
 let updateInterval = null;
+let currentCapabilities = null;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initializeControls();
     startUpdates();
     loadRegisters();
+    initializeModelSwitcher();
 });
+
+// Initialize model switcher
+function initializeModelSwitcher() {
+    const switchBtn = document.getElementById('switchBtn');
+    const modelSelect = document.getElementById('modelSwitcher');
+    const protocolSelect = document.getElementById('protocolSwitcher');
+
+    if (switchBtn) {
+        switchBtn.addEventListener('click', async () => {
+            const profileKey = modelSelect.value;
+            const protocol = protocolSelect.value;
+
+            if (confirm(`Switch to ${modelSelect.options[modelSelect.selectedIndex].text} (${protocol.toUpperCase()})?`)) {
+                switchBtn.disabled = true;
+                switchBtn.textContent = 'Switching...';
+
+                try {
+                    const response = await fetch('/api/switch_model', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            profile_key: profileKey,
+                            protocol_version: protocol,
+                            port: 5020
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        console.log(`Switched to ${data.model}`);
+                        // Update will be reflected on next status poll
+                        setTimeout(() => {
+                            switchBtn.disabled = false;
+                            switchBtn.textContent = 'Switch Model';
+                        }, 2000);
+                    } else {
+                        alert(`Error: ${data.error}`);
+                        switchBtn.disabled = false;
+                        switchBtn.textContent = 'Switch Model';
+                    }
+                } catch (error) {
+                    alert(`Error: ${error.message}`);
+                    switchBtn.disabled = false;
+                    switchBtn.textContent = 'Switch Model';
+                }
+            }
+        });
+    }
+}
 
 // Initialize control sliders
 function initializeControls() {
@@ -15,6 +69,7 @@ function initializeControls() {
         cloudCover: document.getElementById('cloudCover'),
         houseLoad: document.getElementById('houseLoad'),
         timeSpeed: document.getElementById('timeSpeed'),
+        timeOfDay: document.getElementById('timeOfDay'),
     };
 
     // Update value displays
@@ -23,7 +78,13 @@ function initializeControls() {
 
         const valueSpan = document.getElementById(`${key}Val`);
         element.addEventListener('input', () => {
-            valueSpan.textContent = element.value;
+            if (key === 'timeOfDay') {
+                const hours = Math.floor(parseFloat(element.value));
+                const minutes = Math.round((parseFloat(element.value) % 1) * 60);
+                valueSpan.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            } else {
+                valueSpan.textContent = element.value;
+            }
         });
 
         element.addEventListener('change', async () => {
@@ -94,6 +155,25 @@ async function updateStatus() {
 
 // Update display values
 function updateDisplay(data) {
+    // Store capabilities
+    currentCapabilities = data.capabilities;
+
+    // Update model name
+    setValue('modelName', data.model);
+
+    // Update model/protocol selectors
+    const modelSelect = document.getElementById('modelSwitcher');
+    const protocolSelect = document.getElementById('protocolSwitcher');
+    if (modelSelect && data.profile_key) {
+        modelSelect.value = data.profile_key;
+    }
+    if (protocolSelect && data.capabilities) {
+        protocolSelect.value = data.capabilities.protocol_version;
+    }
+
+    // Apply capability-based visibility
+    updateFeatureVisibility(data.capabilities);
+
     // Header
     setValue('time', data.time);
     setValue('status', data.status);
@@ -104,6 +184,13 @@ function updateDisplay(data) {
     setValue('pv1Detail', `${data.solar.pv1_voltage.toFixed(1)}V / ${data.solar.pv1_current.toFixed(1)}A`);
     setValue('pv2Power', formatPower(data.solar.pv2_power));
     setValue('pv2Detail', `${data.solar.pv2_voltage.toFixed(1)}V / ${data.solar.pv2_current.toFixed(1)}A`);
+
+    // PV3 (only if available)
+    if (data.solar.pv3_power !== null) {
+        setValue('pv3Power', formatPower(data.solar.pv3_power));
+        setValue('pv3Detail', `${data.solar.pv3_voltage.toFixed(1)}V / ${data.solar.pv3_current.toFixed(1)}A`);
+    }
+
     setValue('totalSolar', formatPower(data.solar.total_power));
 
     // AC
@@ -143,6 +230,55 @@ function updateDisplay(data) {
     setControlValue('irradiance', data.controls.irradiance);
     setControlValue('cloudCover', data.controls.cloud_cover);
     setControlValue('timeSpeed', data.controls.time_speed);
+
+    // Update time of day slider
+    if (data.time_hour !== undefined) {
+        const timeOfDayInput = document.getElementById('timeOfDay');
+        const timeOfDayVal = document.getElementById('timeOfDayVal');
+        if (timeOfDayInput && timeOfDayInput.value !== data.time_hour.toString()) {
+            timeOfDayInput.value = data.time_hour;
+            if (timeOfDayVal) {
+                const hours = Math.floor(data.time_hour);
+                const minutes = Math.round((data.time_hour % 1) * 60);
+                timeOfDayVal.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            }
+        }
+    }
+}
+
+// Update feature visibility based on capabilities
+function updateFeatureVisibility(capabilities) {
+    if (!capabilities) return;
+
+    // PV3 visibility
+    const pv3Sensor = document.getElementById('pv3Sensor');
+    if (pv3Sensor) {
+        if (capabilities.has_pv3) {
+            pv3Sensor.classList.remove('disabled');
+        } else {
+            pv3Sensor.classList.add('disabled');
+        }
+    }
+
+    // Battery sensor visibility
+    const batterySensor = document.getElementById('batterySensor');
+    if (batterySensor) {
+        if (capabilities.has_battery) {
+            batterySensor.classList.remove('disabled');
+        } else {
+            batterySensor.classList.add('disabled');
+        }
+    }
+
+    // Battery card visibility
+    const batteryCards = document.querySelectorAll('.card:has(#batterySoc)');
+    batteryCards.forEach(card => {
+        if (capabilities.has_battery) {
+            card.style.display = 'block';
+        } else {
+            card.style.opacity = '0.5';
+        }
+    });
 }
 
 // Update energy flow diagram
