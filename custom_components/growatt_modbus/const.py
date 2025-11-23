@@ -155,6 +155,37 @@ STATUS_CODES = {
 }
 
 
+DERATING_CODES = {
+    0: "No derating",
+    1: "Bus voltage high derating",
+    2: "Aging fixed power derating",
+    3: "Grid voltage high derating",
+    4: "Over-frequency reduce derating",
+    5: "Single DC source mode derating",
+    6: "Inverter module over-temperature derating",
+    7: "User activated setting to limit output derating",
+    8: "Load speed process derating",
+    9: "Over back by time derating",
+    10: "Internal environment over-temperature derating",
+    11: "External environment over-temperature derating",
+    12: "Wire impedance derating",
+    13: "Parallel inverter export limit derating",
+    14: "Single inverter export limit derating",
+    15: "Load first mode derating",
+    16: "CT installation issue derating",
+    17: "Zero current mode derating",
+    18: "Boost module over-temperature derating",
+    19: "Zero power mode derating",
+    20: "Under-frequency increase derating",
+    21: "Bus bar current limit derating",
+}
+
+
+def get_derating_name(derating_code: int) -> str:
+    """Get human-readable derating mode name."""
+    return DERATING_CODES.get(derating_code, f"Unknown ({derating_code})")
+
+
 def get_status_name(status_code: int) -> dict:
     """Get human-readable status name and description."""
     return STATUS_CODES.get(
