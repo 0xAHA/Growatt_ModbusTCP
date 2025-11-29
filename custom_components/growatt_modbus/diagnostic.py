@@ -281,26 +281,37 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     # Check for MIN or MOD series (3000 range)
     if has_pv1_at_3003:
         detection["reasoning"].append("✓ Found PV1 at register 3003 (3000 range detected)")
-        
+
         if has_battery_at_3169:
-            # MOD series - 3-phase hybrid with battery
-            detection["model"] = "MOD 6000-15000TL3-XH"
+            # MOD-XH series - 3-phase hybrid with battery
+            detection["model"] = "MOD 6000-15000TL3-XH (Hybrid)"
             detection["confidence"] = "High"
             detection["profile_key"] = "mod_6000_15000tl3_xh"
             detection["register_map"] = "MOD_6000_15000TL3_XH"
-            detection["reasoning"].append("✓ Found battery at register 3169 → MOD series (3-phase hybrid)")
+            detection["reasoning"].append("✓ Found battery at register 3169 (SOC > 0) → MOD-XH hybrid")
             if has_pv3_at_3011:
                 detection["reasoning"].append("✓ Found PV3 at register 3011 → Confirms 3-string MOD")
-            
+
         else:
-            # MIN series - string inverter, no battery
-            if has_pv3_at_3011:
+            # No battery - could be MIN (single/3-phase) or MOD-X (3-phase grid-tied)
+            if has_phase_s and has_phase_t:
+                # 3-phase without battery = MOD-X grid-tied
+                detection["model"] = "MOD 6000-15000TL3-X (Grid-Tied)"
+                detection["confidence"] = "High"
+                detection["profile_key"] = "mod_6000_15000tl3_x"
+                detection["register_map"] = "MOD_6000_15000TL3_X"
+                detection["reasoning"].append("✓ Found 3-phase (registers 42, 46) without battery → MOD-X grid-tied")
+                if has_pv3_at_3011:
+                    detection["reasoning"].append("✓ Found PV3 at register 3011 → Confirms 3-string MOD")
+            elif has_pv3_at_3011:
+                # Single-phase with 3 PV strings = MIN 7-10kW
                 detection["model"] = "MIN 7000-10000TL-X"
                 detection["confidence"] = "High"
                 detection["profile_key"] = "min_7000_10000_tl_x"
                 detection["register_map"] = "MIN_7000_10000TL_X"
                 detection["reasoning"].append("✓ Found PV3 at register 3011 → MIN 7-10kW (3 PV strings)")
             else:
+                # Single-phase with 2 PV strings = MIN 3-6kW
                 detection["model"] = "MIN 3000-6000TL-X"
                 detection["confidence"] = "High"
                 detection["profile_key"] = "min_3000_6000_tl_x"
@@ -415,17 +426,25 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
             # Check for 3000 range responses (MIN/MOD series in standby)
             elif has_3000_3124 or has_3125_3249:
                 if has_battery_at_3169:
-                    detection["model"] = "MOD 6000-15000TL3-XH (Night/Standby Mode)"
+                    detection["model"] = "MOD 6000-15000TL3-XH (Hybrid, Night/Standby)"
                     detection["confidence"] = "Medium"
                     detection["profile_key"] = "mod_6000_15000tl3_xh"
                     detection["register_map"] = "MOD_6000_15000TL3_XH"
-                    detection["reasoning"].append("✓ Found battery at register 3169 → MOD series")
+                    detection["reasoning"].append("✓ Found battery at register 3169 → MOD-XH hybrid")
                 else:
-                    detection["model"] = "MIN Series (Night/Standby Mode)"
-                    detection["confidence"] = "Low"
-                    detection["profile_key"] = "min_3000_6000_tl_x"
-                    detection["register_map"] = "MIN_3000_6000TL_X"
-                    detection["reasoning"].append("✓ Found 3000 range response → MIN series")
+                    # No battery - check for 3-phase to distinguish MOD-X from MIN
+                    if has_phase_s and has_phase_t:
+                        detection["model"] = "MOD 6000-15000TL3-X (Grid-Tied, Night/Standby)"
+                        detection["confidence"] = "Medium"
+                        detection["profile_key"] = "mod_6000_15000tl3_x"
+                        detection["register_map"] = "MOD_6000_15000TL3_X"
+                        detection["reasoning"].append("✓ Found 3-phase without battery → MOD-X grid-tied")
+                    else:
+                        detection["model"] = "MIN Series (Night/Standby Mode)"
+                        detection["confidence"] = "Low"
+                        detection["profile_key"] = "min_3000_6000_tl_x"
+                        detection["register_map"] = "MIN_3000_6000TL_X"
+                        detection["reasoning"].append("✓ Found 3000 range without battery/3-phase → MIN series")
                 detection["reasoning"].append("⚠ No PV voltage detected → likely night or standby mode")
 
             # Check for 3-phase grid-tied based on phase detection alone
