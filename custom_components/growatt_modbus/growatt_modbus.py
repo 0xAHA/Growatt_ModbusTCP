@@ -131,7 +131,11 @@ class GrowattData:
     derating_mode: int = 0
     fault_code: int = 0
     warning_code: int = 0
-    
+
+    # Export Control (writable registers)
+    export_limit_mode: int = 0        # 0=Disabled, 1=RS485, 2=RS232, 3=CT
+    export_limit_power: int = 0       # 0-1000 (0-100.0%)
+
     # Device Info
     firmware_version: str = ""
     serial_number: str = ""
@@ -945,15 +949,15 @@ class GrowattModbus:
         if holding_regs is None:
             logger.debug("Could not read holding registers for device info")
             return
-        
+
         try:
             holding_map = self.register_map.get('holding_registers', {})
-            
+
             # Firmware version at register 3
             if len(holding_regs) > 3 and 3 in holding_map:
                 fw_version = holding_regs[3]
                 data.firmware_version = f"{fw_version >> 8}.{fw_version & 0xFF}"
-            
+
             # Serial number from registers 9-13
             if len(holding_regs) > 13:
                 serial_parts = []
@@ -969,9 +973,22 @@ class GrowattModbus:
                             if char2 > 0 and 32 <= char2 <= 126:
                                 serial_parts.append(chr(char2))
                 data.serial_number = ''.join(serial_parts).rstrip('\x00')
-                
+
         except Exception as e:
             logger.warning(f"Error reading device info: {e}")
+
+        # Read export control registers (122-123) if they exist in the profile
+        if 122 in holding_map or 123 in holding_map:
+            try:
+                export_regs = self.read_holding_registers(122, 2)
+                if export_regs is not None and len(export_regs) >= 2:
+                    if 122 in holding_map:
+                        data.export_limit_mode = export_regs[0]
+                    if 123 in holding_map:
+                        data.export_limit_power = export_regs[1]
+                    logger.debug(f"Read export control: mode={data.export_limit_mode}, power={data.export_limit_power}")
+            except Exception as e:
+                logger.debug(f"Could not read export control registers: {e}")
 
     def get_status_text(self, status_code: int) -> str:
         """Convert status code to human readable text"""

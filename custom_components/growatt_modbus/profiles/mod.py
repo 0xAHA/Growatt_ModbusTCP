@@ -243,7 +243,123 @@ MOD_6000_15000TL3_XH = {
     }
 }
 
+# MOD-6000-15000TL3-X (Three-phase grid-tied WITHOUT battery)
+MOD_6000_15000TL3_X = {
+    'name': 'MOD TL3-X Series (Grid-Tied)',
+    'description': 'Modular three-phase grid-tied inverter without battery (6-15kW)',
+    'notes': 'Uses 0-124 base range only. Grid-tied version without battery storage.',
+    'input_registers': {
+        # === BASE RANGE (0-124) - Inverter Data ===
+        # System Status
+        0: {'name': 'inverter_status', 'scale': 1, 'unit': '', 'desc': '0=Waiting, 1=Normal, 3=Fault'},
+
+        # PV Total Power (32-bit)
+        1: {'name': 'pv_total_power_high', 'scale': 1, 'unit': '', 'pair': 2},
+        2: {'name': 'pv_total_power_low', 'scale': 1, 'unit': '', 'pair': 1, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # PV String 1
+        3: {'name': 'pv1_voltage', 'scale': 0.1, 'unit': 'V'},
+        4: {'name': 'pv1_current', 'scale': 0.1, 'unit': 'A'},
+        5: {'name': 'pv1_power_high', 'scale': 1, 'unit': '', 'pair': 6},
+        6: {'name': 'pv1_power_low', 'scale': 1, 'unit': '', 'pair': 5, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # PV String 2
+        7: {'name': 'pv2_voltage', 'scale': 0.1, 'unit': 'V'},
+        8: {'name': 'pv2_current', 'scale': 0.1, 'unit': 'A'},
+        9: {'name': 'pv2_power_high', 'scale': 1, 'unit': '', 'pair': 10},
+        10: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # PV String 3
+        11: {'name': 'pv3_voltage', 'scale': 0.1, 'unit': 'V'},
+        12: {'name': 'pv3_current', 'scale': 0.1, 'unit': 'A'},
+        13: {'name': 'pv3_power_high', 'scale': 1, 'unit': '', 'pair': 14},
+        14: {'name': 'pv3_power_low', 'scale': 1, 'unit': '', 'pair': 13, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Output Power Total (32-bit)
+        35: {'name': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36},
+        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # === AC OUTPUT - THREE PHASE ===
+        # Grid Frequency (shared across all phases)
+        37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'AC output frequency'},
+
+        # Generic AC aliases (point to Phase R for compatibility)
+        38: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R AC voltage', 'alias': 'ac_voltage'},
+        39: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R AC current', 'alias': 'ac_current'},
+        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41, 'alias': 'ac_power_high'},
+        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'VA', 'alias': 'ac_power_low'},
+
+        # Phase S (L2) - AC Output
+        42: {'name': 'ac_voltage_s', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase S AC voltage'},
+        43: {'name': 'ac_current_s', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase S AC current'},
+        44: {'name': 'ac_power_s_high', 'scale': 1, 'unit': '', 'pair': 45},
+        45: {'name': 'ac_power_s_low', 'scale': 1, 'unit': '', 'pair': 44, 'combined_scale': 0.1, 'combined_unit': 'VA'},
+
+        # Phase T (L3) - AC Output
+        46: {'name': 'ac_voltage_t', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase T AC voltage'},
+        47: {'name': 'ac_current_t', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase T AC current'},
+        48: {'name': 'ac_power_t_high', 'scale': 1, 'unit': '', 'pair': 49},
+        49: {'name': 'ac_power_t_low', 'scale': 1, 'unit': '', 'pair': 48, 'combined_scale': 0.1, 'combined_unit': 'VA'},
+
+        # Line-to-Line Voltages (three-phase only)
+        50: {'name': 'line_voltage_rs', 'scale': 0.1, 'unit': 'V', 'desc': 'Line voltage R-S'},
+        51: {'name': 'line_voltage_st', 'scale': 0.1, 'unit': 'V', 'desc': 'Line voltage S-T'},
+        52: {'name': 'line_voltage_tr', 'scale': 0.1, 'unit': 'V', 'desc': 'Line voltage T-R'},
+
+        # Energy Today (32-bit)
+        53: {'name': 'energy_today_high', 'scale': 1, 'unit': '', 'pair': 54},
+        54: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'pair': 53, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Energy Total (32-bit)
+        55: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'pair': 56},
+        56: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'pair': 55, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Temperatures
+        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C'},
+        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C'},
+        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C'},
+
+        # Status
+        100: {'name': 'power_factor', 'scale': 1, 'unit': ''},
+        104: {'name': 'derating_mode', 'scale': 1, 'unit': ''},
+        105: {'name': 'fault_code', 'scale': 1, 'unit': ''},
+        112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
+    },
+    'holding_registers': {
+        # Basic control
+        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
+        3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Max output power %'},
+        30: {'name': 'modbus_address', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Modbus address 1-254'},
+
+        # Export Control Registers
+        122: {
+            'name': 'export_limit_mode',
+            'scale': 1,
+            'unit': '',
+            'access': 'RW',
+            'desc': 'Export limit control mode',
+            'valid_range': (0, 3),
+            'values': {
+                0: 'Export limit disabled',
+                1: 'Enable 485 (external meter) limitation',
+                2: 'Enable 232 (external meter) limitation',
+                3: 'CT export limit'
+            }
+        },
+        123: {
+            'name': 'export_limit_power',
+            'scale': 0.1,
+            'unit': '%',
+            'access': 'RW',
+            'desc': 'Export limit power percentage',
+            'valid_range': (0, 1000),
+            'note': '0=0%, 1000=100.0%'
+        },
+    }
+}
+
 # Export all MOD profiles
 MOD_REGISTER_MAPS = {
+    'MOD_6000_15000TL3_X': MOD_6000_15000TL3_X,
     'MOD_6000_15000TL3_XH': MOD_6000_15000TL3_XH,
 }
