@@ -559,6 +559,29 @@ INVERTER_PROFILES = {
             STATUS_SENSORS
         ),
     },
+
+    # ========================================================================
+    # WIT SERIES - Three-Phase Hybrid with Advanced Storage
+    # ========================================================================
+
+    "wit_4000_15000tl3": {
+        "name": "WIT 4-15kW Hybrid",
+        "description": "Three-phase hybrid inverter with battery and UPS backup (4-15kW)",
+        "register_map": "WIT_4000_15000TL3",
+        "phases": 3,
+        "has_pv3": False,  # Standard 2 PV strings
+        "has_battery": True,
+        "max_power_kw": 15.0,
+        "protocol_version": "legacy",
+        "sensors": (
+            BASIC_PV_SENSORS |
+            THREE_PHASE_SENSORS |
+            ENERGY_SENSORS |
+            BATTERY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
 }
 
 
