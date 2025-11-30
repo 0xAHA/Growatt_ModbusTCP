@@ -1,0 +1,203 @@
+Feature_Category,Feature_Name,V1.39_Available,V1.39_Register,V2.01_Available,V2.01_Register,Notes
+BASIC CONTROL,,,,,
+Basic Control,Remote On/Off,YES,Hold 0,YES,Hold 30101,"V1.39: 0-3 range, V2.01: 0-1 range"
+Basic Control,Control Authority Enable,NO,-,YES,Hold 30100,V2.01 only - enables remote control
+Basic Control,Safety Function Enable (SPI/LVFRT/HVFRT),YES,Hold 1,NO,-,V1.39 only - comprehensive safety bits
+Basic Control,Country/Region Selection,YES,Hold 16-17,YES,Hold 30102,Different implementations
+Basic Control,System Time Setting,NO,-,YES,Hold 30104,V2.01 only - 6 registers for date/time
+Basic Control,SYN Enable (Offline Box),NO,-,YES,Hold 30115,V2.01 only
+Basic Control,Factory Reset,YES,Hold 33,NO,-,V1.39 only
+Basic Control,User Info Reset,YES,Hold 32,NO,-,V1.39 only
+
+POWER CONTROL,,,,,
+Power Control,Active Power Percentage Derating,YES,Hold 3,YES,Hold 30151,"Both support 0-100%, V1.39 uses 255 for unlimited"
+Power Control,Static Active Power Limitation,NO,-,YES,Hold 30154,V2.01 only - additional power limit
+Power Control,Reactive Power Rate,YES,Hold 4,YES,Hold 30160,"V1.39: -100 to +100, V2.01: 0-60%"
+Power Control,Power Factor Control,YES,Hold 5,YES,Hold 30162,"Both use 10000x multiplier, V2.01 has split range"
+Power Control,Reactive Power Mode,NO,-,YES,Hold 30161,"V2.01 only - 0:PF=1, 1:Pf setting, 4:Lagging, 5:Leading"
+Power Control,Power Start Slope,YES,Hold 20,NO,-,V1.39 only
+Power Control,Power Restart Slope,YES,Hold 21,NO,-,V1.39 only
+
+EXPORT LIMITATION,,,,,
+Export Limitation,Export Limitation Enable,YES,Hold 3000 (TL-X/XH),YES,Hold 30200,V2.01 more comprehensive
+Export Limitation,Export Limitation Power Rate,YES,Hold 3000 (TL-X/XH),YES,Hold 30201,"V2.01: -100 to +100%"
+Export Limitation,Export Limitation Failure Power Rate,YES,Hold 3000 (TL-X/XH),YES,Hold 30202,Both support
+Export Limitation,EMS Communication Failure Time,NO,-,YES,Hold 30203,"V2.01: 1-300s, default 30s"
+Export Limitation,EMS Communication Failure Enable,NO,-,YES,Hold 30204,V2.01 only
+Export Limitation,Super Export Limitation Enable,NO,-,YES,Hold 30205,V2.01 only
+Export Limitation,Export Limitation Change Slope,NO,-,YES,Hold 30206,"V2.01: 0.01%Pn/s, range 1-20000"
+Export Limitation,Export Limitation Single Phase Control,NO,-,YES,Hold 30207,V2.01 only
+Export Limitation,Export Limitation Protection Mode,NO,-,YES,Hold 30208,"V2.01: 0:Default, 1:Combine, 2:Software, 3:Hardware"
+
+BATTERY MANAGEMENT,,,,,
+Battery Management,Battery Type Selection,YES,Hold 3070 (TL-X/XH),YES,Hold 30030,"V1.39: TL-X/XH only, V2.01: all models"
+Battery Management,Battery Cluster Index,NO,-,YES,Hold 30300,"V2.01: supports 4 clusters [0-3]"
+Battery Management,Charging Cut-off SOC,YES,Hold 3048 (TL-X/XH),YES,Hold 30404,"V1.39: TL-X/XH only, V2.01: 70-100%"
+Battery Management,Online Discharge Cut-off SOC,YES,Hold 3037/3067 (TL-X/XH),YES,Hold 30405,"V2.01: 10-30%, default 10%"
+Battery Management,Offline Discharge Cut-off SOC,NO,-,YES,Hold 30475,"V2.01: 10-30%, default 10%"
+Battery Management,Load Priority Discharge Cut-off SOC,NO,-,YES,Hold 30406,"V2.01: 10-20%, SPH/SPA only"
+Battery Management,Remote Power Control Enable,NO,-,YES,Hold 30407,V2.01 only - not stored
+Battery Management,Remote Power Control Charging Time,NO,-,YES,Hold 30408,"V2.01: 0-1440 min, not stored"
+Battery Management,Remote Charge/Discharge Power,NO,-,YES,Hold 30409,"V2.01: -100 to +100%, not stored"
+Battery Management,AC Charging Enable,YES,Hold 3049 (TL-X/XH),YES,Hold 30410,Both support
+Battery Management,Time-based Charge/Discharge (20 periods),YES,Hold 3038+ (TL-X/XH),YES,Hold 30411-30471,V2.01 more comprehensive
+Battery Management,Actual Control Value (Charge/Discharge),NO,-,YES,Hold 30474,V2.01 only - read-only status
+Battery Management,Battery Charge Stop Voltage,YES,Hold 3028 (TL-X/XH),YES,Hold 30496,Lead-acid only
+Battery Management,Battery Discharge Stop Voltage,YES,Hold 3027 (TL-X/XH),YES,Hold 30497,Lead-acid only
+Battery Management,Battery Max Charge Current,NO,-,YES,Hold 30498,"V2.01: 0-2000 (0.1A), lead-acid only"
+Battery Management,Battery Max Discharge Current,NO,-,YES,Hold 30499,"V2.01: 0-2000 (0.1A), lead-acid only"
+Battery Management,Work Mode Selection,YES,Hold 3018 (TL-X/XH),NO,-,"V1.39: 0:default, 1:PV-first, 2:Bat-first, 3:Grid-first"
+Battery Management,Grid-First Discharge Power Rate,YES,Hold 3036 (TL-X/XH),NO,-,V1.39 TL-X/XH only
+Battery Management,Bat-First Charge Power Rate,YES,Hold 3047 (TL-X/XH),NO,-,V1.39 TL-X/XH only
+
+EPS/OFFLINE OPERATION,,,,,
+EPS Operation,EPS Offline Enable,NO,-,YES,Hold 30155,V2.01 only
+EPS Operation,EPS Offline Frequency,NO,-,YES,Hold 30156,"V2.01: 0:50Hz, 1:60Hz"
+EPS Operation,EPS Offline Voltage,NO,-,YES,Hold 30157,V2.01 - model specific values
+
+DEVICE INFORMATION,,,,,
+Device Info,Equipment Type (DTC),NO,-,YES,Hold 30000,V2.01 only - see Table 3-1
+Device Info,Serial Number,YES,Hold 23-27,YES,Hold 30001,"V1.39: 10 chars, V2.01: 30 chars (15 registers)"
+Device Info,Serial Number (New Format),YES,Hold 3001-3015 (TL-X/XH),NO,-,V1.39 TL-X/XH: 30 characters
+Device Info,Inverter Module Type,YES,Hold 28-29,NO,-,V1.39 only
+Device Info,Inverter Type,YES,Hold 125-127,NO,-,V1.39 only - ASCII type codes
+Device Info,Firmware Version,YES,Hold 9-14,YES,Hold 30060-30067,Both support but different format
+Device Info,Battery Software Version,NO,-,YES,Hold 30068-30076,V2.01 only
+Device Info,BCU Software Version,NO,-,YES,Hold 30074-30076,V2.01 only
+Device Info,M3 Software Version,NO,-,YES,Hold 30077-30079,V2.01 only
+Device Info,Meter Version,NO,-,YES,Hold 30080-30082,V2.01 only
+Device Info,VPP Protocol Version,NO,-,YES,Hold 30099,"V2.01: 200=V2.00, 201=V2.01"
+Device Info,Hardware Version,YES,Hold 3046 (TL-X/XH US),NO,-,V1.39 US models only
+Device Info,AFCI Software Version,YES,Hold 3269-3271,NO,-,V1.39 only
+Device Info,Manufacturer Info,YES,Hold 34-38,NO,-,V1.39 only
+
+RATED PARAMETERS,,,,,
+Rated Parameters,Rated Power (Pn),YES,Hold 6-7,YES,Hold 30016,V2.01: UINT32 0.1W
+Rated Parameters,Maximum Active Power,YES,Hold 6-7,YES,Hold 30018,V2.01: UINT32 0.1W
+Rated Parameters,Maximum Reactive Power (Fed),NO,-,YES,Hold 30020,V2.01: UINT32 0.1VAR
+Rated Parameters,Maximum Reactive Power (Absorption),NO,-,YES,Hold 30022,V2.01: UINT32 0.1VAR
+Rated Parameters,Maximum Apparent Power,NO,-,YES,Hold 30024,V2.01: UINT32 0.1VA
+Rated Parameters,Rated BDC Charge/Discharge Power,NO,-,YES,Hold 30026,V2.01: UINT32 0.1W
+Rated Parameters,PV Input Maximum Power,NO,-,YES,Hold 30028,V2.01: UINT32 0.1W
+
+COMMUNICATION,,,,,
+Communication,Communication Address,YES,Hold 30,YES,Hold 30112,"V1.39: 1-254, V2.01: [1,255] default 1"
+Communication,Baud Rate Selection,YES,Hold 22,YES,Hold 30113,"V1.39: 0-1, V2.01: 0:9600, 1:38400"
+Communication,Firmware Update,YES,Hold 31,NO,-,V1.39 only - FlashStart
+Communication,LCD Language,YES,Hold 15,NO,-,V1.39 only - 9 languages
+
+STATUS MONITORING,,,,,
+Status,Inverter Status/State,YES,Input 0 / 1000,YES,Input 31000,"Different value ranges, V2.01: 0-9"
+Status,Battery Working Status,NO,-,YES,Input 31001,"V2.01: 0:standby, 1:disconnected, 2:charging, 3:discharge, 4:fault, 5:upgrade"
+Status,Priority of Work,NO,-,YES,Input 31002,"V2.01: 0:load first, 1:battery first, 2:grid first"
+Status,Fault Code,YES,Input varies,YES,Input 31005,Both support - different implementations
+Status,Fault Sub Code,YES,Input varies,YES,Input 31006,V2.01 only
+Status,Alarm Code,YES,Input varies,YES,Input 31007,V2.01 only
+Status,Alarm Sub Code,NO,-,YES,Input 31008,V2.01 only
+Status,System Work Mode,YES,Input 3000 (TL-X/XH),NO,-,"V1.39: 0:LoadFirst, 1:BatteryFirst, 2:GridFirst, 3:OffGridMode"
+Status,AC Charge Enable Status,YES,Input 3001 (TL-X/XH),NO,-,V1.39 TL-X/XH only
+
+PV MONITORING,,,,,
+PV Monitoring,PV1 Voltage,YES,Input 3,YES,Input 31010,Both: 0.1V
+PV Monitoring,PV1 Current,YES,Input 4,YES,Input 31011,Both: 0.1A
+PV Monitoring,PV1 Power,YES,Input 5-6,YES,Input 31058,"V1.39: separate H/L, V2.01: combined INT32"
+PV Monitoring,PV2 Voltage,YES,Input 7,YES,Input 31012,Both: 0.1V
+PV Monitoring,PV2 Current,YES,Input 8,YES,Input 31013,Both: 0.1A
+PV Monitoring,PV2 Power,YES,Input 9-10,NO,-,V1.39 only
+PV Monitoring,PV3 Voltage,YES,Input 43,YES,Input 31014,Both: 0.1V
+PV Monitoring,PV3 Current,YES,Input 44,YES,Input 31015,Both: 0.1A
+PV Monitoring,PV3 Power,YES,Input 45-46,NO,-,V1.39 only
+PV Monitoring,PV4 Voltage,YES,Input 47,YES,Input 31016,Both: 0.1V
+PV Monitoring,PV4 Current,YES,Input 48,YES,Input 31017,Both: 0.1A
+PV Monitoring,PV4 Power,YES,Input 49-50,NO,-,V1.39 only
+PV Monitoring,PV5-PV16 Parameters,YES,Input (eighth group),YES,Input 31018-31041,Both support
+PV Monitoring,Total PV Input Power,YES,Input 1-2,YES,Input 31058,Both support
+
+AC/GRID MONITORING,,,,,
+AC Monitoring,Active Power (Total),YES,Input 11-12 / 1001-1002,YES,Input 31100,"V2.01: INT32 0.1W, positive=export, negative=import"
+AC Monitoring,Reactive Power,NO,-,YES,Input 31102,V2.01: INT32 0.1VA
+AC Monitoring,Grid Frequency,YES,Input 13,YES,Input 31105,Both: 0.01Hz
+AC Monitoring,Grid Voltage (Phase A / Single),YES,Input 14,YES,Input 31106,Both: 0.1V
+AC Monitoring,Grid Voltage (Phase B),YES,Input 18,YES,Input 31107,Both: 0.1V - three phase
+AC Monitoring,Grid Voltage (Phase C),YES,Input 22,YES,Input 31108,Both: 0.1V - three phase
+AC Monitoring,Grid Current (Phase A / Single),YES,Input 15,YES,Input 31109,Both: 0.1A
+AC Monitoring,Grid Current (Phase B),YES,Input 19,YES,Input 31110,Both: 0.1A - three phase
+AC Monitoring,Grid Current (Phase C),YES,Input 23,YES,Input 31111,Both: 0.1A - three phase
+AC Monitoring,AC Output Power (Phase A),YES,Input 16-17,NO,-,V1.39 only - separate phases
+AC Monitoring,AC Output Power (Phase B),YES,Input 20-21,NO,-,V1.39 only - separate phases
+AC Monitoring,AC Output Power (Phase C),YES,Input 24-25,NO,-,V1.39 only - separate phases
+AC Monitoring,Meter Power,YES,Input varies,YES,Input 31112,"V2.01: INT32 0.1W, positive=import, negative=export"
+AC Monitoring,Inverter Temperature,YES,Input 34-36,YES,Input 31114,"V2.01: INT16 0.1℃, range [-400,1250]"
+
+ENERGY TOTALS,,,,,
+Energy,Today Generate Energy,YES,Input 26-27 / 1003-1004,YES,Input 31122,Both: 0.1kWh
+Energy,Total Generate Energy,YES,Input 28-31 / 1005-1008,YES,Input 31124,Both: 0.1kWh (V2.01: UINT32)
+Energy,Today Export to Grid,NO,-,YES,Input 31122,V2.01: UINT32 0.1kWh
+Energy,Total Export to Grid,NO,-,YES,Input 31124,V2.01: UINT32 0.1kWh
+Energy,Power to User Daily,YES,Input 3020-3021 (TL-X/XH),YES,Input 31118,V2.01: UINT32 0.1kWh
+Energy,Total Power to User,YES,Input 3022-3024 (TL-X/XH),YES,Input 31120,V2.01: UINT32 0.1kWh
+Energy,Power to Grid Daily,NO,-,YES,Input 31122,V2.01: UINT32 0.1kWh
+Energy,Total Power to Grid,NO,-,YES,Input 31124,V2.01: UINT32 0.1kWh
+Energy,Work Time Total,YES,Input 32-33,NO,-,V1.39 only: 0.5S units
+Energy,Inverter Total Power-on Time,YES,Input 3116-3117,NO,-,V1.39 only
+
+BATTERY STATUS,,,,,
+Battery Status,Battery SOC,YES,Input 3002 (TL-X/XH),YES,Input 31217,"V2.01: UINT8 [0,100]"
+Battery Status,Battery SOH,NO,-,YES,Input 31218,"V2.01: UINT8 [0,100]"
+Battery Status,Battery Voltage,YES,Input 3003 (TL-X/XH),YES,Input 31214,Both: 0.1V
+Battery Status,Battery Current,YES,Input 3004 (TL-X/XH),YES,Input 31215,"Both: 0.1A, positive=charge, negative=discharge"
+Battery Status,Battery Charge/Discharge Power,YES,Input 3005-3006 (TL-X/XH),YES,Input 31200,"V2.01: INT32 0.1W"
+Battery Status,Battery Temperature,YES,Input 3007 (TL-X/XH),YES,Input 31223,"V2.01: INT16 0.1℃ [-400,1250]"
+Battery Status,Battery Capacity Rating (FCC),NO,-,YES,Input 31219,V2.01: UINT32 AH
+Battery Status,Daily Battery Charge,YES,Input 3010-3011 (TL-X/XH),YES,Input 31202,Both: 0.1kWh
+Battery Status,Total Battery Charge,YES,Input 3012-3014 (TL-X/XH),YES,Input 31204,Both: 0.1kWh
+Battery Status,Daily Battery Discharge,YES,Input 3008-3009 (TL-X/XH),YES,Input 31206,Both: 0.1kWh
+Battery Status,Total Battery Discharge,YES,Input 3015-3017 (TL-X/XH),YES,Input 31208,Both: 0.1kWh
+Battery Status,Max Allowable Charge Power,NO,-,YES,Input 31210,V2.01: UINT32 0.1W
+Battery Status,Max Allowable Discharge Power,NO,-,YES,Input 31212,V2.01: UINT32 0.1W
+Battery Status,Cluster Sum,NO,-,YES,Input 31225,V2.01 only
+Battery Status,Single Cluster Module Number,NO,-,YES,Input 31226,V2.01 only
+Battery Status,Module Rated Voltage,NO,-,YES,Input 31227,V2.01: UINT16 0.1V
+Battery Status,Module Rated Capacity,NO,-,YES,Input 31228,V2.01: UINT16 0.1AH
+Battery Status,Battery Information 2-4 (Clusters),NO,-,YES,Input 31300-31599,"V2.01: Supports 4 battery clusters, reference 31200-31299"
+
+LOAD MONITORING,,,,,
+Load Monitoring,Load Power,YES,Input 3018-3019 (TL-X/XH),NO,-,V1.39 TL-X/XH: 1W units
+Load Monitoring,Today Load Energy,YES,Input 3020-3021 (TL-X/XH),NO,-,V1.39 TL-X/XH: 0.1kWh
+Load Monitoring,Total Load Energy,YES,Input 3022-3024 (TL-X/XH),NO,-,V1.39 TL-X/XH: 0.1kWh
+Load Monitoring,To Grid Power,YES,Input 3025-3026 (TL-X/XH),NO,-,V1.39 TL-X/XH: 1W units
+Load Monitoring,Today To Grid Energy,YES,Input 3027-3028 (TL-X/XH),NO,-,V1.39 TL-X/XH: 0.1kWh
+Load Monitoring,Total To Grid Energy,YES,Input 3029-3031 (TL-X/XH),NO,-,V1.39 TL-X/XH: 0.1kWh
+
+FAULT DIAGNOSTICS,,,,,
+Diagnostics,ISO Fault Value,YES,Input 37-38,NO,-,V1.39 only
+Diagnostics,GFCI Fault Value,YES,Input 39-40,NO,-,V1.39 only
+Diagnostics,DCI Fault Value,YES,Input 41-42,NO,-,V1.39 only
+Diagnostics,PID Fault Code,YES,Input varies,NO,-,V1.39 only
+Diagnostics,Detailed Fault Maincode,YES,Input varies,YES,Input 31005,Different implementations
+Diagnostics,Detailed Fault Subcode,YES,Input varies,YES,Input 31006,V2.01 has dedicated register
+
+SPECIAL FEATURES,,,,,
+Special Features,Dry Contact Control,YES,Hold 3016-3019 (TL-X/XH),NO,-,V1.39 TL-X/XH only
+Special Features,Box Control Inverter Order,YES,Hold 3020 (TL-X/XH),NO,-,V1.39 TL-X/XH only
+Special Features,External Communication Command,YES,Hold 3021 (TL-X/XH),NO,-,V1.39 TL-X/XH only
+Special Features,PTO Enable,YES,Hold 3072 (TL-X/XH),NO,-,V1.39 TL-X/XH only
+Special Features,Battery Charge from Generator,YES,Hold 3073 (TL-X/XH),NO,-,V1.39 TL-X/XH only
+Special Features,Force Generator On,YES,Hold 3074 (TL-X/XH),NO,-,V1.39 TL-X/XH only
+Special Features,Generator Rated Power,YES,Hold 3077 (TL-X/XH US),NO,-,V1.39 US models only
+Special Features,Backup Box Enable,YES,Hold 3082 (TL-X/XH),NO,-,V1.39 XH models only
+Special Features,Australian Region Parameter,YES,Hold 3083 (TL-X/XH),NO,-,V1.39 XH models only
+Special Features,Backup Box Data,YES,Input 3281-3316,NO,-,V1.39 only
+Special Features,APX Battery Registers,YES,Hold 5400-7959 / Input 5080-7639,NO,-,V1.39 only
+Special Features,BDC Group Registers,YES,Hold/Input various,NO,-,V1.39 only - battery DC-DC converter
+Special Features,Battery Module Serial Numbers,YES,Hold 8560-9519,NO,-,V1.39 only
+Special Features,Acrel Meter Connect Flag,YES,Input 3322,NO,-,V1.39 only
+Special Features,Backup Box Installation Flag,YES,Input 3323,NO,-,V1.39 only
+Special Features,Safety Parameters,NO,-,YES,Hold 30500-30999,V2.01 only - separate document reference
+
+SUMMARY STATISTICS,,,,,
+Coverage,Total Unique Features in V1.39,~180+,-,-,-,Includes model-specific features
+Coverage,Total Unique Features in V2.01,-,-,~93+,-,Focus on VPP/grid integration
+Coverage,Features in BOTH protocols,-,-,-,-,~40-50 overlapping features
+Coverage,V1.39 ONLY features,-,-,-,-,"~130+ (firmware mgmt, diagnostics, BDC, APX, backup box, dry contact, generator control)"
+Coverage,V2.01 ONLY features,-,-,-,-,"~50+ (export limitation advanced, battery clusters, EMS failure handling, comprehensive version info)"
