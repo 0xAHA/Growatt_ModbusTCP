@@ -59,9 +59,9 @@ MIN_3000_6000TL_X = {
         3092: {'name': 'bus_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'DC bus voltage'},
         
         # Temperatures
-        3093: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Inverter temperature'},
-        3094: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'IPM temperature'},
-        3095: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Boost temperature'},
+        3093: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Inverter temperature', 'signed': True},
+        3094: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'IPM temperature', 'signed': True},
+        3095: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Boost temperature', 'signed': True},
         
         # Fault Codes
         3105: {'name': 'fault_code', 'scale': 1, 'unit': '', 'desc': 'Main fault code'},
@@ -166,11 +166,11 @@ MIN_7000_10000TL_X = {
         3092: {'name': 'bus_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'DC bus voltage'},
         
         # Temperatures
-        3093: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Inverter temperature'},
-        3094: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'IPM temperature'},
-        3095: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Boost temperature'},
-        3097: {'name': 'comms_board_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Comms board temperature'},
-        
+        3093: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Inverter temperature', 'signed': True},
+        3094: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'IPM temperature', 'signed': True},
+        3095: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Boost temperature', 'signed': True},
+        3097: {'name': 'comms_board_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Comms board temperature', 'signed': True},
+
         # Fault Codes
         3105: {'name': 'fault_code', 'scale': 1, 'unit': '', 'desc': 'Main fault code'},
         3106: {'name': 'warning_code', 'scale': 1, 'unit': '', 'desc': 'Main warning code'},
@@ -226,9 +226,9 @@ MIN_SERIES_BASE_RANGE = {
         56: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'pair': 55, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         57: {'name': 'time_total_high', 'scale': 1, 'unit': '', 'pair': 58},
         58: {'name': 'time_total_low', 'scale': 1, 'unit': '', 'pair': 57, 'combined_scale': 0.5, 'combined_unit': 's'},
-        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C'},
-        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C'},
-        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C'},
+        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
         98: {'name': 'p_bus_voltage', 'scale': 0.1, 'unit': 'V'},
         99: {'name': 'n_bus_voltage', 'scale': 0.1, 'unit': 'V'},
         100: {'name': 'power_factor', 'scale': 1, 'unit': '', 'desc': '0-10000=underexcited, 10001-20000=overexcited'},
@@ -310,9 +310,9 @@ MIN_3000_6000TL_X_V201 = {
         31123: {'name': 'energy_total_low_vpp', 'scale': 1, 'unit': '', 'pair': 31122, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Temperatures
-        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp'},
-        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp'},
-        31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp'},
+        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp', 'signed': True},
+        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp', 'signed': True},
+        31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp', 'signed': True},
     },
     'holding_registers': {
         # === V1.39 REGISTERS ===
@@ -408,9 +408,9 @@ MIN_7000_10000TL_X_V201 = {
         31123: {'name': 'energy_total_low_vpp', 'scale': 1, 'unit': '', 'pair': 31122, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Temperatures
-        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp'},
-        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp'},
-        31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp'},
+        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp', 'signed': True},
+        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp', 'signed': True},
+        31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp', 'signed': True},
     },
     'holding_registers': {
         # === V1.39 REGISTERS ===

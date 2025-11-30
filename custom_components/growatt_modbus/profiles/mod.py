@@ -69,12 +69,12 @@ MOD_6000_15000TL3_XH = {
         # Energy Total (32-bit)
         55: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'pair': 56},
         56: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'pair': 55, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        
+
         # Temperatures
-        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C'},
-        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C'},
-        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C'},
-        
+        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+
         # Status
         100: {'name': 'power_factor', 'scale': 1, 'unit': ''},
         104: {'name': 'derating_mode', 'scale': 1, 'unit': ''},
@@ -124,7 +124,7 @@ MOD_6000_15000TL3_XH = {
         3169: {'name': 'battery_voltage_legacy', 'scale': 0.01, 'unit': 'V'},
         3170: {'name': 'battery_current_legacy', 'scale': 0.1, 'unit': 'A', 'signed': True},
         3171: {'name': 'battery_soc_legacy', 'scale': 1, 'unit': '%'},
-        3176: {'name': 'battery_temp_legacy', 'scale': 0.1, 'unit': '°C'},
+        3176: {'name': 'battery_temp_legacy', 'scale': 0.1, 'unit': '°C', 'signed': True},
 
         # === BATTERY INFORMATION 1 (31200-31299) - Official VPP Protocol V2.01 ===
         # This is the official battery data range for MOD series per Growatt VPP Protocol
@@ -315,9 +315,9 @@ MOD_6000_15000TL3_X = {
         56: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'pair': 55, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Temperatures
-        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C'},
-        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C'},
-        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C'},
+        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
 
         # Status
         100: {'name': 'power_factor', 'scale': 1, 'unit': ''},

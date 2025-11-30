@@ -417,6 +417,12 @@ class GrowattModbus:
         else:
             # Single register, apply its scale
             scale = reg_info.get('scale', 1)
+
+            # Handle signed 16-bit values if specified
+            if reg_info.get('signed'):
+                if raw_value > 0x7FFF:  # If sign bit is set in 16-bit value
+                    raw_value = raw_value - 0x10000  # Convert to negative
+
             return raw_value * scale
 
     def read_all_data(self) -> Optional[GrowattData]:

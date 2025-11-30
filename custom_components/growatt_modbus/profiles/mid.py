@@ -60,10 +60,10 @@ MID_15000_25000TL3_X = {
         56: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'pair': 55, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         
         # Temperatures
-        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C'},
-        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C'},
-        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C'},
-        
+        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+
         # Status
         100: {'name': 'power_factor', 'scale': 1, 'unit': ''},
         104: {'name': 'derating_mode', 'scale': 1, 'unit': ''},
@@ -125,9 +125,9 @@ MID_15000_25000TL3_X_V201 = {
         31123: {'name': 'energy_total_low_vpp', 'scale': 1, 'unit': '', 'pair': 31122, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Temperatures
-        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp'},
-        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp'},
-        31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp'},
+        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp', 'signed': True},
+        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp', 'signed': True},
+        31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp', 'signed': True},
     },
     'holding_registers': {
         # === Legacy REGISTERS ===
