@@ -494,9 +494,27 @@ INVERTER_PROFILES = {
     # ========================================================================
     # MOD SERIES - Modular Three Phase Hybrid
     # ========================================================================
-    
+
+    "mod_6000_15000tl3_x": {
+        "name": "MOD 6000-15000TL3-X (Grid-Tied)",
+        "description": "Modular three-phase grid-tied inverter without battery (6-15kW)",
+        "register_map": "MOD_6000_15000TL3_X",
+        "phases": 3,
+        "has_pv3": True,
+        "has_battery": False,
+        "max_power_kw": 15.0,
+        "sensors": (
+            BASIC_PV_SENSORS |
+            PV3_SENSORS |
+            THREE_PHASE_SENSORS |
+            ENERGY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
     "mod_6000_15000tl3_xh": {
-        "name": "MOD 6000-15000TL3-XH",
+        "name": "MOD 6000-15000TL3-XH (Hybrid)",
         "description": "Modular three-phase hybrid inverter with battery (6-15kW)",
         "register_map": "MOD_6000_15000TL3_XH",
         "phases": 3,
@@ -536,6 +554,29 @@ INVERTER_PROFILES = {
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
+            BATTERY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
+    # ========================================================================
+    # WIT SERIES - Three-Phase Hybrid with Advanced Storage
+    # ========================================================================
+
+    "wit_4000_15000tl3": {
+        "name": "WIT 4-15kW Hybrid",
+        "description": "Three-phase hybrid inverter with battery and UPS backup (4-15kW)",
+        "register_map": "WIT_4000_15000TL3",
+        "phases": 3,
+        "has_pv3": False,  # Standard 2 PV strings
+        "has_battery": True,
+        "max_power_kw": 15.0,
+        "protocol_version": "legacy",
+        "sensors": (
+            BASIC_PV_SENSORS |
+            THREE_PHASE_SENSORS |
+            ENERGY_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS

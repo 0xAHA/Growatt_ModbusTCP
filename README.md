@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.0.7--beta3-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.0.7--beta4-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -542,7 +542,41 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 
 ---
 
-## 🆕 What's New in v0.0.7-beta3
+## 🆕 What's New in v0.0.7-beta4
+
+**MOD Series Enhancements & Bug Fixes:**
+
+**🐛 Bug Fixes:**
+- **Fixed MOD export control** - Export limit mode and power controls (registers 122-123) now work correctly on MOD units
+  - Root cause: Coordinator wasn't reading holding registers 122-123
+  - Added `export_limit_mode` and `export_limit_power` fields to data model
+  - Number and Select entities now properly populate and function
+
+**✨ Enhancements:**
+- **New MOD-6000-15000TL3-X Profile** - Added dedicated grid-tied MOD profile (no battery)
+  - Distinguishes MOD-XH (hybrid with battery) from MOD-X (grid-tied)
+  - Only creates appropriate entities based on hardware (no battery sensors on grid-tied units)
+  - Includes export control registers (122-123) for both variants
+
+- **Enhanced Auto-Detection** - Automatically differentiates MOD variants:
+  - **DTC 5400** detection now checks battery SOC (31217) or voltage (3169) with non-zero value
+  - Battery present → MOD-XH hybrid (`mod_6000_15000tl3_xh_v201`)
+  - 3000 range but no battery → MOD-X grid-tied (`mod_6000_15000tl3_x`)
+  - 0-124 range only → MID series (`mid_15000_25000tl3_x_v201`)
+  - Updated register probing and scan-based detection with same logic
+
+- **Expanded VPP Register Scanning** - Universal scanner now covers full VPP Protocol V2.01 range:
+  - 31000-31099: Equipment status, PV data, fault words
+  - 31100-31199: AC output, meter/grid power (31112/31113), load power (31118/31119), energy, temperatures
+  - 31200-31299: Battery cluster 1 data
+  - 31300-31399: Battery cluster 2 data (optional)
+
+**Breaking Changes:** None - Fully backward compatible with existing setups
+
+---
+
+<details>
+<summary>📋 Previous Release: v0.0.7-beta3</summary>
 
 **VPP Protocol V2.01 Support** - Major update adding support for Growatt's advanced VPP Protocol V2.01:
 
@@ -561,6 +595,8 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 - Commercial series: 5601, 5800
 
 **Breaking Changes:** None - Fully backward compatible with existing setups
+
+</details>
 
 📖 **Full changelog:** See [GitHub Releases](https://github.com/0xAHA/Growatt_ModbusTCP/releases)
 
@@ -584,8 +620,10 @@ Test your connection using the built-in **Universal Register Scanner**:
 
 **What the scanner does:**
 
-- Scans all register ranges automatically (0-124, 125-249, 1000-1124, 3000-3249)
-- Auto-detects your inverter model (MIN, SPH, MOD, etc.)
+- Scans all register ranges automatically:
+  - Legacy ranges: 0-124, 125-249, 1000-1124, 3000-3249
+  - VPP V2.01 ranges: 31000-31099, 31100-31199, 31200-31299, 31300-31399
+- Auto-detects your inverter model (MIN, SPH, MOD-XH, MOD-X, MID, etc.)
 - Shows confidence rating (High/Medium/Low)
 - Provides reasoning for detection
 - Exports full register dump to CSV with detection analysis

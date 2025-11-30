@@ -1,0 +1,303 @@
+Register_Type,NO,Parameter_Name,Read_Write,Data_Type,Unit,Address,Register_Count,Range_Notes
+Hold,1,Equipment type (DTC),RO,UINT16,-,30000,1,See Table 3-1
+Hold,2,SN,RO,UINT16,-,30001,15,-
+Hold,3,Rated power (Pn),RO,UINT32,0.1W,30016,2,-
+Hold,4,Maximum active power (Pmax),RO,UINT32,0.1W,30018,2,-
+Hold,5,Maximum reactive power (Qmax fed into the grid),RO,UINT32,0.1VAR,30020,2,-
+Hold,6,Maximum reactive power (Qmax absorption grid),RO,UINT32,0.1VAR,30022,2,-
+Hold,7,Maximum apparent power (Smax),RO,UINT32,0.1VA,30024,2,-
+Hold,8,Rated charging and discharging power of BDC,RO,UINT32,0.1W,30026,2,-
+Hold,9,PV input maximum power,RO,UINT32,0.1W,30028,2,-
+Hold,10,Battery type,RO,UINT8,-,30030,1,"0: lead acid battery, 1: lithium battery"
+Hold,11,Reserve,RO,UINT16,-,30031,29,-
+Hold,12,Machine Model,RO,UINT16,ASCII,30060,1,Example: TL
+Hold,13,Machine Model,RO,UINT16,ASCII,30061,1,Example: AA
+Hold,14,Version Num 1,RO,UINT16,Digit,30062,1,-
+Hold,15,Version Num 2,RO,UINT16,Digit,30063,1,-
+Hold,16,Version Num 3,RO,UINT16,Digit,30064,1,-
+Hold,17,M3 Version Name,RO,UINT16,ASCII,30065,1,Example: ZB
+Hold,18,M3 Version Name,RO,UINT16,ASCII,30066,1,Example: AA
+Hold,19,Version Num 1,RO,UINT16,Digit,30067,1,-
+Hold,20,Machine Model,RO,UINT16,ASCII,30068,1,Example: VC
+Hold,21,Machine Model,RO,UINT16,ASCII,30069,1,Example: AA
+Hold,22,Version Num 1,RO,UINT16,Digit,30070,1,-
+Hold,23,DSP2 Software Version Name,RO,UINT16,ASCII,30071,1,Example: VC
+Hold,24,DSP2 Software Version Name,RO,UINT16,ASCII,30072,1,Example: BA
+Hold,25,Version Num 1,RO,UINT16,Digit,30073,1,-
+Hold,26,BCU Software Version Name,RO,UINT16,ASCII,30074,1,Example: QB
+Hold,27,BCU Software Version Name,RO,UINT16,ASCII,30075,1,Example: AA
+Hold,28,Version Num 1,RO,UINT16,Digit,30076,1,-
+Hold,29,M3 Software Version Name,RO,UINT16,ASCII,30077,1,Example: ZE
+Hold,30,M3 Software Version Name,RO,UINT16,ASCII,30078,1,Example: BA
+Hold,31,Version Num 1,RO,UINT16,Digit,30079,1,-
+Hold,32,Machine Model,RO,UINT16,ASCII,30080,1,Example: ZO
+Hold,33,Machine Model,RO,UINT16,ASCII,30081,1,Example: AA
+Hold,34,Version Num 1,RO,UINT16,1,30082,1,-
+Hold,35,Reserved,RO,UINT16,-,30083,1,Reserved
+Hold,36,Reserved,RO,UINT16,-,30084,1,Reserved
+Hold,37,VPP Protocol Version,RO,UINT16,-,30099,15,"200 represents V2.00, 201 represents V2.01"
+Hold,38,Control authority,RW,UINT16,-,30100,1,"0: not enabled, 1: Enable, Default: 0"
+Hold,39,On off command,RW,UINT16,-,30101,1,"0: power off, 1: power on, Default: 1, Not storage"
+Hold,40,Country / region number,RO,UINT16,-,30102,1,See Table 3-5
+Hold,41,Reserve,RW,UINT16,-,30103,1,-
+Hold,42,System time,RW,UINT16,-,30104,6,See table 3-6
+Hold,43,Reserve,RW,UINT32,-,30110,2,-
+Hold,44,Mailing address,RO,UINT16,-,30112,1,"[1, 255], Default: 1"
+Hold,45,Communication baud rate,RO,UINT16,-,30113,1,"0:9600 bps, 1:38400 bps, Default: 0"
+Hold,46,Reserved,RW,UINT16,-,30114,1,-
+Hold,47,SYN enable,RW,UINT16,-,30115,1,"Offline box enable, 0: not enabled, 1: enable, Default: 0"
+Hold,48,Reserve,RW,UINT16,-,30116,34,-
+Hold,49,Reserve,RW,UINT16,-,30150,1,-
+Hold,50,Active power percentage derating,RW,UINT16,%,30151,1,"Power limit percentage: [0,100], Default: 100"
+Hold,51,Reserve,RW,UINT16,-,30152,2,-
+Hold,52,Static active power limitation,RW,UINT16,%,30154,1,"Power limit percent: [0,100], Default: 100, Actual active power is the less one, Not storage"
+Hold,53,EPS offline enable,RW,UINT16,-,30155,1,"0: not enabled, 1: enable, Default: 0"
+Hold,54,EPS offline frequency,RW,UINT16,0.01Hz,30156,1,"0:50Hz, 1:60Hz, Default: 0"
+Hold,55,EPS offline voltage,RW,UINT16,-,30157,1,Default: 0
+Hold,56,Reserve,RW,UINT16,-,30158,2,-
+Hold,57,Fix Q,RW,UINT16,%,30160,1,"Power limit percentage: [0,60], Default: 60"
+Hold,58,Reactive power mode,RW,UINT16,-,30161,1,"0: PF=1, 1: Pf value setting, 4: Lagging reactive power (+), 5: Leading reactive power (-), Default: 0"
+Hold,59,Power factor,RW,UINT16,-,30162,1,"[0,2000] ∪ [18000,20000], Default: 20000, Actual PF = (set value - 10000) * 0.0001"
+Hold,60,Reserve,RW,INT16,%,30163,1,-
+Hold,61,Reserve (reactive power curve),RW,UINT16,-,30164,36,-
+Hold,62,Export Limitation Enable,RW,UINT16,-,30200,1,"0: not enabled, 1: single machine enable, Default: 0"
+Hold,63,Export Limitation power Rate,RW,INT16,%,30201,1,"[-100,100], Default: 0, Positive=backflow, negative=fair current"
+Hold,64,Export Limitation Failure power Rate,RW,UINT16,%,30202,1,"[0,100], Default: 0"
+Hold,65,EMS Communicating Failure Time,RW,UINT16,S,30203,1,"[1,300], Default: 30"
+Hold,66,EMS Communication Failure Enable,RW,UINT16,-,30204,1,"0: not enabled, 1: enable, Default: 0"
+Hold,67,Super Export Limitation enable,RW,UINT16,-,30205,1,"0: not enabled, 1: enable, Default: 0"
+Hold,68,Export Limitation change slope,RW,UINT16,*0.01%Pn/s,30206,1,"[1,20000], Default: 27"
+Hold,69,Export Limitation single phase control enable,RW,UINT16,-,30207,1,"0: not enabled, 1: enable, Default: 0"
+Hold,70,Export Limitation protection mode,RW,UINT16,-,30208,1,"0: Default mode, 1: Combine control, 2: software control, 3: hardware control, Default: 0"
+Hold,71,Reserve,RW,UINT16,-,30209,91,-
+Hold,72,Battery cluster index,RW,UINT16,-,30300,1,"[0,3], Default: 0"
+Hold,73,Reserve,RW,UINT16,-,30301,99,-
+Hold,74,Reserve (Battery max charging power),RW,UINT32,0.1W,30400,2,Not used
+Hold,75,Reserve (Battery max discharging power),RW,UINT32,0.1W,30402,2,Not used
+Hold,76,Charging cut off SOC,RW,UINT8,%,30404,1,"[70,100], Default: 100"
+Hold,77,Online discharge cut off SOC,RW,UINT8,%,30405,1,"[10,30], Default: 10"
+Hold,78,Load priority discharge cut off SOC,RW,UINT8,%,30406,1,"[10,20], Default: 10"
+Hold,79,Remote power control enable,RW,UINT8,-,30407,1,"0: not enabled, 1: Enable, Default: 0, Not storage"
+Hold,80,Remote power control charging time,RW,UINT16,min,30408,1,"0: unlimited, 1~1440min, Default: 0, Not storage"
+Hold,81,Remote charge and discharge power,RW,INT16,-,30409,1,"[-100,100], Positive=charging, Negative=discharge, Default: 0, Not storage"
+Hold,82,AC charging enable,RW,UINT8,-,30410,1,"0: not enabled, 1: Enable, Default: 0"
+Hold,83,Charging and discharging in different periods (20 sections),RW,UINT16,-,30411,61,"See Table 3-2, 30412~30471 default: 0"
+Hold,84,Reserve,RO,UINT16,-,30472,2,-
+Hold,85,Actual control value of charging and discharging power,RO,UINT16,-,30474,1,"[-100,100], Positive=charging, Negative=discharge"
+Hold,86,Offline discharge cut off SOC,RW,UINT16,%,30475,1,"[10,30], Default: 10"
+Hold,87,Reserve,RW,UINT16,-,30476,20,-
+Hold,88,Battery charge stop voltage,RW,UINT16,0.1V,30496,1,"Lead-acid only, [0,15000]"
+Hold,89,Battery discharge stop voltage,RW,UINT16,0.1V,30497,1,"Lead-acid only, [0,15000]"
+Hold,90,Battery max charge current,RW,UINT16,0.1A,30498,1,"Lead-acid only, [0,2000], Default: 1500"
+Hold,91,Battery max discharge current,RW,UINT16,0.1A,30499,1,"Lead-acid only, [0,2000], Default: 1500"
+Hold,92,Safety Information,RW,UINT16,-,30500,500,See GROWATT INVERTER VPP COMMUNICATION PROTOCOL & SAFETY PARAMETERS
+Hold,93,Reserve,RW,UINT16,-,32000,100,-
+Input,1,Working state of energy storage machine,RO,UINT16,1,31000,1,"0:standby,1:self-test,2:reserved,3:fault,4:upgrade,5:PV online&battery offline,6:battery online&PV online(or offline),7:PV&cell online off-grid,8:Battery online PV offline,9:bypass"
+Input,2,Battery working status,RO,UINT16,1,31001,1,"0:standby,1:disconnected,2:charging,3:discharge,4:fault,5:upgrade"
+Input,3,Priority of work,RO,UINT16,1,31002,1,"0:load first,1:Battery first,2:grid first"
+Input,4,Reserve,RO,UINT16,-,31003,2,-
+Input,5,Fault code,RO,UINT16,-,31005,1,See Table 3-3
+Input,6,Fault sub code,RO,UINT16,-,31006,1,See Table 3-3
+Input,7,Alarm code,RO,UINT16,-,31007,1,See Table 3-4
+Input,8,Alarm sub code,RO,UINT16,-,31008,1,See Table 3-4
+Input,9,Reserve,RO,UINT16,-,31009,1,-
+Input,10,PV1 voltage,RO,INT16,0.1V,31010,1,-
+Input,11,PV1 current,RO,INT16,0.1A,31011,1,-
+Input,12,PV2 voltage,RO,INT16,0.1V,31012,1,-
+Input,13,PV2 current,RO,INT16,0.1A,31013,1,-
+Input,14,PV3 voltage,RO,INT32,0.1W,31014,1,-
+Input,15,PV3 current,RO,INT16,0.1A,31015,1,-
+Input,16,PV4 voltage,RO,INT16,0.1V,31016,1,-
+Input,17,PV4 current,RO,INT16,0.1A,31017,1,-
+Input,18,PV5 voltage,RO,INT16,0.1V,31018,1,-
+Input,19,PV5 current,RO,INT16,0.1A,31019,1,-
+Input,20,PV6 voltage,RO,INT16,0.1V,31020,1,-
+Input,21,PV6 current,RO,INT16,0.1A,31021,1,-
+Input,22,PV7 voltage,RO,INT16,0.1V,31022,1,-
+Input,23,PV7 current,RO,INT16,0.1A,31023,1,-
+Input,24,PV8 voltage,RO,INT16,0.1V,31024,1,-
+Input,25,PV8 current,RO,INT16,0.1A,31025,1,-
+Input,26,PV9 voltage,RO,INT16,0.1V,31026,1,-
+Input,27,PV9 current,RO,INT16,0.1A,31027,1,-
+Input,28,PV10 voltage,RO,INT16,0.1V,31028,1,-
+Input,29,PV10 current,RO,INT16,0.1A,31029,1,-
+Input,30,PV11 voltage,RO,INT16,0.1V,31030,1,-
+Input,31,PV11 current,RO,INT16,0.1A,31031,1,-
+Input,32,PV12 voltage,RO,INT16,0.1V,31032,1,-
+Input,33,PV12 current,RO,INT16,0.1A,31033,1,-
+Input,34,PV13 voltage,RO,INT16,0.1V,31034,1,-
+Input,35,PV13 current,RO,INT16,0.1A,31035,1,-
+Input,36,PV14 voltage,RO,INT16,0.1V,31036,1,-
+Input,37,PV14 current,RO,INT16,0.1A,31037,1,-
+Input,38,PV15 voltage,RO,INT16,0.1V,31038,1,-
+Input,39,PV15 current,RO,INT16,0.1A,31039,1,-
+Input,40,PV16 voltage,RO,INT16,0.1V,31040,1,-
+Input,41,PV16 current,RO,INT16,0.1A,31041,1,-
+Input,42,Reserve,RO,INT16,-,31042,16,-
+Input,43,PV input power,RO,INT32,0.1W,31058,2,-
+Input,44,Reserve,RO,UINT32,-,31060,40,-
+Input,45,Active power,RO,INT32,0.1W,31100,2,"Positive:export to grid, Negative:import from grid"
+Input,46,Reactive power,RO,INT32,0.1VA,31102,2,-
+Input,47,Reserve,RO,INT16,-,31104,1,-
+Input,48,Grid frequency,RO,UINT16,0.01Hz,31105,1,-
+Input,49,Grid voltage / line AB voltage,RO,UINT16,0.1V,31106,1,When output mode is L/N
+Input,50,BC line voltage of power grid,RO,UINT16,0.1V,31107,1,-
+Input,51,CA line voltage of power grid,RO,UINT16,0.1V,31108,1,-
+Input,52,Grid current / A phase current of grid,RO,INT16,0.1A,31109,1,-
+Input,53,Phase B current of grid,RO,INT16,0.1A,31110,1,-
+Input,54,Phase C current of grid,RO,INT16,0.1A,31111,1,-
+Input,55,Meter power,RO,INT32,0.1W,31112,2,"Positive:import from grid, Negative:export to grid"
+Input,56,Inverter temperature,RO,INT16,0.1℃,31114,1,"[-400,1250]"
+Input,57,Reserve,RO,INT16,-,31115,1,-
+Input,58,Reserve,RO,INT16,-,31116,1,-
+Input,59,Reserve,RO,INT16,-,31117,1,-
+Input,60,Power to user daily,RO,UINT32,0.1KWH,31118,2,-
+Input,61,Total power to user,RO,UINT32,0.1KWH,31120,2,-
+Input,62,Power to grid daily,RO,UINT32,0.1KWH,31122,2,-
+Input,63,Total power to grid,RO,UINT32,0.1KWH,31124,2,-
+Input,64,Reserved,RO,INT16,-,31126,74,-
+Input,65,Charge/discharge power,RO,INT32,0.1W,31200,2,"Positive:charging, Negative:discharge"
+Input,66,Daily charge of battery,RO,UINT32,0.1KWH,31202,2,-
+Input,67,Cumulative charge of battery,RO,UINT32,0.1KWH,31204,2,-
+Input,68,Daily discharge capacity of battery,RO,UINT32,0.1KWH,31206,2,-
+Input,69,Cumulative discharge of battery,RO,UINT32,0.1KWH,31208,2,-
+Input,70,Maximum allowable charging power of battery,RO,UINT32,0.1W,31210,2,-
+Input,71,Maximum allowable discharge power of battery,RO,UINT32,0.1W,31212,2,-
+Input,72,Battery voltage,RO,INT16,0.1V,31214,1,-
+Input,73,Battery current,RO,INT32,0.1A,31215,2,"Positive:charging, Negative:discharge"
+Input,74,SOC,RO,UINT8,-,31217,1,"[0,100]"
+Input,75,SOH,RO,UINT8,-,31218,1,"[0,100]"
+Input,76,Battery capacity rating (FCC),RO,UINT32,AH,31219,2,-
+Input,77,Reserved,RO,UINT32,AH,31221,2,Reserved for Battery remaining capacity (RM)
+Input,78,Battery environmental temperature,RO,INT16,0.1℃,31223,1,"[-400,1250]"
+Input,79,Reserved,RO,INT16,0.1℃,31224,1,Reserved for Maximum battery temperature
+Input,80,Cluster Sum,RO,UINT16,1,31225,1,-
+Input,81,Single Cluster Module Number,RO,UINT16,1,31226,1,-
+Input,82,Module Rated Voltage,RO,UINT16,0.1V,31227,1,-
+Input,83,Module Rated Cap,RO,UINT16,0.1AH,31228,1,-
+Input,84,Reserve,RO,UINT16,-,31229,71,-
+Input,85,Battery Information 2,RO,-,-,31300,100,Refer to 31200~31299
+Input,86,Battery Information 3,RO,-,-,31400,100,Refer to 31200~31299
+Input,87,Battery Information 4,RO,-,-,31500,100,Refer to 31200~31299
+
+,,,,,,,,
+TABLE 3-1: DTC CODE DESCRIPTION,,,,,,,,
+Model,DTC_Code,,,,,,,
+SPH 3000-6000TL BL,3502,,,,,,,
+SPA 3000-6000TL BL,3735,,,,,,,
+SPA 4000-10000TL3 BH-UP,3725,,,,,,,
+SPH 4000-10000TL3 BH-UP,3601,,,,,,,
+MIN 2500-6000TL-XH/XH(P),5100,,,,,,,
+MIC/MIN 2500-6000TL-X/X2,5200,,,,,,,
+MIN 7000-10000TL-X/X2,5201,,,,,,,
+MOD-XH\MID-XH,5400,,,,,,,
+WIT 100KTL3-H,5601,,,,,,,
+WIS 215KTL3,5800,,,,,,,
+
+,,,,,,,,
+TABLE 3-2: CHARGING/DISCHARGING TIME PERIODS,,,,,,,,
+Description,Data_Type,Unit,Value_Range,,,,
+Number of time periods,UINT8,-,"[0,20] Default: 0",,,,
+Start time of period 1,UINT16,Min,"[0,1440] relative to minutes at 0 o'clock, start < end",,,,
+End time of period 1,UINT16,Min,"[0,1440]",,,,
+Charging/discharging power of period 1,INT16,%,"[-100,100] Positive=charging, Negative=discharge",,,,
+Start time of period 2,UINT16,Min,"[0,1440] relative to minutes at 0 o'clock, start < end",,,,
+End time of period 2,UINT16,Min,"[0,1440]",,,,
+Charging/discharging power of period 2,INT16,%,"[-100,100]",,,,
+... (continues for periods 3-19),,,,,,,
+Start time of period 20,UINT16,Min,"[0,1440] relative to minutes at 0 o'clock, start < end",,,,
+End time of period 20,UINT16,Min,"[0,1440]",,,,
+Charging/discharging power of period 20,INT16,%,"[-100,100]",,,,
+Note: Requires 0x10 function code; 20 time periods must be mutually exclusive,,,,,,,,
+
+,,,,,,,,
+TABLE 3-3: FAULT CODES,,,,,,,,
+Serial_Number,Fault_Code,Auxiliary_Code,Fault_Name,Causes_or_Measures,,,
+(Reference product fault list),,,,,,,,
+
+,,,,,,,,
+TABLE 3-4: ALARM CODES,,,,,,,,
+Serial_Number,Fault_Code,Auxiliary_Code,Fault_Name,Causes_or_Measures,,,
+(Reference product fault list),,,,,,,,
+
+,,,,,,,,
+TABLE 3-5: COUNTRY/REGION NUMBERS,,,,,,,,
+Number,Standard,Applicable_Countries,,,,,,
+0,SA_NULL,-,,,,,,
+1,SA_VDE0126,Germany,,,,,,
+2,SA_G99,Britain,,,,,,
+3,SA_AS4777,Australia,,,,,,
+4,SA_CEI0_21,Italy,,,,,,
+5,SA_SPAIN,Spain,,,,,,
+6,SA_GREECE_CONTINENT,The Greek continent,,,,,,
+7,SA_N4105,Germany,,,,,,
+8,SA_G98,Britain,,,,,,
+9,SA_IRELAND,Ireland,,,,,,
+10,SA_CQC_2013,China,,,,,,
+11,SA_EN50438,Poland/Norway/Turkey/Switzerland,,,,,,
+12,SA_HUNGARY,Hungary,,,,,,
+13,SA_BELGIUM,Belgium,,,,,,
+14,SA_MEA,Thailand,,,,,,
+15,SA_PEA,Thailand,,,,,,
+16,SA_NEWZWALAND,New Zealand,,,,,,
+17,SA_CQC_PLANT,China,,,,,,
+18,SA_INDIA,India,,,,,,
+19,SA_DEMARK_DK1,Denmark,,,,,,
+20,SA_SWEDEN,Sweden,,,,,,
+21,SA_NORWAY,Norway,,,,,,
+22,SA_QUEENSLAND,Queensland,,,,,,
+23,SA_FRANCE,France,,,,,,
+24,SA_KOREA_60HZ,the republic of Korea,,,,,,
+25,SA_BRAZIL,Brazil,,,,,,
+26,SA_CEI0_16,Italy,,,,,,
+27,SA_DEWA,Dubai,,,,,,
+28,SA_CHILE,Chile,,,,,,
+29,SA_ARGENTINA,Argentina,,,,,,
+30,SA_N4110_BDEW,Germany,,,,,,
+31,SA_TAIWAN_VPC,Taiwan,,,,,,
+32,SA_DEMARK_DK2,Denmark,,,,,,
+33,SA_CQC_2018,China,,,,,,
+34,SA_DEMARK_TR3_3_1,Denmark,,,,,,
+35,SA_POLAND,Poland,,,,,,
+36,SA_TAIWAN_TPC,Taiwan Electric Power Bureau,,,,,,
+37,SA_IEEE1547_1,North America,,,,,,
+38,SA_BRAZIL_240V,Brazil,,,,,,
+39,SA_EN50549,Europe,,,,,,
+40,SA_AU_VICTORIA,Victoria,,,,,,
+41,SA_AU_WESTERN,Western Australia 1,,,,,,
+42,SA_AU_HORIZON,Western Australia 2,,,,,,
+43,SA_AU_AUSGRID,New South Wales 1,,,,,,
+44,SA_AU_ENDEAVOUR,New South Wales 2,,,,,,
+45,SA_AU_ERGONENERGY,Queensland 1,,,,,,
+46,SA_AU_ENERGEX,Queensland 2,,,,,,
+47,SA_AU_SANETWORK,Nan ao electric,,,,,,
+48,SA_US_UL1741,North America,,,,,,
+49,SA_US_RULE21,North America,,,,,,
+50,SA_US_RULE14_HECO,North America,,,,,,
+51,SA_NRS097,South Africa,,,,,,
+52,SA_TUNISIA,Tunisia,,,,,,
+53,SA_PRC_EAST,North America,,,,,,
+54,SA_PRC_WEST,North America,,,,,,
+55,SA_PRC_QUEBEC,North America,,,,,,
+56,SA_AUSTRIA,Austria,,,,,,
+57,SA_ESTONIA,Estonia,,,,,,
+58,SA_NI_G98,Northern Ireland,,,,,,
+59,SA_NI_G99,Northern Ireland,,,,,,
+60,SA_INDIA_KERALA,India Kerala,,,,,,
+
+,,,,,,,,
+TABLE 3-6: SYSTEM TIME SETTING,,,,,,,,
+Description,Data_Type,Unit,Value_Range,,,,
+Year,UINT8,-,"[12,99] Default: 12",,,,
+Month,UINT8,-,"[1,12] Default: 1",,,,
+Day,UINT8,-,"[1,31] Default: 1",,,,
+Time,UINT8,-,"[0,24] Default: 0",,,,
+Minute,UINT8,-,"[0,59] Default: 0",,,,
+Second,UINT8,-,"[0,59] Default: 0",,,,
+
+,,,,,,,,
+EPS OFFLINE VOLTAGE VALUES (Register 30157),,,,,,,,
+Type_and_DTC,EPS_Offline_Voltage_Values,,,,,,
+WIT 100KTL3-H (DTC 5601),"0:230V, 1:208V, 2:240V, 3:220V, 4:127V, 5:277V, 6:254V",,,,,,
+MOD-XH\MID-XH (DTC 5400),"0:230V, 1:208V, 2:240V, 3:220V",,,,,,
+Others,Not used,,,,,,

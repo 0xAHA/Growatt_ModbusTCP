@@ -37,7 +37,7 @@ TL_XH_3000_10000 = {
         18: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
         19: {'name': 'battery_power', 'scale': 1, 'unit': 'W', 'signed': True},
         21: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
-        22: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C'},
+        22: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
 
         # AC Output
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
@@ -78,9 +78,9 @@ TL_XH_3000_10000 = {
         80: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 79, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Temperatures
-        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C'},
-        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C'},
-        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C'},
+        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
 
         # Diagnostics
         104: {'name': 'derating_mode', 'scale': 1, 'unit': ''},
@@ -159,9 +159,9 @@ TL_XH_3000_10000_V201 = {
         31123: {'name': 'energy_total_low_vpp', 'scale': 1, 'unit': '', 'pair': 31122, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Temperatures
-        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp'},
-        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp'},
-        31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp'},
+        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp', 'signed': True},
+        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp', 'signed': True},
+        31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp', 'signed': True},
 
         # Battery Cluster 1 State
         31200: {'name': 'battery_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
@@ -171,7 +171,7 @@ TL_XH_3000_10000_V201 = {
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
         31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
-        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp'},
+        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
 
         # Battery Cluster 2 State
         31300: {'name': 'battery2_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31301},
@@ -181,7 +181,7 @@ TL_XH_3000_10000_V201 = {
         31314: {'name': 'battery2_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery 2 voltage (0 if not present)', 'signed': True},
         31315: {'name': 'battery2_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
         31317: {'name': 'battery2_soc', 'scale': 1, 'unit': '%'},
-        31322: {'name': 'battery2_temp', 'scale': 0.1, 'unit': '°C'},
+        31322: {'name': 'battery2_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
     },
     'holding_registers': {
         # === Legacy REGISTERS ===

@@ -100,6 +100,18 @@ def detect_profile_from_model_name(model_name: str) -> Optional[str]:
         'MOD10000': 'mod_6000_15000tl3_xh',
         'MOD12000': 'mod_6000_15000tl3_xh',
         'MOD15000': 'mod_6000_15000tl3_xh',
+
+        # WIT series (three-phase hybrid residential)
+        'WIT4000': 'wit_4000_15000tl3',
+        'WIT5000': 'wit_4000_15000tl3',
+        'WIT6000': 'wit_4000_15000tl3',
+        'WIT8000': 'wit_4000_15000tl3',
+        'WIT10000': 'wit_4000_15000tl3',
+        'WIT12000': 'wit_4000_15000tl3',
+        'WIT15000': 'wit_4000_15000tl3',
+        'WIT4K': 'wit_4000_15000tl3',
+        'WIT8K': 'wit_4000_15000tl3',
+        'WIT15K': 'wit_4000_15000tl3',
     }
     
     # Try to find a match - check longer patterns first to match specific models
@@ -288,9 +300,12 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
         # MOD/MID series - Official Growatt DTC
         5400: 'mod_6000_15000tl3_xh_v201', # MOD-XH\MID-XH - covers both MOD and MID
 
-        # WIT/WIS series - Official Growatt DTCs (fallback to MID profile)
-        5601: 'mid_15000_25000tl3_x_v201', # WIT 100KTL3-H
-        5800: 'mid_15000_25000tl3_x_v201', # WIS 215KTL3
+        # WIT/WIS series - Official Growatt DTCs
+        # NOTE: DTC 5601/5800 are for commercial units (100kW+), currently map to MID
+        # For residential WIT 4-15kW: DTC unknown (manual selection required)
+        # Register 988 can distinguish: 0=WIT, 1=WIS (future enhancement)
+        5601: 'mid_15000_25000tl3_x_v201', # WIT 100KTL3-H (commercial)
+        5800: 'mid_15000_25000tl3_x_v201', # WIS 215KTL3 (commercial)
     }
 
     profile_key = dtc_map.get(dtc_code)
@@ -362,14 +377,14 @@ async def async_detect_inverter_series(
             )
             
             if phase_s_test and phase_t_test:
-                _LOGGER.debug("Detected 3-phase hybrid - SPH TL3 or MOD series")
+                _LOGGER.debug("Detected 3-phase with battery register - SPH TL3 or MOD series")
 
                 # Check for MOD-specific 31200 range (battery power per VPP Protocol V2.01)
                 mod_test = await hass.async_add_executor_job(
                     client.read_input_registers, 31200, 1
                 )
                 if mod_test is not None:
-                    _LOGGER.debug("Detected 31200 range (VPP Protocol) - MOD series")
+                    _LOGGER.debug("Detected 31200 range (VPP Protocol) - MOD-XH hybrid")
                     await hass.async_add_executor_job(client.disconnect)
                     return 'mod_6000_15000tl3_xh'
 
@@ -382,7 +397,7 @@ async def async_detect_inverter_series(
                     await hass.async_add_executor_job(client.disconnect)
                     return 'sph_tl3_3000_10000'
                 else:
-                    _LOGGER.info("No distinctive registers found - defaulting to MOD series")
+                    _LOGGER.info("No distinctive registers found - defaulting to MOD-XH hybrid")
                     await hass.async_add_executor_job(client.disconnect)
                     return 'mod_6000_15000tl3_xh'
             else:
@@ -390,7 +405,7 @@ async def async_detect_inverter_series(
                 await hass.async_add_executor_job(client.disconnect)
                 return 'sph_7000_10000'  # Default to SPH 7-10k
         
-        # Test for 3-phase at register 38 (MID/MAC/MAX)
+        # Test for 3-phase at register 38 (MID/MAX/MOD-X grid-tied)
         result = await hass.async_add_executor_job(
             client.read_input_registers, 38, 1
         )
@@ -400,9 +415,20 @@ async def async_detect_inverter_series(
                 client.read_input_registers, 42, 1
             )
             if phase2:
-                _LOGGER.debug("Detected 3-phase grid-tied inverter - MID/MAX series")
-                await hass.async_add_executor_job(client.disconnect)
-                return 'mid_15000_25000tl3_x'  # Default to MID
+                _LOGGER.debug("Detected 3-phase grid-tied inverter")
+
+                # Check for 3000 range (MOD-X uses 3000 range, MID uses 0-124)
+                mod_range_test = await hass.async_add_executor_job(
+                    client.read_input_registers, 3003, 1
+                )
+                if mod_range_test is not None:
+                    _LOGGER.debug("Detected 3000 range - MOD-X grid-tied (no battery)")
+                    await hass.async_add_executor_job(client.disconnect)
+                    return 'mod_6000_15000tl3_x'
+                else:
+                    _LOGGER.debug("No 3000 range - MID series")
+                    await hass.async_add_executor_job(client.disconnect)
+                    return 'mid_15000_25000tl3_x'
         
         # Default fallback
         _LOGGER.warning("Could not definitively detect inverter series, defaulting to MIN 3000-6000TL-X")
@@ -467,25 +493,34 @@ async def async_refine_dtc_detection(
                 _LOGGER.info("No PV3 string (2PV) - SPH 3-6kW")
                 return 'sph_3000_6000_v201'
 
-        # DTC 5400: MOD vs MID - Check V2.01 battery registers (MOD has battery, MID doesn't)
+        # DTC 5400: MOD-XH (hybrid) vs MOD-X (grid-tied) vs MID
+        # Check V2.01 battery registers (MOD-XH has battery, MOD-X/MID don't)
         elif dtc_code == 5400:
             # Try V2.01 battery SOC register (31217)
             result = await hass.async_add_executor_job(
                 client.read_input_registers, 31217, 1  # V2.01 Battery SOC
             )
-            if result is not None and len(result) > 0:
-                _LOGGER.info("Detected V2.01 battery SOC register (31217) - MOD series")
+            if result is not None and len(result) > 0 and result[0] > 0:
+                _LOGGER.info("Detected V2.01 battery SOC register (31217) with valid value - MOD-XH hybrid")
                 return 'mod_6000_15000tl3_xh_v201'
 
             # Fallback to legacy battery register (3169)
             result = await hass.async_add_executor_job(
                 client.read_input_registers, 3169, 1  # Legacy battery voltage
             )
-            if result is not None and len(result) > 0:
-                _LOGGER.info("Detected legacy battery voltage register (3169) - MOD series")
+            if result is not None and len(result) > 0 and result[0] > 0:
+                _LOGGER.info("Detected legacy battery voltage register (3169) with valid value - MOD-XH hybrid")
                 return 'mod_6000_15000tl3_xh_v201'
+
+            # Check for 3000+ range to distinguish MOD (grid-tied) from MID
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 3003, 1  # MOD uses 3000 range, MID uses 0-124
+            )
+            if result is not None:
+                _LOGGER.info("No battery but 3000+ range detected - MOD-X grid-tied")
+                return 'mod_6000_15000tl3_x'  # Grid-tied MOD without V2.01 suffix (uses legacy registers)
             else:
-                _LOGGER.info("No battery registers - MID series")
+                _LOGGER.info("No battery, no 3000+ range - MID series")
                 return 'mid_15000_25000tl3_x_v201'
 
         # DTC 5200: MIC vs MIN - Check register range (MIC uses 0-179, MIN uses 3000+)

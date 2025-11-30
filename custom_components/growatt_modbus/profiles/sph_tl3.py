@@ -56,10 +56,10 @@ SPH_TL3_3000_10000 = {
         54: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'desc': 'Today energy LOW', 'pair': 53, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         55: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'desc': 'Total energy HIGH', 'pair': 56},
         56: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'desc': 'Total energy LOW', 'pair': 55, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        
+
         # Temperatures
-        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C'},
-        
+        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+
         # Status
         105: {'name': 'fault_code', 'scale': 1, 'unit': ''},
         112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
@@ -80,7 +80,7 @@ SPH_TL3_3000_10000 = {
         # Battery State
         1013: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V'},
         1014: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
-        1040: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C'},
+        1040: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
         1041: {'name': 'battery_type', 'scale': 1, 'unit': ''},
         
         # Power Flow
@@ -175,7 +175,7 @@ SPH_TL3_3000_10000_V201 = {
         31123: {'name': 'energy_total_low_vpp', 'scale': 1, 'unit': '', 'pair': 31122, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Temperatures
-        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp'},
+        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp', 'signed': True},
 
         # Battery Cluster 1 State (31200-31223)
         31200: {'name': 'battery_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31201, 'maps_to': 'discharge_power'},
@@ -184,7 +184,7 @@ SPH_TL3_3000_10000_V201 = {
         31203: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W'},
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
-        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp'},
+        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
 
         # Battery Cluster 2 State (31300-31323)
         31300: {'name': 'battery2_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31301},
@@ -194,7 +194,7 @@ SPH_TL3_3000_10000_V201 = {
         31314: {'name': 'battery2_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery 2 voltage (0 if not present)', 'signed': True},
         31315: {'name': 'battery2_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
         31317: {'name': 'battery2_soc', 'scale': 1, 'unit': '%'},
-        31322: {'name': 'battery2_temp', 'scale': 0.1, 'unit': '°C'},
+        31322: {'name': 'battery2_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
     },
     'holding_registers': {
         # === Legacy REGISTERS ===

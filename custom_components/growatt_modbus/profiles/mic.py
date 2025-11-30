@@ -45,9 +45,9 @@ MIC_600_3300TL_X = {
         31: {'name': 'time_total_low', 'scale': 1, 'unit': '', 'pair': 30, 'combined_scale': 0.5, 'combined_unit': 'h'},
         
         # Temperatures
-        32: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C'},
-        41: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Internal power module temperature'},
-        
+        32: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        41: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Internal power module temperature', 'signed': True},
+
         # Diagnostics
         40: {'name': 'fault_code', 'scale': 1, 'unit': ''},
         64: {'name': 'warning_code', 'scale': 1, 'unit': ''},
@@ -122,8 +122,8 @@ MIC_600_3300TL_X_V201 = {
         31123: {'name': 'energy_total_low_vpp', 'scale': 1, 'unit': '', 'pair': 31122, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Temperatures
-        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp'},
-        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp'},
+        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp', 'signed': True},
+        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp', 'signed': True},
     },
     'holding_registers': {
         # === V3.05 REGISTERS ===
