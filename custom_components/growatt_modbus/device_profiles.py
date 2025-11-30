@@ -572,11 +572,16 @@ INVERTER_PROFILES = {
         "has_pv3": False,  # Standard 2 PV strings
         "has_battery": True,
         "max_power_kw": 15.0,
-        "protocol_version": "legacy",
+        "protocol_version": "v2.02",
         "sensors": (
             BASIC_PV_SENSORS |
+            BASIC_AC_SENSORS |
             THREE_PHASE_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS

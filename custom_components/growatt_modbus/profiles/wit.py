@@ -7,7 +7,7 @@ Based on legacy Growatt Modbus Protocol
 WIT_4000_15000TL3 = {
     'name': 'WIT 4-15kW Hybrid',
     'description': 'Three-phase hybrid inverter with battery storage and UPS/EPS backup (4-15kW)',
-    'notes': 'Uses 0-124, 125-249, 875-999 register ranges. Compatible with 48V LiFePo4 batteries (ARK/AXE 5.1-30.6kWh). Features: UPS 10ms switching, time-of-use programming, VPP/demand management.',
+    'notes': 'Uses 0-124, 125-249, 875-999, 8000-8124 and VPP (31000-31399) register ranges. Battery data mapped to 8000-8124 range; battery temperature seen at 31223 (VPP block). Features: UPS 10ms switching, time-of-use programming, VPP/demand management.',
     'input_registers': {
         # ============================================================================
         # BASE RANGE 0-124: PV, AC, and System Status (same as SPH-TL3)
@@ -32,12 +32,16 @@ WIT_4000_15000TL3 = {
         9: {'name': 'pv2_power_high', 'scale': 1, 'unit': '', 'pair': 10},
         10: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
+        # Output Power
+        35: {'name': 'ac_power_high', 'alias': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36},
+        36: {'name': 'ac_power_low', 'alias': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
         # AC Grid Frequency
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
 
         # Three-Phase AC Output - Phase R
-        38: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R voltage'},
-        39: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R current'},
+        38: {'name': 'ac_voltage_r', 'alias': 'ac_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R voltage'},
+        39: {'name': 'ac_current_r', 'alias': 'ac_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R current'},
         40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41},
         41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
@@ -53,6 +57,11 @@ WIT_4000_15000TL3 = {
         48: {'name': 'ac_power_t_high', 'scale': 1, 'unit': '', 'pair': 49},
         49: {'name': 'ac_power_t_low', 'scale': 1, 'unit': '', 'pair': 48, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
+        # Line-to-Line Voltages
+        50: {'name': 'line_voltage_rs', 'scale': 0.1, 'unit': 'V', 'desc': 'Line voltage R-S'},
+        51: {'name': 'line_voltage_st', 'scale': 0.1, 'unit': 'V', 'desc': 'Line voltage S-T'},
+        52: {'name': 'line_voltage_tr', 'scale': 0.1, 'unit': 'V', 'desc': 'Line voltage T-R'},
+
         # Energy
         53: {'name': 'energy_today_high', 'scale': 1, 'unit': '', 'pair': 54},
         54: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'pair': 53, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
@@ -61,8 +70,12 @@ WIT_4000_15000TL3 = {
 
         # Temperatures
         93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
 
         # Status
+        100: {'name': 'power_factor', 'scale': 1, 'unit': ''},
+        104: {'name': 'derating_mode', 'scale': 1, 'unit': ''},
         105: {'name': 'fault_code', 'scale': 1, 'unit': ''},
         112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
 
@@ -98,6 +111,49 @@ WIT_4000_15000TL3 = {
         185: {'name': 'battery_pack_count', 'scale': 1, 'unit': '', 'desc': 'Total battery modules connected'},
         187: {'name': 'vpp_function_status', 'scale': 1, 'unit': '', 'desc': '0=Disabled, 1=Enabled'},
         188: {'name': 'datalog_server_status', 'scale': 1, 'unit': '', 'desc': '0=Connected, 1=Failed'},
+
+        # Battery Range (8000-8124)
+        8034: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V'},
+        8035: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
+        8093: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
+        8094: {'name': 'battery_soh', 'scale': 1, 'unit': '%'},
+
+        # Battery temperature (VPP block observed on WIT)
+        31223: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+
+        # Power flow / consumption (8045-8086)
+        8045: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 8046},
+        8046: {'name': 'self_consumption_power_low', 'scale': 1, 'unit': '', 'pair': 8045, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        8063: {'name': 'self_output_energy_today_high', 'scale': 1, 'unit': '', 'pair': 8064},
+        8064: {'name': 'self_output_energy_today_low', 'scale': 1, 'unit': '', 'pair': 8063, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        8065: {'name': 'self_output_energy_total_high', 'scale': 1, 'unit': '', 'pair': 8066},
+        8066: {'name': 'self_output_energy_total_low', 'scale': 1, 'unit': '', 'pair': 8065, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        8067: {'name': 'energy_to_user_today_high', 'scale': 1, 'unit': '', 'pair': 8068},
+        8068: {'name': 'energy_to_user_today_low', 'scale': 1, 'unit': '', 'pair': 8067, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        8069: {'name': 'energy_to_user_total_high', 'scale': 1, 'unit': '', 'pair': 8070},
+        8070: {'name': 'energy_to_user_total_low', 'scale': 1, 'unit': '', 'pair': 8069, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        8071: {'name': 'energy_to_grid_today_high', 'scale': 1, 'unit': '', 'pair': 8072},
+        8072: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 8071, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        8073: {'name': 'energy_to_grid_total_high', 'scale': 1, 'unit': '', 'pair': 8074},
+        8074: {'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 8073, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        8077: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 8078},
+        8078: {'name': 'load_energy_today_low', 'scale': 1, 'unit': '', 'pair': 8077, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        8079: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 8080},
+        8080: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 8079, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        8081: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 8082},
+        8082: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 8081, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        8083: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 8084},
+        8084: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 8083, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        8085: {'name': 'system_output_power_high', 'scale': 1, 'unit': '', 'pair': 8086},
+        8086: {'name': 'system_output_power_low', 'scale': 1, 'unit': '', 'pair': 8085, 'combined_scale': 0.1, 'combined_unit': 'W'},
     },
     'holding_registers': {
         # ============================================================================
@@ -105,6 +161,7 @@ WIT_4000_15000TL3 = {
         # ============================================================================
 
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
+        3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW'},
 
         # ============================================================================
         # EXTENDED RANGE 125-249: Advanced Grid Control
@@ -161,6 +218,12 @@ WIT_4000_15000TL3 = {
         # Debug Settings (230-249)
         230: {'name': 'island_disable', 'scale': 1, 'unit': '', 'access': 'W', 'desc': '0=Enable, 1=Disable'},
         236: {'name': 'nonstd_vac_enable', 'scale': 1, 'unit': '', 'access': 'W', 'desc': '0=Disable, 1=Grade1, 2=Grade2'},
+
+		# Grid Phase Sequence
+        871: {'name': 'grid_phase_sequence', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Positive, 1=Reverse'},
+		
+		# Parallel Enable
+        874: {'name': 'parallel_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
 
         # ============================================================================
         # BUSINESS STORAGE RANGE 875-999: Advanced Battery/Storage Features
