@@ -572,12 +572,17 @@ INVERTER_PROFILES = {
         "has_pv3": False,  # Standard 2 PV strings
         "has_battery": True,
         "max_power_kw": 15.0,
-        "protocol_version": "v202",  # VPP Protocol V2.02 (register 30099 = 202)
+        "protocol_version": "v2.02",  # VPP Protocol V2.02 (register 30099 = 202)
         "dtc_code": 5603,  # Device Type Code from register 30000
         "sensors": (
             BASIC_PV_SENSORS |
+            BASIC_AC_SENSORS |
             THREE_PHASE_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS

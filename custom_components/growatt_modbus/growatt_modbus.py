@@ -449,6 +449,8 @@ class GrowattModbus:
         has_base_range = any(0 <= addr < 1000 for addr in addresses)
         has_storage_range = any(1000 <= addr < 2000 for addr in addresses)
         has_3000_range = any(3000 <= addr < 4000 for addr in addresses)
+        has_875_range = any(875 <= addr < 1000 for addr in addresses)
+        has_8000_range = any(8000 <= addr < 8200 for addr in addresses)
         has_31000_range = any(31000 <= addr < 32000 for addr in addresses)
         
         # Read base range (0-124) if needed - SPH models
@@ -462,6 +464,31 @@ class GrowattModbus:
             # Populate cache
             for i, value in enumerate(registers):
                 self._register_cache[i] = value
+
+        # Read business storage range (875-999) if needed - WIT/WIS models
+        if has_875_range:
+            addrs_875 = sorted([addr for addr in addresses if 875 <= addr < 1000])
+            min_addr_875 = min(addrs_875)
+            max_addr_875 = max(addrs_875)
+            count_875 = (max_addr_875 - min_addr_875) + 1
+
+            logger.debug(f"Reading 875 range ({min_addr_875}-{max_addr_875}, {count_875} registers)")
+            if count_875 > 125:
+                for chunk_start in range(min_addr_875, max_addr_875 + 1, 125):
+                    chunk_count = min(125, max_addr_875 - chunk_start + 1)
+                    registers = self.read_input_registers(chunk_start, chunk_count)
+                    if registers is None:
+                        logger.warning(f"Failed to read 875 block ({chunk_start}-{chunk_start+chunk_count-1})")
+                    else:
+                        for i, value in enumerate(registers):
+                            self._register_cache[chunk_start + i] = value
+            else:
+                registers = self.read_input_registers(min_addr_875, count_875)
+                if registers is None:
+                    logger.warning("Failed to read business storage register block (875-999)")
+                else:
+                    for i, value in enumerate(registers):
+                        self._register_cache[min_addr_875 + i] = value
         
         # Read storage range (1000-1124) if needed - SPH/hybrid models with battery
         if has_storage_range:
@@ -537,6 +564,31 @@ class GrowattModbus:
                 # Populate cache
                 for i, value in enumerate(registers):
                     self._register_cache[3000 + i] = value
+
+        # Read 8000 range if needed - WIT/WIS battery/storage data
+        if has_8000_range:
+            addrs_8000 = sorted([addr for addr in addresses if 8000 <= addr < 8200])
+            min_addr_8000 = min(addrs_8000)
+            max_addr_8000 = max(addrs_8000)
+            count_8000 = (max_addr_8000 - min_addr_8000) + 1
+
+            logger.debug(f"Reading 8000 range ({min_addr_8000}-{max_addr_8000}, {count_8000} registers)")
+            if count_8000 > 125:
+                for chunk_start in range(min_addr_8000, max_addr_8000 + 1, 125):
+                    chunk_count = min(125, max_addr_8000 - chunk_start + 1)
+                    registers = self.read_input_registers(chunk_start, chunk_count)
+                    if registers is None:
+                        logger.warning(f"Failed to read 8000 block ({chunk_start}-{chunk_start+chunk_count-1})")
+                    else:
+                        for i, value in enumerate(registers):
+                            self._register_cache[chunk_start + i] = value
+            else:
+                registers = self.read_input_registers(min_addr_8000, count_8000)
+                if registers is None:
+                    logger.warning("Failed to read 8000 register block")
+                else:
+                    for i, value in enumerate(registers):
+                        self._register_cache[min_addr_8000 + i] = value
 
         # Read 31000 range if needed - MOD extended battery/BMS range
         if has_31000_range:
@@ -879,6 +931,9 @@ class GrowattModbus:
             # Battery current (signed: positive=discharge, negative=charge)
             # Try VPP protocol first (31216 - low register of 32-bit pair)
             addr = self._find_register_by_name('battery_current_low')
+            if not addr:
+                # Fallback to single-register name (used by legacy/WIT maps)
+                addr = self._find_register_by_name('battery_current')
             if not addr:
                 # Fallback to legacy register (3170)
                 addr = self._find_register_by_name('battery_current_legacy')
