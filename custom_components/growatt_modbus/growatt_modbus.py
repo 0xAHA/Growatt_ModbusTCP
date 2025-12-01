@@ -798,36 +798,75 @@ class GrowattModbus:
     def write_register(self, register: int, value: int) -> bool:
         """
         Write a single holding register.
-        
+
         Args:
             register: Register address (relative to base address 0)
             value: Value to write (already scaled as integer)
-        
+
         Returns:
             bool: True if write successful, False otherwise
         """
         try:
-            # Check if client exists and is connected
-            if not self.client or not hasattr(self.client, 'is_socket_open') or not self.client.is_socket_open():
-                logger.error("Cannot write register - not connected")
+            logger.debug(f"[WRITE] Request to write register {register} with value {value}")
+
+            if not self.client:
+                logger.error("[WRITE] Cannot write register - client not initialized")
                 return False
-            
-            # Write to holding register (function code 6)
+
+            # ---- Connection / socket check and reconnection ----------------------
+            # Check if socket is open, attempt reconnect if not
+            socket_is_open = False
+
+            if hasattr(self.client, 'is_socket_open'):
+                try:
+                    socket_is_open = self.client.is_socket_open()
+                    logger.debug(f"[WRITE] is_socket_open() returned: {socket_is_open}")
+
+                    if not socket_is_open:
+                        logger.warning("[WRITE] Socket not open, attempting reconnect...")
+                        if not self.connect():
+                            logger.error("[WRITE] Reconnect failed - not connected")
+                            return False
+                        logger.info("[WRITE] Reconnect successful, proceeding with write")
+                        socket_is_open = True
+
+                except Exception as e:
+                    logger.warning(f"[WRITE] is_socket_open() threw exception: {e}")
+                    logger.warning("[WRITE] Attempting reconnect due to error...")
+                    if not self.connect():
+                        logger.error("[WRITE] Reconnect failed after exception")
+                        return False
+                    logger.info("[WRITE] Reconnect successful after exception")
+                    socket_is_open = True
+            else:
+                # Client doesn't support is_socket_open(), try to reconnect to be safe
+                logger.debug("[WRITE] Client has no is_socket_open(), attempting reconnect...")
+                if not self.connect():
+                    logger.error("[WRITE] Reconnect failed - cannot determine socket state")
+                    return False
+                logger.info("[WRITE] Reconnect successful (no is_socket_open available)")
+                socket_is_open = True
+            # -----------------------------------------------------------------------
+
+            # ---- Perform actual write ---------------------------------------------
+            logger.debug(f"[WRITE] Sending write_register({register}, {value}) to inverter")
+
             result = self.client.write_register(
                 address=register,
                 value=value,
                 device_id=self.slave_id
             )
-            
+
             if result.isError():
-                logger.error(f"Failed to write register {register}: {result}")
+                logger.error(f"[WRITE] Inverter responded with error: {result}")
                 return False
-            
-            logger.info(f"Successfully wrote value {value} to register {register}")
+
+            logger.info(f"[WRITE] Successfully wrote value {value} → register {register}")
             return True
-            
+            # -----------------------------------------------------------------------
+
         except Exception as e:
-            logger.error(f"Exception writing register {register}: {e}")
+            logger.error(f"[WRITE] Exception writing register {register}: {e}")
             return False
 
 

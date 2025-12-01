@@ -163,6 +163,10 @@ WIT_4000_15000TL3 = {
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW'},
 
+        # Device identification
+        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 5603 for WIT 4-15kW', 'default': 5603},
+        30099: {'name': 'protocol_version', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'VPP Protocol version (202 = V2.02)', 'default': 202},
+
         # ============================================================================
         # EXTENDED RANGE 125-249: Advanced Grid Control
         # ============================================================================
