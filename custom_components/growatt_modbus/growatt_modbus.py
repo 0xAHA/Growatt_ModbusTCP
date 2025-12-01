@@ -72,11 +72,27 @@ class GrowattData:
     pv3_power: float = 0.0            # W
     pv_total_power: float = 0.0       # W
     
-    # AC Output
+    # AC Output (generic - usually Phase R for 3-phase)
     ac_voltage: float = 0.0           # V
     ac_current: float = 0.0           # A
     ac_power: float = 0.0             # W
     ac_frequency: float = 0.0         # Hz
+
+    # Three-Phase AC Output (individual phases)
+    ac_voltage_r: float = 0.0         # V (Phase R/L1)
+    ac_current_r: float = 0.0         # A (Phase R/L1)
+    ac_power_r: float = 0.0           # W (Phase R/L1)
+    ac_voltage_s: float = 0.0         # V (Phase S/L2)
+    ac_current_s: float = 0.0         # A (Phase S/L2)
+    ac_power_s: float = 0.0           # W (Phase S/L2)
+    ac_voltage_t: float = 0.0         # V (Phase T/L3)
+    ac_current_t: float = 0.0         # A (Phase T/L3)
+    ac_power_t: float = 0.0           # W (Phase T/L3)
+
+    # Line-to-Line Voltages (3-phase only)
+    ac_voltage_rs: float = 0.0        # V
+    ac_voltage_st: float = 0.0        # V
+    ac_voltage_tr: float = 0.0        # V
     
     # Power Flow (storage/hybrid models)
     power_to_user: float = 0.0        # W
@@ -115,7 +131,11 @@ class GrowattData:
     derating_mode: int = 0
     fault_code: int = 0
     warning_code: int = 0
-    
+
+    # Export Control (writable registers)
+    export_limit_mode: int = 0        # 0=Disabled, 1=RS485, 2=RS232, 3=CT
+    export_limit_power: int = 0       # 0-1000 (0-100.0%)
+
     # Device Info
     firmware_version: str = ""
     serial_number: str = ""
@@ -145,14 +165,26 @@ class GrowattModbus:
         self.last_read_time = 0
         self.min_read_interval = 1.0  # 1 second minimum between reads
         self._timeout = timeout
-        
+
+        # Store connection details for logging
+        self.host = host
+        self.port = port
+        self.device = device
+
         # Load register map
         if register_map not in REGISTER_MAPS:
             raise ValueError(f"Unknown register map: {register_map}. Available: {list(REGISTER_MAPS.keys())}")
-        
+
         self.register_map = REGISTER_MAPS[register_map]
         self.register_map_name = register_map
-        logger.info(f"Using register map: {self.register_map['name']}")
+
+        # Build connection identifier for logs
+        if connection_type == 'tcp':
+            self.connection_id = f"{host}:{port}"
+        else:
+            self.connection_id = f"{device}"
+
+        logger.info(f"Initializing {self.register_map['name']} profile for {self.connection_id}")
         
         # Cache for raw register data
         self._register_cache = {}
@@ -209,19 +241,19 @@ class GrowattModbus:
         try:
             result = self.client.connect()
             if result:
-                logger.info("Successfully connected to Growatt inverter")
+                logger.info(f"[{self.register_map['name']}@{self.connection_id}] Successfully connected")
             else:
-                logger.error("Failed to connect to Growatt inverter")
+                logger.error(f"[{self.register_map['name']}@{self.connection_id}] Failed to connect")
             return result
         except Exception as e:
-            logger.error(f"Connection error: {e}")
+            logger.error(f"[{self.register_map['name']}@{self.connection_id}] Connection error: {e}")
             return False
     
     def disconnect(self):
         """Close connection"""
         if self.client:
             self.client.close()
-            logger.info("Disconnected from Growatt inverter")
+            logger.info(f"[{self.register_map['name']}@{self.connection_id}] Disconnected")
     
     def _enforce_read_interval(self):
         """Ensure minimum time between reads per Growatt spec"""
@@ -272,17 +304,18 @@ class GrowattModbus:
             # Handle different pymodbus versions for error checking
             if hasattr(response, 'isError'):
                 if response.isError():
-                    logger.debug(f"Modbus error reading input registers {start_address}-{start_address+count-1}")
+                    logger.warning(f"Modbus error reading input registers {start_address}-{start_address+count-1}: {response}")
                     return None
             elif hasattr(response, 'is_error') and callable(response.is_error):
                 if response.is_error():
-                    logger.debug(f"Modbus error reading input registers {start_address}-{start_address+count-1}")
+                    logger.warning(f"Modbus error reading input registers {start_address}-{start_address+count-1}: {response}")
                     return None
-            
+
             if hasattr(response, 'registers'):
+                logger.debug(f"Successfully read {len(response.registers)} registers from {start_address}")
                 return response.registers
-            
-            logger.debug(f"Unknown response type: {type(response)}")
+
+            logger.warning(f"Unknown response type: {type(response)}, response: {response}")
             return None
             
         except Exception as e:
@@ -290,50 +323,19 @@ class GrowattModbus:
             return None
     
     def read_holding_registers(self, start_address: int, count: int) -> Optional[list]:
-        """Read holding registers with error handling"""
+        """Read holding registers with error handling (no unit/slave, no positional count)."""
         self._enforce_read_interval()
-        
         try:
-            # Try keyword arguments (pymodbus 3.x+)
-            try:
-                response = self.client.read_holding_registers(
-                    address=start_address, 
-                    count=count, 
-                    slave=self.slave_id
-                )
-            except TypeError:
-                # Try with 'unit' parameter (pymodbus 2.5.x)
-                try:
-                    response = self.client.read_holding_registers(
-                        start_address, 
-                        count, 
-                        unit=self.slave_id
-                    )
-                except TypeError:
-                    # Simplest - just address and count (some versions handle slave differently)
-                    response = self.client.read_holding_registers(
-                        start_address, 
-                        count
-                    )
-            
-            # Handle different pymodbus versions for error checking
-            if hasattr(response, 'isError'):
-                if response.isError():
-                    logger.debug(f"Modbus error reading holding registers {start_address}-{start_address+count-1}")
-                    return None
-            elif hasattr(response, 'is_error') and callable(response.is_error):
-                if response.is_error():
-                    logger.debug(f"Modbus error reading holding registers {start_address}-{start_address+count-1}")
-                    return None
-            
-            if hasattr(response, 'registers'):
+            response = self.client.read_holding_registers(address=start_address, count=count)
+            if hasattr(response, "isError") and callable(response.isError) and response.isError():
+                logger.debug("Modbus error reading holding registers %d-%d: %r", start_address, start_address + count - 1, response)
+                return None
+            if hasattr(response, "registers"):
                 return response.registers
-            
-            logger.debug(f"Unknown response type: {type(response)}")
+            logger.debug("Unexpected response type from read_holding_registers(%d, %d): %r", start_address, count, response)
             return None
-            
         except Exception as e:
-            logger.debug(f"Exception reading holding registers: {e}")
+            logger.debug("Exception reading holding registers %d-%d: %s", start_address, start_address + count - 1, e)
             return None
 
     def _get_register_value(self, address: int) -> Optional[float]:
@@ -384,6 +386,12 @@ class GrowattModbus:
         else:
             # Single register, apply its scale
             scale = reg_info.get('scale', 1)
+
+            # Handle signed 16-bit values if specified
+            if reg_info.get('signed'):
+                if raw_value > 0x7FFF:  # If sign bit is set in 16-bit value
+                    raw_value = raw_value - 0x10000  # Convert to negative
+
             return raw_value * scale
 
     def read_all_data(self) -> Optional[GrowattData]:
@@ -410,6 +418,9 @@ class GrowattModbus:
         has_base_range = any(0 <= addr < 1000 for addr in addresses)
         has_storage_range = any(1000 <= addr < 2000 for addr in addresses)
         has_3000_range = any(3000 <= addr < 4000 for addr in addresses)
+        has_875_range = any(875 <= addr < 1000 for addr in addresses)
+        has_8000_range = any(8000 <= addr < 8200 for addr in addresses)
+        has_31000_range = any(31000 <= addr < 32000 for addr in addresses)
         
         # Read base range (0-124) if needed - SPH models
         if has_base_range:
@@ -422,6 +433,31 @@ class GrowattModbus:
             # Populate cache
             for i, value in enumerate(registers):
                 self._register_cache[i] = value
+
+        # Read business storage range (875-999) if needed - WIT/WIS models
+        if has_875_range:
+            addrs_875 = sorted([addr for addr in addresses if 875 <= addr < 1000])
+            min_addr_875 = min(addrs_875)
+            max_addr_875 = max(addrs_875)
+            count_875 = (max_addr_875 - min_addr_875) + 1
+
+            logger.debug(f"Reading 875 range ({min_addr_875}-{max_addr_875}, {count_875} registers)")
+            if count_875 > 125:
+                for chunk_start in range(min_addr_875, max_addr_875 + 1, 125):
+                    chunk_count = min(125, max_addr_875 - chunk_start + 1)
+                    registers = self.read_input_registers(chunk_start, chunk_count)
+                    if registers is None:
+                        logger.warning(f"Failed to read 875 block ({chunk_start}-{chunk_start+chunk_count-1})")
+                    else:
+                        for i, value in enumerate(registers):
+                            self._register_cache[chunk_start + i] = value
+            else:
+                registers = self.read_input_registers(min_addr_875, count_875)
+                if registers is None:
+                    logger.warning("Failed to read business storage register block (875-999)")
+                else:
+                    for i, value in enumerate(registers):
+                        self._register_cache[min_addr_875 + i] = value
         
         # Read storage range (1000-1124) if needed - SPH/hybrid models with battery
         if has_storage_range:
@@ -435,18 +471,126 @@ class GrowattModbus:
                 for i, value in enumerate(registers):
                     self._register_cache[1000 + i] = value
         
-        # Read 3000 range if needed - MIN models
+        # Read 3000 range if needed - MIN/MOD models
         if has_3000_range:
-            logger.debug("Reading 3000 range (3000-3110)")
-            registers = self.read_input_registers(3000, 111)
-            if registers is None:
-                logger.error("Failed to read main input register block")
-                return None
-            
-            # Populate cache
-            for i, value in enumerate(registers):
-                self._register_cache[3000 + i] = value
-        
+            addrs_3000 = sorted([addr for addr in addresses if 3000 <= addr < 4000])
+            max_3000_addr = max(addrs_3000)
+            count_3000 = (max_3000_addr - 3000) + 1
+
+            # Check if we need to split the read (max 125 registers per read)
+            if count_3000 > 125:
+                # Split into contiguous blocks
+                logger.debug(f"Splitting 3000 range into blocks (total range: 3000-{max_3000_addr}, {count_3000} registers)")
+
+                blocks = []
+                current_block = [addrs_3000[0]]
+                for addr in addrs_3000[1:]:
+                    if addr - current_block[-1] <= 10:  # Group if gap is small
+                        current_block.append(addr)
+                    else:
+                        blocks.append(current_block)
+                        current_block = [addr]
+                blocks.append(current_block)
+
+                # Read each block separately
+                for block in blocks:
+                    min_addr_block = min(block)
+                    max_addr_block = max(block)
+                    count_block = (max_addr_block - min_addr_block) + 1
+
+                    # Further split if block still exceeds 125 registers
+                    if count_block > 125:
+                        # Read in 125-register chunks
+                        for chunk_start in range(min_addr_block, max_addr_block + 1, 125):
+                            chunk_count = min(125, max_addr_block - chunk_start + 1)
+                            logger.debug(f"Reading 3000 sub-chunk ({chunk_start}-{chunk_start+chunk_count-1}, {chunk_count} registers)")
+                            registers = self.read_input_registers(chunk_start, chunk_count)
+                            if registers is None:
+                                logger.warning(f"Failed to read 3000 chunk ({chunk_start}-{chunk_start+chunk_count-1})")
+                            else:
+                                for i, value in enumerate(registers):
+                                    self._register_cache[chunk_start + i] = value
+                    else:
+                        logger.debug(f"Reading 3000 sub-range ({min_addr_block}-{max_addr_block}, {count_block} registers)")
+                        registers = self.read_input_registers(min_addr_block, count_block)
+                        if registers is None:
+                            logger.warning(f"Failed to read 3000 block ({min_addr_block}-{max_addr_block})")
+                        else:
+                            for i, value in enumerate(registers):
+                                addr = min_addr_block + i
+                                self._register_cache[addr] = value
+                                # Log load_energy registers specifically
+                                if addr in [3075, 3076, 3077, 3078]:
+                                    logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Cached 3000 range: reg {addr} = {value}")
+            else:
+                # Single read is sufficient
+                logger.debug(f"Reading 3000 range (3000-{max_3000_addr}, {count_3000} registers)")
+                registers = self.read_input_registers(3000, count_3000)
+                if registers is None:
+                    logger.error("Failed to read main input register block")
+                    return None
+
+                # Populate cache
+                for i, value in enumerate(registers):
+                    self._register_cache[3000 + i] = value
+
+        # Read 8000 range if needed - WIT/WIS battery/storage data
+        if has_8000_range:
+            addrs_8000 = sorted([addr for addr in addresses if 8000 <= addr < 8200])
+            min_addr_8000 = min(addrs_8000)
+            max_addr_8000 = max(addrs_8000)
+            count_8000 = (max_addr_8000 - min_addr_8000) + 1
+
+            logger.debug(f"Reading 8000 range ({min_addr_8000}-{max_addr_8000}, {count_8000} registers)")
+            if count_8000 > 125:
+                for chunk_start in range(min_addr_8000, max_addr_8000 + 1, 125):
+                    chunk_count = min(125, max_addr_8000 - chunk_start + 1)
+                    registers = self.read_input_registers(chunk_start, chunk_count)
+                    if registers is None:
+                        logger.warning(f"Failed to read 8000 block ({chunk_start}-{chunk_start+chunk_count-1})")
+                    else:
+                        for i, value in enumerate(registers):
+                            self._register_cache[chunk_start + i] = value
+            else:
+                registers = self.read_input_registers(min_addr_8000, count_8000)
+                if registers is None:
+                    logger.warning("Failed to read 8000 register block")
+                else:
+                    for i, value in enumerate(registers):
+                        self._register_cache[min_addr_8000 + i] = value
+
+        # Read 31000 range if needed - MOD extended battery/BMS range
+        if has_31000_range:
+            # Split into contiguous blocks to avoid reading large gaps
+            # (e.g., 31126-31127 and 31200-31209 are separate blocks with a 73-register gap)
+            addrs_31000 = sorted([addr for addr in addresses if 31000 <= addr < 32000])
+
+            # Group into contiguous blocks (max gap of 10 registers)
+            blocks = []
+            current_block = [addrs_31000[0]]
+            for addr in addrs_31000[1:]:
+                if addr - current_block[-1] <= 10:
+                    current_block.append(addr)
+                else:
+                    blocks.append(current_block)
+                    current_block = [addr]
+            blocks.append(current_block)
+
+            # Read each block separately
+            for block in blocks:
+                min_addr_block = min(block)
+                max_addr_block = max(block)
+                count_block = (max_addr_block - min_addr_block) + 1
+                logger.debug(f"Reading 31000 sub-range ({min_addr_block}-{max_addr_block}, {count_block} registers)")
+                registers = self.read_input_registers(min_addr_block, count_block)
+                if registers is None:
+                    logger.warning(f"Failed to read extended battery register block ({min_addr_block}-{max_addr_block})")
+                    # Don't return None - continue with what we have
+                else:
+                    # Populate cache
+                    for i, value in enumerate(registers):
+                        self._register_cache[min_addr_block + i] = value
+
         # Now extract values using the register map
         try:
             # Status
@@ -496,12 +640,12 @@ class GrowattModbus:
                 # Calculate from strings if not available
                 data.pv_total_power = data.pv1_power + data.pv2_power + data.pv3_power
             
-            # AC Output
+            # AC Output (generic - will use Phase R via alias for 3-phase)
             ac_voltage_addr = self._find_register_by_name('ac_voltage')
             ac_current_addr = self._find_register_by_name('ac_current')
             ac_power_addr = self._find_register_by_name('ac_power_low')
             ac_freq_addr = self._find_register_by_name('ac_frequency')
-            
+
             if ac_voltage_addr:
                 data.ac_voltage = self._get_register_value(ac_voltage_addr) or 0.0
             if ac_current_addr:
@@ -510,6 +654,51 @@ class GrowattModbus:
                 data.ac_power = self._get_register_value(ac_power_addr) or 0.0
             if ac_freq_addr:
                 data.ac_frequency = self._get_register_value(ac_freq_addr) or 0.0
+
+            # Three-Phase AC Output (individual phases)
+            # Phase R
+            ac_voltage_r_addr = self._find_register_by_name('ac_voltage_r')
+            ac_current_r_addr = self._find_register_by_name('ac_current_r')
+            ac_power_r_addr = self._find_register_by_name('ac_power_r_low')
+            if ac_voltage_r_addr:
+                data.ac_voltage_r = self._get_register_value(ac_voltage_r_addr) or 0.0
+            if ac_current_r_addr:
+                data.ac_current_r = self._get_register_value(ac_current_r_addr) or 0.0
+            if ac_power_r_addr:
+                data.ac_power_r = self._get_register_value(ac_power_r_addr) or 0.0
+
+            # Phase S
+            ac_voltage_s_addr = self._find_register_by_name('ac_voltage_s')
+            ac_current_s_addr = self._find_register_by_name('ac_current_s')
+            ac_power_s_addr = self._find_register_by_name('ac_power_s_low')
+            if ac_voltage_s_addr:
+                data.ac_voltage_s = self._get_register_value(ac_voltage_s_addr) or 0.0
+            if ac_current_s_addr:
+                data.ac_current_s = self._get_register_value(ac_current_s_addr) or 0.0
+            if ac_power_s_addr:
+                data.ac_power_s = self._get_register_value(ac_power_s_addr) or 0.0
+
+            # Phase T
+            ac_voltage_t_addr = self._find_register_by_name('ac_voltage_t')
+            ac_current_t_addr = self._find_register_by_name('ac_current_t')
+            ac_power_t_addr = self._find_register_by_name('ac_power_t_low')
+            if ac_voltage_t_addr:
+                data.ac_voltage_t = self._get_register_value(ac_voltage_t_addr) or 0.0
+            if ac_current_t_addr:
+                data.ac_current_t = self._get_register_value(ac_current_t_addr) or 0.0
+            if ac_power_t_addr:
+                data.ac_power_t = self._get_register_value(ac_power_t_addr) or 0.0
+
+            # Line-to-Line Voltages
+            ac_voltage_rs_addr = self._find_register_by_name('line_voltage_rs')
+            ac_voltage_st_addr = self._find_register_by_name('line_voltage_st')
+            ac_voltage_tr_addr = self._find_register_by_name('line_voltage_tr')
+            if ac_voltage_rs_addr:
+                data.ac_voltage_rs = self._get_register_value(ac_voltage_rs_addr) or 0.0
+            if ac_voltage_st_addr:
+                data.ac_voltage_st = self._get_register_value(ac_voltage_st_addr) or 0.0
+            if ac_voltage_tr_addr:
+                data.ac_voltage_tr = self._get_register_value(ac_voltage_tr_addr) or 0.0
             
             # Power Flow (if available - storage/hybrid models)
             power_to_user_addr = self._find_register_by_name('power_to_user_low')
@@ -527,6 +716,7 @@ class GrowattModbus:
             energy_today_addr = self._find_register_by_name('energy_today_low')
             if energy_today_addr:
                 data.energy_today = self._get_register_value(energy_today_addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from reg {energy_today_addr}: {data.energy_today} kWh (cache: {self._register_cache.get(energy_today_addr)})")
             
             # Energy Total
             energy_total_addr = self._find_register_by_name('energy_total_low')
@@ -577,44 +767,87 @@ class GrowattModbus:
     def write_register(self, register: int, value: int) -> bool:
         """
         Write a single holding register.
-        
+
         Args:
             register: Register address (relative to base address 0)
             value: Value to write (already scaled as integer)
-        
+
         Returns:
             bool: True if write successful, False otherwise
         """
         try:
-            # Check if client exists and is connected
-            if not self.client or not hasattr(self.client, 'is_socket_open') or not self.client.is_socket_open():
-                logger.error("Cannot write register - not connected")
+            logger.debug(f"[WRITE] Request to write register {register} with value {value}")
+
+            if not self.client:
+                logger.error("[WRITE] Cannot write register - client not initialized")
                 return False
-            
-            # Write to holding register (function code 6)
+
+            # ---- Connection / socket check and reconnection ----------------------
+            # Check if socket is open, attempt reconnect if not
+            socket_is_open = False
+
+            if hasattr(self.client, 'is_socket_open'):
+                try:
+                    socket_is_open = self.client.is_socket_open()
+                    logger.debug(f"[WRITE] is_socket_open() returned: {socket_is_open}")
+
+                    if not socket_is_open:
+                        logger.warning("[WRITE] Socket not open, attempting reconnect...")
+                        if not self.connect():
+                            logger.error("[WRITE] Reconnect failed - not connected")
+                            return False
+                        logger.info("[WRITE] Reconnect successful, proceeding with write")
+                        socket_is_open = True
+
+                except Exception as e:
+                    logger.warning(f"[WRITE] is_socket_open() threw exception: {e}")
+                    logger.warning("[WRITE] Attempting reconnect due to error...")
+                    if not self.connect():
+                        logger.error("[WRITE] Reconnect failed after exception")
+                        return False
+                    logger.info("[WRITE] Reconnect successful after exception")
+                    socket_is_open = True
+            else:
+                # Client doesn't support is_socket_open(), try to reconnect to be safe
+                logger.debug("[WRITE] Client has no is_socket_open(), attempting reconnect...")
+                if not self.connect():
+                    logger.error("[WRITE] Reconnect failed - cannot determine socket state")
+                    return False
+                logger.info("[WRITE] Reconnect successful (no is_socket_open available)")
+                socket_is_open = True
+            # -----------------------------------------------------------------------
+
+            # ---- Perform actual write ---------------------------------------------
+            logger.debug(f"[WRITE] Sending write_register({register}, {value}) to inverter")
+
             result = self.client.write_register(
                 address=register,
                 value=value,
                 device_id=self.slave_id
             )
-            
+
             if result.isError():
-                logger.error(f"Failed to write register {register}: {result}")
+                logger.error(f"[WRITE] Inverter responded with error: {result}")
                 return False
-            
-            logger.info(f"Successfully wrote value {value} to register {register}")
+
+            logger.info(f"[WRITE] Successfully wrote value {value} → register {register}")
             return True
-            
+            # -----------------------------------------------------------------------
+
         except Exception as e:
-            logger.error(f"Exception writing register {register}: {e}")
+            logger.error(f"[WRITE] Exception writing register {register}: {e}")
             return False
 
 
     def _find_register_by_name(self, name: str) -> Optional[int]:
-        """Find register address by its name"""
+        """Find register address by its name or alias"""
         input_regs = self.register_map['input_registers']
         for addr, reg_info in input_regs.items():
+            # Check exact name match
             if reg_info['name'] == name:
+                return addr
+            # Check alias match (for 3-phase compatibility)
+            if reg_info.get('alias') == name:
                 return addr
         return None
     
@@ -643,10 +876,14 @@ class GrowattModbus:
             addr = self._find_register_by_name('load_energy_today_low')
             if addr:
                 data.load_energy_today = self._get_register_value(addr) or 0.0
-            
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Load energy today from reg {addr}: {data.load_energy_today} kWh (cache: {self._register_cache.get(addr)})")
+            else:
+                logger.warning(f"[{self.register_map['name']}@{self.connection_id}] load_energy_today_low register not found")
+
             addr = self._find_register_by_name('load_energy_total_low')
             if addr:
                 data.load_energy_total = self._get_register_value(addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Load energy total from reg {addr}: {data.load_energy_total} kWh (cache: {self._register_cache.get(addr)})")
                 
         except Exception as e:
             logger.debug(f"Energy breakdown not available: {e}")
@@ -661,7 +898,14 @@ class GrowattModbus:
                 logger.debug(f"Battery voltage from reg {addr}: {data.battery_voltage}V")
 
             # Battery current (signed: positive=discharge, negative=charge)
-            addr = self._find_register_by_name('battery_current')
+            # Try VPP protocol first (31216 - low register of 32-bit pair)
+            addr = self._find_register_by_name('battery_current_low')
+            if not addr:
+                # Fallback to single-register name (used by legacy/WIT maps)
+                addr = self._find_register_by_name('battery_current')
+            if not addr:
+                # Fallback to legacy register (3170)
+                addr = self._find_register_by_name('battery_current_legacy')
             if addr:
                 data.battery_current = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery current from reg {addr}: {data.battery_current}A")
@@ -678,31 +922,53 @@ class GrowattModbus:
                 data.battery_temp = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery temp from reg {addr}: {data.battery_temp}°C")
 
-            # Charge power (try to read from registers first)
-            addr = self._find_register_by_name('charge_power_low')
+            # Battery power (signed: positive=charging, negative=discharging)
+            # Try new signed battery_power register first (MOD series @ 31126)
+            addr = self._find_register_by_name('battery_power_low')
             if addr:
                 raw_low = self._register_cache.get(addr, 0)
-                pair_addr = self._find_register_by_name('charge_power_high')
+                pair_addr = self._find_register_by_name('battery_power_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                data.charge_power = self._get_register_value(addr) or 0.0
-                logger.debug(f"Charge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_power}W")
-            elif data.battery_voltage > 0 and data.battery_current < 0:
-                # Fallback: Calculate from V×I when charging (negative current)
-                data.charge_power = data.battery_voltage * abs(data.battery_current)
-                logger.debug(f"Charge power (calculated): {data.battery_voltage}V × {abs(data.battery_current)}A = {data.charge_power}W")
+                battery_power = self._get_register_value(addr) or 0.0
+                logger.debug(f"Battery power (signed): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {battery_power}W")
 
-            # Discharge power (try to read from registers first)
-            addr = self._find_register_by_name('discharge_power_low')
-            if addr:
-                raw_low = self._register_cache.get(addr, 0)
-                pair_addr = self._find_register_by_name('discharge_power_high')
-                raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                data.discharge_power = self._get_register_value(addr) or 0.0
-                logger.debug(f"Discharge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_power}W")
-            elif data.battery_voltage > 0 and data.battery_current > 0:
-                # Fallback: Calculate from V×I when discharging (positive current)
-                data.discharge_power = data.battery_voltage * data.battery_current
-                logger.debug(f"Discharge power (calculated): {data.battery_voltage}V × {data.battery_current}A = {data.discharge_power}W")
+                # Split into charge/discharge based on sign
+                if battery_power > 0:
+                    data.charge_power = battery_power
+                    data.discharge_power = 0.0
+                    logger.debug(f"  → Charging: {data.charge_power}W")
+                elif battery_power < 0:
+                    data.charge_power = 0.0
+                    data.discharge_power = abs(battery_power)
+                    logger.debug(f"  → Discharging: {data.discharge_power}W")
+                else:
+                    data.charge_power = 0.0
+                    data.discharge_power = 0.0
+            else:
+                # Fallback: Try old separate charge/discharge registers (SPH series)
+                addr = self._find_register_by_name('charge_power_low')
+                if addr:
+                    raw_low = self._register_cache.get(addr, 0)
+                    pair_addr = self._find_register_by_name('charge_power_high')
+                    raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
+                    data.charge_power = self._get_register_value(addr) or 0.0
+                    logger.debug(f"Charge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_power}W")
+                elif data.battery_voltage > 0 and data.battery_current < 0:
+                    # Fallback: Calculate from V×I when charging (negative current)
+                    data.charge_power = data.battery_voltage * abs(data.battery_current)
+                    logger.debug(f"Charge power (calculated): {data.battery_voltage}V × {abs(data.battery_current)}A = {data.charge_power}W")
+
+                addr = self._find_register_by_name('discharge_power_low')
+                if addr:
+                    raw_low = self._register_cache.get(addr, 0)
+                    pair_addr = self._find_register_by_name('discharge_power_high')
+                    raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
+                    data.discharge_power = self._get_register_value(addr) or 0.0
+                    logger.debug(f"Discharge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_power}W")
+                elif data.battery_voltage > 0 and data.battery_current > 0:
+                    # Fallback: Calculate from V×I when discharging (positive current)
+                    data.discharge_power = data.battery_voltage * data.battery_current
+                    logger.debug(f"Discharge power (calculated): {data.battery_voltage}V × {data.battery_current}A = {data.discharge_power}W")
             
             # Charge energy today
             addr = self._find_register_by_name('charge_energy_today_low')
@@ -739,46 +1005,64 @@ class GrowattModbus:
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.discharge_energy_total = self._get_register_value(addr) or 0.0
                 logger.debug(f"Discharge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_energy_total} kWh")
-            
+
             if data.battery_voltage > 0:
-                logger.info(f"Battery summary: {data.battery_voltage}V, {data.battery_current}A, {data.battery_soc}%, {data.battery_temp}°C, Charge={data.charge_power}W, Discharge={data.discharge_power}W")
+                logger.debug(f"Battery summary: {data.battery_voltage}V, {data.battery_current}A, {data.battery_soc}%, {data.battery_temp}°C, Charge={data.charge_power}W, Discharge={data.discharge_power}W")
             
         except Exception as e:
             logger.debug(f"Battery data not available: {e}")
 
     def _read_device_info(self, data: GrowattData) -> None:
         """Read device info from holding registers"""
+
+        # Get holding register map once so we can use it even if 0–19 read fails
+        holding_map = self.register_map.get("holding_registers", {})
+
+        # --- Device info (0–19) ---
         holding_regs = self.read_holding_registers(0, 20)
         if holding_regs is None:
-            logger.debug("Could not read holding registers for device info")
-            return
-        
-        try:
-            holding_map = self.register_map.get('holding_registers', {})
-            
-            # Firmware version at register 3
-            if len(holding_regs) > 3 and 3 in holding_map:
-                fw_version = holding_regs[3]
-                data.firmware_version = f"{fw_version >> 8}.{fw_version & 0xFF}"
-            
-            # Serial number from registers 9-13
-            if len(holding_regs) > 13:
-                serial_parts = []
-                for i in range(9, 14):  # registers 9-13
-                    if i < len(holding_regs):
-                        reg_val = holding_regs[i]
-                        # Convert 16-bit register to 2 ASCII characters
-                        if reg_val > 0:
-                            char1 = (reg_val >> 8) & 0xFF
-                            char2 = reg_val & 0xFF
-                            if char1 > 0 and 32 <= char1 <= 126:  # Printable ASCII
-                                serial_parts.append(chr(char1))
-                            if char2 > 0 and 32 <= char2 <= 126:
-                                serial_parts.append(chr(char2))
-                data.serial_number = ''.join(serial_parts).rstrip('\x00')
-                
-        except Exception as e:
-            logger.warning(f"Error reading device info: {e}")
+            logger.debug("Could not read holding registers 0–19 for device info")
+        else:
+            try:
+                # Firmware version at register 3
+                if len(holding_regs) > 3 and 3 in holding_map:
+                    fw_version = holding_regs[3]
+                    data.firmware_version = f"{fw_version >> 8}.{fw_version & 0xFF}"
+
+                # Serial number from registers 9-13
+                if len(holding_regs) > 13:
+                    serial_parts = []
+                    for i in range(9, 14):
+                        if i < len(holding_regs):
+                            reg_val = holding_regs[i]
+                            # Convert 16-bit register to 2 ASCII characters
+                            if reg_val > 0:
+                                char1 = (reg_val >> 8) & 0xFF
+                                char2 = reg_val & 0xFF
+                                if char1 > 0 and 32 <= char1 <= 126:
+                                    serial_parts.append(chr(char1))
+                                if char2 > 0 and 32 <= char2 <= 126:
+                                    serial_parts.append(chr(char2))
+                    data.serial_number = ''.join(serial_parts).rstrip('\x00')
+            except Exception as e:
+                logger.warning(f"Error reading device info: {e}")
+
+        # --- Export control (122–123) --- ALWAYS ATTEMPTED
+        if 122 in holding_map or 123 in holding_map:
+            try:
+                export_regs = self.read_holding_registers(122, 2)
+                logger.debug("[EXPORT CTRL] Raw export_regs from 122–123: %r", export_regs)
+
+                if export_regs is not None and len(export_regs) >= 2:
+                    if 122 in holding_map:
+                        data.export_limit_mode = int(export_regs[0])
+                    if 123 in holding_map:
+                        data.export_limit_power = int(export_regs[1])
+
+                    logger.debug("[EXPORT CTRL] Read export control: mode=%s, power=%s",
+                               data.export_limit_mode, data.export_limit_power)
+            except Exception as e:
+                logger.debug(f"Could not read export control registers: {e}")
 
     def get_status_text(self, status_code: int) -> str:
         """Convert status code to human readable text"""

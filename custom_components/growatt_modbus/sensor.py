@@ -895,14 +895,19 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
         # Special handling for status sensor
         if self._sensor_key == "status":
             from .const import STATUS_CODES
-            
+
             # If offline, show "Offline"
             if not self.coordinator.is_online:
                 return "Offline"
-            
+
             status_info = STATUS_CODES.get(value, {"name": f"Unknown ({value})"})
             return status_info["name"]
-        
+
+        # Special handling for derating_mode sensor
+        if self._sensor_key == "derating_mode":
+            from .const import get_derating_name
+            return get_derating_name(int(value))
+
         # Round numeric values to reasonable precision
         if isinstance(value, float):
             if self._sensor_def.get("unit") == UnitOfPower.WATT:

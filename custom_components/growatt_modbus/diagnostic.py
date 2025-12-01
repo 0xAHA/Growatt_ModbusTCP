@@ -32,12 +32,19 @@ _LOGGER = logging.getLogger(__name__)
 SERVICE_EXPORT_DUMP = "export_register_dump"
 
 # Universal scan ranges - covers all Growatt series
+# Split into chunks of max 125 registers to respect Modbus limits
 UNIVERSAL_SCAN_RANGES = [
     {"name": "Base Range 0-124", "start": 0, "count": 125},
     {"name": "Extended Range 125-249", "start": 125, "count": 125},
     {"name": "Storage Range 1000-1124", "start": 1000, "count": 125},
     {"name": "MIN/MOD Range 3000-3124", "start": 3000, "count": 125},
     {"name": "MOD Extended 3125-3249", "start": 3125, "count": 125},
+    {"name": "WIT/WIS Battery Range 8000-8124", "start": 8000, "count": 125},
+    # VPP Protocol V2.01 ranges (31000+)
+    {"name": "VPP Status/PV: 31000-31099", "start": 31000, "count": 100},  # Equipment status, PV data, faults
+    {"name": "VPP AC/Grid/Load: 31100-31199", "start": 31100, "count": 100},  # AC output, meter/grid power (31112), load power (31118), energy, temps
+    {"name": "VPP Battery 1: 31200-31299", "start": 31200, "count": 100},  # Battery cluster 1 data
+    {"name": "VPP Battery 2: 31300-31399", "start": 31300, "count": 100},  # Battery cluster 2 data (optional)
 ]
 
 # Service schema
@@ -118,18 +125,30 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             confidence = detection.get("confidence", "Unknown")
             model = detection.get("model", "Unknown")
             profile_key = detection.get("profile_key", "N/A")
-            
+            dtc_code = detection.get("dtc_code")
+            protocol_version = detection.get("protocol_version")
+
             message_lines = [
                 f"**File saved:** `{result['filename']}`\n",
                 f"**Detected Model:** {model}",
                 f"**Confidence:** {confidence}",
+            ]
+
+            # Add DTC/Protocol info if available
+            if dtc_code:
+                message_lines.append(f"**DTC Code:** {dtc_code}")
+            if protocol_version:
+                protocol_str = f"{protocol_version // 100}.{protocol_version % 100:02d}" if protocol_version >= 100 else str(protocol_version)
+                message_lines.append(f"**Protocol:** V{protocol_str}")
+
+            message_lines.extend([
                 f"**Suggested Profile:** `{profile_key}`\n",
                 f"**Scan Results:**",
                 f"• Total registers scanned: {result['total_registers']}",
                 f"• Non-zero registers: {result['non_zero']}",
                 f"• Responding ranges: {result['responding_ranges']}\n",
                 f"Download from File Editor or `/config/{result['filename']}`",
-            ]
+            ])
             
             if send_notification:
                 await hass.services.async_call(
@@ -162,9 +181,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     )
 
 
-def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk_size: int = 50) -> Dict[int, Dict[str, Any]]:
+def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk_size: int = 50, register_type: str = 'input') -> Dict[int, Dict[str, Any]]:
     """
     Read registers in chunks to avoid timeouts.
+
+    Args:
+        register_type: 'input' for input registers (default), 'holding' for holding registers
 
     Returns dict mapping register address to: {
         'value': int or None,
@@ -179,11 +201,19 @@ def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk
         chunk_address = start + chunk_start
 
         try:
-            response = client.read_input_registers(
-                address=chunk_address,
-                count=chunk_count,
-                device_id=slave_id
-            )
+            # Choose read method based on register type
+            if register_type == 'holding':
+                response = client.read_holding_registers(
+                    address=chunk_address,
+                    count=chunk_count,
+                    device_id=slave_id
+                )
+            else:  # 'input'
+                response = client.read_input_registers(
+                    address=chunk_address,
+                    count=chunk_count,
+                    device_id=slave_id
+                )
 
             if not response.isError():
                 # Store ALL values, including zeros
@@ -238,7 +268,7 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     """
     Analyze register responses to detect inverter model.
 
-    Returns dict with: model, confidence, profile_key, register_map, reasoning
+    Returns dict with: model, confidence, profile_key, register_map, reasoning, dtc_code, protocol_version
     """
     detection = {
         "model": "Unknown",
@@ -246,11 +276,58 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
         "profile_key": "unknown",
         "register_map": "UNKNOWN",
         "reasoning": [],
+        "dtc_code": None,
+        "protocol_version": None,
     }
 
     # Helper to check if register exists with valid data
     def has_reg(addr):
         return addr in register_data and register_data[addr]['status'] == 'success' and register_data[addr]['value'] is not None and register_data[addr]['value'] > 0
+
+    # Check for DTC code (holding register 30000)
+    if 30000 in register_data and register_data[30000]['status'] == 'success' and register_data[30000]['value']:
+        dtc_code = register_data[30000]['value']
+        detection["dtc_code"] = dtc_code
+        detection["reasoning"].append(f"✓ DTC Code: {dtc_code} (register 30000)")
+
+        # Map DTC to profile (from auto_detection.py)
+        dtc_map = {
+            3502: ('SPH 3-6kW', 'sph_3000_6000_v201'),
+            3735: ('SPA 3-6kW', 'sph_3000_6000_v201'),
+            3601: ('SPH-TL3 4-10kW', 'sph_tl3_3000_10000_v201'),
+            3725: ('SPA-TL3 4-10kW', 'sph_tl3_3000_10000_v201'),
+            5100: ('TL-XH 3-10kW', 'tl_xh_3000_10000_v201'),
+            5200: ('MIN/MIC 2.5-6kW', 'min_3000_6000_tl_x_v201'),
+            5201: ('MIN 7-10kW', 'min_7000_10000_tl_x_v201'),
+            5400: ('MOD-XH/MID-XH', 'mod_6000_15000tl3_xh_v201'),
+            5603: ('WIT 4-15kW Hybrid', 'wit_4000_15000tl3'),
+            5601: ('WIT 100kW Commercial', 'mid_15000_25000tl3_x_v201'),
+            5800: ('WIS 215kW Commercial', 'mid_15000_25000tl3_x_v201'),
+        }
+
+        if dtc_code in dtc_map:
+            model_name, profile_key = dtc_map[dtc_code]
+            detection["model"] = f"{model_name} (DTC {dtc_code})"
+            detection["profile_key"] = profile_key
+            detection["confidence"] = "Very High"
+            detection["reasoning"].append(f"✓ DTC {dtc_code} matches: {model_name}")
+            detection["reasoning"].append("  → Auto-detection via DTC is most reliable method")
+        else:
+            detection["reasoning"].append(f"⚠ Unknown DTC code {dtc_code} - not in supported models")
+
+    # Check for protocol version (holding register 30099)
+    if 30099 in register_data and register_data[30099]['status'] == 'success' and register_data[30099]['value']:
+        protocol_ver = register_data[30099]['value']
+        detection["protocol_version"] = protocol_ver
+        protocol_str = f"{protocol_ver // 100}.{protocol_ver % 100:02d}" if protocol_ver >= 100 else str(protocol_ver)
+        detection["reasoning"].append(f"✓ Protocol Version: {protocol_str} (register 30099 = {protocol_ver})")
+
+        if protocol_ver >= 201:
+            detection["reasoning"].append(f"  → VPP Protocol V{protocol_str} - supports advanced features")
+
+    # If DTC detected model, skip other detection logic
+    if detection["confidence"] == "Very High":
+        return detection
     
     # Check register ranges (only successful reads with non-zero values)
     has_0_124 = any(0 <= r <= 124 and register_data[r]['status'] == 'success' and register_data[r]['value'] > 0 for r in register_data.keys())
@@ -275,26 +352,37 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     # Check for MIN or MOD series (3000 range)
     if has_pv1_at_3003:
         detection["reasoning"].append("✓ Found PV1 at register 3003 (3000 range detected)")
-        
+
         if has_battery_at_3169:
-            # MOD series - 3-phase hybrid with battery
-            detection["model"] = "MOD 6000-15000TL3-XH"
+            # MOD-XH series - 3-phase hybrid with battery
+            detection["model"] = "MOD 6000-15000TL3-XH (Hybrid)"
             detection["confidence"] = "High"
             detection["profile_key"] = "mod_6000_15000tl3_xh"
             detection["register_map"] = "MOD_6000_15000TL3_XH"
-            detection["reasoning"].append("✓ Found battery at register 3169 → MOD series (3-phase hybrid)")
+            detection["reasoning"].append("✓ Found battery at register 3169 (SOC > 0) → MOD-XH hybrid")
             if has_pv3_at_3011:
                 detection["reasoning"].append("✓ Found PV3 at register 3011 → Confirms 3-string MOD")
-            
+
         else:
-            # MIN series - string inverter, no battery
-            if has_pv3_at_3011:
+            # No battery - could be MIN (single/3-phase) or MOD-X (3-phase grid-tied)
+            if has_phase_s and has_phase_t:
+                # 3-phase without battery = MOD-X grid-tied
+                detection["model"] = "MOD 6000-15000TL3-X (Grid-Tied)"
+                detection["confidence"] = "High"
+                detection["profile_key"] = "mod_6000_15000tl3_x"
+                detection["register_map"] = "MOD_6000_15000TL3_X"
+                detection["reasoning"].append("✓ Found 3-phase (registers 42, 46) without battery → MOD-X grid-tied")
+                if has_pv3_at_3011:
+                    detection["reasoning"].append("✓ Found PV3 at register 3011 → Confirms 3-string MOD")
+            elif has_pv3_at_3011:
+                # Single-phase with 3 PV strings = MIN 7-10kW
                 detection["model"] = "MIN 7000-10000TL-X"
                 detection["confidence"] = "High"
                 detection["profile_key"] = "min_7000_10000_tl_x"
                 detection["register_map"] = "MIN_7000_10000TL_X"
                 detection["reasoning"].append("✓ Found PV3 at register 3011 → MIN 7-10kW (3 PV strings)")
             else:
+                # Single-phase with 2 PV strings = MIN 3-6kW
                 detection["model"] = "MIN 3000-6000TL-X"
                 detection["confidence"] = "High"
                 detection["profile_key"] = "min_3000_6000_tl_x"
@@ -409,17 +497,25 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
             # Check for 3000 range responses (MIN/MOD series in standby)
             elif has_3000_3124 or has_3125_3249:
                 if has_battery_at_3169:
-                    detection["model"] = "MOD 6000-15000TL3-XH (Night/Standby Mode)"
+                    detection["model"] = "MOD 6000-15000TL3-XH (Hybrid, Night/Standby)"
                     detection["confidence"] = "Medium"
                     detection["profile_key"] = "mod_6000_15000tl3_xh"
                     detection["register_map"] = "MOD_6000_15000TL3_XH"
-                    detection["reasoning"].append("✓ Found battery at register 3169 → MOD series")
+                    detection["reasoning"].append("✓ Found battery at register 3169 → MOD-XH hybrid")
                 else:
-                    detection["model"] = "MIN Series (Night/Standby Mode)"
-                    detection["confidence"] = "Low"
-                    detection["profile_key"] = "min_3000_6000_tl_x"
-                    detection["register_map"] = "MIN_3000_6000TL_X"
-                    detection["reasoning"].append("✓ Found 3000 range response → MIN series")
+                    # No battery - check for 3-phase to distinguish MOD-X from MIN
+                    if has_phase_s and has_phase_t:
+                        detection["model"] = "MOD 6000-15000TL3-X (Grid-Tied, Night/Standby)"
+                        detection["confidence"] = "Medium"
+                        detection["profile_key"] = "mod_6000_15000tl3_x"
+                        detection["register_map"] = "MOD_6000_15000TL3_X"
+                        detection["reasoning"].append("✓ Found 3-phase without battery → MOD-X grid-tied")
+                    else:
+                        detection["model"] = "MIN Series (Night/Standby Mode)"
+                        detection["confidence"] = "Low"
+                        detection["profile_key"] = "min_3000_6000_tl_x"
+                        detection["register_map"] = "MIN_3000_6000TL_X"
+                        detection["reasoning"].append("✓ Found 3000 range without battery/3-phase → MIN series")
                 detection["reasoning"].append("⚠ No PV voltage detected → likely night or standby mode")
 
             # Check for 3-phase grid-tied based on phase detection alone
@@ -459,20 +555,38 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int) -> dict:
         "non_zero": 0,
         "responding_ranges": 0,
     }
-    
+
     try:
         # Connect with longer timeout
         client = ModbusTcpClient(host=host, port=port, timeout=15)
         if not client.connect():
             result["error"] = f"Cannot connect to {host}:{port}"
             return result
-        
+
         _LOGGER.info("Connected, starting universal scan...")
-        
+
         # Scan ALL ranges
         all_register_data = {}
         range_responses = {}
 
+        # FIRST: Read DTC code and protocol version (holding registers - critical for identification)
+        _LOGGER.info("Reading identification registers (DTC code, protocol version)...")
+        id_registers = _read_registers_chunked(client, 30000, 100, slave_id, chunk_size=50, register_type='holding')
+        if id_registers:
+            all_register_data.update(id_registers)
+            dtc_found = 30000 in id_registers and id_registers[30000]['status'] == 'success' and id_registers[30000]['value']
+            protocol_found = 30099 in id_registers and id_registers[30099]['status'] == 'success' and id_registers[30099]['value']
+            if dtc_found or protocol_found:
+                _LOGGER.info(f"  DTC: {id_registers[30000]['value'] if dtc_found else 'Not found'}")
+                _LOGGER.info(f"  Protocol: {id_registers[30099]['value'] if protocol_found else 'Not found'}")
+                range_responses["VPP Identification (30000-30099)"] = 1 if (dtc_found or protocol_found) else 0
+            else:
+                _LOGGER.info("  No identification registers found (likely legacy protocol)")
+                range_responses["VPP Identification (30000-30099)"] = 0
+        else:
+            range_responses["VPP Identification (30000-30099)"] = 0
+
+        # THEN: Scan input register ranges
         for range_config in UNIVERSAL_SCAN_RANGES:
             range_name = range_config["name"]
             start = range_config["start"]
@@ -480,7 +594,7 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int) -> dict:
 
             _LOGGER.info(f"Scanning {range_name}...")
 
-            registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=50)
+            registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=50, register_type='input')
 
             if registers:
                 all_register_data.update(registers)
@@ -517,6 +631,15 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int) -> dict:
             writer.writerow(["DETECTION ANALYSIS"])
             writer.writerow(["Detected Model", detection["model"]])
             writer.writerow(["Confidence", detection["confidence"]])
+
+            # Add DTC code and protocol version if available
+            if detection.get("dtc_code"):
+                writer.writerow(["DTC Code", detection["dtc_code"]])
+            if detection.get("protocol_version"):
+                protocol_ver = detection["protocol_version"]
+                protocol_str = f"{protocol_ver // 100}.{protocol_ver % 100:02d}" if protocol_ver >= 100 else str(protocol_ver)
+                writer.writerow(["Protocol Version", f"V{protocol_str} (register value: {protocol_ver})"])
+
             writer.writerow(["Suggested Profile Key", detection["profile_key"]])
             writer.writerow(["Register Map", detection["register_map"]])
             writer.writerow([])
@@ -551,7 +674,76 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int) -> dict:
             total = 0
             non_zero = 0
 
-            # Group by ranges for organized output
+            # FIRST: Write holding registers (30000-30099) - Identification
+            id_range_registers = {k: v for k, v in all_register_data.items() if 30000 <= k < 30100}
+            if id_range_registers:
+                writer.writerow([])
+                writer.writerow([f"--- VPP Identification (Holding Registers 30000-30099) ---"])
+                for reg_addr in range(30000, 30100):
+                    if reg_addr in id_range_registers:
+                        reg_info = id_range_registers[reg_addr]
+                        value = reg_info['value']
+                        status = reg_info['status']
+                        error = reg_info['error']
+
+                        total += 1
+
+                        # Build status/comment field
+                        if status == 'success':
+                            if value == 0:
+                                status_comment = "Read OK (zero value)"
+                            else:
+                                status_comment = "Read OK"
+                                non_zero += 1
+
+                            # Special handling for known registers
+                            if reg_addr == 30000 and value:
+                                status_comment += f" [DTC Code - Device Type: {value}]"
+                            elif reg_addr == 30099 and value:
+                                protocol_str = f"{value // 100}.{value % 100:02d}" if value >= 100 else str(value)
+                                status_comment += f" [Protocol Version V{protocol_str}]"
+
+                        elif status == 'error':
+                            status_comment = f"Modbus Error: {error}"
+                            value = ""  # Clear value field for errors
+                        else:  # exception
+                            status_comment = error
+                            value = ""  # Clear value field for exceptions
+
+                        # Calculate interpretations only for successful reads
+                        if status == 'success' and value is not None:
+                            scaled_01 = value * 0.1
+                            scaled_001 = value * 0.01
+                            signed = value - 65536 if value > 32767 else value
+                            combined_32bit = ""  # Not relevant for these registers
+                        else:
+                            scaled_01 = ""
+                            scaled_001 = ""
+                            signed = ""
+                            combined_32bit = ""
+
+                        # Look up suggested match from register map
+                        suggested_match = _lookup_register_info(reg_addr) or ""
+
+                        # Add manual descriptions for key registers
+                        if reg_addr == 30000:
+                            suggested_match = "dtc_code (Device Type Code)"
+                        elif reg_addr == 30099:
+                            suggested_match = "protocol_version (VPP Protocol Version)"
+
+                        writer.writerow([
+                            reg_addr,
+                            f"0x{reg_addr:04X}",
+                            value,
+                            f"{scaled_01:.1f}" if scaled_01 != "" else "",
+                            f"{scaled_001:.2f}" if scaled_001 != "" else "",
+                            signed,
+                            combined_32bit,
+                            suggested_match,
+                            status_comment
+                        ])
+
+            # THEN: Group by input register ranges for organized output
             for range_config in UNIVERSAL_SCAN_RANGES:
                 range_name = range_config["name"]
                 start = range_config["start"]

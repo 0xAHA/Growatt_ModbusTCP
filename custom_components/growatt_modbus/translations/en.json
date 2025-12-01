@@ -60,12 +60,14 @@
         "data": {
           "device_name": "Device Name",
           "scan_interval": "Scan Interval",
+          "offline_scan_interval": "Offline Scan Interval",
           "timeout": "Connection Timeout",
           "invert_grid_power": "Invert Grid Power"
         },
         "data_description": {
           "device_name": "Friendly name for the device (appears before all sensor names)",
-          "scan_interval": "How often to poll the inverter for new data (5-300 seconds)",
+          "scan_interval": "How often to poll the inverter when online (5-300 seconds)",
+          "offline_scan_interval": "How often to poll when inverter is offline/at night (60-3600 seconds, default 300)",
           "timeout": "How long to wait for responses from the inverter (1-60 seconds)",
           "invert_grid_power": "Enable if CT clamp installed backwards (import/export swapped)"
         }
@@ -83,7 +85,8 @@
         "sph_7000_10000": "SPH 7000-10000 (Single-phase hybrid with battery, 7-10kW)",
         "sph_tl3_3000_10000": "SPH-TL3 3000-10000 (3-phase hybrid with battery, 3-10kW)",
         "tl_xh_3000_10000": "TL-XH 3000-10000 (Hybrid with battery, 3-10kW)",
-        "tl_xh_us_3000_10000": "TL-XH US 3000-10000 (US Hybrid with battery, 3-10kW)"
+        "tl_xh_us_3000_10000": "TL-XH US 3000-10000 (US Hybrid with battery, 3-10kW)",
+        "wit_4000_15000tl3": "WIT 4000-15000 HU (3-phase hybrid with battery, 4-15kW)"
       }
     }
   }

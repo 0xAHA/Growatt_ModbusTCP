@@ -1,0 +1,16 @@
+# Requirements for Growatt Inverter Emulator
+
+# Modbus TCP server
+pymodbus>=3.0.0
+
+# Terminal UI
+rich>=13.0.0
+
+# Web UI (for web emulator)
+Flask>=2.0.0
+flask-cors>=3.0.0
+
+# Standard library dependencies (usually included)
+# - threading
+# - datetime
+# - typing

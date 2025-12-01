@@ -6,14 +6,17 @@
 
 ## ✨ What It Does
 
-The diagnostic service:
+The **Universal Register Scanner** diagnostic service:
 
 * ✅ Tests TCP connection to your adapter
-* ✅ Reads key registers for your inverter model
+* ✅ Auto-detects your inverter model (VPP 2.01 inverters)
+* ✅ Scans all register ranges automatically
 * ✅ Validates responses are correct
 * ✅ Shows results as a notification
-* ✅ Logs detailed output
+* ✅ Exports complete register dump to CSV
 * ✅ **No Terminal or SSH needed!**
+
+> **Note:** For VPP Protocol V2.01-capable inverters, auto-detection identifies your model automatically. Legacy protocol inverters require manual model selection.
 
 ---
 
@@ -32,14 +35,18 @@ The diagnostic service will be available immediately!
 ### Step 2: Run the Diagnostic
 
 1. Go to **Developer Tools** → **Services**
-2. Search for **"Growatt Modbus: Run Diagnostic Test"**
+2. Search for **"Growatt Modbus: Universal Register Scanner"**
 3. Fill in the form:
-   * **IP Address:** Your RS485-TCP adapter IP (e.g., `192.168.1.100`)
+   * **Host:** Your RS485-TCP adapter IP (e.g., `192.168.1.100`)
    * **Port:** Usually `502`
    * **Slave ID:** Usually `1` (check inverter display)
-   * **Inverter Series:** Select your model from dropdown
-   * **Send Notification:** Leave checked
 4. Click **"Call Service"**
+
+The scanner will:
+- Automatically detect your model (if VPP 2.01 supported)
+- Scan all register ranges (0-124, 125-249, 1000-1124, 3000-3249)
+- Show detection confidence rating (High/Medium/Low)
+- Export results to CSV file
 
 ### Step 3: Check Results
 
@@ -59,47 +66,63 @@ The diagnostic service will be available immediately!
 
 ## 📊 Example Results
 
-### ✅ All Tests Passed
+### ✅ Auto-Detection Success (VPP 2.01 Inverter)
 
 ```
-🔌 Growatt Diagnostic: MIN 7000-10000TL-X
+🔌 Universal Register Scanner
 
-✅ All tests passed (6/6)
+✅ Auto-Detection: MIN 7000-10000TL-X (V2.01)
+Confidence: HIGH
+DTC Code: 5201 (register 30000)
+Protocol Version: 2.01 (register 30099)
 
-Results:
-• ✅ Connected to 192.168.1.147:502
-• ✅ Register 3000 (Status): Normal
-• ✅ Register 3003 (PV1 Voltage): 284.50 V
-• ✅ Register 3007 (PV2 Voltage): 289.00 V
-• ✅ Register 3011 (PV3 Voltage): 291.20 V
-• ✅ Register 3026 (AC Voltage): 240.10 V
+Scanned Registers:
+• Range 0-124: 89 readable
+• Range 3000-3249: 124 readable
+• Range 30000-30999: 43 readable (V2.01)
+• Range 31000-31999: 67 readable (V2.01)
+
+Sample Values:
+• Status (3000): Normal
+• PV1 Voltage (3003): 284.50 V
+• PV2 Voltage (3007): 289.00 V
+• PV3 Voltage (3011): 291.20 V
+• AC Voltage (3026): 240.10 V
+
+CSV exported to: /config/growatt_register_scan_20250121_143022.csv
 
 ✅ Next Steps:
-Your inverter is responding correctly!
-You can now install the integration.
+Your inverter supports VPP 2.01 and was auto-detected!
+Configure the integration - auto-detection will identify it automatically.
 ```
 
-### ⚠️ Partial Success
+### ⚠️ Legacy Inverter (No Auto-Detection)
 
 ```
-🔌 Growatt Diagnostic: SPH 3000-10000
+🔌 Universal Register Scanner
 
-⚠️ Partial success (3/6)
+⚠️ Auto-Detection: FAILED
+Reason: DTC register (30000) not readable
+Conclusion: Legacy protocol inverter (V1.39 or V3.05)
 
-Results:
-• ✅ Connected to 192.168.1.100:502
-• ✅ Register 0 (Status): Normal
-• ✅ Register 3 (PV1 Voltage): 285.30 V
-• ✅ Register 7 (PV2 Voltage): 0.00 V
-• ❌ Register 38 (AC Voltage): Read error
-• ❌ Register 1013 (Battery Voltage): Read error
-• ❌ Register 1014 (Battery SOC): Read error
+Scanned Registers:
+• Range 0-124: 78 readable
+• Range 3000-3249: 0 readable
+• Range 30000-30999: 0 readable (V2.01 not supported)
+• Range 31000-31999: 0 readable (V2.01 not supported)
 
-⚠️ Troubleshooting:
-Some registers failed. Try:
-• Test during daytime (inverter on)
-• Check if correct model selected
-• Wait for inverter to fully boot
+Sample Values:
+• Status (0): Normal
+• PV1 Voltage (3): 285.30 V
+• PV2 Voltage (7): 289.50 V
+• AC Voltage (38): 241.20 V
+
+CSV exported to: /config/growatt_register_scan_20250121_150033.csv
+
+⚠️ Next Steps:
+Your inverter uses legacy protocol (no V2.01 support).
+When configuring the integration, you will need to manually select your inverter series.
+Based on scan results, possible models: MIC or MIN 3-6kW
 ```
 
 ### ❌ All Tests Failed
@@ -124,6 +147,26 @@ No registers responded. Check:
 • Inverter is powered on
 • Baud rate is 9600
 ```
+
+---
+
+## 📊 Understanding Status Values
+
+The **Status** register (shown as "Status: Normal" in results) indicates the inverter's current operating state:
+
+| Status | Meaning | When You'll See It |
+|--------|---------|-------------------|
+| **Waiting** | Waiting for sufficient PV power or grid | Startup, low sun, early morning/late evening |
+| **Normal** | Operating normally | Active power generation during day |
+| **Fault** | Fault condition detected | Error state - check fault code for details |
+
+**Typical Daily Cycle:**
+- **Sunrise:** Waiting → Normal (as PV voltage builds)
+- **Daytime:** Normal (active generation)
+- **Sunset:** Normal → Waiting → Offline
+- **Night:** Inverter powered off (no response)
+
+> 💡 **Tip:** If the scanner shows "Waiting" during sunny conditions, check for low PV voltage, grid issues, or inverter configuration.
 
 ---
 

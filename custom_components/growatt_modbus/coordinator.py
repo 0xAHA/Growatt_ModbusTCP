@@ -81,9 +81,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         
         # Device identification (populated during first refresh)
         self._serial_number = None
-        self._firmware_version = None  
+        self._firmware_version = None
         self._inverter_type = None
         self._model_name = None
+        self._protocol_version = None  # VPP Protocol version (from register 30099)
 
         # Handle register map key (might be dict or string due to old bug)
         raw_register_map = entry.data.get(CONF_REGISTER_MAP, 'MIN_7000_10000TL_X')
@@ -96,7 +97,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             # Update config entry to store string key instead of dict
             new_data = {**entry.data, CONF_REGISTER_MAP: self._register_map_key}
             hass.config_entries.async_update_entry(entry, data=new_data)
-            _LOGGER.info(f"Fixed config entry to store register map key: {self._register_map_key}")
+            _LOGGER.debug(f"Fixed config entry to store register map key: {self._register_map_key}")
         else:
             # Normal case - it's a string key, use it directly
             self._register_map_key = raw_register_map
@@ -116,15 +117,19 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self._previous_day_totals = {}
         self._current_date = datetime.now().date()
         self._inverter_online = False
-        
-        # Get update interval from options (default 30 seconds)
+
+        # Adaptive polling for offline inverters
+        self._consecutive_failures = 0
+        self._failure_threshold = 5  # After 5 failures, slow down polling
         scan_interval = entry.options.get("scan_interval", 30)
-        
+        self._normal_update_interval = timedelta(seconds=scan_interval)
+        self._offline_update_interval = timedelta(seconds=entry.options.get("offline_scan_interval", 300))  # 5 min default
+
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{entry.data[CONF_NAME]}",
-            update_interval=timedelta(seconds=scan_interval),
+            update_interval=self._normal_update_interval,
         )
         
         # Initialize the Growatt client
@@ -148,7 +153,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             # Try to find which register map this is by comparing
             for map_name, map_data in REGISTER_MAPS.items():
                 if map_data == register_map or map_data.get('name') == register_map.get('name'):
-                    _LOGGER.info("Identified register map as: %s", map_name)
+                    _LOGGER.debug("Identified register map as: %s", map_name)
                     register_map = map_name
                     break
             else:
@@ -189,7 +194,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 timeout=timeout  # Pass timeout
             )
                 
-            _LOGGER.info("Initialized Growatt client with register map: %s", register_map)
+            _LOGGER.debug("Initialized Growatt client with register map: %s", register_map)
             
         except Exception as err:
             _LOGGER.error("Failed to initialize Growatt client: %s", err)
@@ -204,7 +209,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             minute=0,
             second=0
         )
-        _LOGGER.info("Midnight callback registered for daily total resets")
+        _LOGGER.debug("Midnight callback registered for daily total resets")
 
     async def _handle_midnight_reset(self, now=None):
         """Handle midnight reset of daily totals."""
@@ -229,7 +234,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         
         # If inverter is offline, zero out the daily totals now
         if not self._inverter_online and self.data is not None:
-            _LOGGER.info("Inverter offline at midnight - resetting daily totals to 0")
+            _LOGGER.debug("Inverter offline at midnight - resetting daily totals to 0")
             # Create modified data with zeroed daily totals
             self.data.energy_today = 0
             self.data.energy_to_grid_today = 0
@@ -291,54 +296,91 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         try:
             # Run the blocking operations in executor
             data = await self.hass.async_add_executor_job(self._fetch_data)
-            
+
             if data is None:
                 # Inverter not responding (probably night time or powered off)
                 self._inverter_online = False
-                
+                self._consecutive_failures += 1
+
+                # Adaptive polling: slow down after repeated failures
+                if self._consecutive_failures == self._failure_threshold:
+                    _LOGGER.info(
+                        "Inverter offline for %d consecutive polls - reducing poll frequency to %s",
+                        self._failure_threshold,
+                        self._offline_update_interval
+                    )
+                    self.update_interval = self._offline_update_interval
+                elif self._consecutive_failures > self._failure_threshold:
+                    # Already in slow mode, just log occasionally
+                    if self._consecutive_failures % 10 == 0:  # Log every 10th failure
+                        _LOGGER.debug(
+                            "Inverter still offline (%d consecutive failures) - continuing slow polling",
+                            self._consecutive_failures
+                        )
+
                 if self.data is not None:
                     _LOGGER.debug("Inverter offline - applying smart offline behavior")
-                    
+
                     # Check if we crossed midnight while offline
                     current_date = datetime.now().date()
                     if current_date > self._current_date:
-                        _LOGGER.info("Date changed while inverter offline - resetting daily totals")
+                        _LOGGER.debug("Date changed while inverter offline - resetting daily totals")
                         # Reset daily totals to 0
                         self.data.energy_today = 0
                         self.data.energy_to_grid_today = 0
                         self.data.load_energy_today = 0
                         self.data.energy_to_user_today = 0
                         self._current_date = current_date
-                    
+
                     # Return existing data (sensors will apply offline behavior via get_sensor_value)
                     return self.data
                 else:
                     # First connection attempt failed
                     raise UpdateFailed("Failed to read data from inverter")
-            
+
             # Inverter is responding!
             was_offline = not self._inverter_online
             self._inverter_online = True
-            
+
+            # Reset failure counter and restore normal polling if we were in slow mode
+            if self._consecutive_failures >= self._failure_threshold:
+                _LOGGER.info(
+                    "Inverter back online after %d failures - restoring normal poll frequency to %s",
+                    self._consecutive_failures,
+                    self._normal_update_interval
+                )
+                self.update_interval = self._normal_update_interval
+            self._consecutive_failures = 0
+
             # Update successful - record timestamp (timezone-aware)
             from datetime import timezone as tz
             self.last_successful_update = datetime.now()
             self.last_update_success_time = datetime.now(tz.utc)
             self._last_successful_read = datetime.now()
-            
+
             # Check for date transition (inverter came back online on new day)
             current_date = datetime.now().date()
             if was_offline and current_date > self._current_date:
-                _LOGGER.info("Inverter back online after date change - daily totals already reset by inverter")
+                _LOGGER.debug("Inverter back online after date change - daily totals already reset by inverter")
                 self._current_date = current_date
                 # Inverter's daily totals are already at new day values (small amounts from morning production)
-            
+
             return data
-            
+
         except Exception as err:
             _LOGGER.error("Error fetching data from Growatt inverter: %s", err)
             self._inverter_online = False
-            
+            self._consecutive_failures += 1
+
+            # Adaptive polling: slow down after repeated failures
+            if self._consecutive_failures == self._failure_threshold:
+                _LOGGER.info(
+                    "Inverter errors for %d consecutive polls - reducing poll frequency to %s",
+                    self._failure_threshold,
+                    self._offline_update_interval
+                )
+                self.update_interval = self._offline_update_interval
+
             # Keep last data if available
             if self.data is not None:
                 _LOGGER.debug("Error fetching data, keeping last known data with offline behavior")
@@ -367,9 +409,13 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 if data is not None:  # Success!
                     self._client.disconnect()
                     return data
-                
-                # Read failed but connection was ok - retry without disconnecting
+
+                # Read failed - disconnect before retrying to avoid stale connections
                 _LOGGER.warning("Read returned None (attempt %d/%d)", attempt + 1, max_retries)
+                try:
+                    self._client.disconnect()
+                except:
+                    pass
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     continue
@@ -434,7 +480,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 
                 if not result.isError():
                     self._serial_number = self._registers_to_ascii(result.registers)
-                    _LOGGER.info(f"Read serial number: {self._serial_number}")
+                    _LOGGER.debug(f"Read serial number: {self._serial_number}")
             except Exception as e:
                 _LOGGER.debug(f"Could not read serial number: {e}")
             
@@ -443,7 +489,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 result = self._client.client.read_holding_registers(address=9, count=3, device_id=self._slave_id)
                 if not result.isError():
                     self._firmware_version = self._registers_to_ascii(result.registers)
-                    _LOGGER.info(f"Read firmware version: {self._firmware_version}")
+                    _LOGGER.debug(f"Read firmware version: {self._firmware_version}")
             except Exception as e:
                 _LOGGER.debug(f"Could not read firmware version: {e}")
             
@@ -452,15 +498,38 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 result = self._client.client.read_holding_registers(address=125, count=8, device_id=self._slave_id)
                 if not result.isError():
                     self._inverter_type = self._registers_to_ascii(result.registers)
-                    _LOGGER.info(f"Read inverter type: {self._inverter_type}")
-                    
+                    _LOGGER.debug(f"Read inverter type: {self._inverter_type}")
+
                     # Parse model name from inverter type
                     self._model_name = self._parse_model_name(self._inverter_type, profile)
             except Exception as e:
                 _LOGGER.debug(f"Could not read inverter type: {e}")
                 # Fallback to profile name
                 self._model_name = profile.get("name", "Unknown Model")
-            
+
+            # Read Protocol version (register 30099)
+            # If readable, shows actual protocol version (e.g., 2.01, 2.02, etc.)
+            try:
+                result = self._client.client.read_holding_registers(address=30099, count=1, device_id=self._slave_id)
+                if not result.isError() and len(result.registers) > 0:
+                    version_value = result.registers[0]
+                    if version_value > 0:
+                        # Format as version string (e.g., 201 -> "Protocol 2.01", 202 -> "Protocol 2.02")
+                        major = version_value // 100
+                        minor = version_value % 100
+                        self._protocol_version = f"Protocol {major}.{minor:02d}"
+                        _LOGGER.info(f"Detected protocol version: {self._protocol_version} (register 30099 = {version_value})")
+                    else:
+                        self._protocol_version = "Protocol Legacy"
+                        _LOGGER.info("Protocol version register returned 0, using Protocol Legacy")
+                else:
+                    # Register not available - likely legacy protocol
+                    self._protocol_version = "Protocol Legacy"
+                    _LOGGER.debug("Could not read register 30099, assuming Protocol Legacy")
+            except Exception as e:
+                _LOGGER.debug(f"Could not read protocol version (30099): {e}")
+                self._protocol_version = "Protocol Legacy"
+
         except Exception as e:
             _LOGGER.error(f"Error reading device identification: {e}")
 
@@ -532,7 +601,8 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         model = self._model_name if self._model_name else profile.get("name", "Unknown Model")
         
         device_info = {
-            "identifiers": {(DOMAIN, self._slave_id)},
+            # Use entry_id for unique device identification (not slave_id, which may be the same for multiple inverters)
+            "identifiers": {(DOMAIN, self.entry.entry_id)},
             "name": self.config[CONF_NAME],
             "manufacturer": "Growatt",
             "model": model,
@@ -541,11 +611,15 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # Add serial number if available
         if self._serial_number:
             device_info["serial_number"] = self._serial_number
-        
+
         # Add firmware version if available
         if self._firmware_version:
             device_info["sw_version"] = self._firmware_version
-        
+
+        # Add protocol version (VPP 2.01 or Legacy)
+        if self._protocol_version:
+            device_info["hw_version"] = self._protocol_version
+
         return device_info
 
     @property

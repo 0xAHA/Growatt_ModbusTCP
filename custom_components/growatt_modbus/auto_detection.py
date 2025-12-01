@@ -100,6 +100,16 @@ def detect_profile_from_model_name(model_name: str) -> Optional[str]:
         'MOD10000': 'mod_6000_15000tl3_xh',
         'MOD12000': 'mod_6000_15000tl3_xh',
         'MOD15000': 'mod_6000_15000tl3_xh',
+
+        # WIT series (three-phase hybrid residential)
+        'WIT4000': 'wit_4000_15000tl3',
+        'WIT5000': 'wit_4000_15000tl3',
+        'WIT6000': 'wit_4000_15000tl3',
+        'WIT8000': 'wit_4000_15000tl3',
+        'WIT10000': 'wit_4000_15000tl3',
+        'WIT12000': 'wit_4000_15000tl3',
+        'WIT15000': 'wit_4000_15000tl3',
+
     }
     
     # Try to find a match - check longer patterns first to match specific models
@@ -131,8 +141,7 @@ async def async_read_serial_number(
     try:
         # Read 10 registers starting at address 23
         result = await hass.async_add_executor_job(
-            client.client.read_holding_registers,
-            23, 10
+            lambda: client.client.read_holding_registers(address=23, count=10)
         )
         
         if result.isError():
@@ -150,7 +159,7 @@ async def async_read_serial_number(
         serial_number = bytes(serial_bytes).decode('ascii', errors='ignore').strip('\x00').strip()
         
         if serial_number:
-            _LOGGER.info(f"Read serial number: {serial_number}")
+            _LOGGER.debug(f"Read serial number: {serial_number}")
             return serial_number
         
         return None
@@ -179,8 +188,7 @@ async def async_read_model_name(
     try:
         # Read 5 registers starting at address 0
         result = await hass.async_add_executor_job(
-            client.client.read_holding_registers,
-            0, 5
+            lambda: client.client.read_holding_registers(address=0, count=5)
         )
         
         if result.isError():
@@ -198,7 +206,7 @@ async def async_read_model_name(
         model_name = bytes(model_bytes).decode('ascii', errors='ignore').strip('\x00').strip()
         
         if model_name:
-            _LOGGER.info(f"Read model name: {model_name}")
+            _LOGGER.debug(f"Read model name: {model_name}")
             return model_name
         
         return None
@@ -206,6 +214,104 @@ async def async_read_model_name(
     except Exception as e:
         _LOGGER.debug(f"Exception reading model name: {str(e)}")
         return None
+
+
+async def async_read_dtc_code(
+    hass: HomeAssistant,
+    client: GrowattModbus,
+    device_id: int = 1
+) -> Optional[int]:
+    """
+    Read DTC (Device Type Code) from holding register 30000.
+
+    This is the most reliable way to identify the exact inverter model.
+
+    Args:
+        hass: HomeAssistant instance
+        client: GrowattModbus client
+        device_id: Modbus device ID (default 1)
+
+    Returns:
+        DTC code (int) or None if read fails
+    """
+    try:
+        # Read DTC from holding register 30000
+        result = await hass.async_add_executor_job(
+            lambda: client.client.read_holding_registers(address=30000, count=1)
+        )
+
+        if result.isError():
+            _LOGGER.warning(f"Failed to read DTC code from register 30000: {result}")
+            return None
+
+        dtc_code = result.registers[0]
+        if dtc_code and dtc_code > 0:
+            _LOGGER.info(f"✓ DTC Detection - Read DTC code: {dtc_code} from holding register 30000")
+            return dtc_code
+        else:
+            _LOGGER.warning(f"DTC code register 30000 returned 0 or invalid value: {dtc_code}")
+            return None
+
+    except Exception as e:
+        _LOGGER.warning(f"Exception reading DTC code from register 30000: {str(e)}")
+        return None
+
+
+def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
+    """
+    Match DTC (Device Type Code) to a profile.
+
+    DTC codes from Growatt VPP Protocol documentation:
+    - SPH 3000-6000TL BL: 3502
+    - SPA 3000-6000TL BL: 3735
+    - SPA 4000-10000TL3 BH-UP: 3725
+    - SPH 4000-10000TL3 BH-UP: 3601
+    - MIN 2500-6000TL-XH/XH(P): 5100
+    - MIC/MIN 2500-6000TL-X/X2: 5200
+    - MIN 7000-10000TL-X/X2: 5201
+    - MOD-XH\MID-XH: 5400
+    - WIT 100KTL3-H: 5601
+    - WIS 215KTL3: 5800
+
+    NOTE: DTC code presence indicates V2.01 protocol support, so we return V2.01 profiles.
+    Only official DTC codes from Growatt VPP 2.01 Protocol Table 3-1 are included.
+
+    Args:
+        dtc_code: DTC code from register 30000
+
+    Returns:
+        Profile key (V2.01 variant) or None if no match
+    """
+    # Only official DTC codes from Growatt VPP 2.01 Protocol documentation Table 3-1
+    dtc_map = {
+        # SPH series - Official Growatt DTCs
+        3502: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL
+        3735: 'sph_3000_6000_v201',       # SPA 3000-6000TL BL (similar to SPH)
+        3601: 'sph_tl3_3000_10000_v201',  # SPH 4000-10000TL3 BH-UP
+        3725: 'sph_tl3_3000_10000_v201',  # SPA 4000-10000TL3 BH-UP
+
+        # MIN/TL-XH/MIC series - Official Growatt DTCs
+        5100: 'tl_xh_3000_10000_v201',    # MIN 2500-6000TL-XH/XH(P) - covers TL-XH
+        5200: 'min_3000_6000_tl_x_v201',  # MIC/MIN 2500-6000TL-X/X2 - shared code, prioritize MIN
+        5201: 'min_7000_10000_tl_x_v201', # MIN 7000-10000TL-X/X2
+
+        # MOD/MID series - Official Growatt DTC
+        5400: 'mod_6000_15000tl3_xh_v201', # MOD-XH\MID-XH - covers both MOD and MID
+
+        # WIT/WIS series - Official Growatt DTCs
+        # Register 988 can distinguish: 0=WIT, 1=WIS
+        5603: 'wit_4000_15000tl3',          # WIT 4-15kW (residential three-phase hybrid) - Protocol V2.02
+        5601: 'mid_15000_25000tl3_x_v201',  # WIT 100KTL3-H (commercial)
+        5800: 'mid_15000_25000tl3_x_v201',  # WIS 215KTL3 (commercial)
+    }
+
+    profile_key = dtc_map.get(dtc_code)
+    if profile_key:
+        _LOGGER.info(f"Matched DTC code {dtc_code} to V2.01 profile '{profile_key}'")
+        return profile_key
+
+    _LOGGER.warning(f"✗ DTC Detection - Unknown DTC code: {dtc_code} (not in supported models)")
+    return None
 
 
 async def async_detect_inverter_series(
@@ -236,18 +342,18 @@ async def async_detect_inverter_series(
             client.read_input_registers, 3003, 1
         )
         if min_test is not None:
-            _LOGGER.info("Detected 3000-range registers - MIN series inverter")
+            _LOGGER.debug("Detected 3000-range registers - MIN series inverter")
             
             # Test for PV3 at register 3011 (MIN 7-10k has 3 strings)
             pv3_test = await hass.async_add_executor_job(
                 client.read_input_registers, 3011, 1
             )
             if pv3_test is not None:  # Register exists, even if value is 0
-                _LOGGER.info("Detected PV3 register - MIN 7000-10000TL-X")
+                _LOGGER.debug("Detected PV3 register - MIN 7000-10000TL-X")
                 await hass.async_add_executor_job(client.disconnect)
                 return 'min_7000_10000_tl_x'
             else:
-                _LOGGER.info("No PV3 register - MIN 3000-6000TL-X")
+                _LOGGER.debug("No PV3 register - MIN 3000-6000TL-X")
                 await hass.async_add_executor_job(client.disconnect)
                 return 'min_3000_6000_tl_x'
         
@@ -256,7 +362,7 @@ async def async_detect_inverter_series(
             client.read_input_registers, 3169, 1
         )
         if result is not None:
-            _LOGGER.info("Detected battery voltage register returns value")
+            _LOGGER.debug("Detected battery voltage register returns value")
             
             # Check for 3-phase at register 42 (S-phase voltage)
             phase_s_test = await hass.async_add_executor_job(
@@ -268,26 +374,35 @@ async def async_detect_inverter_series(
             )
             
             if phase_s_test and phase_t_test:
-                _LOGGER.info("Detected 3-phase hybrid - SPH TL3 or MOD series")
-                
-                # Check for register 1000 range (SPH TL3 uses 1000-1124, MOD may not)
+                _LOGGER.debug("Detected 3-phase with battery register - SPH TL3 or MOD series")
+
+                # Check for MOD-specific 31200 range (battery power per VPP Protocol V2.01)
+                mod_test = await hass.async_add_executor_job(
+                    client.read_input_registers, 31200, 1
+                )
+                if mod_test is not None:
+                    _LOGGER.debug("Detected 31200 range (VPP Protocol) - MOD-XH hybrid")
+                    await hass.async_add_executor_job(client.disconnect)
+                    return 'mod_6000_15000tl3_xh'
+
+                # Check for register 1000 range (SPH TL3 specific)
                 storage_test = await hass.async_add_executor_job(
                     client.read_input_registers, 1000, 1
                 )
                 if storage_test is not None:
-                    _LOGGER.info("Detected storage range - SPH TL3 series")
+                    _LOGGER.debug("Detected storage range - SPH TL3 series")
                     await hass.async_add_executor_job(client.disconnect)
                     return 'sph_tl3_3000_10000'
                 else:
-                    _LOGGER.info("No storage range - MOD series")
+                    _LOGGER.info("No distinctive registers found - defaulting to MOD-XH hybrid")
                     await hass.async_add_executor_job(client.disconnect)
                     return 'mod_6000_15000tl3_xh'
             else:
-                _LOGGER.info("Detected single-phase hybrid - SPH or TL-XH series")
+                _LOGGER.debug("Detected single-phase hybrid - SPH or TL-XH series")
                 await hass.async_add_executor_job(client.disconnect)
                 return 'sph_7000_10000'  # Default to SPH 7-10k
         
-        # Test for 3-phase at register 38 (MID/MAC/MAX)
+        # Test for 3-phase at register 38 (MID/MAX/MOD-X grid-tied)
         result = await hass.async_add_executor_job(
             client.read_input_registers, 38, 1
         )
@@ -297,9 +412,20 @@ async def async_detect_inverter_series(
                 client.read_input_registers, 42, 1
             )
             if phase2:
-                _LOGGER.info("Detected 3-phase grid-tied inverter - MID/MAX series")
-                await hass.async_add_executor_job(client.disconnect)
-                return 'mid_15000_25000tl3_x'  # Default to MID
+                _LOGGER.debug("Detected 3-phase grid-tied inverter")
+
+                # Check for 3000 range (MOD-X uses 3000 range, MID uses 0-124)
+                mod_range_test = await hass.async_add_executor_job(
+                    client.read_input_registers, 3003, 1
+                )
+                if mod_range_test is not None:
+                    _LOGGER.debug("Detected 3000 range - MOD-X grid-tied (no battery)")
+                    await hass.async_add_executor_job(client.disconnect)
+                    return 'mod_6000_15000tl3_x'
+                else:
+                    _LOGGER.debug("No 3000 range - MID series")
+                    await hass.async_add_executor_job(client.disconnect)
+                    return 'mid_15000_25000tl3_x'
         
         # Default fallback
         _LOGGER.warning("Could not definitively detect inverter series, defaulting to MIN 3000-6000TL-X")
@@ -314,6 +440,114 @@ async def async_detect_inverter_series(
             pass
         return None
 
+async def async_refine_dtc_detection(
+    hass: HomeAssistant,
+    client: GrowattModbus,
+    dtc_code: int,
+    initial_profile_key: str,
+    device_id: int = 1
+) -> str:
+    """
+    Refine DTC detection for models that share the same DTC code.
+
+    Uses additional V2.01 register checks to differentiate (with legacy fallback):
+    - SPH 3-6kW vs 7-10kW (DTC 3502): Check PV3 presence (31018 or 11)
+    - MOD vs MID (DTC 5400): Check battery SOC (31217) or voltage (3169)
+    - MIC vs MIN (DTC 5200): Check MIN range (31010 or 3003)
+
+    Since DTC exists, prefer V2.01 registers (30000+ range) first, then
+    fallback to legacy registers for robustness.
+
+    Args:
+        hass: HomeAssistant instance
+        client: GrowattModbus client
+        dtc_code: DTC code from register 30000
+        initial_profile_key: Initial profile from DTC mapping
+        device_id: Modbus device ID
+
+    Returns:
+        Refined profile key
+    """
+    try:
+        # DTC 3502: SPH 3-6kW vs 7-10kW - Check for PV3 (3PV = 7-10kW, 2PV = 3-6kW)
+        if dtc_code == 3502:
+            # Check V2.01 PV3 voltage register first (31018)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 31018, 1  # V2.01 PV3 voltage
+            )
+            if result is not None and len(result) > 0 and result[0] > 0:
+                _LOGGER.info("Detected PV3 in V2.01 range (3PV) - SPH 7-10kW")
+                return 'sph_7000_10000_v201'
+
+            # Fallback to legacy register 11 (base range)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 11, 1  # Legacy PV3 voltage
+            )
+            if result is not None and len(result) > 0 and result[0] > 0:
+                _LOGGER.info("Detected PV3 in legacy range (3PV) - SPH 7-10kW")
+                return 'sph_7000_10000_v201'
+            else:
+                _LOGGER.info("No PV3 string (2PV) - SPH 3-6kW")
+                return 'sph_3000_6000_v201'
+
+        # DTC 5400: MOD-XH (hybrid) vs MOD-X (grid-tied) vs MID
+        # Check V2.01 battery registers (MOD-XH has battery, MOD-X/MID don't)
+        elif dtc_code == 5400:
+            # Try V2.01 battery SOC register (31217)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 31217, 1  # V2.01 Battery SOC
+            )
+            if result is not None and len(result) > 0 and result[0] > 0:
+                _LOGGER.info("Detected V2.01 battery SOC register (31217) with valid value - MOD-XH hybrid")
+                return 'mod_6000_15000tl3_xh_v201'
+
+            # Fallback to legacy battery register (3169)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 3169, 1  # Legacy battery voltage
+            )
+            if result is not None and len(result) > 0 and result[0] > 0:
+                _LOGGER.info("Detected legacy battery voltage register (3169) with valid value - MOD-XH hybrid")
+                return 'mod_6000_15000tl3_xh_v201'
+
+            # Check for 3000+ range to distinguish MOD (grid-tied) from MID
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 3003, 1  # MOD uses 3000 range, MID uses 0-124
+            )
+            if result is not None:
+                _LOGGER.info("No battery but 3000+ range detected - MOD-X grid-tied")
+                return 'mod_6000_15000tl3_x'  # Grid-tied MOD without V2.01 suffix (uses legacy registers)
+            else:
+                _LOGGER.info("No battery, no 3000+ range - MID series")
+                return 'mid_15000_25000tl3_x_v201'
+
+        # DTC 5200: MIC vs MIN - Check register range (MIC uses 0-179, MIN uses 3000+)
+        elif dtc_code == 5200:
+            # Try V2.01 MIN range first (31010 - PV1 voltage in V2.01)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 31010, 1  # V2.01 MIN PV1 voltage
+            )
+            if result is not None:
+                _LOGGER.info("Detected V2.01 31000+ range - MIN series")
+                return 'min_3000_6000_tl_x_v201'
+
+            # Fallback to legacy MIN's 3000 range
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 3003, 1  # Legacy MIN PV1 voltage
+            )
+            if result is not None:
+                _LOGGER.info("Detected legacy 3000+ range - MIN series")
+                return 'min_3000_6000_tl_x_v201'
+            else:
+                _LOGGER.info("No 3000+ range - MIC series")
+                return 'mic_600_3300tl_x_v201'
+
+    except Exception as e:
+        _LOGGER.debug(f"Error during DTC refinement: {e}")
+
+    # Return initial profile if refinement fails or not applicable
+    return initial_profile_key
+
+
 async def async_determine_inverter_type(
     hass: HomeAssistant,
     client: GrowattModbus,
@@ -321,40 +555,55 @@ async def async_determine_inverter_type(
 ) -> Tuple[Optional[str], Optional[dict]]:
     """
     Automatically determine the inverter type and return appropriate profile.
-    
+
     Process:
-    1. Read model name from holding registers
-    2. Attempt to match model name to known profiles
-    3. If no match, detect series by probing registers
-    4. Return the appropriate profile
-    
+    1. Read DTC (Device Type Code) from register 30000 - most reliable
+    2. For ambiguous DTCs (shared codes), refine with additional register checks
+    3. Read model name from holding registers and match
+    4. If no match, detect series by probing registers
+    5. Return the appropriate profile
+
     Args:
         hass: HomeAssistant instance
         client: GrowattModbus client
         device_id: Modbus device ID (default 1)
-    
+
     Returns:
         Tuple of (profile_key, profile_dict) or (None, None) if detection fails
     """
     _LOGGER.info("Starting automatic inverter type detection")
-    
-    # Step 1: Try to read model name
+
+    # Step 1: Try to read DTC code (most reliable method)
+    dtc_code = await async_read_dtc_code(hass, client, device_id)
+
+    if dtc_code:
+        profile_key = detect_profile_from_dtc(dtc_code)
+
+        if profile_key:
+            # Step 1.5: Refine DTC detection for ambiguous codes
+            profile_key = await async_refine_dtc_detection(hass, client, dtc_code, profile_key, device_id)
+
+            profile = get_profile(profile_key)
+            if profile:
+                _LOGGER.info(f"✓ Auto-detected from DTC code {dtc_code}: {profile['name']}")
+                return profile_key, profile
+
+    # Step 2: Try to read model name
     model_name = await async_read_model_name(hass, client, device_id)
-    
+
     if model_name:
-        # Step 2: Try to match model name to profile
         profile_key = detect_profile_from_model_name(model_name)
-        
+
         if profile_key:
             profile = get_profile(profile_key)
             if profile:
                 _LOGGER.info(f"✓ Auto-detected from model name: {profile['name']}")
                 return profile_key, profile
-    
-    # Step 3: Model name didn't work, try series detection
-    _LOGGER.info("Model name detection failed, trying register-based detection...")
+
+    # Step 3: DTC and model name didn't work, try register probing
+    _LOGGER.info("DTC and model name detection failed, trying register-based detection...")
     profile_key = await async_detect_inverter_series(hass, client, device_id)
-    
+
     if profile_key:
         profile = get_profile(profile_key)
         if profile:

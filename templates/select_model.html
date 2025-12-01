@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Growatt Emulator - Model Selection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1f6feb 0%, #0969da 100%);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(31, 111, 235, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .selection-panel {
+            background: #161b22;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 1.1em;
+            color: #58a6ff;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            background: #0d1117;
+            border: 2px solid #30363d;
+            border-radius: 8px;
+            color: #c9d1d9;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+        }
+
+        .form-group select option {
+            background: #161b22;
+            padding: 10px;
+        }
+
+        .model-info {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .model-info.show {
+            display: block;
+        }
+
+        .model-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .model-info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .model-info-item .label {
+            font-size: 0.85em;
+            color: #8b949e;
+            margin-bottom: 4px;
+        }
+
+        .model-info-item .value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #58a6ff;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .badge-battery {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        .badge-pv3 {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .badge-phase {
+            background: rgba(23, 162, 184, 0.2);
+            color: #17a2b8;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #1f6feb 0%, #0969da 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(31, 111, 235, 0.3);
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(31, 111, 235, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #8b949e;
+        }
+
+        .spinner {
+            border: 3px solid #30363d;
+            border-top: 3px solid #58a6ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .series-group {
+            margin-bottom: 5px;
+            padding-left: 10px;
+        }
+
+        .series-header {
+            font-weight: 700;
+            color: #58a6ff;
+            font-size: 0.9em;
+            padding: 5px 0;
+            background: #0d1117;
+        }
+
+        .error {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid #f85149;
+            color: #f85149;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔆 Growatt Inverter Emulator</h1>
+            <p>Select an inverter model to start the emulator</p>
+        </div>
+
+        <div class="selection-panel">
+            <div class="form-group">
+                <label for="model-select">Inverter Model</label>
+                <select id="model-select">
+                    <option value="">Loading models...</option>
+                </select>
+                <div id="model-info" class="model-info">
+                    <div id="model-badges"></div>
+                    <div class="model-info-grid">
+                        <div class="model-info-item">
+                            <span class="label">Series</span>
+                            <span class="value" id="info-series">-</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="label">Max Power</span>
+                            <span class="value" id="info-power">-</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="label">Phases</span>
+                            <span class="value" id="info-phases">-</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="label">PV Strings</span>
+                            <span class="value" id="info-pv">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group" id="protocol-group" style="display: none;">
+                <label for="protocol-select">Protocol Version</label>
+                <select id="protocol-select">
+                    <option value="v201">V2.01 VPP Protocol (30000+ registers, DTC support)</option>
+                    <option value="legacy">Legacy Protocol (3000+ registers only)</option>
+                </select>
+                <div style="margin-top: 8px; font-size: 0.85em; color: #8b949e;">
+                    V2.01 serves both legacy and new VPP registers for full smart grid functionality
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="port-input">Modbus TCP Port</label>
+                <input type="number" id="port-input" value="502" min="1" max="65535">
+            </div>
+
+            <button id="start-btn" class="btn" disabled>Start Emulator</button>
+
+            <div id="error-msg" class="error" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let models = [];
+        let selectedModel = null;
+
+        // Load available models
+        async function loadModels() {
+            try {
+                const response = await fetch('/api/models');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to load models');
+                }
+
+                if (!data.models || data.models.length === 0) {
+                    throw new Error('No models available');
+                }
+
+                models = data.models;
+                populateModelSelect();
+                console.log(`Loaded ${models.length} models`);
+            } catch (error) {
+                console.error('Failed to load models:', error);
+                showError(`Failed to load models: ${error.message}. Check browser console for details.`);
+
+                // Still try to populate with empty list
+                const select = document.getElementById('model-select');
+                select.innerHTML = '<option value="">Error loading models - check console</option>';
+            }
+        }
+
+        // Populate model dropdown
+        function populateModelSelect() {
+            const select = document.getElementById('model-select');
+            select.innerHTML = '<option value="">-- Select a model --</option>';
+
+            // Group by series
+            const grouped = {};
+            models.forEach(model => {
+                if (!grouped[model.series]) {
+                    grouped[model.series] = [];
+                }
+                grouped[model.series].push(model);
+            });
+
+            // Sort series
+            const seriesOrder = ['MIC', 'MIN', 'TL-XH', 'MID', 'SPH', 'SPH-TL3', 'MOD'];
+            seriesOrder.forEach(series => {
+                if (grouped[series]) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = `${series} Series`;
+
+                    grouped[series].forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.key;
+                        option.textContent = model.name;
+                        option.dataset.model = JSON.stringify(model);
+                        optgroup.appendChild(option);
+                    });
+
+                    select.appendChild(optgroup);
+                }
+            });
+
+            document.getElementById('start-btn').disabled = false;
+        }
+
+        // Show model info
+        function showModelInfo(model) {
+            selectedModel = model;
+
+            const info = document.getElementById('model-info');
+            info.classList.add('show');
+
+            // Badges
+            const badges = document.getElementById('model-badges');
+            let badgeHtml = '';
+            if (model.has_battery) badgeHtml += '<span class="badge badge-battery">🔋 Battery</span>';
+            if (model.has_pv3) badgeHtml += '<span class="badge badge-pv3">3️⃣ PV Strings</span>';
+            badgeHtml += `<span class="badge badge-phase">${model.phases}⚡ Phase${model.phases > 1 ? 's' : ''}</span>`;
+            badges.innerHTML = badgeHtml;
+
+            // Info grid
+            document.getElementById('info-series').textContent = model.series;
+            document.getElementById('info-power').textContent = `${model.max_power_kw} kW`;
+            document.getElementById('info-phases').textContent = model.phases;
+            document.getElementById('info-pv').textContent = model.has_pv3 ? '3 strings' : '2 strings';
+
+            // Show protocol selector only if model has V2.01 variant
+            const protocolGroup = document.getElementById('protocol-group');
+            if (model.has_v201) {
+                protocolGroup.style.display = 'block';
+            } else {
+                protocolGroup.style.display = 'none';
+            }
+        }
+
+        // Start emulator
+        async function startEmulator() {
+            if (!selectedModel) {
+                showError('Please select a model');
+                return;
+            }
+
+            const port = parseInt(document.getElementById('port-input').value);
+            if (!port || port < 1 || port > 65535) {
+                showError('Invalid port number');
+                return;
+            }
+
+            // Determine final model key based on protocol selection
+            let modelKey = selectedModel.key;
+            const protocolGroup = document.getElementById('protocol-group');
+            if (protocolGroup.style.display !== 'none') {
+                const protocol = document.getElementById('protocol-select').value;
+                if (protocol === 'v201') {
+                    // Append _v201 suffix for V2.01 protocol
+                    modelKey = selectedModel.key + '_v201';
+                }
+                // else use legacy (no suffix)
+            }
+
+            const btn = document.getElementById('start-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Starting...';
+            hideError();
+
+            try {
+                const response = await fetch('/api/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        model: modelKey,
+                        port: port
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Redirect to dashboard
+                    window.location.href = '/dashboard';
+                } else {
+                    showError(data.error || 'Failed to start emulator');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Start Emulator';
+                }
+            } catch (error) {
+                console.error('Start error:', error);
+                showError('Failed to start emulator. Check console for details.');
+                btn.disabled = false;
+                btn.innerHTML = 'Start Emulator';
+            }
+        }
+
+        function showError(message) {
+            const errorMsg = document.getElementById('error-msg');
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error-msg').style.display = 'none';
+        }
+
+        // Event listeners
+        document.getElementById('model-select').addEventListener('change', (e) => {
+            const option = e.target.selectedOptions[0];
+            if (option.dataset.model) {
+                const model = JSON.parse(option.dataset.model);
+                showModelInfo(model);
+            } else {
+                document.getElementById('model-info').classList.remove('show');
+                selectedModel = null;
+            }
+        });
+
+        document.getElementById('start-btn').addEventListener('click', startEmulator);
+
+        // Load models on page load
+        loadModels();
+    </script>
+</body>
+</html>
