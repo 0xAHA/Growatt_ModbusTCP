@@ -301,11 +301,10 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
         5400: 'mod_6000_15000tl3_xh_v201', # MOD-XH\MID-XH - covers both MOD and MID
 
         # WIT/WIS series - Official Growatt DTCs
-        # NOTE: DTC 5601/5800 are for commercial units (100kW+), currently map to MID
-        # For residential WIT 4-15kW: DTC unknown (manual selection required)
-        # Register 988 can distinguish: 0=WIT, 1=WIS (future enhancement)
-        5601: 'mid_15000_25000tl3_x_v201', # WIT 100KTL3-H (commercial)
-        5800: 'mid_15000_25000tl3_x_v201', # WIS 215KTL3 (commercial)
+        # Register 988 can distinguish: 0=WIT, 1=WIS
+        5603: 'wit_4000_15000tl3',          # WIT 4-15kW (residential three-phase hybrid) - Protocol V2.02
+        5601: 'mid_15000_25000tl3_x_v201',  # WIT 100KTL3-H (commercial)
+        5800: 'mid_15000_25000tl3_x_v201',  # WIS 215KTL3 (commercial)
     }
 
     profile_key = dtc_map.get(dtc_code)
