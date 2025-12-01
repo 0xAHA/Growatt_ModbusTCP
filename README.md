@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.0.7--beta5-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.0.7-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -549,7 +549,7 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 
 ---
 
-## 🆕 What's New in v0.0.7-beta4 / 5
+## 🆕 What's New in v0.0.7
 
 **MOD Series Enhancements & Bug Fixes:**
 
@@ -569,6 +569,7 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
   - Includes export control registers (122-123) for both variants
 - **Enhanced Auto-Detection** - Automatically differentiates MOD variants:
 
+  - **DTC** detection for WIT 4-15K models
   - **DTC 5400** detection now checks battery SOC (31217) or voltage (3169) with non-zero value
   - Battery present → MOD-XH hybrid (`mod_6000_15000tl3_xh_v201`)
   - 3000 range but no battery → MOD-X grid-tied (`mod_6000_15000tl3_x`)
@@ -680,7 +681,6 @@ We need community members with different inverter models to validate the unteste
 - SPH-TL3 (3-phase hybrid)
 - TL-XH & TL-XH US (hybrid with battery)
 - MID 15-25kW (3-phase grid-tied)
-- MOD 6-15kW (3-phase hybrid)
 
 If you successfully test any of these, please report back via GitHub Issues with:
 
@@ -703,6 +703,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - Tested by solar enthusiasts worldwide 🌍
 - Special thanks to all hardware testers and contributors
 - MIN-10000TL-X validation by [@0xAHA](https://github.com/0xAHA)
+- MOD TL-XH validation by [@JoelSimmo](https://github.com/JoelSimmo)
+- WIT 4-15K support added by [@jekmanis](https://github.com/jekmanishttps://)
 
 ---
 
