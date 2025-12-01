@@ -117,15 +117,19 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self._previous_day_totals = {}
         self._current_date = datetime.now().date()
         self._inverter_online = False
-        
-        # Get update interval from options (default 30 seconds)
+
+        # Adaptive polling for offline inverters
+        self._consecutive_failures = 0
+        self._failure_threshold = 5  # After 5 failures, slow down polling
         scan_interval = entry.options.get("scan_interval", 30)
-        
+        self._normal_update_interval = timedelta(seconds=scan_interval)
+        self._offline_update_interval = timedelta(seconds=entry.options.get("offline_scan_interval", 300))  # 5 min default
+
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{entry.data[CONF_NAME]}",
-            update_interval=timedelta(seconds=scan_interval),
+            update_interval=self._normal_update_interval,
         )
         
         # Initialize the Growatt client
@@ -292,14 +296,31 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         try:
             # Run the blocking operations in executor
             data = await self.hass.async_add_executor_job(self._fetch_data)
-            
+
             if data is None:
                 # Inverter not responding (probably night time or powered off)
                 self._inverter_online = False
-                
+                self._consecutive_failures += 1
+
+                # Adaptive polling: slow down after repeated failures
+                if self._consecutive_failures == self._failure_threshold:
+                    _LOGGER.info(
+                        "Inverter offline for %d consecutive polls - reducing poll frequency to %s",
+                        self._failure_threshold,
+                        self._offline_update_interval
+                    )
+                    self.update_interval = self._offline_update_interval
+                elif self._consecutive_failures > self._failure_threshold:
+                    # Already in slow mode, just log occasionally
+                    if self._consecutive_failures % 10 == 0:  # Log every 10th failure
+                        _LOGGER.debug(
+                            "Inverter still offline (%d consecutive failures) - continuing slow polling",
+                            self._consecutive_failures
+                        )
+
                 if self.data is not None:
                     _LOGGER.debug("Inverter offline - applying smart offline behavior")
-                    
+
                     # Check if we crossed midnight while offline
                     current_date = datetime.now().date()
                     if current_date > self._current_date:
@@ -310,36 +331,56 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         self.data.load_energy_today = 0
                         self.data.energy_to_user_today = 0
                         self._current_date = current_date
-                    
+
                     # Return existing data (sensors will apply offline behavior via get_sensor_value)
                     return self.data
                 else:
                     # First connection attempt failed
                     raise UpdateFailed("Failed to read data from inverter")
-            
+
             # Inverter is responding!
             was_offline = not self._inverter_online
             self._inverter_online = True
-            
+
+            # Reset failure counter and restore normal polling if we were in slow mode
+            if self._consecutive_failures >= self._failure_threshold:
+                _LOGGER.info(
+                    "Inverter back online after %d failures - restoring normal poll frequency to %s",
+                    self._consecutive_failures,
+                    self._normal_update_interval
+                )
+                self.update_interval = self._normal_update_interval
+            self._consecutive_failures = 0
+
             # Update successful - record timestamp (timezone-aware)
             from datetime import timezone as tz
             self.last_successful_update = datetime.now()
             self.last_update_success_time = datetime.now(tz.utc)
             self._last_successful_read = datetime.now()
-            
+
             # Check for date transition (inverter came back online on new day)
             current_date = datetime.now().date()
             if was_offline and current_date > self._current_date:
                 _LOGGER.debug("Inverter back online after date change - daily totals already reset by inverter")
                 self._current_date = current_date
                 # Inverter's daily totals are already at new day values (small amounts from morning production)
-            
+
             return data
-            
+
         except Exception as err:
             _LOGGER.error("Error fetching data from Growatt inverter: %s", err)
             self._inverter_online = False
-            
+            self._consecutive_failures += 1
+
+            # Adaptive polling: slow down after repeated failures
+            if self._consecutive_failures == self._failure_threshold:
+                _LOGGER.info(
+                    "Inverter errors for %d consecutive polls - reducing poll frequency to %s",
+                    self._failure_threshold,
+                    self._offline_update_interval
+                )
+                self.update_interval = self._offline_update_interval
+
             # Keep last data if available
             if self.data is not None:
                 _LOGGER.debug("Error fetching data, keeping last known data with offline behavior")

@@ -313,9 +313,10 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
         current_name = self.config_entry.data.get(CONF_NAME, "Growatt")
         current_series = self.config_entry.data.get(CONF_INVERTER_SERIES, "min_7000_10000_tl_x")
         current_scan_interval = self.config_entry.options.get("scan_interval", 30)
+        current_offline_scan_interval = self.config_entry.options.get("offline_scan_interval", 300)
         current_timeout = self.config_entry.options.get("timeout", 10)
         current_invert = self.config_entry.options.get("invert_grid_power", False)
-        
+
         available_profiles = get_available_profiles()
 
         options_schema = vol.Schema({
@@ -331,6 +332,10 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                 "scan_interval",
                 default=current_scan_interval
             ): vol.All(vol.Coerce(int), vol.Range(min=5, max=300)),
+            vol.Required(
+                "offline_scan_interval",
+                default=current_offline_scan_interval
+            ): vol.All(vol.Coerce(int), vol.Range(min=60, max=3600)),
             vol.Required(
                 "timeout",
                 default=current_timeout
