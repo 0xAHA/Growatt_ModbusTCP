@@ -1,13 +1,14 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.0.7--beta4-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.0.7--beta5-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
 A native Home Assistant integration for Growatt solar inverters using direct Modbus RTU/TCP communication. Get real-time data straight from your inverter without relying on cloud services! 🚀
 
 **Protocol Support:**
+
 - **Primary:** Growatt VPP Protocol V2.01 with automatic model detection via Device Type Code (DTC)
 - **Fallback:** Legacy protocols (V1.39, V3.05) with manual model selection for older inverters
 - **Smart Detection:** Automatically uses best available protocol based on inverter capabilities
@@ -52,6 +53,7 @@ The integration supports **residential and small commercial** Growatt inverters 
 Sensors created depend on your inverter's hardware capabilities:
 
 **All Models:**
+
 - Solar PV strings (voltage, current, power per string)
 - AC output (single-phase or three-phase depending on model)
 - Energy totals (today, lifetime)
@@ -59,10 +61,12 @@ Sensors created depend on your inverter's hardware capabilities:
 - System diagnostics (temperatures, status, faults)
 
 **Hybrid Models Only** (TL-XH, SPH, SPH-TL3, MOD):
+
 - Battery voltage, current, power, SOC, temperature
 - Direct power flow measurements (to grid, to load, to user)
 
 **Model-Specific Details:**
+
 - **1 PV string:** MIC only
 - **2 PV strings:** MIN 3-6kW, SPH 3-6kW/7-10kW, SPH-TL3, MID
 - **3 PV strings:** MIN 7-10kW, TL-XH, MOD
@@ -195,12 +199,14 @@ Choose the profile that matches your inverter model:
 The integration uses a **4-step auto-detection** process:
 
 **VPP 2.01 Inverters** (newer models):
+
 1. Reads Device Type Code (DTC) from register 30000
 2. Identifies exact model (e.g., "MOD 6000-15000TL3-XH")
 3. Shows confirmation screen - accept or manually override
 4. Protocol version displayed as "Protocol 2.01"
 
 **Legacy Inverters** (older models without V2.01):
+
 1. DTC not available → tries model name detection
 2. Model name not available → probes register ranges
 3. **Register probing identifies most legacy inverters automatically!**
@@ -208,6 +214,7 @@ The integration uses a **4-step auto-detection** process:
 5. Protocol version displayed as "Protocol Legacy"
 
 **Detection Success Rate:**
+
 - ✅ V2.01 inverters: ~100% (DTC code)
 - ✅ Legacy inverters: ~90% (register probing)
 - ⚠️ Manual selection: ~10% (unusual/old models)
@@ -542,30 +549,33 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 
 ---
 
-## 🆕 What's New in v0.0.7-beta4
+## 🆕 What's New in v0.0.7-beta4 / 5
 
 **MOD Series Enhancements & Bug Fixes:**
 
 **🐛 Bug Fixes:**
+
 - **Fixed MOD export control** - Export limit mode and power controls (registers 122-123) now work correctly on MOD units
   - Root cause: Coordinator wasn't reading holding registers 122-123
   - Added `export_limit_mode` and `export_limit_power` fields to data model
   - Number and Select entities now properly populate and function
 
 **✨ Enhancements:**
+
 - **New MOD-6000-15000TL3-X Profile** - Added dedicated grid-tied MOD profile (no battery)
+
   - Distinguishes MOD-XH (hybrid with battery) from MOD-X (grid-tied)
   - Only creates appropriate entities based on hardware (no battery sensors on grid-tied units)
   - Includes export control registers (122-123) for both variants
-
 - **Enhanced Auto-Detection** - Automatically differentiates MOD variants:
+
   - **DTC 5400** detection now checks battery SOC (31217) or voltage (3169) with non-zero value
   - Battery present → MOD-XH hybrid (`mod_6000_15000tl3_xh_v201`)
   - 3000 range but no battery → MOD-X grid-tied (`mod_6000_15000tl3_x`)
   - 0-124 range only → MID series (`mid_15000_25000tl3_x_v201`)
   - Updated register probing and scan-based detection with same logic
-
 - **Expanded VPP Register Scanning** - Universal scanner now covers full VPP Protocol V2.01 range:
+
   - 31000-31099: Equipment status, PV data, fault words
   - 31100-31199: AC output, meter/grid power (31112/31113), load power (31118/31119), energy, temperatures
   - 31200-31299: Battery cluster 1 data
@@ -589,6 +599,7 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 - **🔧 Improved Config Flow** - Shows auto-detection results when manual selection is required
 
 **Official DTC Codes Implemented:**
+
 - SPH series: 3502, 3601, 3725, 3735
 - MIN/TL-XH/MIC series: 5100, 5200, 5201
 - MOD/MID series: 5400
