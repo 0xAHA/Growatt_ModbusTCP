@@ -109,9 +109,7 @@ def detect_profile_from_model_name(model_name: str) -> Optional[str]:
         'WIT10000': 'wit_4000_15000tl3',
         'WIT12000': 'wit_4000_15000tl3',
         'WIT15000': 'wit_4000_15000tl3',
-        'WIT4K': 'wit_4000_15000tl3',
-        'WIT8K': 'wit_4000_15000tl3',
-        'WIT15K': 'wit_4000_15000tl3',
+
     }
     
     # Try to find a match - check longer patterns first to match specific models

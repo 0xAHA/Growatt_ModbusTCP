@@ -39,6 +39,7 @@ UNIVERSAL_SCAN_RANGES = [
     {"name": "Storage Range 1000-1124", "start": 1000, "count": 125},
     {"name": "MIN/MOD Range 3000-3124", "start": 3000, "count": 125},
     {"name": "MOD Extended 3125-3249", "start": 3125, "count": 125},
+    {"name": "WIT/WIS Battery Range 8000-8124", "start": 8000, "count": 125},
     # VPP Protocol V2.01 ranges (31000+)
     {"name": "VPP Status/PV: 31000-31099", "start": 31000, "count": 100},  # Equipment status, PV data, faults
     {"name": "VPP AC/Grid/Load: 31100-31199", "start": 31100, "count": 100},  # AC output, meter/grid power (31112), load power (31118), energy, temps
