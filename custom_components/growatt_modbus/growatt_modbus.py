@@ -289,52 +289,22 @@ class GrowattModbus:
             logger.debug(f"Exception reading input registers: {e}")
             return None
     
-    def read_holding_registers(self, start_address: int, count: int) -> Optional[list]:
-        """Read holding registers with error handling"""
-        self._enforce_read_interval()
-        
-        try:
-            # Try keyword arguments (pymodbus 3.x+)
-            try:
-                response = self.client.read_holding_registers(
-                    address=start_address, 
-                    count=count, 
-                    slave=self.slave_id
-                )
-            except TypeError:
-                # Try with 'unit' parameter (pymodbus 2.5.x)
-                try:
-                    response = self.client.read_holding_registers(
-                        start_address, 
-                        count, 
-                        unit=self.slave_id
-                    )
-                except TypeError:
-                    # Simplest - just address and count (some versions handle slave differently)
-                    response = self.client.read_holding_registers(
-                        start_address, 
-                        count
-                    )
-            
-            # Handle different pymodbus versions for error checking
-            if hasattr(response, 'isError'):
-                if response.isError():
-                    logger.debug(f"Modbus error reading holding registers {start_address}-{start_address+count-1}")
-                    return None
-            elif hasattr(response, 'is_error') and callable(response.is_error):
-                if response.is_error():
-                    logger.debug(f"Modbus error reading holding registers {start_address}-{start_address+count-1}")
-                    return None
-            
-            if hasattr(response, 'registers'):
-                return response.registers
-            
-            logger.debug(f"Unknown response type: {type(response)}")
+def read_holding_registers(self, start_address: int, count: int) -> Optional[list]:
+    """Read holding registers with error handling (no unit/slave, no positional count)."""
+    self._enforce_read_interval()
+    try:
+        response = self.client.read_holding_registers(address=start_address, count=count)
+        if hasattr(response, "isError") and callable(response.isError) and response.isError():
+            logger.debug("Modbus error reading holding registers %d-%d: %r", start_address, start_address + count - 1, response)
             return None
-            
-        except Exception as e:
-            logger.debug(f"Exception reading holding registers: {e}")
-            return None
+        if hasattr(response, "registers"):
+            return response.registers
+        logger.debug("Unexpected response type from read_holding_registers(%d, %d): %r", start_address, count, response)
+        return None
+    except Exception as e:
+        logger.debug("Exception reading holding registers %d-%d: %s", start_address, start_address + count - 1, e)
+        return None
+
 
     def _get_register_value(self, address: int) -> Optional[float]:
         """
@@ -577,37 +547,64 @@ class GrowattModbus:
     def write_register(self, register: int, value: int) -> bool:
         """
         Write a single holding register.
-        
-        Args:
-            register: Register address (relative to base address 0)
-            value: Value to write (already scaled as integer)
-        
-        Returns:
-            bool: True if write successful, False otherwise
         """
         try:
-            # Check if client exists and is connected
-            if not self.client or not hasattr(self.client, 'is_socket_open') or not self.client.is_socket_open():
-                logger.error("Cannot write register - not connected")
+            logger.debug(f"[WRITE] Request to write register {register} with value {value}")
+
+            if not self.client:
+                logger.error("[WRITE] Cannot write register - client not initialised")
                 return False
-            
-            # Write to holding register (function code 6)
+
+            # ---- Connection / socket logging ----------------------
+            if hasattr(self.client, "is_socket_open"):
+                try:
+                    socket_open = self.client.is_socket_open()
+                    logger.debug(f"[WRITE] is_socket_open() returned: {socket_open}")
+
+                    if not socket_open:
+                        logger.warning("[WRITE] Socket not open, attempting reconnect...")
+                        if not self.connect():
+                            logger.error("[WRITE] Reconnect failed - not connected")
+                            return False
+                        logger.info("[WRITE] Reconnect successful, proceeding with write")
+
+                except Exception as e:
+                    logger.warning(f"[WRITE] is_socket_open() threw exception: {e}")
+                    logger.warning("[WRITE] Attempting reconnect due to error...")
+                    if not self.connect():
+                        logger.error("[WRITE] Reconnect failed after exception")
+                        return False
+                    logger.info("[WRITE] Reconnect successful after exception")
+
+            else:
+                logger.debug("[WRITE] Client has no is_socket_open(), forcing reconnect...")
+                if not self.connect():
+                    logger.error("[WRITE] Reconnect failed - cannot determine socket state")
+                    return False
+                logger.info("[WRITE] Reconnect successful (no is_socket_open available)")
+            # --------------------------------------------------------
+
+            # ---- Perform actual write ------------------------------
+            logger.debug(f"[WRITE] Sending write_register({register}, {value}) to inverter")
+
             result = self.client.write_register(
                 address=register,
                 value=value,
                 device_id=self.slave_id
             )
-            
+
             if result.isError():
-                logger.error(f"Failed to write register {register}: {result}")
+                logger.error(f"[WRITE] Inverter responded with error: {result}")
                 return False
-            
-            logger.info(f"Successfully wrote value {value} to register {register}")
+
+            logger.info(f"[WRITE] Successfully wrote value {value} → register {register}")
             return True
-            
+            # --------------------------------------------------------
+
         except Exception as e:
-            logger.error(f"Exception writing register {register}: {e}")
+            logger.error(f"[WRITE] Exception writing register {register}: {e}")
             return False
+
 
 
     def _find_register_by_name(self, name: str) -> Optional[int]:
@@ -748,37 +745,59 @@ class GrowattModbus:
 
     def _read_device_info(self, data: GrowattData) -> None:
         """Read device info from holding registers"""
+
+        # Get holding register map once so we can use it even if 0–19 read fails
+        holding_map = self.register_map.get("holding_registers", {})
+
+        # --- Device info (0–19) ---
         holding_regs = self.read_holding_registers(0, 20)
         if holding_regs is None:
-            logger.debug("Could not read holding registers for device info")
-            return
-        
-        try:
-            holding_map = self.register_map.get('holding_registers', {})
-            
-            # Firmware version at register 3
-            if len(holding_regs) > 3 and 3 in holding_map:
-                fw_version = holding_regs[3]
-                data.firmware_version = f"{fw_version >> 8}.{fw_version & 0xFF}"
-            
-            # Serial number from registers 9-13
-            if len(holding_regs) > 13:
-                serial_parts = []
-                for i in range(9, 14):  # registers 9-13
-                    if i < len(holding_regs):
-                        reg_val = holding_regs[i]
+            logger.debug("Could not read holding registers 0–19 for device info")
+        else:
+            try:
+                # Firmware version at register 3
+                if len(holding_regs) > 3 and 3 in holding_map:
+                    fw_version = holding_regs[3]
+                    data.firmware_version = f"{fw_version >> 8}.{fw_version & 0xFF}"
+
+                # Serial number from registers 9-13
+                if len(holding_regs) > 13:
+                    serial_parts = []
+                    for i in range(9, 14):  # registers 9-13
+                        if i < len(holding_regs):
+                            reg_val = holding_regs[i]
                         # Convert 16-bit register to 2 ASCII characters
-                        if reg_val > 0:
-                            char1 = (reg_val >> 8) & 0xFF
-                            char2 = reg_val & 0xFF
-                            if char1 > 0 and 32 <= char1 <= 126:  # Printable ASCII
-                                serial_parts.append(chr(char1))
-                            if char2 > 0 and 32 <= char2 <= 126:
-                                serial_parts.append(chr(char2))
-                data.serial_number = ''.join(serial_parts).rstrip('\x00')
-                
-        except Exception as e:
-            logger.warning(f"Error reading device info: {e}")
+                            if reg_val > 0:
+                                char1 = (reg_val >> 8) & 0xFF
+                                char2 = reg_val & 0xFF
+                                if char1 > 0 and 32 <= char1 <= 126:  # Printable ASCII
+                                    serial_parts.append(chr(char1))
+                                if char2 > 0 and 32 <= char2 <= 126:
+                                    serial_parts.append(chr(char2))
+                    data.serial_number = ''.join(serial_parts).rstrip('\x00')
+
+            except Exception as e:
+                logger.warning(f"Error reading device info: {e}")
+
+        # --- Export control (122–123) ---
+        if 122 in holding_map or 123 in holding_map:
+            try:
+                export_regs = self.read_holding_registers(122, 2)
+                logger.debug(
+                    "[EXPORT CTRL] Raw export_regs from 122–123: %r", export_regs
+                )
+
+                if export_regs is not None and len(export_regs) >= 2:
+                    if 122 in holding_map:
+                        data.export_limit_mode = int(export_regs[0])
+                    if 123 in holding_map:
+                        data.export_limit_power = int(export_regs[1])
+
+                    logger.debug(
+                        "[EXPORT CTRL] Read export control: mode=%s, power=%s", data.export_limit_mode, data.export_limit_power)
+            except Exception as e:
+                logger.debug(f"Could not read export control registers: {e}")
+
 
     def get_status_text(self, status_code: int) -> str:
         """Convert status code to human readable text"""
