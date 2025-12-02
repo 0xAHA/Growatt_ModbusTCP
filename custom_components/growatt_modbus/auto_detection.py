@@ -291,10 +291,10 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
         3725: 'sph_tl3_3000_10000_v201',  # SPA 4000-10000TL3 BH-UP
 
         # SPF series - Off-Grid (034xx range from SPF protocol documentation)
-        3400: 'spf_6000_es_plus',         # SPF 3000-6000 ES PLUS (off-grid)
-        3401: 'spf_6000_es_plus',         # SPF 3000-6000 ES PLUS variant
-        3402: 'spf_6000_es_plus',         # SPF 3000-6000 ES PLUS variant
-        3403: 'spf_6000_es_plus',         # SPF 3000-6000 ES PLUS variant
+        3400: 'spf_3000_6000_es_plus',         # SPF 3000-6000 ES PLUS (off-grid)
+        3401: 'spf_3000_6000_es_plus',         # SPF 3000-6000 ES PLUS variant
+        3402: 'spf_3000_6000_es_plus',         # SPF 3000-6000 ES PLUS variant
+        3403: 'spf_3000_6000_es_plus',         # SPF 3000-6000 ES PLUS variant
 
         # MIN/TL-XH/MIC series - Official Growatt DTCs
         5100: 'tl_xh_3000_10000_v201',    # MIN 2500-6000TL-XH/XH(P) - covers TL-XH

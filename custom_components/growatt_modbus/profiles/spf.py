@@ -13,10 +13,10 @@ Key Features:
 - Detailed energy tracking for all power flows
 """
 
-# SPF 6000 ES PLUS (Off-grid inverter with battery)
-SPF_6000_ES_PLUS = {
-    'name': 'SPF 6000 ES PLUS',
-    'description': 'Off-grid solar inverter with battery storage and AC charging (6kW)',
+# SPF 3000-6000 ES PLUS (Off-grid inverter with battery)
+SPF_3000_6000_ES_PLUS = {
+    'name': 'SPF 3000-6000 ES PLUS',
+    'description': 'Off-grid solar inverter with battery storage and AC charging (3-6kW)',
     'notes': 'Uses 0-82 register range. Off-grid system with AC input, battery, and load output. No grid export.',
     'input_registers': {
         # System Status
@@ -119,5 +119,5 @@ SPF_6000_ES_PLUS = {
 
 # Export register maps for import by __init__.py
 SPF_REGISTER_MAPS = {
-    'SPF_6000_ES_PLUS': SPF_6000_ES_PLUS,
+    'SPF_3000_6000_ES_PLUS': SPF_3000_6000_ES_PLUS,
 }

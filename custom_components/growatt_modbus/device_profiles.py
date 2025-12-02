@@ -495,10 +495,10 @@ INVERTER_PROFILES = {
     # SPF SERIES - Off-Grid Storage (Battery with AC Input/Output)
     # ========================================================================
 
-    "spf_6000_es_plus": {
-        "name": "SPF 6000 ES PLUS",
-        "description": "Off-grid inverter with battery storage and AC charging (6kW)",
-        "register_map": "SPF_6000_ES_PLUS",
+    "spf_3000_6000_es_plus": {
+        "name": "SPF 3000-6000 ES PLUS",
+        "description": "Off-grid inverter with battery storage and AC charging (3-6kW)",
+        "register_map": "SPF_3000_6000_ES_PLUS",
         "phases": 1,
         "has_pv3": False,
         "has_battery": True,
