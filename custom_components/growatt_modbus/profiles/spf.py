@@ -74,6 +74,7 @@ SPF_6000_ES_PLUS = {
         41: {'name': 'warning_bit', 'scale': 1, 'unit': '', 'desc': 'Warning bit field'},
         42: {'name': 'fault_code', 'scale': 1, 'unit': '', 'desc': 'Fault value/code'},
         43: {'name': 'warning_code', 'scale': 1, 'unit': '', 'desc': 'Warning value/code'},
+        44: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'desc': 'Device Type Code: 034xx for SPF 3-6K series'},
 
         # === Energy Counters (all 32-bit pairs) ===
 
