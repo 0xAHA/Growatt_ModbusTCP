@@ -1,0 +1,123 @@
+"""
+SPF Series Profiles - Off-grid Solar Inverters with Battery Storage
+
+The SPF series are off-grid inverters designed for standalone solar systems.
+Unlike grid-tied models, they have AC input (for grid/generator backup charging)
+but no grid export capability.
+
+Key Features:
+- Off-grid operation with battery storage
+- AC input for charging from grid/generator
+- Load output for powering devices
+- Battery charge/discharge management
+- Detailed energy tracking for all power flows
+"""
+
+# SPF 3000-6000 ES PLUS (Off-grid inverter with battery)
+SPF_3000_6000_ES_PLUS = {
+    'name': 'SPF 3000-6000 ES PLUS',
+    'description': 'Off-grid solar inverter with battery storage and AC charging (3-6kW)',
+    'notes': 'Uses 0-82 register range. Off-grid system with AC input, battery, and load output. No grid export.',
+    'input_registers': {
+        # System Status
+        0: {'name': 'inverter_status', 'scale': 1, 'unit': '', 'desc': '0=Standby, 1=No Use, 2=Discharge, 3=Fault, 4=Flash, 5=PV Charge, 6=AC Charge, 7=Combine Charge, 8=Combine Charge+Bypass, 9=PV Charge+Bypass, 10=AC Charge+Bypass, 11=Bypass, 12=PV Charge+Discharge'},
+
+        # PV String 1
+        1: {'name': 'pv1_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'PV string 1 voltage'},
+        7: {'name': 'pv1_current', 'scale': 0.1, 'unit': 'A', 'desc': 'PV string 1 current'},
+        3: {'name': 'pv1_power_high', 'scale': 1, 'unit': '', 'pair': 4, 'desc': 'PV1 charge power (HIGH word)'},
+        4: {'name': 'pv1_power_low', 'scale': 1, 'unit': '', 'pair': 3, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'PV1 charge power (LOW word)'},
+
+        # PV String 2
+        2: {'name': 'pv2_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'PV string 2 voltage'},
+        8: {'name': 'pv2_current', 'scale': 0.1, 'unit': 'A', 'desc': 'PV string 2 current'},
+        5: {'name': 'pv2_power_high', 'scale': 1, 'unit': '', 'pair': 6, 'desc': 'PV2 charge power (HIGH word)'},
+        6: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'pair': 5, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'PV2 charge power (LOW word)'},
+
+        # Load Power (output to connected devices)
+        9: {'name': 'load_power_high', 'scale': 1, 'unit': '', 'pair': 10, 'desc': 'Load power consumption (HIGH word)'},
+        10: {'name': 'load_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Load power consumption (LOW word)'},
+
+        # AC Charge Power (from grid/generator to battery)
+        13: {'name': 'ac_charge_power_high', 'scale': 1, 'unit': '', 'pair': 14, 'desc': 'AC charge power (HIGH word)'},
+        14: {'name': 'ac_charge_power_low', 'scale': 1, 'unit': '', 'pair': 13, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'AC charge power (LOW word)'},
+
+        # Battery
+        17: {'name': 'battery_voltage', 'scale': 0.01, 'unit': 'V', 'desc': 'Battery voltage (note: 0.01 scale for precision)'},
+        18: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery state of charge'},
+        77: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 78, 'signed': True, 'desc': 'Battery power (HIGH word, signed)'},
+        78: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 77, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery power (LOW word, +charge/-discharge)'},
+
+        # Grid Input (AC input from grid/generator)
+        20: {'name': 'grid_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'AC input voltage (grid/generator)'},
+        21: {'name': 'grid_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'AC input frequency'},
+        36: {'name': 'ac_input_power_high', 'scale': 1, 'unit': '', 'pair': 37, 'desc': 'AC input power (HIGH word)'},
+        37: {'name': 'ac_input_power_low', 'scale': 1, 'unit': '', 'pair': 36, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'AC input power (LOW word)'},
+
+        # AC Output (to load)
+        22: {'name': 'ac_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'AC output voltage'},
+        23: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'AC output frequency'},
+
+        # Temperatures
+        25: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Inverter temperature', 'signed': True},
+        26: {'name': 'dcdc_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'DC-DC converter temperature', 'signed': True},
+
+        # Load Percentage
+        27: {'name': 'load_percentage', 'scale': 0.1, 'unit': '%', 'desc': 'Load percentage of rated capacity'},
+
+        # Work Time Total (inverter operating hours)
+        30: {'name': 'time_total_high', 'scale': 1, 'unit': '', 'pair': 31, 'desc': 'Total work time (HIGH word)'},
+        31: {'name': 'time_total_low', 'scale': 1, 'unit': '', 'pair': 30, 'combined_scale': 0.5, 'combined_unit': 's', 'desc': 'Total work time (LOW word, in seconds)'},
+
+        # Fault & Warning Codes
+        40: {'name': 'fault_bit', 'scale': 1, 'unit': '', 'desc': 'Fault bit field'},
+        41: {'name': 'warning_bit', 'scale': 1, 'unit': '', 'desc': 'Warning bit field'},
+        42: {'name': 'fault_code', 'scale': 1, 'unit': '', 'desc': 'Fault value/code'},
+        43: {'name': 'warning_code', 'scale': 1, 'unit': '', 'desc': 'Warning value/code'},
+        44: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'desc': 'Device Type Code: 034xx for SPF 3-6K series'},
+
+        # === Energy Counters (all 32-bit pairs) ===
+
+        # Solar Energy
+        48: {'name': 'energy_today_high', 'scale': 1, 'unit': '', 'pair': 49, 'desc': 'Solar energy today (HIGH word)'},
+        49: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'pair': 48, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Solar energy today (LOW word)'},
+        50: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'pair': 51, 'desc': 'Solar energy total (HIGH word)'},
+        51: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'pair': 50, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Solar energy total (LOW word)'},
+
+        # AC Charge Energy (from grid/generator)
+        56: {'name': 'ac_charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 57, 'desc': 'AC charge energy today (HIGH word)'},
+        57: {'name': 'ac_charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 56, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'AC charge energy today (LOW word)'},
+        58: {'name': 'ac_charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 59, 'desc': 'AC charge energy total (HIGH word)'},
+        59: {'name': 'ac_charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 58, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'AC charge energy total (LOW word)'},
+
+        # Battery Discharge Energy
+        60: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 61, 'desc': 'Battery discharge energy today (HIGH word)'},
+        61: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 60, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery discharge energy today (LOW word)'},
+        62: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 63, 'desc': 'Battery discharge energy total (HIGH word)'},
+        63: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 62, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery discharge energy total (LOW word)'},
+
+        # AC Discharge Energy (from battery to load via inverter)
+        64: {'name': 'ac_discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 65, 'desc': 'AC discharge energy today (HIGH word)'},
+        65: {'name': 'ac_discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 64, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'AC discharge energy today (LOW word)'},
+        66: {'name': 'ac_discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 67, 'desc': 'AC discharge energy total (HIGH word)'},
+        67: {'name': 'ac_discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 66, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'AC discharge energy total (LOW word)'},
+
+        # AC Charge Current & AC Discharge Power
+        68: {'name': 'ac_charge_battery_current', 'scale': 0.1, 'unit': 'A', 'desc': 'AC charging battery current'},
+        69: {'name': 'ac_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 70, 'desc': 'AC discharge power (HIGH word)'},
+        70: {'name': 'ac_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 69, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'AC discharge power (LOW word)'},
+
+        # Fan Speeds
+        81: {'name': 'mppt_fan_speed', 'scale': 1, 'unit': '%', 'desc': 'MPPT fan speed percentage'},
+        82: {'name': 'inverter_fan_speed', 'scale': 1, 'unit': '%', 'desc': 'Inverter fan speed percentage'},
+    },
+    'holding_registers': {
+        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
+        3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Active power rate control'},
+    }
+}
+
+# Export register maps for import by __init__.py
+SPF_REGISTER_MAPS = {
+    'SPF_3000_6000_ES_PLUS': SPF_3000_6000_ES_PLUS,
+}

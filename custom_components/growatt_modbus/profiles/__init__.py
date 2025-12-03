@@ -9,6 +9,7 @@ Profile Structure:
 - mod.py: MOD series (6-15kW three-phase hybrid)
 - tl_xh.py: TL-XH series (3-10kW hybrid)
 - sph.py: SPH series (storage/battery)
+- spf.py: SPF series (off-grid with battery)
 - wit.py: WIT series (4-15kW three-phase hybrid with advanced storage)
 """
 
@@ -20,6 +21,7 @@ from .min import MIN_REGISTER_MAPS
 from .mid import MID_REGISTER_MAPS
 from .sph import SPH_REGISTER_MAPS
 from .sph_tl3 import SPH_TL3_REGISTER_MAPS
+from .spf import SPF_REGISTER_MAPS
 from .mod import MOD_REGISTER_MAPS
 from .tl_xh import TL_XH_REGISTER_MAPS
 from .wit import WIT_REGISTER_MAPS
@@ -32,6 +34,7 @@ REGISTER_MAPS = {
     **MID_REGISTER_MAPS,
     **SPH_REGISTER_MAPS,
     **SPH_TL3_REGISTER_MAPS,
+    **SPF_REGISTER_MAPS,
     **MOD_REGISTER_MAPS,
     **TL_XH_REGISTER_MAPS,
     **WIT_REGISTER_MAPS,
