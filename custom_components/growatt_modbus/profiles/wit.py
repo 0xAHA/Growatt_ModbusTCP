@@ -33,8 +33,8 @@ WIT_4000_15000TL3 = {
         10: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         # Output Power
-        35: {'name': 'ac_power_high', 'alias': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36},
-        36: {'name': 'ac_power_low', 'alias': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        35: {'name': 'ac_power_high', 'alias': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36, 'signed': True},
+        36: {'name': 'ac_power_low', 'alias': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
         # AC Grid Frequency
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
@@ -42,20 +42,20 @@ WIT_4000_15000TL3 = {
         # Three-Phase AC Output - Phase R
         38: {'name': 'ac_voltage_r', 'alias': 'ac_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R voltage'},
         39: {'name': 'ac_current_r', 'alias': 'ac_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R current'},
-        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41},
-        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41, 'signed': True},
+        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
         # Three-Phase AC Output - Phase S
         42: {'name': 'ac_voltage_s', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase S voltage'},
         43: {'name': 'ac_current_s', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase S current'},
-        44: {'name': 'ac_power_s_high', 'scale': 1, 'unit': '', 'pair': 45},
-        45: {'name': 'ac_power_s_low', 'scale': 1, 'unit': '', 'pair': 44, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        44: {'name': 'ac_power_s_high', 'scale': 1, 'unit': '', 'pair': 45, 'signed': True},
+        45: {'name': 'ac_power_s_low', 'scale': 1, 'unit': '', 'pair': 44, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
         # Three-Phase AC Output - Phase T
         46: {'name': 'ac_voltage_t', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase T voltage'},
         47: {'name': 'ac_current_t', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase T current'},
-        48: {'name': 'ac_power_t_high', 'scale': 1, 'unit': '', 'pair': 49},
-        49: {'name': 'ac_power_t_low', 'scale': 1, 'unit': '', 'pair': 48, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        48: {'name': 'ac_power_t_high', 'scale': 1, 'unit': '', 'pair': 49, 'signed': True},
+        49: {'name': 'ac_power_t_low', 'scale': 1, 'unit': '', 'pair': 48, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
         # Line-to-Line Voltages
         50: {'name': 'line_voltage_rs', 'scale': 0.1, 'unit': 'V', 'desc': 'Line voltage R-S'},

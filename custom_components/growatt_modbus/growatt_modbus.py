@@ -98,6 +98,7 @@ class GrowattData:
     power_to_user: float = 0.0        # W
     power_to_grid: float = 0.0        # W (export)
     power_to_load: float = 0.0        # W
+    system_output_power: float = 0.0  # W (total system output per inverter)
     
     # Energy & Status
     energy_today: float = 0.0         # kWh
