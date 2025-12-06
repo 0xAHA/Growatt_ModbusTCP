@@ -701,6 +701,11 @@ class GrowattModbus:
             if ac_voltage_tr_addr:
                 data.ac_voltage_tr = self._get_register_value(ac_voltage_tr_addr) or 0.0
             
+            # System output power (total per inverter)
+            system_output_addr = self._find_register_by_name('system_output_power_low')
+            if system_output_addr:
+                data.system_output_power = self._get_register_value(system_output_addr) or 0.0
+
             # Power Flow (if available - storage/hybrid models)
             power_to_user_addr = self._find_register_by_name('power_to_user_low')
             power_to_grid_addr = self._find_register_by_name('power_to_grid_low')

@@ -66,6 +66,10 @@ THREE_PHASE_SENSORS: Set[str] = {
     "ac_frequency",
 }
 
+SYSTEM_OUTPUT_SENSORS: Set[str] = {
+    "system_output_power",
+}
+
 
 # ============================================================================
 # INVERTER PROFILES
@@ -151,6 +155,7 @@ INVERTER_PROFILES = {
             BASIC_PV_SENSORS |
             PV3_SENSORS |
             BASIC_AC_SENSORS |
+            SYSTEM_OUTPUT_SENSORS |
             GRID_SENSORS |
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
@@ -197,6 +202,7 @@ INVERTER_PROFILES = {
             BASIC_PV_SENSORS |
             PV3_SENSORS |
             BASIC_AC_SENSORS |
+            SYSTEM_OUTPUT_SENSORS |
             GRID_SENSORS |
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
@@ -578,6 +584,7 @@ INVERTER_PROFILES = {
             BASIC_PV_SENSORS |
             BASIC_AC_SENSORS |
             THREE_PHASE_SENSORS |
+            SYSTEM_OUTPUT_SENSORS |
             GRID_SENSORS |
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |

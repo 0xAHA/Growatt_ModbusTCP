@@ -146,6 +146,14 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfPower.WATT,
         "attr": "ac_power",
     },
+    "system_output_power": {
+        "name": "System Output Power",
+        "icon": "mdi:power-plug",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.WATT,
+        "attr": "system_output_power",
+    },
     "ac_frequency": {
         "name": "AC Frequency",
         "icon": "mdi:sine-wave",
