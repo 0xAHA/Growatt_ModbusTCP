@@ -5,6 +5,7 @@ import logging
 from typing import Any
 
 import voluptuous as vol
+import serial
 import serial.tools.list_ports
 
 from homeassistant import config_entries
@@ -176,25 +177,37 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                 # If manual entry was selected, use the manual path
                 if user_input.get("manual_path"):
                     device_path = user_input["manual_path"]
+                    _LOGGER.info(f"Using manually entered device path: {device_path}")
 
-                if not device_path:
+                if not device_path or device_path == "manual":
                     errors["base"] = "no_device"
+                    _LOGGER.warning("No device path provided")
                 else:
-                    # Test basic connection first
-                    _LOGGER.info(f"Testing serial connection to {device_path}")
+                    # Log the connection attempt with all parameters
+                    baudrate = user_input.get(CONF_BAUDRATE, DEFAULT_BAUDRATE)
+                    slave_id = user_input.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID)
+                    _LOGGER.info(
+                        f"Testing serial connection: device={device_path}, "
+                        f"baudrate={baudrate}, slave_id={slave_id}"
+                    )
 
                     # Create temporary client for auto-detection
                     client = GrowattModbus(
                         connection_type="serial",
                         device=device_path,
-                        baudrate=user_input.get(CONF_BAUDRATE, DEFAULT_BAUDRATE),
-                        slave_id=user_input.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID),
+                        baudrate=baudrate,
+                        slave_id=slave_id,
                         register_map="MIN_7000_10000TL_X"  # Temporary for connection
                     )
 
                     # Try to connect
                     if not await self.hass.async_add_executor_job(client.connect):
-                        _LOGGER.error("Failed to connect to inverter")
+                        _LOGGER.error(
+                            f"Failed to connect to inverter via serial port {device_path}. "
+                            f"Please check: (1) Device is plugged in, (2) Correct port selected, "
+                            f"(3) RS485 wiring (A/B pins), (4) Inverter is powered on, "
+                            f"(5) Baudrate matches inverter setting ({baudrate})"
+                        )
                         errors["base"] = "cannot_connect"
                     else:
                         _LOGGER.info("✓ Connected successfully, attempting auto-detection...")
@@ -238,12 +251,34 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                             })
                             return await self.async_step_manual()
 
+            except serial.SerialException as err:
+                _LOGGER.error(
+                    f"Serial port error: {err}. "
+                    f"This may indicate: (1) Port in use by another application, "
+                    f"(2) Insufficient permissions to access {device_path}, "
+                    f"(3) Device disconnected during configuration"
+                )
+                errors["base"] = "cannot_connect"
             except Exception as err:
-                _LOGGER.exception("Unexpected error during serial setup")
+                _LOGGER.exception(f"Unexpected error during serial setup: {err}")
                 errors["base"] = "unknown"
 
         # Get list of available serial ports
         ports = await self.hass.async_add_executor_job(serial.tools.list_ports.comports)
+
+        # Log discovered USB devices for debugging
+        _LOGGER.info("Scanning for USB serial devices...")
+        if ports:
+            _LOGGER.info(f"Found {len(ports)} serial device(s):")
+            for port in ports:
+                _LOGGER.info(
+                    f"  - {port.device}: {port.description} "
+                    f"(VID:PID={port.vid:04X}:{port.pid:04X} SN={port.serial_number or 'N/A'})"
+                    if port.vid and port.pid
+                    else f"  - {port.device}: {port.description}"
+                )
+        else:
+            _LOGGER.warning("No serial devices found on system")
 
         # Build port options with descriptions
         port_options = {}
@@ -259,6 +294,9 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
 
         # Default to first port or manual if no ports found
         default_port = next(iter(port_options.keys())) if port_options else "manual"
+
+        if not ports:
+            _LOGGER.info("Defaulting to manual entry (no devices detected)")
 
         # Build the serial form schema
         schema = vol.Schema({
