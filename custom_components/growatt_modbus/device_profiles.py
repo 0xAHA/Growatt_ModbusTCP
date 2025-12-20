@@ -312,6 +312,30 @@ INVERTER_PROFILES = {
         ),
     },
 
+    # MIN TL-XH Hybrid - Uses MIN 3000+ range with VPP battery
+    "min_tl_xh_3000_10000_v201": {
+        "name": "MIN TL-XH 3000-10000 (V2.01)",
+        "description": "MIN series TL-XH hybrid with battery (3-10kW) using 3000+ and 31000+ ranges",
+        "register_map": "MIN_TL_XH_3000_10000_V201",
+        "phases": 1,
+        "has_pv3": False,  # Only 2 PV strings based on user's CSV data
+        "has_battery": True,
+        "max_power_kw": 10.0,
+        "protocol_version": "v2.01",
+        "sensors": (
+            BASIC_PV_SENSORS |
+            BASIC_AC_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
+            ENERGY_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
+            BATTERY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
     # ========================================================================
     # MID SERIES - Three Phase String Inverters
     # ========================================================================

@@ -126,3 +126,35 @@ export_register_dump:
       default: true
       selector:
         boolean:
+
+write_register:
+  name: Write Modbus Register
+  description: Write a value to a specific Modbus holding register for advanced inverter control
+  fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device
+      required: true
+      selector:
+        device:
+          integration: growatt_modbus
+    register:
+      name: Register Address
+      description: Holding register address to write to (e.g., 0 for on/off, 3 for power rate, 30 for modbus address)
+      required: true
+      example: 0
+      selector:
+        number:
+          min: 0
+          max: 65535
+          mode: box
+    value:
+      name: Value
+      description: Value to write to the register (as integer, already scaled if needed)
+      required: true
+      example: 1
+      selector:
+        number:
+          min: -32768
+          max: 65535
+          mode: box

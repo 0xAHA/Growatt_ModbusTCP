@@ -349,7 +349,16 @@ async def async_detect_inverter_series(
         )
         if min_test is not None:
             _LOGGER.debug("Detected 3000-range registers - MIN series inverter")
-            
+
+            # Check for battery in VPP range (31200+) to detect MIN TL-XH hybrid variant
+            battery_test = await hass.async_add_executor_job(
+                client.read_input_registers, 31217, 1  # Battery SOC in VPP range
+            )
+            if battery_test is not None and len(battery_test) > 0 and battery_test[0] > 0:
+                _LOGGER.debug("Detected battery in 31200+ range - MIN TL-XH hybrid variant")
+                await hass.async_add_executor_job(client.disconnect)
+                return 'min_tl_xh_3000_10000_v201'
+
             # Test for PV3 at register 3011 (MIN 7-10k has 3 strings)
             pv3_test = await hass.async_add_executor_job(
                 client.read_input_registers, 3011, 1
@@ -525,6 +534,31 @@ async def async_refine_dtc_detection(
             else:
                 _LOGGER.info("No battery, no 3000+ range - MID series")
                 return 'mid_15000_25000tl3_x_v201'
+
+        # DTC 5100: TL-XH standard (0-124 range) vs MIN TL-XH hybrid (3000+ range)
+        # Check if inverter uses MIN series 3000+ range instead of standard TL-XH 0-124 range
+        elif dtc_code == 5100:
+            # Check for MIN range (3000+) - PV1 voltage at 3003
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 3003, 1  # MIN PV1 voltage
+            )
+            if result is not None and len(result) > 0:
+                # This is MIN TL-XH variant using 3000+ range with battery in 31200+ range
+                _LOGGER.info("Detected 3000+ range with DTC 5100 - MIN TL-XH hybrid variant")
+                # Verify battery registers exist in VPP range (31200+)
+                battery_test = await hass.async_add_executor_job(
+                    client.read_input_registers, 31217, 1  # Battery SOC in VPP range
+                )
+                if battery_test is not None:
+                    _LOGGER.info("Confirmed battery in 31200+ range - MIN TL-XH V2.01")
+                    return 'min_tl_xh_3000_10000_v201'
+                else:
+                    _LOGGER.warning("No battery found in 31200+ range despite 3000+ base range")
+                    return 'min_tl_xh_3000_10000_v201'  # Still use MIN TL-XH profile
+            else:
+                # Standard TL-XH using 0-124 range
+                _LOGGER.info("No 3000+ range detected - Standard TL-XH with 0-124 range")
+                return 'tl_xh_3000_10000_v201'
 
         # DTC 5200: MIC vs MIN - Check register range (MIC uses 0-179, MIN uses 3000+)
         elif dtc_code == 5200:

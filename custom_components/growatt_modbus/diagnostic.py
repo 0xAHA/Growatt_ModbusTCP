@@ -8,6 +8,7 @@ import voluptuous as vol
 from pymodbus.client import ModbusTcpClient
 
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 
 from .const import DOMAIN
@@ -30,6 +31,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Service names
 SERVICE_EXPORT_DUMP = "export_register_dump"
+SERVICE_WRITE_REGISTER = "write_register"
 
 # Universal scan ranges - covers all Growatt series
 # Split into chunks of max 125 registers to respect Modbus limits
@@ -54,6 +56,14 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         vol.Optional("port", default=502): cv.port,
         vol.Optional("slave_id", default=1): vol.All(vol.Coerce(int), vol.Range(min=1, max=247)),
         vol.Optional("notify", default=True): cv.boolean,
+    }
+)
+
+SERVICE_WRITE_REGISTER_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): cv.string,
+        vol.Required("register"): vol.All(vol.Coerce(int), vol.Range(min=0, max=65535)),
+        vol.Required("value"): vol.All(vol.Coerce(int), vol.Range(min=-32768, max=65535)),
     }
 )
 
@@ -172,12 +182,66 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     },
                 )
 
-    # Register service
+    async def write_register(call: ServiceCall) -> None:
+        """Write a value to a Modbus holding register."""
+        device_id = call.data["device_id"]
+        register = call.data["register"]
+        value = call.data["value"]
+
+        _LOGGER.info("Write register service called: device=%s, register=%d, value=%d", device_id, register, value)
+
+        # Get device registry
+        device_reg = dr.async_get(hass)
+        device_entry = device_reg.async_get(device_id)
+
+        if not device_entry:
+            _LOGGER.error("Device %s not found", device_id)
+            raise ValueError(f"Device {device_id} not found")
+
+        # Find the config entry for this device
+        config_entry_id = None
+        for entry_id in device_entry.config_entries:
+            if entry_id in hass.data.get(DOMAIN, {}):
+                config_entry_id = entry_id
+                break
+
+        if not config_entry_id:
+            _LOGGER.error("No config entry found for device %s", device_id)
+            raise ValueError(f"No config entry found for device {device_id}")
+
+        # Get the coordinator
+        coordinator = hass.data[DOMAIN][config_entry_id]
+
+        if not coordinator:
+            _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
+            raise ValueError(f"Coordinator not found for device {device_id}")
+
+        # Write the register using the coordinator's client
+        success = await hass.async_add_executor_job(
+            coordinator._client.write_register, register, value
+        )
+
+        if success:
+            _LOGGER.info("Successfully wrote value %d to register %d", value, register)
+            # Trigger a refresh to update the UI
+            await coordinator.async_request_refresh()
+        else:
+            _LOGGER.error("Failed to write value %d to register %d", value, register)
+            raise ValueError(f"Failed to write to register {register}")
+
+    # Register services
     hass.services.async_register(
         DOMAIN,
         SERVICE_EXPORT_DUMP,
         export_register_dump,
         schema=SERVICE_EXPORT_DUMP_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_WRITE_REGISTER,
+        write_register,
+        schema=SERVICE_WRITE_REGISTER_SCHEMA,
     )
 
 
