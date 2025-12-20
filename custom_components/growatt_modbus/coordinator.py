@@ -15,6 +15,9 @@ from .const import (
     DOMAIN,
     CONF_SLAVE_ID,
     CONF_REGISTER_MAP,
+    CONF_CONNECTION_TYPE,
+    CONF_DEVICE_PATH,
+    CONF_BAUDRATE,
     get_sensor_type,
     SENSOR_OFFLINE_BEHAVIOR,
 )
@@ -26,31 +29,44 @@ from .growatt_modbus import GrowattModbus, GrowattData
 _LOGGER = logging.getLogger(__name__)
 
 def test_connection(config: dict) -> dict:
-    """Test the connection to the Growatt inverter (TCP only)."""
+    """Test the connection to the Growatt inverter (TCP or Serial)."""
     try:
         # Migrate old register map names
         register_map = config.get(CONF_REGISTER_MAP, 'MIN_7000_10000TL_X')
-        
+
         # Ensure register map exists
         if register_map not in REGISTER_MAPS:
             register_map = 'MIN_7000_10000TL_X'
-        
-        # Create the TCP modbus client (TCP-only)
-        client = GrowattModbus(
-            connection_type="tcp",
-            host=config[CONF_HOST],
-            port=config[CONF_PORT],
-            slave_id=config[CONF_SLAVE_ID],
-            register_map=register_map,
-            timeout=self.entry.options.get("timeout", 10)
-        )
-        
+
+        # Get connection type (default to tcp for backward compatibility)
+        connection_type = config.get(CONF_CONNECTION_TYPE, "tcp")
+
+        # Create the modbus client based on connection type
+        if connection_type == "tcp":
+            client = GrowattModbus(
+                connection_type="tcp",
+                host=config[CONF_HOST],
+                port=config[CONF_PORT],
+                slave_id=config[CONF_SLAVE_ID],
+                register_map=register_map,
+                timeout=config.get("timeout", 10)
+            )
+        else:  # serial
+            client = GrowattModbus(
+                connection_type="serial",
+                device=config[CONF_DEVICE_PATH],
+                baudrate=config[CONF_BAUDRATE],
+                slave_id=config[CONF_SLAVE_ID],
+                register_map=register_map,
+                timeout=config.get("timeout", 10)
+            )
+
         # Test connection
         if client.connect():
             # Try to read some basic data
             data = client.read_all_data()
             client.disconnect()
-            
+
             if data is not None:
                 return {
                     "success": True,
@@ -62,7 +78,7 @@ def test_connection(config: dict) -> dict:
                 return {"success": False, "error": "Could not read data from inverter"}
         else:
             return {"success": False, "error": "Could not connect to inverter"}
-            
+
     except Exception as err:
         _LOGGER.exception("Connection test failed")
         return {"success": False, "error": str(err)}
@@ -177,25 +193,42 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         return register_map
 
     def _initialize_client(self):
-        """Initialize the Growatt Modbus client (TCP-only)."""
+        """Initialize the Growatt Modbus client (TCP or Serial)."""
         try:
             register_map = self._get_register_map()
-            
+
             # Get timeout from options (default 10 seconds)
             timeout = self.entry.options.get("timeout", 10)
-            
-            # TCP-only connection
-            self._client = GrowattModbus(
-                connection_type="tcp",
-                host=self.config[CONF_HOST],
-                port=self.config[CONF_PORT],
-                slave_id=self.config[CONF_SLAVE_ID],
-                register_map=register_map,
-                timeout=timeout  # Pass timeout
-            )
-                
-            _LOGGER.debug("Initialized Growatt client with register map: %s", register_map)
-            
+
+            # Get connection type (default to tcp for backward compatibility)
+            connection_type = self.config.get(CONF_CONNECTION_TYPE, "tcp")
+
+            # Create client based on connection type
+            if connection_type == "tcp":
+                self._client = GrowattModbus(
+                    connection_type="tcp",
+                    host=self.config[CONF_HOST],
+                    port=self.config[CONF_PORT],
+                    slave_id=self.config[CONF_SLAVE_ID],
+                    register_map=register_map,
+                    timeout=timeout
+                )
+                _LOGGER.debug("Initialized TCP Growatt client at %s:%s",
+                             self.config[CONF_HOST], self.config[CONF_PORT])
+            else:  # serial
+                self._client = GrowattModbus(
+                    connection_type="serial",
+                    device=self.config[CONF_DEVICE_PATH],
+                    baudrate=self.config[CONF_BAUDRATE],
+                    slave_id=self.config[CONF_SLAVE_ID],
+                    register_map=register_map,
+                    timeout=timeout
+                )
+                _LOGGER.debug("Initialized Serial Growatt client at %s @ %s baud",
+                             self.config[CONF_DEVICE_PATH], self.config[CONF_BAUDRATE])
+
+            _LOGGER.debug("Using register map: %s", register_map)
+
         except Exception as err:
             _LOGGER.error("Failed to initialize Growatt client: %s", err)
             self._client = None

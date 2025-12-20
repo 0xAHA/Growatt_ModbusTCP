@@ -146,6 +146,14 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfPower.WATT,
         "attr": "ac_power",
     },
+    "system_output_power": {
+        "name": "System Output Power",
+        "icon": "mdi:power-plug",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.WATT,
+        "attr": "system_output_power",
+    },
     "ac_frequency": {
         "name": "AC Frequency",
         "icon": "mdi:sine-wave",
@@ -674,15 +682,12 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 export = getattr(data, "power_to_grid", 0)
                 solar = getattr(data, "pv_total_power", 0)
                 load = getattr(data, "power_to_load", 0)
+                charge = getattr(data, "charge_power", 0)
+                discharge = getattr(data, "discharge_power", 0)
                 
-                if export > 0:
-                    # We have export data from registers
-                    grid_power = export
-                elif load > 0 and solar > 0:
-                    # Calculate: positive if exporting, negative if importing
-                    grid_power = solar - load
-                else:
-                    grid_power = 0
+                # Prefer inverter grid register (signed). When it's 0 or unavailable,
+                # fall back to net flow: (solar + battery discharge) - (load + battery charge)
+                grid_power = export if export != 0 else (solar + discharge) - (load + charge)
                 
                 # Apply inversion if configured (CT clamp backwards)
                 if invert_grid_power:
@@ -698,13 +703,11 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 export = getattr(data, "power_to_grid", 0)
                 solar = getattr(data, "pv_total_power", 0)
                 load = getattr(data, "power_to_load", 0)
+                charge = getattr(data, "charge_power", 0)
+                discharge = getattr(data, "discharge_power", 0)
                 
-                if export > 0:
-                    grid_power = export
-                elif load > 0 and solar > 0:
-                    grid_power = solar - load
-                else:
-                    grid_power = 0
+                # Positive means export, negative means import
+                grid_power = export if export != 0 else (solar + discharge) - (load + charge)
                 
                 # Apply inversion if configured
                 if invert_grid_power:
@@ -719,13 +722,11 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 export = getattr(data, "power_to_grid", 0)
                 solar = getattr(data, "pv_total_power", 0)
                 load = getattr(data, "power_to_load", 0)
+                charge = getattr(data, "charge_power", 0)
+                discharge = getattr(data, "discharge_power", 0)
                 
-                if export > 0:
-                    grid_power = export
-                elif load > 0 and solar > 0:
-                    grid_power = solar - load
-                else:
-                    grid_power = 0
+                # Positive means export, negative means import
+                grid_power = export if export != 0 else (solar + discharge) - (load + charge)
                 
                 # Apply inversion if configured
                 if invert_grid_power:

@@ -46,7 +46,9 @@
     },
     "error": {
       "cannot_connect": "Failed to connect to inverter. Check your connection settings and wiring.",
-      "unknown": "Unexpected error occurred during setup."
+      "unknown": "Unexpected error occurred during setup.",
+      "no_device": "Please select a device or enter a device path manually.",
+      "invalid_profile": "Invalid inverter profile selected."
     },
     "abort": {
       "already_configured": "This inverter is already configured."
