@@ -11,8 +11,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity import EntityCategory
 
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    DEVICE_TYPE_INVERTER,
+)
 from .coordinator import GrowattModbusCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,6 +41,7 @@ class GrowattInverterOnlineSensor(CoordinatorEntity, BinarySensorEntity):
     """Binary sensor for inverter online status."""
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(
         self,
@@ -45,7 +50,7 @@ class GrowattInverterOnlineSensor(CoordinatorEntity, BinarySensorEntity):
     ) -> None:
         """Initialize the binary sensor."""
         super().__init__(coordinator)
-        
+
         self._config_entry = config_entry
         self._attr_name = f"{config_entry.data['name']} Inverter Online"
         self._attr_unique_id = f"{config_entry.entry_id}_inverter_online"
@@ -54,7 +59,7 @@ class GrowattInverterOnlineSensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def device_info(self) -> dict[str, Any]:
         """Return device information."""
-        return self.coordinator.device_info
+        return self.coordinator.get_device_info(DEVICE_TYPE_INVERTER)
 
     @property
     def is_on(self) -> bool:

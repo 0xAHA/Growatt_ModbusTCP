@@ -18,8 +18,16 @@ from .const import (
     CONF_CONNECTION_TYPE,
     CONF_DEVICE_PATH,
     CONF_BAUDRATE,
+    CONF_DEVICE_STRUCTURE_VERSION,
+    CURRENT_DEVICE_STRUCTURE_VERSION,
     get_sensor_type,
     SENSOR_OFFLINE_BEHAVIOR,
+    DEVICE_TYPE_INVERTER,
+    DEVICE_TYPE_SOLAR,
+    DEVICE_TYPE_GRID,
+    DEVICE_TYPE_LOAD,
+    DEVICE_TYPE_BATTERY,
+    DEVICE_TYPE_CONTROLS,
 )
 
 from .const import REGISTER_MAPS
@@ -627,33 +635,102 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
     @property
     def device_info(self):
-        """Return device information for Home Assistant."""
+        """Return device information for Home Assistant (legacy compatibility).
+
+        This property is maintained for backwards compatibility.
+        New code should use get_device_info(device_type) instead.
+        """
+        return self.get_device_info(DEVICE_TYPE_INVERTER)
+
+    def get_device_info(self, device_type: str) -> dict:
+        """Get device info for a specific device type.
+
+        Args:
+            device_type: One of DEVICE_TYPE_INVERTER, DEVICE_TYPE_SOLAR, etc.
+
+        Returns:
+            Device info dictionary for Home Assistant device registry
+        """
         profile = REGISTER_MAPS[self._register_map_key]
-        
+        base_name = self.config[CONF_NAME]
+        entry_id = self.entry.entry_id
+
         # Use parsed model name if available, otherwise fall back to profile name
         model = self._model_name if self._model_name else profile.get("name", "Unknown Model")
-        
-        device_info = {
-            # Use entry_id for unique device identification (not slave_id, which may be the same for multiple inverters)
-            "identifiers": {(DOMAIN, self.entry.entry_id)},
-            "name": self.config[CONF_NAME],
-            "manufacturer": "Growatt",
-            "model": model,
-        }
-        
-        # Add serial number if available
-        if self._serial_number:
-            device_info["serial_number"] = self._serial_number
 
-        # Add firmware version if available
-        if self._firmware_version:
-            device_info["sw_version"] = self._firmware_version
+        # Main inverter device (parent)
+        if device_type == DEVICE_TYPE_INVERTER:
+            device_info = {
+                "identifiers": {(DOMAIN, f"{entry_id}_inverter")},
+                "name": base_name,
+                "manufacturer": "Growatt",
+                "model": model,
+            }
 
-        # Add protocol version (VPP 2.01 or Legacy)
-        if self._protocol_version:
-            device_info["hw_version"] = self._protocol_version
+            # Add serial number if available
+            if self._serial_number:
+                device_info["serial_number"] = self._serial_number
 
-        return device_info
+            # Add firmware version if available
+            if self._firmware_version:
+                device_info["sw_version"] = self._firmware_version
+
+            # Add protocol version (VPP 2.01 or Legacy)
+            if self._protocol_version:
+                device_info["hw_version"] = self._protocol_version
+
+            return device_info
+
+        # All other devices reference the inverter as parent
+        via_device = (DOMAIN, f"{entry_id}_inverter")
+
+        if device_type == DEVICE_TYPE_SOLAR:
+            return {
+                "identifiers": {(DOMAIN, f"{entry_id}_solar")},
+                "name": f"{base_name} Solar",
+                "manufacturer": "Growatt",
+                "model": "Solar Production",
+                "via_device": via_device,
+            }
+
+        elif device_type == DEVICE_TYPE_GRID:
+            return {
+                "identifiers": {(DOMAIN, f"{entry_id}_grid")},
+                "name": f"{base_name} Grid",
+                "manufacturer": "Growatt",
+                "model": "Grid Connection",
+                "via_device": via_device,
+            }
+
+        elif device_type == DEVICE_TYPE_LOAD:
+            return {
+                "identifiers": {(DOMAIN, f"{entry_id}_load")},
+                "name": f"{base_name} Load",
+                "manufacturer": "Growatt",
+                "model": "Load Management",
+                "via_device": via_device,
+            }
+
+        elif device_type == DEVICE_TYPE_BATTERY:
+            return {
+                "identifiers": {(DOMAIN, f"{entry_id}_battery")},
+                "name": f"{base_name} Battery",
+                "manufacturer": "Growatt",
+                "model": "Battery Storage",
+                "via_device": via_device,
+            }
+
+        elif device_type == DEVICE_TYPE_CONTROLS:
+            return {
+                "identifiers": {(DOMAIN, f"{entry_id}_controls")},
+                "name": f"{base_name} Controls",
+                "manufacturer": "Growatt",
+                "model": "System Controls",
+                "via_device": via_device,
+            }
+
+        # Default to inverter for unknown device types
+        return self.get_device_info(DEVICE_TYPE_INVERTER)
 
     @property
     def modbus_client(self):

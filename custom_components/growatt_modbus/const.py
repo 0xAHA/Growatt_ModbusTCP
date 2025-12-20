@@ -46,11 +46,17 @@ CONF_BAUDRATE = "baudrate"
 CONF_REGISTER_MAP = "register_map"
 CONF_INVERTER_SERIES = "inverter_series"
 CONF_INVERT_GRID_POWER = "invert_grid_power"  # For reversed CT clamps
+CONF_DEVICE_STRUCTURE_VERSION = "device_structure_version"
 
 # Default Values
 DEFAULT_PORT = 502
 DEFAULT_SLAVE_ID = 1
 DEFAULT_BAUDRATE = 9600
+
+# Device Structure Version
+# Version 1: Single device (legacy)
+# Version 2: Multi-device (inverter, solar, grid, load, battery, controls)
+CURRENT_DEVICE_STRUCTURE_VERSION = 2
 
 # ============================================================================
 # SENSOR TYPE CLASSIFICATIONS FOR OFFLINE BEHAVIOR
@@ -141,6 +147,148 @@ def get_sensor_type(sensor_key: str) -> str:
         if sensor_key in sensors:
             return sensor_type
     return 'diagnostic'  # Default to diagnostic if not found
+
+
+# ============================================================================
+# DEVICE STRUCTURE - Multi-Device Organization
+# ============================================================================
+
+# Device Types
+DEVICE_TYPE_INVERTER = "inverter"
+DEVICE_TYPE_SOLAR = "solar"
+DEVICE_TYPE_GRID = "grid"
+DEVICE_TYPE_LOAD = "load"
+DEVICE_TYPE_BATTERY = "battery"
+DEVICE_TYPE_CONTROLS = "controls"
+
+# Sensor to Device Mapping
+# Each sensor is assigned to a logical device for better organization
+SENSOR_DEVICE_MAP = {
+    # Inverter device - system health and status
+    DEVICE_TYPE_INVERTER: {
+        'status', 'last_update', 'fault_code', 'warning_code', 'derating_mode',
+        'inverter_temp', 'ipm_temp', 'boost_temp',
+        'battery_derating_mode',  # Battery-related status on inverter
+    },
+
+    # Solar device - PV production and AC output
+    DEVICE_TYPE_SOLAR: {
+        # PV inputs
+        'pv1_voltage', 'pv1_current', 'pv1_power',
+        'pv2_voltage', 'pv2_current', 'pv2_power',
+        'pv3_voltage', 'pv3_current', 'pv3_power',
+        'pv_total_power',
+        # AC output (single phase)
+        'ac_voltage', 'ac_current', 'ac_power', 'ac_frequency',
+        # AC output (three phase)
+        'ac_voltage_r', 'ac_voltage_s', 'ac_voltage_t',
+        'ac_voltage_rs', 'ac_voltage_st', 'ac_voltage_tr',
+        'ac_current_r', 'ac_current_s', 'ac_current_t',
+        'ac_power_r', 'ac_power_s', 'ac_power_t',
+        'system_output_power',
+        # Solar production energy
+        'energy_today', 'energy_total',
+        # Self-consumption percentage (related to solar utilization)
+        'self_consumption_percentage',
+    },
+
+    # Grid device - grid connection and import/export
+    DEVICE_TYPE_GRID: {
+        'grid_power', 'grid_export_power', 'grid_import_power',
+        'grid_energy_today', 'grid_energy_total',
+        'grid_import_energy_today', 'grid_import_energy_total',
+        'energy_to_grid_today', 'energy_to_grid_total',
+        'power_to_grid',
+    },
+
+    # Load device - consumption
+    DEVICE_TYPE_LOAD: {
+        'house_consumption', 'power_to_load', 'power_to_user',
+        'load_energy_today', 'load_energy_total',
+        'energy_to_user_today', 'energy_to_user_total',
+        'self_consumption',
+    },
+
+    # Battery device - storage
+    DEVICE_TYPE_BATTERY: {
+        'battery_voltage', 'battery_current', 'battery_soc',
+        'battery_temp', 'battery_power',
+        'battery_charge_power', 'battery_discharge_power',
+        'battery_charge_today', 'battery_discharge_today',
+        'battery_charge_total', 'battery_discharge_total',
+        'priority_mode',  # Battery priority mode
+    },
+
+    # Controls device - all control entities (number, select)
+    # This is populated programmatically in number.py and select.py
+    DEVICE_TYPE_CONTROLS: set(),
+}
+
+
+def get_device_type_for_sensor(sensor_key: str) -> str:
+    """Get the device type that a sensor belongs to.
+
+    Args:
+        sensor_key: The sensor key (e.g., 'pv1_power', 'battery_soc')
+
+    Returns:
+        Device type string (e.g., DEVICE_TYPE_SOLAR, DEVICE_TYPE_BATTERY)
+    """
+    for device_type, sensors in SENSOR_DEVICE_MAP.items():
+        if sensor_key in sensors:
+            return device_type
+    # Default to inverter for unknown sensors
+    return DEVICE_TYPE_INVERTER
+
+
+# ============================================================================
+# ENTITY CATEGORIES
+# ============================================================================
+
+# Entity category assignments for better UI organization
+# - None (default): Main sensors shown prominently
+# - "diagnostic": Technical details shown in separate diagnostic tab
+# - "config": Configuration entities (hidden by default)
+
+ENTITY_CATEGORY_MAP = {
+    # Diagnostic entities - voltages, currents, temperatures, technical details
+    'diagnostic': {
+        # PV diagnostic
+        'pv1_voltage', 'pv1_current',
+        'pv2_voltage', 'pv2_current',
+        'pv3_voltage', 'pv3_current',
+        # AC diagnostic
+        'ac_voltage', 'ac_current', 'ac_frequency',
+        'ac_voltage_r', 'ac_voltage_s', 'ac_voltage_t',
+        'ac_voltage_rs', 'ac_voltage_st', 'ac_voltage_tr',
+        'ac_current_r', 'ac_current_s', 'ac_current_t',
+        # Battery diagnostic
+        'battery_voltage', 'battery_current', 'battery_temp',
+        # Temperatures
+        'inverter_temp', 'ipm_temp', 'boost_temp',
+        # Status codes
+        'fault_code', 'warning_code', 'derating_mode', 'battery_derating_mode',
+    },
+
+    # Config entities - all control entities
+    # Note: These are handled in number.py and select.py
+    'config': set(),
+}
+
+
+def get_entity_category(sensor_key: str) -> str | None:
+    """Get the entity category for a sensor.
+
+    Args:
+        sensor_key: The sensor key
+
+    Returns:
+        Entity category string ('diagnostic', 'config') or None for main sensors
+    """
+    for category, sensors in ENTITY_CATEGORY_MAP.items():
+        if sensor_key in sensors:
+            return category
+    return None
 
 
 # ============================================================================
