@@ -22,7 +22,7 @@ The integration supports **residential and small commercial** Growatt inverters 
 |-----------------|-------------|------------|---------|------------------|--------|-------|
 | **TL-XH 3000-10000** | TL-XH 3000-10000 | 3 | Yes | V2.01 + Legacy | ⚠️ Untested | Hybrid with battery, 3-10kW |
 | **TL-XH US 3000-10000** | TL-XH US 3000-10000 | 3 | Yes | V2.01 + Legacy | ⚠️ Untested | US version hybrid, 3-10kW |
-| **MIN TL-XH 3000-10000** | MIN 6000 TL-XH | 2 | Yes | V2.01 | ⚠️ Untested | MIN series hybrid with battery, DTC 5100, uses 3000+ and 31200+ ranges |
+| **MIN TL-XH 3000-10000** | MIN 6000/10000 TL-XH | 2-3 | Yes | V2.01 | ⚠️ Untested | MIN hybrid with battery, DTC 5100, 3-6kW: 2 strings, 7-10kW: 3 strings |
 | **SPH 3000-6000** | SPH 3000-6000 | 2 | Yes | V2.01 + Legacy | ⚠️ Untested | Storage hybrid, 3-6kW |
 | **SPH 7000-10000** | SPH 7000-10000 | 2 | Yes | V2.01 + Legacy | ⚠️ Untested | Storage hybrid, 7-10kW |
 
@@ -62,7 +62,7 @@ Different inverter models create different sensors based on their hardware capab
 | **Solar Input (PV Strings)** | | | | | | | | | | | | |
 | PV1 Voltage/Current/Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | PV2 Voltage/Current/Power | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| PV3 Voltage/Current/Power | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| PV3 Voltage/Current/Power | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
 | Solar Total Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **AC Output (Single-Phase)** | | | | | | | | | | | | |
 | AC Voltage | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |

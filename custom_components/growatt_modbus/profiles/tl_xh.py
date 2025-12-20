@@ -223,7 +223,7 @@ TL_XH_US_3000_10000_V201['holding_registers'][30000] = {
 MIN_TL_XH_3000_10000_V201 = {
     'name': 'MIN TL-XH 3000-10000 (V2.01)',
     'description': 'MIN series TL-XH hybrid with battery (3-10kW) using 3000+ and 31000+ ranges',
-    'notes': 'Uses MIN 3000+ range for base sensors and VPP 31200+ range for battery. Found in MIN 6000 TL-XH models with DTC 5100.',
+    'notes': 'Uses MIN 3000+ range for base sensors and VPP 31200+ range for battery. 3-6kW models have 2 PV strings, 7-10kW models have 3 PV strings. Found in MIN 6000/10000 TL-XH models with DTC 5100.',
     'input_registers': {
         # === MIN SERIES BASE RANGE (3000+) ===
         # System Status
@@ -244,6 +244,12 @@ MIN_TL_XH_3000_10000_V201 = {
         3008: {'name': 'pv2_current', 'scale': 0.1, 'unit': 'A', 'desc': 'PV2 DC current'},
         3009: {'name': 'pv2_power_high', 'scale': 1, 'unit': '', 'desc': 'PV2 power HIGH word', 'pair': 3010},
         3010: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'desc': 'PV2 power LOW word', 'pair': 3009, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # PV String 3 (7-10kW models only)
+        3011: {'name': 'pv3_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'PV3 DC voltage'},
+        3012: {'name': 'pv3_current', 'scale': 0.1, 'unit': 'A', 'desc': 'PV3 DC current'},
+        3013: {'name': 'pv3_power_high', 'scale': 1, 'unit': '', 'desc': 'PV3 power HIGH word', 'pair': 3014},
+        3014: {'name': 'pv3_power_low', 'scale': 1, 'unit': '', 'desc': 'PV3 power LOW word', 'pair': 3013, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         # AC Output
         3025: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'AC frequency'},

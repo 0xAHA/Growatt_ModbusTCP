@@ -318,12 +318,13 @@ INVERTER_PROFILES = {
         "description": "MIN series TL-XH hybrid with battery (3-10kW) using 3000+ and 31000+ ranges",
         "register_map": "MIN_TL_XH_3000_10000_V201",
         "phases": 1,
-        "has_pv3": False,  # Only 2 PV strings based on user's CSV data
+        "has_pv3": True,  # 3-6kW: 2 strings, 7-10kW: 3 strings
         "has_battery": True,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
         "sensors": (
             BASIC_PV_SENSORS |
+            PV3_SENSORS |
             BASIC_AC_SENSORS |
             GRID_SENSORS |
             POWER_FLOW_SENSORS |
