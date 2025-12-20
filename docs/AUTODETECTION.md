@@ -24,9 +24,9 @@ For models sharing the same DTC code, additional register checks differentiate t
 | Shared DTC | Models | Check Register | Decision Logic |
 |------------|--------|----------------|----------------|
 | **3502** | SPH 3-6kW<br>SPH 7-10kW | 31018 (V2.01 PV3)<br>11 (Legacy PV3) | Has PV3 → 7-10kW<br>No PV3 → 3-6kW |
+| **5100** | TL-XH (standard)<br>MIN TL-XH (hybrid) | 3003 (MIN range)<br>31217 (Battery SOC in VPP range) | Has 3000+ range + battery → MIN TL-XH<br>No 3000+ range → Standard TL-XH |
 | **5200** | MIC<br>MIN 3-6kW | 31010 (V2.01 MIN range)<br>3003 (Legacy MIN range) | Readable → MIN<br>Not readable → MIC |
 | **5400** | MOD<br>MID | 31217 (V2.01 Battery SOC)<br>3169 (Legacy Battery voltage) | Readable → MOD<br>Not readable → MID |
-| **5100** | TL-XH<br>TL-XH US | N/A | Both use same profile |
 
 ### Step 3: Model Name Detection
 If DTC unavailable, reads model name string from holding registers and pattern-matches against known models.
@@ -37,6 +37,7 @@ If DTC and model name unavailable, probes different register ranges to identify 
 **Detection Patterns:**
 - **MIN Series:** Tests register 3003 (PV1 voltage in 3000 range)
   - If readable → MIN detected
+  - Tests register 31217 (Battery SOC in VPP range): Readable = MIN TL-XH hybrid
   - Tests register 3011 (PV3): Readable = 7-10kW, Not readable = 3-6kW
 - **Hybrid Models:** Tests register 3169 (battery voltage)
   - If readable → Hybrid model (SPH/TL-XH/MOD)
@@ -55,13 +56,16 @@ Based on **Growatt VPP Protocol V2.01 - Table 3-1**:
 | Model Series | DTC Code | Protocol | Battery | Legacy Registers | Notes |
 |--------------|----------|----------|---------|------------------|-------|
 | **SPH 3000-6000TL BL** | 3502 | V2.01 | Yes | 0-124, 1000-1124 | Single-phase hybrid |
+| **SPF 3000-6000 ES PLUS** | 3400-3403 | V2.01 | Yes | 0-124, 31200+ | Off-grid with battery |
 | **SPA 3000-6000TL BL** | 3735 | V2.01 | Yes | 0-124 | SPA variant of SPH |
 | **SPH 4000-10000TL3 BH-UP** | 3601 | V2.01 | Yes | 0-124, 1000-1124 | Three-phase hybrid |
 | **SPA 4000-10000TL3 BH-UP** | 3725 | V2.01 | Yes | 0-124 | SPA variant |
-| **MIN 2500-6000TL-XH/XH(P)** | 5100 | V2.01 | No | 0-124 | Covers TL-XH series |
+| **TL-XH 3000-10000** | 5100 | V2.01 | Yes | 0-124, 31200+ | Standard TL-XH (0-124 range) |
+| **MIN TL-XH 3000-10000** | 5100 | V2.01 | Yes | 3000-3124, 31200+ | MIN series TL-XH (3000+ range) |
 | **MIC/MIN 2500-6000TL-X/X2** | 5200 | V2.01 | No | 0-179 (MIC)<br>3000-3124 (MIN) | Shared code |
 | **MIN 7000-10000TL-X/X2** | 5201 | V2.01 | No | 3000-3124 | Grid-tied, 3 PV strings |
 | **MOD-XH / MID-XH** | 5400 | V2.01 | MOD: Yes<br>MID: No | 0-124, 3000+ (MOD)<br>0-124 (MID) | Shared code |
+| **WIT 4000-15000TL3** | 5603 | V2.02 | Yes | 0-124, 8000+, 31000+ | Three-phase hybrid with advanced storage |
 | **WIT 100KTL3-H** | 5601 | V2.01 | No | Uses MID profile | Large commercial |
 | **WIS 215KTL3** | 5800 | V2.01 | No | Uses MID profile | Large commercial |
 
