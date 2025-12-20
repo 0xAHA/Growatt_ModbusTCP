@@ -474,7 +474,7 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
     @callback
     def async_get_options_flow(config_entry):
         """Get options flow."""
-        return GrowattModbusOptionsFlow(config_entry)
+        return GrowattModbusOptionsFlow()
 
 
 class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
