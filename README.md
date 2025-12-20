@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.0.8beta2-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.0.8-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -37,8 +37,9 @@ A native Home Assistant integration for Growatt solar inverters using direct Mod
 The integration supports **residential and small commercial** Growatt inverters (3-25kW range):
 
 **Single-Phase Grid-Tied:** MIC (0.6-3.3kW), MIN 3-6kW, MIN 7-10kW ✅
-**Single-Phase Hybrid:** SPH 3-6kW, SPH 7-10kW, TL-XH 3-10kW, TL-XH US 3-10kW
-**Three-Phase:** MID 15-25kW, MOD 6-15kW, SPH-TL3 3-10kW
+**Single-Phase Hybrid:** SPH 3-6kW, SPH 7-10kW, TL-XH 3-10kW, TL-XH US 3-10kW, MIN TL-XH 3-10kW
+**Single-Phase Off-Grid:** SPF 3-6kW ES PLUS
+**Three-Phase Hybrid:** MID 15-25kW, MOD 6-15kW, SPH-TL3 3-10kW, WIT 4-15kW
 
 ✅ = Tested with real hardware | Most models created from official documentation (validation needed)
 
@@ -548,6 +549,38 @@ The integration automatically reads and displays:
 View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click your inverter device
 
 ---
+
+## 🆕 What's New in v0.0.8
+
+**MIN TL-XH Support & Modbus Write Service:**
+
+**✨ New Features:**
+
+- **MIN TL-XH Hybrid Detection** - Added support for MIN 6000 TL-XH inverters with unique register layout
+  - Created `MIN_TL_XH_3000_10000_V201` profile combining MIN 3000+ range with VPP 31200+ battery registers
+  - Enhanced DTC 5100 detection to differentiate MIN variant from standard TL-XH
+  - Fixes missing sensors: `power_to_user`, `power_to_load`, `load_energy`, grid energy breakdown, and battery data
+  - Users with MIN TL-XH now get complete sensor coverage without manual intervention
+
+- **Modbus Write Service** - Advanced inverter control via Home Assistant services
+  - New `growatt_modbus.write_register` service for writing to holding registers
+  - Exposes existing write functionality for user automations and scripts
+  - Allows control of on/off, power limits, export limits, and other writable parameters
+  - Full device selector integration for Developer Tools and automations
+  - Auto-refresh UI after successful writes
+
+**🐛 Bug Fixes:**
+
+- **Fixed Options Flow** - Resolved `AttributeError` and `TypeError` when accessing integration options
+  - Fixed compatibility with newer Home Assistant versions
+  - Options flow now loads correctly for all users
+
+**Breaking Changes:** None - Fully backward compatible with existing setups
+
+---
+
+<details>
+<summary>📋 Previous Release: v0.0.7</summary>
 
 ## 🆕 What's New in v0.0.7
 
