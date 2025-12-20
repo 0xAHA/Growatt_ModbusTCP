@@ -37,9 +37,9 @@ A native Home Assistant integration for Growatt solar inverters using direct Mod
 The integration supports **residential and small commercial** Growatt inverters (3-25kW range):
 
 **Single-Phase Grid-Tied:** MIC (0.6-3.3kW), MIN 3-6kW, MIN 7-10kW ✅
-**Single-Phase Hybrid:** SPH 3-6kW, SPH 7-10kW, TL-XH 3-10kW, TL-XH US 3-10kW, MIN TL-XH 3-10kW
-**Single-Phase Off-Grid:** SPF 3-6kW ES PLUS
-**Three-Phase Hybrid:** MID 15-25kW, MOD 6-15kW, SPH-TL3 3-10kW, WIT 4-15kW
+**Single-Phase Hybrid:** SPH 3-6kW, SPH 7-10kW, TL-XH 3-10kW, TL-XH US 3-10kW, MIN TL-XH 3-10kW ✅
+**Single-Phase Off-Grid:** SPF 3-6kW ES PLUS ✅
+**Three-Phase Hybrid:** MID 15-25kW, MOD 6-15kW, SPH-TL3 3-10kW, WIT 4-15kW ✅
 
 ✅ = Tested with real hardware | Most models created from official documentation (validation needed)
 
@@ -557,17 +557,22 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 **✨ New Features:**
 
 - **MIN TL-XH Hybrid Detection** - Added support for MIN 6000 TL-XH inverters with unique register layout
+
   - Created `MIN_TL_XH_3000_10000_V201` profile combining MIN 3000+ range with VPP 31200+ battery registers
   - Enhanced DTC 5100 detection to differentiate MIN variant from standard TL-XH
   - Fixes missing sensors: `power_to_user`, `power_to_load`, `load_energy`, grid energy breakdown, and battery data
   - Users with MIN TL-XH now get complete sensor coverage without manual intervention
-
 - **Modbus Write Service** - Advanced inverter control via Home Assistant services
+
   - New `growatt_modbus.write_register` service for writing to holding registers
   - Exposes existing write functionality for user automations and scripts
   - Allows control of on/off, power limits, export limits, and other writable parameters
   - Full device selector integration for Developer Tools and automations
   - Auto-refresh UI after successful writes
+- **USB RS485 Adapter Support**
+
+  - Now supports using a USB RS485/Modbus adapter, and not just Modbus TCP
+
 
 **🐛 Bug Fixes:**
 
