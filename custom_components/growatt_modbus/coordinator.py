@@ -27,7 +27,6 @@ from .const import (
     DEVICE_TYPE_GRID,
     DEVICE_TYPE_LOAD,
     DEVICE_TYPE_BATTERY,
-    DEVICE_TYPE_CONTROLS,
 )
 
 from .const import REGISTER_MAPS
@@ -717,15 +716,6 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 "name": f"{base_name} Battery",
                 "manufacturer": "Growatt",
                 "model": "Battery Storage",
-                "via_device": via_device,
-            }
-
-        elif device_type == DEVICE_TYPE_CONTROLS:
-            return {
-                "identifiers": {(DOMAIN, f"{entry_id}_controls")},
-                "name": f"{base_name} Controls",
-                "manufacturer": "Growatt",
-                "model": "System Controls",
                 "via_device": via_device,
             }
 

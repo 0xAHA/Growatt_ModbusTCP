@@ -55,7 +55,8 @@ DEFAULT_BAUDRATE = 9600
 
 # Device Structure Version
 # Version 1: Single device (legacy)
-# Version 2: Multi-device (inverter, solar, grid, load, battery, controls)
+# Version 2: Multi-device (inverter, solar, grid, load, battery)
+#            Controls are within their respective devices (inverter or battery)
 CURRENT_DEVICE_STRUCTURE_VERSION = 2
 
 # ============================================================================
@@ -159,7 +160,6 @@ DEVICE_TYPE_SOLAR = "solar"
 DEVICE_TYPE_GRID = "grid"
 DEVICE_TYPE_LOAD = "load"
 DEVICE_TYPE_BATTERY = "battery"
-DEVICE_TYPE_CONTROLS = "controls"
 
 # Sensor to Device Mapping
 # Each sensor is assigned to a logical device for better organization
@@ -218,10 +218,6 @@ SENSOR_DEVICE_MAP = {
         'battery_charge_total', 'battery_discharge_total',
         'priority_mode',  # Battery priority mode
     },
-
-    # Controls device - all control entities (number, select)
-    # This is populated programmatically in number.py and select.py
-    DEVICE_TYPE_CONTROLS: set(),
 }
 
 

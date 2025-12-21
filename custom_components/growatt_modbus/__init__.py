@@ -56,7 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info(
             "Device structure upgraded successfully. "
             "Entities will now be organized into separate devices: "
-            "Inverter, Solar, Grid, Load, Battery (if present), and Controls"
+            "Inverter (with system controls), Solar, Grid, Load, and Battery (if present)"
         )
 
     coordinator = GrowattModbusCoordinator(hass, entry)
