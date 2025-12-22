@@ -144,7 +144,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # Adaptive polling for offline inverters
         self._consecutive_failures = 0
         self._failure_threshold = 5  # After 5 failures, slow down polling
-        scan_interval = entry.options.get("scan_interval", 30)
+        scan_interval = entry.options.get("scan_interval", 60)  # Default 60 seconds
         self._normal_update_interval = timedelta(seconds=scan_interval)
         self._offline_update_interval = timedelta(seconds=entry.options.get("offline_scan_interval", 300))  # 5 min default
 

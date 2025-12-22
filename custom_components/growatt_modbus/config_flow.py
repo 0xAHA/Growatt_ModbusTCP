@@ -356,9 +356,19 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                 self._abort_if_unique_id_configured()
 
                 profile_name = self._discovered_data["detected_profile"]["name"]
+
+                # Set default options
+                default_options = {
+                    "scan_interval": 60,  # 60 seconds default polling
+                    "offline_scan_interval": 300,  # 5 minutes when offline
+                    "timeout": 10,  # 10 seconds connection timeout
+                    "invert_grid_power": False,  # Normal CT clamp orientation
+                }
+
                 return self.async_create_entry(
                     title=f"{config_data[CONF_NAME]} ({profile_name})",
                     data=config_data,
+                    options=default_options,
                 )
             else:
                 # User wants manual selection
@@ -427,9 +437,18 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                     await self.async_set_unique_id(unique_id)
                     self._abort_if_unique_id_configured()
 
+                    # Set default options
+                    default_options = {
+                        "scan_interval": 60,  # 60 seconds default polling
+                        "offline_scan_interval": 300,  # 5 minutes when offline
+                        "timeout": 10,  # 10 seconds connection timeout
+                        "invert_grid_power": False,  # Normal CT clamp orientation
+                    }
+
                     return self.async_create_entry(
                         title=f"{config_data[CONF_NAME]} ({profile['name']})",
                         data=config_data,
+                        options=default_options,
                     )
 
             except Exception as err:
@@ -529,7 +548,7 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
         # Build options schema with current values
         current_name = self.config_entry.data.get(CONF_NAME, "Growatt")
         current_series = self.config_entry.data.get(CONF_INVERTER_SERIES, "min_7000_10000_tl_x")
-        current_scan_interval = self.config_entry.options.get("scan_interval", 30)
+        current_scan_interval = self.config_entry.options.get("scan_interval", 60)  # Default 60 seconds
         current_offline_scan_interval = self.config_entry.options.get("offline_scan_interval", 300)
         current_timeout = self.config_entry.options.get("timeout", 10)
         current_invert = self.config_entry.options.get("invert_grid_power", False)
