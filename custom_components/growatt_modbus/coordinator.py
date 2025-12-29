@@ -140,6 +140,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self._previous_day_totals = {}
         self._current_date = datetime.now().date()
         self._inverter_online = False
+        self._just_came_online_time = None  # Timestamp when inverter came online (for debouncing)
 
         # Adaptive polling for offline inverters
         self._consecutive_failures = 0
@@ -400,10 +401,55 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
             # Check for date transition (inverter came back online on new day)
             current_date = datetime.now().date()
+            current_time = datetime.now()
+
             if was_offline and current_date > self._current_date:
-                _LOGGER.debug("Inverter back online after date change - daily totals already reset by inverter")
+                _LOGGER.info("Inverter woke up on new day - enabling daily total debouncing")
                 self._current_date = current_date
-                # Inverter's daily totals are already at new day values (small amounts from morning production)
+                self._just_came_online_time = current_time
+
+            # Debounce stale daily totals for a window after wake-up
+            # Many inverters report yesterday's values from volatile memory before resetting
+            debounce_window = timedelta(minutes=15)  # 15-minute debounce window
+
+            if self._just_came_online_time and (current_time - self._just_came_online_time) < debounce_window:
+                # Within debounce window - check if daily totals look stale
+                tolerance = 0.1  # 0.1 kWh tolerance for floating point comparison
+                energy_today = getattr(data, 'energy_today', 0)
+                yesterday_energy = self._previous_day_totals.get('energy_today', 0)
+
+                # Stale data detection: matches yesterday's final value OR is suspiciously high for early morning
+                hours_since_midnight = (current_time.hour * 60 + current_time.minute) / 60
+                max_expected_early = hours_since_midnight * 2.0  # Assume max 2 kWh/hour in early morning
+
+                is_stale = (abs(energy_today - yesterday_energy) < tolerance and energy_today > 0) or \
+                          (energy_today > max_expected_early and energy_today > 1.0)
+
+                if is_stale:
+                    _LOGGER.warning(
+                        "Detected stale daily total in debounce window (%.1f min since wake-up): "
+                        "energy_today=%.2f kWh (yesterday: %.2f kWh, max expected: %.2f kWh) - resetting to 0",
+                        (current_time - self._just_came_online_time).total_seconds() / 60,
+                        energy_today, yesterday_energy, max_expected_early
+                    )
+                    # Reset stale daily totals to zero
+                    data.energy_today = 0
+                    data.energy_to_grid_today = 0
+                    data.load_energy_today = 0
+                    data.energy_to_user_today = 0
+                    data.battery_charge_today = 0
+                    data.battery_discharge_today = 0
+                    data.grid_energy_today = 0
+                    data.grid_import_energy_today = 0
+                else:
+                    _LOGGER.debug(
+                        "Daily totals look valid: energy_today=%.2f kWh (yesterday: %.2f kWh, hours since midnight: %.1f)",
+                        energy_today, yesterday_energy, hours_since_midnight
+                    )
+            elif self._just_came_online_time:
+                # Debounce window expired
+                _LOGGER.debug("Debounce window expired - normal operation resumed")
+                self._just_came_online_time = None
 
             return data
 
