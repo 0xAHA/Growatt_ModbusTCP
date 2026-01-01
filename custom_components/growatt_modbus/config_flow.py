@@ -32,6 +32,52 @@ from .auto_detection import async_determine_inverter_type
 _LOGGER = logging.getLogger(__name__)
 
 
+def _detect_grid_orientation(client: GrowattModbus) -> tuple[bool, str]:
+    """
+    Detect if grid power needs inversion for Home Assistant compatibility.
+
+    Returns:
+        tuple: (invert_needed, detection_message)
+            - invert_needed: True if inversion should be enabled
+            - detection_message: Human-readable explanation of detection result
+    """
+    try:
+        # Read current data from inverter
+        data = client.read_all_data()
+        if not data:
+            return False, "⚠️ Could not read data - using default (no inversion)"
+
+        pv_power = getattr(data, "pv_total_power", 0)
+        consumption = getattr(data, "house_consumption", 0) or getattr(data, "power_to_load", 0)
+        raw_grid_power = getattr(data, "power_to_grid", 0)
+
+        # Check if conditions are good for detection
+        if pv_power < 1000:
+            return False, f"⚠️ Solar production too low ({pv_power:.0f}W) - using default (no inversion). Run detection service later."
+
+        expected_export = pv_power - consumption
+        if expected_export < 500:
+            return False, f"⚠️ Not exporting enough ({expected_export:.0f}W) - using default (no inversion). Run detection service later."
+
+        # Analyze grid power sign
+        # IEC 61850: positive = export, negative = import
+        # HA: negative = export, positive = import
+
+        if raw_grid_power > 100:
+            # Positive while exporting = IEC standard → need inversion for HA
+            return True, f"✅ Auto-detected: IEC 61850 standard (exporting {raw_grid_power:.0f}W shows as positive) - inversion enabled"
+        elif raw_grid_power < -100:
+            # Negative while exporting = already HA format → no inversion
+            return False, f"✅ Auto-detected: Already HA format (exporting shows as negative) - no inversion needed"
+        else:
+            # Too close to zero
+            return False, f"⚠️ Grid power near zero ({raw_grid_power:.0f}W) - using default (no inversion). Run detection service later."
+
+    except Exception as e:
+        _LOGGER.debug(f"Grid orientation detection failed: {e}")
+        return False, f"⚠️ Detection failed - using default (no inversion). Run detection service later."
+
+
 class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type: ignore[call-arg]
     """Handle a config flow for Growatt Modbus."""
 
@@ -357,12 +403,47 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
 
                 profile_name = self._discovered_data["detected_profile"]["name"]
 
+                # Attempt grid orientation detection
+                invert_grid_power = False
+                detection_msg = "⚠️ Using default (no inversion)"
+
+                try:
+                    # Create temporary client for grid orientation detection
+                    if connection_type == "tcp":
+                        detection_client = GrowattModbus(
+                            connection_type="tcp",
+                            host=config_data[CONF_HOST],
+                            port=config_data[CONF_PORT],
+                            slave_id=config_data[CONF_SLAVE_ID],
+                            register_map=config_data[CONF_REGISTER_MAP]
+                        )
+                    else:  # serial
+                        detection_client = GrowattModbus(
+                            connection_type="serial",
+                            device=config_data[CONF_DEVICE_PATH],
+                            baudrate=config_data[CONF_BAUDRATE],
+                            slave_id=config_data[CONF_SLAVE_ID],
+                            register_map=config_data[CONF_REGISTER_MAP]
+                        )
+
+                    # Try to connect and detect
+                    if await self.hass.async_add_executor_job(detection_client.connect):
+                        invert_grid_power, detection_msg = await self.hass.async_add_executor_job(
+                            _detect_grid_orientation, detection_client
+                        )
+                        await self.hass.async_add_executor_job(detection_client.disconnect)
+                        _LOGGER.info(f"Grid orientation detection: {detection_msg}")
+                    else:
+                        _LOGGER.debug("Could not connect for grid orientation detection")
+                except Exception as e:
+                    _LOGGER.debug(f"Grid orientation detection error: {e}")
+
                 # Set default options
                 default_options = {
                     "scan_interval": 60,  # 60 seconds default polling
                     "offline_scan_interval": 300,  # 5 minutes when offline
                     "timeout": 10,  # 10 seconds connection timeout
-                    "invert_grid_power": False,  # Normal CT clamp orientation
+                    "invert_grid_power": invert_grid_power,  # Auto-detected or default
                 }
 
                 return self.async_create_entry(
@@ -437,12 +518,47 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                     await self.async_set_unique_id(unique_id)
                     self._abort_if_unique_id_configured()
 
+                    # Attempt grid orientation detection
+                    invert_grid_power = False
+                    detection_msg = "⚠️ Using default (no inversion)"
+
+                    try:
+                        # Create temporary client for grid orientation detection
+                        if connection_type == "tcp":
+                            detection_client = GrowattModbus(
+                                connection_type="tcp",
+                                host=config_data[CONF_HOST],
+                                port=config_data[CONF_PORT],
+                                slave_id=config_data[CONF_SLAVE_ID],
+                                register_map=config_data["register_map"]
+                            )
+                        else:  # serial
+                            detection_client = GrowattModbus(
+                                connection_type="serial",
+                                device=config_data[CONF_DEVICE_PATH],
+                                baudrate=config_data[CONF_BAUDRATE],
+                                slave_id=config_data[CONF_SLAVE_ID],
+                                register_map=config_data["register_map"]
+                            )
+
+                        # Try to connect and detect
+                        if await self.hass.async_add_executor_job(detection_client.connect):
+                            invert_grid_power, detection_msg = await self.hass.async_add_executor_job(
+                                _detect_grid_orientation, detection_client
+                            )
+                            await self.hass.async_add_executor_job(detection_client.disconnect)
+                            _LOGGER.info(f"Grid orientation detection: {detection_msg}")
+                        else:
+                            _LOGGER.debug("Could not connect for grid orientation detection")
+                    except Exception as e:
+                        _LOGGER.debug(f"Grid orientation detection error: {e}")
+
                     # Set default options
                     default_options = {
                         "scan_interval": 60,  # 60 seconds default polling
                         "offline_scan_interval": 300,  # 5 minutes when offline
                         "timeout": 10,  # 10 seconds connection timeout
-                        "invert_grid_power": False,  # Normal CT clamp orientation
+                        "invert_grid_power": invert_grid_power,  # Auto-detected or default
                     }
 
                     return self.async_create_entry(

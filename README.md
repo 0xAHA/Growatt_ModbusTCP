@@ -259,9 +259,33 @@ Your Growatt inverter and Home Assistant use **different sign conventions** for 
 
 This is why the **Invert Grid Power** setting exists!
 
-#### Auto-Detection Service 🎯
+#### ✨ Automatic Detection During Setup
 
-**Don't guess!** Use the automatic detection service to check your configuration:
+**NEW!** The integration now **automatically detects** the correct grid orientation during initial setup:
+
+- When you add the integration, it reads current power flow
+- If solar is producing (> 1000 W) and exporting (> 500 W), it automatically detects your inverter's convention
+- The correct setting is applied automatically - no manual configuration needed!
+- Detection result is logged: check Home Assistant logs for confirmation
+
+**What you'll see in logs:**
+
+```
+✅ Auto-detected: IEC 61850 standard (exporting 5000W shows as positive) - inversion enabled
+```
+or
+```
+⚠️ Solar production too low (200W) - using default (no inversion). Run detection service later.
+```
+
+**If setup happens at night or indoors:**
+- Detection can't run (no solar production)
+- Default setting is used (no inversion)
+- Use the manual detection service below once solar is producing
+
+#### Manual Detection Service 🎯
+
+**Already installed?** Use the detection service to verify or update your configuration:
 
 ```yaml
 service: growatt_modbus.detect_grid_orientation
