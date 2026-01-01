@@ -446,6 +446,36 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                     "invert_grid_power": invert_grid_power,  # Auto-detected or default
                 }
 
+                # Create notification about grid orientation detection
+                if "✅" in detection_msg:
+                    # Successful detection
+                    notification_message = (
+                        f"**Grid Orientation Detection**\n\n"
+                        f"{detection_msg}\n\n"
+                        f"**Setting applied:** Invert Grid Power = {'ON' if invert_grid_power else 'OFF'}\n\n"
+                        f"You can verify this anytime using the service:\n"
+                        f"`growatt_modbus.detect_grid_orientation`"
+                    )
+                else:
+                    # Detection skipped or failed
+                    notification_message = (
+                        f"**Grid Orientation Detection**\n\n"
+                        f"{detection_msg}\n\n"
+                        f"**Default setting applied:** Invert Grid Power = OFF\n\n"
+                        f"To detect the correct setting, run this service when solar is producing:\n"
+                        f"`growatt_modbus.detect_grid_orientation`"
+                    )
+
+                await self.hass.services.async_call(
+                    "persistent_notification",
+                    "create",
+                    {
+                        "title": "Growatt Modbus Setup Complete",
+                        "message": notification_message,
+                        "notification_id": f"growatt_setup_{config_data.get(CONF_HOST, 'device')}",
+                    },
+                )
+
                 return self.async_create_entry(
                     title=f"{config_data[CONF_NAME]} ({profile_name})",
                     data=config_data,
@@ -560,6 +590,36 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                         "timeout": 10,  # 10 seconds connection timeout
                         "invert_grid_power": invert_grid_power,  # Auto-detected or default
                     }
+
+                    # Create notification about grid orientation detection
+                    if "✅" in detection_msg:
+                        # Successful detection
+                        notification_message = (
+                            f"**Grid Orientation Detection**\n\n"
+                            f"{detection_msg}\n\n"
+                            f"**Setting applied:** Invert Grid Power = {'ON' if invert_grid_power else 'OFF'}\n\n"
+                            f"You can verify this anytime using the service:\n"
+                            f"`growatt_modbus.detect_grid_orientation`"
+                        )
+                    else:
+                        # Detection skipped or failed
+                        notification_message = (
+                            f"**Grid Orientation Detection**\n\n"
+                            f"{detection_msg}\n\n"
+                            f"**Default setting applied:** Invert Grid Power = OFF\n\n"
+                            f"To detect the correct setting, run this service when solar is producing:\n"
+                            f"`growatt_modbus.detect_grid_orientation`"
+                        )
+
+                    await self.hass.services.async_call(
+                        "persistent_notification",
+                        "create",
+                        {
+                            "title": "Growatt Modbus Setup Complete",
+                            "message": notification_message,
+                            "notification_id": f"growatt_setup_{config_data.get(CONF_HOST, config_data.get(CONF_DEVICE_PATH, 'device'))}",
+                        },
+                    )
 
                     return self.async_create_entry(
                         title=f"{config_data[CONF_NAME]} ({profile['name']})",
