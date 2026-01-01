@@ -32,6 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 # Service names
 SERVICE_EXPORT_DUMP = "export_register_dump"
 SERVICE_WRITE_REGISTER = "write_register"
+SERVICE_DETECT_GRID_ORIENTATION = "detect_grid_orientation"
 
 # Universal scan ranges - covers all Growatt series
 # Split into chunks of max 125 registers to respect Modbus limits
@@ -64,6 +65,12 @@ SERVICE_WRITE_REGISTER_SCHEMA = vol.Schema(
         vol.Required("device_id"): cv.string,
         vol.Required("register"): vol.All(vol.Coerce(int), vol.Range(min=0, max=65535)),
         vol.Required("value"): vol.All(vol.Coerce(int), vol.Range(min=-32768, max=65535)),
+    }
+)
+
+SERVICE_DETECT_GRID_ORIENTATION_SCHEMA = vol.Schema(
+    {
+        vol.Optional("device_id"): cv.string,  # If not provided, uses first found integration
     }
 )
 
@@ -229,6 +236,193 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Failed to write value %d to register %d", value, register)
             raise ValueError(f"Failed to write to register {register}")
 
+    async def detect_grid_orientation(call: ServiceCall) -> None:
+        """Detect if grid power CT clamp needs inversion based on current power flow."""
+        device_id = call.data.get("device_id")
+
+        # Find coordinator
+        if device_id:
+            device_reg = dr.async_get(hass)
+            device_entry = device_reg.async_get(device_id)
+            if not device_entry:
+                raise ValueError(f"Device {device_id} not found")
+
+            config_entry_id = None
+            for entry_id in device_entry.config_entries:
+                if entry_id in hass.data.get(DOMAIN, {}):
+                    config_entry_id = entry_id
+                    break
+
+            if not config_entry_id:
+                raise ValueError(f"No config entry found for device {device_id}")
+
+            coordinator = hass.data[DOMAIN][config_entry_id]
+        else:
+            # Use first available coordinator
+            if not hass.data.get(DOMAIN):
+                raise ValueError("No Growatt Modbus integrations found")
+
+            coordinator = next(iter(hass.data[DOMAIN].values()))
+            if not coordinator:
+                raise ValueError("No coordinator found")
+
+        # Check if inverter is online and producing
+        if not coordinator.data:
+            message = (
+                "❌ **Grid Orientation Detection Failed**\n\n"
+                "No data available from inverter.\n"
+                "Please ensure the inverter is online and try again."
+            )
+            await hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "title": "Grid Orientation Detection",
+                    "message": message,
+                    "notification_id": "growatt_grid_detection",
+                },
+            )
+            return
+
+        data = coordinator.data
+        pv_power = getattr(data, "pv_total_power", 0)
+        consumption = getattr(data, "house_consumption", 0) or getattr(data, "power_to_load", 0)
+
+        # Read RAW grid power (before inversion)
+        raw_grid_power = getattr(data, "power_to_grid", 0)
+
+        # Need clear export scenario for reliable detection
+        if pv_power < 1000:
+            message = (
+                "⚠️ **Grid Orientation Detection: Insufficient Solar**\n\n"
+                f"Current solar production: **{pv_power:.0f} W**\n\n"
+                "Detection requires at least **1000 W** of solar production for reliability.\n\n"
+                "**Please try again when:**\n"
+                "• The sun is shining\n"
+                "• Solar panels are producing > 1 kW\n"
+                "• Preferably during midday"
+            )
+            await hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "title": "Grid Orientation Detection",
+                    "message": message,
+                    "notification_id": "growatt_grid_detection",
+                },
+            )
+            return
+
+        # Check if we're clearly exporting
+        expected_export = pv_power - consumption
+        if expected_export < 500:
+            message = (
+                "⚠️ **Grid Orientation Detection: Not Exporting Enough**\n\n"
+                f"• Solar production: **{pv_power:.0f} W**\n"
+                f"• House consumption: **{consumption:.0f} W**\n"
+                f"• Expected export: **{expected_export:.0f} W**\n\n"
+                "Detection requires at least **500 W** net export for reliability.\n\n"
+                "**Please try again when:**\n"
+                "• Solar production exceeds consumption by > 500 W\n"
+                "• Turn off high-power appliances temporarily"
+            )
+            await hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "title": "Grid Orientation Detection",
+                    "message": message,
+                    "notification_id": "growatt_grid_detection",
+                },
+            )
+            return
+
+        # Analyze grid power sign
+        _LOGGER.info(
+            "Grid orientation detection: PV=%.0fW, Consumption=%.0fW, "
+            "Expected export=%.0fW, Raw grid=%.0fW",
+            pv_power, consumption, expected_export, raw_grid_power
+        )
+
+        # IEC 61850 standard: positive = export, negative = import
+        # When exporting, raw_grid_power should be positive in IEC standard
+        # HA convention: negative = export, positive = import
+
+        current_invert_setting = coordinator.entry.options.get("invert_grid_power", False)
+
+        # Expected: exporting, so raw_grid_power should be positive (IEC standard)
+        if raw_grid_power > 100:
+            # Positive grid power while exporting = IEC standard (correct)
+            # Need to invert FOR Home Assistant visualization
+            recommended_invert = True
+            confidence = "High"
+            explanation = (
+                "Your inverter follows **IEC 61850 standard** (positive = export).\n"
+                "Home Assistant expects **negative = export** for visualization.\n"
+                "**Inversion is needed** for correct display."
+            )
+        elif raw_grid_power < -100:
+            # Negative grid power while exporting = already inverted or wrong
+            recommended_invert = False
+            confidence = "High"
+            explanation = (
+                "Your grid power is already in **Home Assistant format** (negative = export).\n"
+                "**No inversion needed** for correct display."
+            )
+        else:
+            # Close to zero - ambiguous
+            confidence = "Low"
+            recommended_invert = current_invert_setting  # Keep current
+            explanation = (
+                "Grid power too close to zero for reliable detection.\n"
+                "Try again with higher export levels."
+            )
+
+        # Determine action needed
+        if confidence == "Low":
+            action = "⚠️ **Unable to determine** - insufficient export"
+            title_emoji = "⚠️"
+        elif recommended_invert == current_invert_setting:
+            action = "✅ **Already configured correctly** - no changes needed"
+            title_emoji = "✅"
+        else:
+            action = f"🔧 **Change needed**: Set 'Invert Grid Power' to **{'ON' if recommended_invert else 'OFF'}**"
+            title_emoji = "🔧"
+
+        message = (
+            f"{action}\n\n"
+            f"**Current Measurements:**\n"
+            f"• Solar production: **{pv_power:.0f} W**\n"
+            f"• House consumption: **{consumption:.0f} W**\n"
+            f"• Net export: **{expected_export:.0f} W**\n"
+            f"• Raw grid power: **{raw_grid_power:.0f} W**\n\n"
+            f"**Analysis:**\n"
+            f"{explanation}\n\n"
+            f"**Current Setting:** Invert = **{'ON' if current_invert_setting else 'OFF'}**\n"
+            f"**Recommended:** Invert = **{'ON' if recommended_invert else 'OFF'}**\n"
+            f"**Confidence:** {confidence}\n\n"
+            f"**To change setting:**\n"
+            f"1. Go to Settings → Devices & Services\n"
+            f"2. Find Growatt Modbus → Configure\n"
+            f"3. Set 'Invert Grid Power' to **{'ON' if recommended_invert else 'OFF'}**\n"
+            f"4. Save and reload the integration"
+        )
+
+        await hass.services.async_call(
+            "persistent_notification",
+            "create",
+            {
+                "title": f"{title_emoji} Grid Orientation Detection",
+                "message": message,
+                "notification_id": "growatt_grid_detection",
+            },
+        )
+
+        _LOGGER.info(
+            "Grid orientation detection complete: current=%s, recommended=%s, confidence=%s",
+            current_invert_setting, recommended_invert, confidence
+        )
+
     # Register services
     hass.services.async_register(
         DOMAIN,
@@ -242,6 +436,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_WRITE_REGISTER,
         write_register,
         schema=SERVICE_WRITE_REGISTER_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_DETECT_GRID_ORIENTATION,
+        detect_grid_orientation,
+        schema=SERVICE_DETECT_GRID_ORIENTATION_SCHEMA,
     )
 
 

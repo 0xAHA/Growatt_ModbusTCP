@@ -720,18 +720,18 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 load = getattr(data, "power_to_load", 0)
                 charge = getattr(data, "charge_power", 0)
                 discharge = getattr(data, "discharge_power", 0)
-                
-                # Positive means export, negative means import
+
+                # Calculate grid power (IEC standard: positive = export)
                 grid_power = export if export != 0 else (solar + discharge) - (load + charge)
-                
-                # Apply inversion if configured
+
+                # Apply inversion if configured (for HA convention: negative = export)
                 if invert_grid_power:
                     grid_power = -grid_power
-                
-                # Export is only the positive part
-                raw_value = round(max(0, grid_power), 1)
+
+                # After inversion for HA: negative = export, so take negative part and make positive
+                raw_value = round(max(0, -grid_power), 1)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
-                
+
             elif self._sensor_key == "grid_import_power":
                 # Import power (always positive or 0)
                 export = getattr(data, "power_to_grid", 0)
@@ -739,16 +739,16 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 load = getattr(data, "power_to_load", 0)
                 charge = getattr(data, "charge_power", 0)
                 discharge = getattr(data, "discharge_power", 0)
-                
-                # Positive means export, negative means import
+
+                # Calculate grid power (IEC standard: positive = export)
                 grid_power = export if export != 0 else (solar + discharge) - (load + charge)
-                
-                # Apply inversion if configured
+
+                # Apply inversion if configured (for HA convention: positive = import)
                 if invert_grid_power:
                     grid_power = -grid_power
-                
-                # Import is only the negative part (made positive)
-                raw_value = round(max(0, -grid_power), 1)
+
+                # After inversion for HA: positive = import, so take positive part
+                raw_value = round(max(0, grid_power), 1)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
                 
             elif self._sensor_key == "self_consumption":
