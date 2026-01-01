@@ -158,3 +158,15 @@ write_register:
           min: -32768
           max: 65535
           mode: box
+
+detect_grid_orientation:
+  name: Detect Grid CT Orientation
+  description: Automatically detect if your grid power CT clamp needs inversion for correct Home Assistant display. Run this when solar is producing and exporting to grid.
+  fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device (optional - uses first found if not specified)
+      required: false
+      selector:
+        device:
+          integration: growatt_modbus

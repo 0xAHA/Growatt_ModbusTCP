@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.0.8-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.0.9-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -236,30 +236,104 @@ Access via **Settings** → **Devices & Services** → **Growatt Modbus** → **
 | **Connection Timeout** | 10 seconds | 1-60s  | How long to wait for responses                  |
 | **Invert Grid Power**  | OFF        | ON/OFF | **Reverse import/export if CT clamp backwards** |
 
-### 🔄 Invert Grid Power
+### 🔄 Grid Power Sign Convention & Inversion
 
-Got your CT clamp installed backwards? No problem! Just enable this option:
+#### Understanding Grid Power Signs
 
-**When to use:**
+Your Growatt inverter and Home Assistant use **different sign conventions** for grid power:
 
-- Your "Grid Import" shows power when exporting to grid
-- Your "Grid Export" shows power when importing from grid
-- Grid power values are the opposite of what they should be
+| Convention | Export (to grid) | Import (from grid) | Used By |
+|------------|------------------|---------------------|---------|
+| **IEC 61850 Standard** | ✅ Positive (+) | ⛔ Negative (-) | Growatt inverters, industrial systems, energy meters |
+| **Home Assistant** | ⛔ Negative (-) | ✅ Positive (+) | HA Power Flow visualization |
 
-**What it does:**
+**Why the difference?**
 
-- Automatically flips the sign of grid power measurements
-- Swaps Grid Import ⬌ Grid Export sensor values
-- Applies to both power (W) and energy (kWh) sensors
-- No need for template sensors or workarounds!
+- **IEC 61850** measures current flow direction at grid connection (export = current flowing TO grid = positive)
+- **Home Assistant** uses consumer perspective (import = power coming FROM grid = positive, like "spending money")
 
-**How to enable:**
+**Example:**
+- You're generating 6 kW solar, consuming 1 kW, exporting 5 kW
+- **Inverter reports:** `grid_power = +5000 W` (positive = export, IEC standard ✓)
+- **HA expects:** `grid_power = -5000 W` (negative = export, for visualization)
 
-1. Go to **Growatt Modbus** integration → **Configure**
-2. Toggle **Invert Grid Power** to ON
-3. Changes apply on next update (within scan interval)
+This is why the **Invert Grid Power** setting exists!
 
-> 💡 **Tip:** 30 seconds scan interval is recommended. Faster polling provides minimal benefit and may stress the inverter.
+#### ✨ Automatic Detection During Setup
+
+**NEW!** The integration now **automatically detects** the correct grid orientation during initial setup:
+
+- When you add the integration, it reads current power flow
+- If solar is producing (> 1000 W) and exporting (> 100 W), it automatically detects your inverter's convention
+- The correct setting is applied automatically - no manual configuration needed!
+- Detection result is logged: check Home Assistant logs for confirmation
+
+**What you'll see in logs:**
+
+```
+✅ Auto-detected: IEC 61850 standard (exporting 5000W shows as positive) - inversion enabled
+```
+or
+```
+⚠️ Solar production too low (200W) - using default (no inversion). Run detection service later.
+```
+
+**If setup happens at night or indoors:**
+- Detection can't run (no solar production)
+- Default setting is used (no inversion)
+- Use the manual detection service below once solar is producing
+
+#### Manual Detection Service 🎯
+
+**Already installed?** Use the detection service to verify or update your configuration:
+
+```yaml
+service: growatt_modbus.detect_grid_orientation
+```
+
+**Requirements:**
+- Solar must be producing > 1000 W
+- Must be exporting > 100 W to grid
+- Run during daytime with good sun
+
+The service will:
+1. Analyze your current power flow
+2. Detect which convention your inverter uses
+3. Compare with your current setting
+4. Recommend whether to enable/disable inversion
+5. Display results as a persistent notification
+
+#### Manual Configuration
+
+**When to enable Invert Grid Power:**
+
+✅ **Enable if:** Your inverter follows IEC 61850 (most Growatt inverters do)
+- Grid power shows **positive** when exporting
+- Power Flow graph shows incorrect direction
+- Consumption calculation is wrong (too high/too low)
+
+❌ **Disable if:** Your readings are already in HA format
+- Grid power shows **negative** when exporting
+- Power Flow graph is correct
+- Or if the auto-detection recommends it
+
+**How to configure:**
+
+1. Go to **Settings** → **Devices & Services**
+2. Find **Growatt Modbus** → **Configure**
+3. Toggle **Invert Grid Power** based on auto-detection result
+4. **Save** and reload the integration
+
+**What it affects:**
+
+- ✅ `sensor.grid_power` (signed W)
+- ✅ `sensor.grid_export_power` (unsigned W)
+- ✅ `sensor.grid_import_power` (unsigned W)
+- ✅ Home Assistant Power Flow visualization
+- ✅ Consumption calculation accuracy
+- ❌ Does NOT affect energy totals (`_total` sensors) - they're always correct
+
+> 💡 **Note:** This setting is for visualization compatibility, not because anything is "wrong" with your inverter. Most Growatt inverters correctly follow the IEC 61850 industrial standard, while Home Assistant uses a consumer-friendly convention for its UI.
 
 ---
 
@@ -550,6 +624,79 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 
 ---
 
+## 🆕 What's New in v0.0.9
+
+**Multi-Device Architecture & Automatic Grid Orientation Detection:**
+
+**✨ New Features:**
+
+- **Multi-Device Organization** - Sensors now organized into logical devices
+
+  - **Inverter** (parent) - System health, status, temperatures, connectivity
+  - **Solar** - PV inputs, AC output, energy production
+  - **Grid** - Grid connection, import/export, grid energy
+  - **Load** - Consumption monitoring
+  - **Battery** (conditional) - Battery storage metrics
+  - Entities categorized as Main/Diagnostic/Config for cleaner UI
+  - **Automatic migration** from single device - no manual action needed!
+  - Entity IDs preserved - dashboards and automations continue working
+
+- **Automatic Grid Orientation Detection** - Eliminates manual configuration
+
+  - **Auto-detection during setup** - Correct setting applied automatically when adding integration
+  - **Detection service** - `growatt_modbus.detect_grid_orientation` for verification anytime
+  - Analyzes power flow to determine if inverter follows IEC 61850 or HA convention
+  - Works with just 100W export (previously 500W) - much more practical
+  - Shows persistent notification with detection results and applied setting
+  - Comprehensive README documentation explaining IEC vs HA sign conventions
+
+- **Stale Daily Totals Debouncing** - Fixes morning energy spikes
+
+  - Detects when inverter wakes up with yesterday's totals in volatile memory
+  - 15-minute debounce window filters stale readings
+  - Prevents false spikes in energy dashboards
+
+- **Default Options on Setup** - Proper defaults from first installation
+  - 60-second scan interval set automatically
+  - No need to manually configure polling rate
+
+
+**🐛 Bug Fixes:**
+
+- **Fixed Grid Export/Import Sensors** - Critical fix when inversion enabled
+  - Export sensor now correctly shows `max(0, -grid_power)` after inversion
+  - Import sensor now correctly shows `max(0, grid_power)` after inversion
+  - Previously showed swapped values when "Invert Grid Power" was ON
+
+
+**⚠️ Breaking Changes:**
+
+**IMPORTANT:** After updating, **verify your grid power settings:**
+
+1. Run the detection service during daytime with solar producing:
+   ```yaml
+   service: growatt_modbus.detect_grid_orientation
+   ```
+
+2. The service will analyze your setup and recommend whether to enable/disable "Invert Grid Power"
+
+3. If recommendation differs from current setting, update it:
+   - Go to **Settings** → **Devices & Services** → **Growatt Modbus** → **Configure**
+   - Toggle **Invert Grid Power** based on recommendation
+   - Save and reload integration
+
+**Why this is needed:**
+- Previous versions had a bug in export/import sensors when inversion was enabled
+- The bug is now fixed, but you should verify your current setting is correct
+- Auto-detection makes this easy - just run the service!
+
+**Entity IDs unchanged** - Your dashboards and automations continue working
+
+---
+
+<details>
+<summary>📋 Previous Release: v0.0.8</summary>
+
 ## 🆕 What's New in v0.0.8
 
 **MIN TL-XH Support & Modbus Write Service:**
@@ -581,6 +728,8 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
   - Options flow now loads correctly for all users
 
 **Breaking Changes:** None - Fully backward compatible with existing setups
+
+</details>
 
 ---
 

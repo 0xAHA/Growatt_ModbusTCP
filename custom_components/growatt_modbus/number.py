@@ -7,8 +7,14 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity import EntityCategory
 
-from .const import DOMAIN, WRITABLE_REGISTERS, CONF_REGISTER_MAP
+from .const import (
+    DOMAIN,
+    WRITABLE_REGISTERS,
+    CONF_REGISTER_MAP,
+    DEVICE_TYPE_INVERTER,
+)
 from .coordinator import GrowattModbusCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,6 +57,7 @@ class GrowattExportLimitPowerNumber(CoordinatorEntity, NumberEntity):
     _attr_native_max_value = 100.0
     _attr_native_step = 0.1
     _attr_native_unit_of_measurement = "%"
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(
         self,
@@ -59,7 +66,7 @@ class GrowattExportLimitPowerNumber(CoordinatorEntity, NumberEntity):
     ) -> None:
         """Initialize the number entity."""
         super().__init__(coordinator)
-        
+
         self._config_entry = config_entry
         self._attr_name = f"{config_entry.data['name']} Export Limit Power"
         self._attr_unique_id = f"{config_entry.entry_id}_export_limit_power"
@@ -68,7 +75,8 @@ class GrowattExportLimitPowerNumber(CoordinatorEntity, NumberEntity):
     @property
     def device_info(self) -> dict[str, Any]:
         """Return device information."""
-        return self.coordinator.device_info
+        # Export limit is a system-wide inverter setting
+        return self.coordinator.get_device_info(DEVICE_TYPE_INVERTER)
 
     @property
     def native_value(self) -> float | None:

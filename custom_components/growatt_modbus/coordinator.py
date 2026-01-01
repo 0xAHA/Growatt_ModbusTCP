@@ -18,8 +18,15 @@ from .const import (
     CONF_CONNECTION_TYPE,
     CONF_DEVICE_PATH,
     CONF_BAUDRATE,
+    CONF_DEVICE_STRUCTURE_VERSION,
+    CURRENT_DEVICE_STRUCTURE_VERSION,
     get_sensor_type,
     SENSOR_OFFLINE_BEHAVIOR,
+    DEVICE_TYPE_INVERTER,
+    DEVICE_TYPE_SOLAR,
+    DEVICE_TYPE_GRID,
+    DEVICE_TYPE_LOAD,
+    DEVICE_TYPE_BATTERY,
 )
 
 from .const import REGISTER_MAPS
@@ -133,11 +140,12 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self._previous_day_totals = {}
         self._current_date = datetime.now().date()
         self._inverter_online = False
+        self._just_came_online_time = None  # Timestamp when inverter came online (for debouncing)
 
         # Adaptive polling for offline inverters
         self._consecutive_failures = 0
         self._failure_threshold = 5  # After 5 failures, slow down polling
-        scan_interval = entry.options.get("scan_interval", 30)
+        scan_interval = entry.options.get("scan_interval", 60)  # Default 60 seconds
         self._normal_update_interval = timedelta(seconds=scan_interval)
         self._offline_update_interval = timedelta(seconds=entry.options.get("offline_scan_interval", 300))  # 5 min default
 
@@ -393,10 +401,55 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
             # Check for date transition (inverter came back online on new day)
             current_date = datetime.now().date()
+            current_time = datetime.now()
+
             if was_offline and current_date > self._current_date:
-                _LOGGER.debug("Inverter back online after date change - daily totals already reset by inverter")
+                _LOGGER.info("Inverter woke up on new day - enabling daily total debouncing")
                 self._current_date = current_date
-                # Inverter's daily totals are already at new day values (small amounts from morning production)
+                self._just_came_online_time = current_time
+
+            # Debounce stale daily totals for a window after wake-up
+            # Many inverters report yesterday's values from volatile memory before resetting
+            debounce_window = timedelta(minutes=15)  # 15-minute debounce window
+
+            if self._just_came_online_time and (current_time - self._just_came_online_time) < debounce_window:
+                # Within debounce window - check if daily totals look stale
+                tolerance = 0.1  # 0.1 kWh tolerance for floating point comparison
+                energy_today = getattr(data, 'energy_today', 0)
+                yesterday_energy = self._previous_day_totals.get('energy_today', 0)
+
+                # Stale data detection: matches yesterday's final value OR is suspiciously high for early morning
+                hours_since_midnight = (current_time.hour * 60 + current_time.minute) / 60
+                max_expected_early = hours_since_midnight * 2.0  # Assume max 2 kWh/hour in early morning
+
+                is_stale = (abs(energy_today - yesterday_energy) < tolerance and energy_today > 0) or \
+                          (energy_today > max_expected_early and energy_today > 1.0)
+
+                if is_stale:
+                    _LOGGER.warning(
+                        "Detected stale daily total in debounce window (%.1f min since wake-up): "
+                        "energy_today=%.2f kWh (yesterday: %.2f kWh, max expected: %.2f kWh) - resetting to 0",
+                        (current_time - self._just_came_online_time).total_seconds() / 60,
+                        energy_today, yesterday_energy, max_expected_early
+                    )
+                    # Reset stale daily totals to zero
+                    data.energy_today = 0
+                    data.energy_to_grid_today = 0
+                    data.load_energy_today = 0
+                    data.energy_to_user_today = 0
+                    data.battery_charge_today = 0
+                    data.battery_discharge_today = 0
+                    data.grid_energy_today = 0
+                    data.grid_import_energy_today = 0
+                else:
+                    _LOGGER.debug(
+                        "Daily totals look valid: energy_today=%.2f kWh (yesterday: %.2f kWh, hours since midnight: %.1f)",
+                        energy_today, yesterday_energy, hours_since_midnight
+                    )
+            elif self._just_came_online_time:
+                # Debounce window expired
+                _LOGGER.debug("Debounce window expired - normal operation resumed")
+                self._just_came_online_time = None
 
             return data
 
@@ -627,33 +680,93 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
     @property
     def device_info(self):
-        """Return device information for Home Assistant."""
+        """Return device information for Home Assistant (legacy compatibility).
+
+        This property is maintained for backwards compatibility.
+        New code should use get_device_info(device_type) instead.
+        """
+        return self.get_device_info(DEVICE_TYPE_INVERTER)
+
+    def get_device_info(self, device_type: str) -> dict:
+        """Get device info for a specific device type.
+
+        Args:
+            device_type: One of DEVICE_TYPE_INVERTER, DEVICE_TYPE_SOLAR, etc.
+
+        Returns:
+            Device info dictionary for Home Assistant device registry
+        """
         profile = REGISTER_MAPS[self._register_map_key]
-        
+        base_name = self.config[CONF_NAME]
+        entry_id = self.entry.entry_id
+
         # Use parsed model name if available, otherwise fall back to profile name
         model = self._model_name if self._model_name else profile.get("name", "Unknown Model")
-        
-        device_info = {
-            # Use entry_id for unique device identification (not slave_id, which may be the same for multiple inverters)
-            "identifiers": {(DOMAIN, self.entry.entry_id)},
-            "name": self.config[CONF_NAME],
-            "manufacturer": "Growatt",
-            "model": model,
-        }
-        
-        # Add serial number if available
-        if self._serial_number:
-            device_info["serial_number"] = self._serial_number
 
-        # Add firmware version if available
-        if self._firmware_version:
-            device_info["sw_version"] = self._firmware_version
+        # Main inverter device (parent)
+        if device_type == DEVICE_TYPE_INVERTER:
+            device_info = {
+                "identifiers": {(DOMAIN, f"{entry_id}_inverter")},
+                "name": base_name,
+                "manufacturer": "Growatt",
+                "model": model,
+            }
 
-        # Add protocol version (VPP 2.01 or Legacy)
-        if self._protocol_version:
-            device_info["hw_version"] = self._protocol_version
+            # Add serial number if available
+            if self._serial_number:
+                device_info["serial_number"] = self._serial_number
 
-        return device_info
+            # Add firmware version if available
+            if self._firmware_version:
+                device_info["sw_version"] = self._firmware_version
+
+            # Add protocol version (VPP 2.01 or Legacy)
+            if self._protocol_version:
+                device_info["hw_version"] = self._protocol_version
+
+            return device_info
+
+        # All other devices reference the inverter as parent
+        via_device = (DOMAIN, f"{entry_id}_inverter")
+
+        if device_type == DEVICE_TYPE_SOLAR:
+            return {
+                "identifiers": {(DOMAIN, f"{entry_id}_solar")},
+                "name": f"{base_name} Solar",
+                "manufacturer": "Growatt",
+                "model": "Solar Production",
+                "via_device": via_device,
+            }
+
+        elif device_type == DEVICE_TYPE_GRID:
+            return {
+                "identifiers": {(DOMAIN, f"{entry_id}_grid")},
+                "name": f"{base_name} Grid",
+                "manufacturer": "Growatt",
+                "model": "Grid Connection",
+                "via_device": via_device,
+            }
+
+        elif device_type == DEVICE_TYPE_LOAD:
+            return {
+                "identifiers": {(DOMAIN, f"{entry_id}_load")},
+                "name": f"{base_name} Load",
+                "manufacturer": "Growatt",
+                "model": "Load Management",
+                "via_device": via_device,
+            }
+
+        elif device_type == DEVICE_TYPE_BATTERY:
+            return {
+                "identifiers": {(DOMAIN, f"{entry_id}_battery")},
+                "name": f"{base_name} Battery",
+                "manufacturer": "Growatt",
+                "model": "Battery Storage",
+                "via_device": via_device,
+            }
+
+        # Default to inverter for unknown device types
+        return self.get_device_info(DEVICE_TYPE_INVERTER)
 
     @property
     def modbus_client(self):

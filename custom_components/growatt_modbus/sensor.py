@@ -8,6 +8,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
@@ -22,7 +23,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, CONF_INVERTER_SERIES, CONF_INVERT_GRID_POWER
+from .const import (
+    DOMAIN,
+    CONF_INVERTER_SERIES,
+    CONF_INVERT_GRID_POWER,
+    get_device_type_for_sensor,
+    get_entity_category,
+)
 from .coordinator import GrowattModbusCoordinator
 from .device_profiles import get_sensors_for_profile
 
@@ -641,13 +648,21 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        
+
         self._config_entry = config_entry
         self._sensor_key = sensor_key
         self._sensor_def = sensor_def
         self._attr_name = f"{config_entry.data['name']} {sensor_def['name']}"
         self._attr_unique_id = f"{config_entry.entry_id}_{sensor_key}"
-        
+
+        # Determine which device this sensor belongs to
+        self._device_type = get_device_type_for_sensor(sensor_key)
+
+        # Set entity category (None for main sensors, "diagnostic" for technical details)
+        entity_category = get_entity_category(sensor_key)
+        if entity_category == "diagnostic":
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
         # Set sensor attributes based on definition
         if "device_class" in sensor_def:
             self._attr_device_class = sensor_def["device_class"]
@@ -661,7 +676,7 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
     @property
     def device_info(self) -> dict[str, Any]:
         """Return device information."""
-        return self.coordinator.device_info
+        return self.coordinator.get_device_info(self._device_type)
 
     @property
     def native_value(self) -> Any:
@@ -705,18 +720,18 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 load = getattr(data, "power_to_load", 0)
                 charge = getattr(data, "charge_power", 0)
                 discharge = getattr(data, "discharge_power", 0)
-                
-                # Positive means export, negative means import
+
+                # Calculate grid power (IEC standard: positive = export)
                 grid_power = export if export != 0 else (solar + discharge) - (load + charge)
-                
-                # Apply inversion if configured
+
+                # Apply inversion if configured (for HA convention: negative = export)
                 if invert_grid_power:
                     grid_power = -grid_power
-                
-                # Export is only the positive part
-                raw_value = round(max(0, grid_power), 1)
+
+                # After inversion for HA: negative = export, so take negative part and make positive
+                raw_value = round(max(0, -grid_power), 1)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
-                
+
             elif self._sensor_key == "grid_import_power":
                 # Import power (always positive or 0)
                 export = getattr(data, "power_to_grid", 0)
@@ -724,16 +739,16 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 load = getattr(data, "power_to_load", 0)
                 charge = getattr(data, "charge_power", 0)
                 discharge = getattr(data, "discharge_power", 0)
-                
-                # Positive means export, negative means import
+
+                # Calculate grid power (IEC standard: positive = export)
                 grid_power = export if export != 0 else (solar + discharge) - (load + charge)
-                
-                # Apply inversion if configured
+
+                # Apply inversion if configured (for HA convention: positive = import)
                 if invert_grid_power:
                     grid_power = -grid_power
-                
-                # Import is only the negative part (made positive)
-                raw_value = round(max(0, -grid_power), 1)
+
+                # After inversion for HA: positive = import, so take positive part
+                raw_value = round(max(0, grid_power), 1)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
                 
             elif self._sensor_key == "self_consumption":
