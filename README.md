@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.0.8-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.0.9-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -624,6 +624,79 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 
 ---
 
+## 🆕 What's New in v0.0.9
+
+**Multi-Device Architecture & Automatic Grid Orientation Detection:**
+
+**✨ New Features:**
+
+- **Multi-Device Organization** - Sensors now organized into logical devices
+
+  - **Inverter** (parent) - System health, status, temperatures, connectivity
+  - **Solar** - PV inputs, AC output, energy production
+  - **Grid** - Grid connection, import/export, grid energy
+  - **Load** - Consumption monitoring
+  - **Battery** (conditional) - Battery storage metrics
+  - Entities categorized as Main/Diagnostic/Config for cleaner UI
+  - **Automatic migration** from single device - no manual action needed!
+  - Entity IDs preserved - dashboards and automations continue working
+
+- **Automatic Grid Orientation Detection** - Eliminates manual configuration
+
+  - **Auto-detection during setup** - Correct setting applied automatically when adding integration
+  - **Detection service** - `growatt_modbus.detect_grid_orientation` for verification anytime
+  - Analyzes power flow to determine if inverter follows IEC 61850 or HA convention
+  - Works with just 100W export (previously 500W) - much more practical
+  - Shows persistent notification with detection results and applied setting
+  - Comprehensive README documentation explaining IEC vs HA sign conventions
+
+- **Stale Daily Totals Debouncing** - Fixes morning energy spikes
+
+  - Detects when inverter wakes up with yesterday's totals in volatile memory
+  - 15-minute debounce window filters stale readings
+  - Prevents false spikes in energy dashboards
+
+- **Default Options on Setup** - Proper defaults from first installation
+  - 60-second scan interval set automatically
+  - No need to manually configure polling rate
+
+
+**🐛 Bug Fixes:**
+
+- **Fixed Grid Export/Import Sensors** - Critical fix when inversion enabled
+  - Export sensor now correctly shows `max(0, -grid_power)` after inversion
+  - Import sensor now correctly shows `max(0, grid_power)` after inversion
+  - Previously showed swapped values when "Invert Grid Power" was ON
+
+
+**⚠️ Breaking Changes:**
+
+**IMPORTANT:** After updating, **verify your grid power settings:**
+
+1. Run the detection service during daytime with solar producing:
+   ```yaml
+   service: growatt_modbus.detect_grid_orientation
+   ```
+
+2. The service will analyze your setup and recommend whether to enable/disable "Invert Grid Power"
+
+3. If recommendation differs from current setting, update it:
+   - Go to **Settings** → **Devices & Services** → **Growatt Modbus** → **Configure**
+   - Toggle **Invert Grid Power** based on recommendation
+   - Save and reload integration
+
+**Why this is needed:**
+- Previous versions had a bug in export/import sensors when inversion was enabled
+- The bug is now fixed, but you should verify your current setting is correct
+- Auto-detection makes this easy - just run the service!
+
+**Entity IDs unchanged** - Your dashboards and automations continue working
+
+---
+
+<details>
+<summary>📋 Previous Release: v0.0.8</summary>
+
 ## 🆕 What's New in v0.0.8
 
 **MIN TL-XH Support & Modbus Write Service:**
@@ -655,6 +728,8 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
   - Options flow now loads correctly for all users
 
 **Breaking Changes:** None - Fully backward compatible with existing setups
+
+</details>
 
 ---
 
