@@ -315,16 +315,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         # Check if we're clearly exporting
         expected_export = pv_power - consumption
-        if expected_export < 500:
+        if expected_export < 100:
             message = (
                 "⚠️ **Grid Orientation Detection: Not Exporting Enough**\n\n"
                 f"• Solar production: **{pv_power:.0f} W**\n"
                 f"• House consumption: **{consumption:.0f} W**\n"
                 f"• Expected export: **{expected_export:.0f} W**\n\n"
-                "Detection requires at least **500 W** net export for reliability.\n\n"
+                "Detection requires at least **100 W** net export for reliability.\n\n"
                 "**Please try again when:**\n"
-                "• Solar production exceeds consumption by > 500 W\n"
-                "• Turn off high-power appliances temporarily"
+                "• Solar production exceeds consumption by > 100 W\n"
+                "• Turn off high-power appliances temporarily if needed"
             )
             await hass.services.async_call(
                 "persistent_notification",

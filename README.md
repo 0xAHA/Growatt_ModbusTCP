@@ -264,7 +264,7 @@ This is why the **Invert Grid Power** setting exists!
 **NEW!** The integration now **automatically detects** the correct grid orientation during initial setup:
 
 - When you add the integration, it reads current power flow
-- If solar is producing (> 1000 W) and exporting (> 500 W), it automatically detects your inverter's convention
+- If solar is producing (> 1000 W) and exporting (> 100 W), it automatically detects your inverter's convention
 - The correct setting is applied automatically - no manual configuration needed!
 - Detection result is logged: check Home Assistant logs for confirmation
 
@@ -293,7 +293,7 @@ service: growatt_modbus.detect_grid_orientation
 
 **Requirements:**
 - Solar must be producing > 1000 W
-- Must be exporting > 500 W to grid (turn off appliances temporarily)
+- Must be exporting > 100 W to grid
 - Run during daytime with good sun
 
 The service will:

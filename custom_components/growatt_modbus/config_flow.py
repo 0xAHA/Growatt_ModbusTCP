@@ -56,7 +56,7 @@ def _detect_grid_orientation(client: GrowattModbus) -> tuple[bool, str]:
             return False, f"⚠️ Solar production too low ({pv_power:.0f}W) - using default (no inversion). Run detection service later."
 
         expected_export = pv_power - consumption
-        if expected_export < 500:
+        if expected_export < 100:
             return False, f"⚠️ Not exporting enough ({expected_export:.0f}W) - using default (no inversion). Run detection service later."
 
         # Analyze grid power sign
