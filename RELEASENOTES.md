@@ -162,6 +162,44 @@ No more need to manually configure polling rate!
 - TL-XH Series (all variants)
 - WIT Series
 
+### Enhancement: WIT Battery Sensors (VPP V2.02)
+
+**Added complete VPP battery power and energy registers** to WIT 4-15kW profile.
+
+**The Problem:**
+- WIT profile only had basic battery registers (voltage, current, SOC, SOH, temperature)
+- Missing VPP battery power registers (31200-31205)
+- Missing battery energy registers (31206-31213)
+- Battery power was calculated from V×I instead of using dedicated registers
+- Battery energy sensors (charge/discharge today/total) didn't exist
+- Users only saw 4 battery sensors instead of full battery monitoring suite
+
+**The Fix:**
+- Added VPP battery power registers:
+  - 31200-31201: `battery_power` (signed, positive=charge, negative=discharge)
+  - 31202-31203: `charge_power` (unsigned charge power)
+  - 31204-31205: `discharge_power` (unsigned discharge power)
+- Added VPP battery energy registers:
+  - 31206-31207: `charge_energy_today`
+  - 31208-31209: `charge_energy_total`
+  - 31210-31211: `discharge_energy_today`
+  - 31212-31213: `discharge_energy_total`
+- Added VPP battery state registers for redundancy:
+  - 31214: `battery_voltage_vpp` (maps to 8034)
+  - 31215: `battery_current_vpp` (maps to 8035)
+  - 31217: `battery_soc_vpp` (maps to 8093)
+  - 31222: `battery_temp_vpp` (maps to battery_temp)
+
+**Benefits:**
+- Battery power now read from dedicated inverter registers (more accurate than V×I calculation)
+- Battery charge/discharge energy tracking now available
+- Complete battery monitoring suite with all expected sensors
+- Consistent with other VPP-enabled profiles (SPH, TL-XH, MOD)
+
+**Note:** Register layout based on VPP V2.02 protocol and similar profiles. Users should verify with debug register scan if any sensors show unexpected values.
+
+---
+
 ### Critical: Battery Discharge Power Sign Convention
 
 **Fixed a critical bug** in TL-XH/SPH VPP 2.01 profiles where battery discharge power was misinterpreted as unsigned.

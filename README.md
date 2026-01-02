@@ -687,6 +687,19 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
     - `battery_power` - Signed VPP power (negative=discharge, positive=charge)
     - Users can disable entities they don't need
 
+- **Enhanced WIT Battery Sensors** - Added complete VPP battery power and energy registers
+  - **NEW:** VPP battery power registers (31200-31205)
+    - `battery_power` - Signed power (positive=charge, negative=discharge)
+    - `charge_power` and `discharge_power` - Unsigned power values
+    - Battery power now read from dedicated registers instead of V×I calculation
+  - **NEW:** Battery energy tracking (31206-31213)
+    - `charge_energy_today` / `charge_energy_total`
+    - `discharge_energy_today` / `discharge_energy_total`
+  - **NEW:** VPP battery state registers for redundancy
+    - Voltage, current, SOC, temperature from VPP range
+  - WIT users now get full battery monitoring suite instead of just 4 basic sensors
+  - More accurate power measurements from hardware registers vs calculated values
+
 
 **⚠️ Breaking Changes:**
 
