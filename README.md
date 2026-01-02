@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.0.9-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.1.0-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -624,7 +624,7 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 
 ---
 
-## 🆕 What's New in v0.0.9
+## 🆕 What's New in v0.1.0
 
 **Multi-Device Architecture & Automatic Grid Orientation Detection:**
 
@@ -667,6 +667,17 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
   - Export sensor now correctly shows `max(0, -grid_power)` after inversion
   - Import sensor now correctly shows `max(0, grid_power)` after inversion
   - Previously showed swapped values when "Invert Grid Power" was ON
+
+- **Fixed Battery Discharge Power Sign Convention** - Critical fix for TL-XH/SPH VPP 2.01 profiles
+  - Register 31200-31201 now correctly marked as **signed** battery power
+  - Per VPP Protocol V2.01 spec: positive=charge, negative=discharge
+  - Previously misinterpreted as unsigned, causing discharge to show as huge positive values
+  - Affects all TL-XH, SPH, SPH-TL3 users with VPP 2.01 inverters
+  - **NEW:** Added legacy battery power registers (3178-3181) for TL-XH models
+    - `battery_discharge_power` - Unsigned discharge power (always positive)
+    - `battery_charge_power` - Unsigned charge power (always positive)
+    - `battery_power` - Signed VPP power (negative=discharge, positive=charge)
+    - Users can disable entities they don't need
 
 
 **⚠️ Breaking Changes:**

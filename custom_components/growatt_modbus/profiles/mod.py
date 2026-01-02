@@ -173,7 +173,7 @@ MOD_6000_15000TL3_XH = {
         # === BATTERY CLUSTER 2 (31300-31399) - VPP Protocol V2.01 ===
         # Battery 2 Power (signed: positive=charging, negative=discharging)
         31300: {'name': 'battery2_power_high', 'scale': 1, 'unit': '', 'pair': 31301},
-        31301: {'name': 'battery2_power_low', 'scale': 1, 'unit': '', 'pair': 31300, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31301: {'name': 'battery2_power', 'scale': 1, 'unit': '', 'pair': 31300, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
         # Battery 2 Energy
         31302: {'name': 'battery2_charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31303},

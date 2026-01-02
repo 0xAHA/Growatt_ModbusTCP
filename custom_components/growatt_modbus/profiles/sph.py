@@ -201,8 +201,10 @@ SPH_3000_6000_V201 = {
         31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp', 'signed': True},
 
         # Battery Cluster 1 State (31200-31223)
-        31200: {'name': 'battery_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)
+        31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
+        31201: {'name': 'battery_power', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        # Note: 31202-31203 might be charge energy per VPP spec, but keeping as charge power for now (needs validation)
         31202: {'name': 'battery_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31203},
         31203: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W'},
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
@@ -211,8 +213,8 @@ SPH_3000_6000_V201 = {
         31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
 
         # Battery Cluster 2 State (31300-31323) - Optional second battery
-        31300: {'name': 'battery2_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31301},
-        31301: {'name': 'battery2_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31300, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        31300: {'name': 'battery2_power_high', 'scale': 1, 'unit': '', 'pair': 31301},
+        31301: {'name': 'battery2_power', 'scale': 1, 'unit': '', 'pair': 31300, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         31302: {'name': 'battery2_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31303},
         31303: {'name': 'battery2_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31302, 'combined_scale': 0.1, 'combined_unit': 'W'},
         31314: {'name': 'battery2_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery 2 voltage (0 if not present)', 'signed': True},
@@ -310,8 +312,10 @@ SPH_7000_10000_V201 = {
         31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp', 'signed': True},
 
         # Battery Cluster 1 State
-        31200: {'name': 'battery_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)
+        31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
+        31201: {'name': 'battery_power', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        # Note: 31202-31203 might be charge energy per VPP spec, but keeping as charge power for now (needs validation)
         31202: {'name': 'battery_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31203},
         31203: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W'},
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
@@ -320,8 +324,8 @@ SPH_7000_10000_V201 = {
         31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
 
         # Battery Cluster 2 State
-        31300: {'name': 'battery2_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31301},
-        31301: {'name': 'battery2_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31300, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        31300: {'name': 'battery2_power_high', 'scale': 1, 'unit': '', 'pair': 31301},
+        31301: {'name': 'battery2_power', 'scale': 1, 'unit': '', 'pair': 31300, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         31302: {'name': 'battery2_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31303},
         31303: {'name': 'battery2_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31302, 'combined_scale': 0.1, 'combined_unit': 'W'},
         31314: {'name': 'battery2_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery 2 voltage (0 if not present)', 'signed': True},

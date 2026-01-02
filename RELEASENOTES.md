@@ -1,4 +1,4 @@
-# Release Notes - v0.0.9
+# Release Notes - v0.1.0
 
 ## Multi-Device Architecture & Automatic Grid Orientation Detection
 
@@ -130,13 +130,44 @@ No more need to manually configure polling rate!
 - Import sensor now correctly uses `max(0, grid_power)` after inversion
 - Export/import sensors now show correct unsigned values regardless of inversion setting
 
+### Critical: Battery Discharge Power Sign Convention
+
+**Fixed a critical bug** in TL-XH/SPH VPP 2.01 profiles where battery discharge power was misinterpreted as unsigned.
+
+**The Problem:**
+- Register 31200-31201 returns **signed** battery power per VPP Protocol V2.01 spec
+- Positive = charging, Negative = discharging
+- Profile was missing `'signed': True` flag on register 31201
+- Code interpreted -1238W discharge as 4294954916W (huge positive value!)
+- Affected all TL-XH, SPH, SPH-TL3 users with VPP 2.01 inverters
+
+**The Fix:**
+- Added `'signed': True` flag to register 31201 in all affected profiles
+- Renamed `battery_discharge_power` → `battery_power` (matches VPP spec)
+- Battery power now correctly shows negative when discharging
+- Updated profiles: TL_XH, MIN_TL_XH, SPH_3000_6000, SPH_7000_10000, SPH_TL3
+
+**Bonus: Added Legacy Battery Power Registers (3178-3181)**
+
+For TL-XH models that provide both register sets, added optional legacy registers:
+
+- **`battery_discharge_power`** (3178-3179) - Unsigned discharge power (always positive)
+- **`battery_charge_power`** (3180-3181) - Unsigned charge power (always positive)
+- **`battery_power`** (31200-31201) - Signed VPP power (negative=discharge, positive=charge)
+
+**Benefits:**
+- Users can compare both values to validate correct operation
+- Legacy registers easier to understand (always positive)
+- Users can disable entities they don't need
+- Provides redundancy and fallback options
+
 ---
 
 ## ⚠️ Breaking Changes / Action Required
 
 ### IMPORTANT: Verify Grid Power Settings
 
-After updating to v0.0.9, **verify your grid power configuration** using the detection service:
+After updating to v0.1.0, **verify your grid power configuration** using the detection service:
 
 **Step 1: Run Detection Service**
 
@@ -179,6 +210,10 @@ Previous versions had a bug in export/import sensors when inversion was enabled.
 
 Full list of changes:
 
+- `c0e0949` - Clean up battery power entity naming - remove _legacy and _low suffixes
+- `0913ecd` - Add legacy battery power registers (3178-3181) to MIN TL-XH profile
+- `c985a23` - Fix battery discharge power sign convention for TL-XH/SPH VPP 2.01 profiles
+- `635d5c1` - Prepare release v0.0.9
 - `a7f5a78` - Add persistent notification for grid orientation detection results during setup
 - `e0b559c` - Reduce grid orientation detection export threshold from 500W to 100W
 - `8a76782` - Add automatic grid orientation detection during initial setup
@@ -195,8 +230,9 @@ Full list of changes:
 - Added comprehensive grid power sign convention section to README
 - Documented IEC 61850 vs Home Assistant conventions
 - Added usage instructions for detection service
-- Updated "What's New" section for v0.0.9
-- Created this RELEASENOTES.md file for future releases
+- Updated "What's New" section for v0.1.0
+- Added battery power entity documentation
+- Updated RELEASENOTES.md with battery power bug fix details
 
 ---
 
@@ -204,6 +240,7 @@ Full list of changes:
 
 Thank you to all users who reported issues and provided feedback! Special thanks for:
 - Grid power sign convention feedback
+- Battery discharge power sign convention bug report
 - Morning energy spike reports
 - Device organization suggestions
 
@@ -211,7 +248,7 @@ Thank you to all users who reported issues and provided feedback! Special thanks
 
 ## 🔗 Links
 
-- **Full Changelog:** https://github.com/0xAHA/Growatt_ModbusTCP/compare/v0.0.8...v0.0.9
+- **Full Changelog:** https://github.com/0xAHA/Growatt_ModbusTCP/compare/v0.0.8...v0.1.0
 - **Issues:** https://github.com/0xAHA/Growatt_ModbusTCP/issues
 - **Documentation:** https://github.com/0xAHA/Growatt_ModbusTCP/blob/main/README.md
 
