@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.1.0-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.1.1-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -624,6 +624,46 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 
 ---
 
+## 🆕 What's New in v0.1.1
+
+**WIT Battery Sensors & Control Device Organization (Issue #75):**
+
+**✨ New Features:**
+
+- **WIT Profile Battery Sensors** - Complete VPP battery monitoring suite
+  - **NEW:** VPP battery power registers (31200-31205)
+    - Battery Power (signed: positive=charge, negative=discharge)
+    - Charge Power & Discharge Power (unsigned separate values)
+    - More accurate readings from dedicated hardware registers vs V×I calculation
+  - **NEW:** Battery energy tracking (31206-31213)
+    - Charge Energy Today / Total
+    - Discharge Energy Today / Total
+  - **NEW:** VPP battery state registers for redundancy
+  - **Result:** WIT users now get **full battery monitoring suite** instead of just 4 basic sensors
+  - **Fixes:** GitHub Issue #75 - WIT showing minimal battery sensors
+
+- **Control Entity Device Organization**
+  - Controls now appear under their **logical device** instead of separate Controls device
+  - Battery controls → Battery device (Configuration section)
+  - Grid controls → Grid device (Configuration section)
+  - Solar controls → Solar device (Configuration section)
+  - System controls → Inverter device (Configuration section)
+  - All controls have EntityCategory.CONFIG (hidden by default, expand Configuration to view)
+  - **NEW:** Active Power Rate control (register 3) - limits max inverter output 0-100%
+    - Available on: MIN series, and other profiles with register 3
+    - Appears in Inverter device Configuration section
+
+**🔧 Enhancements:**
+
+- Added device mapping infrastructure for future control entity auto-generation
+- Control entities automatically assigned to correct device based on function
+- Tested and validated on MIN-10000TL-X hardware
+
+---
+
+<details>
+<summary>📋 Previous Release: v0.1.0</summary>
+
 ## 🆕 What's New in v0.1.0
 
 **Multi-Device Architecture & Automatic Grid Orientation Detection:**
@@ -687,6 +727,19 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
     - `battery_power` - Signed VPP power (negative=discharge, positive=charge)
     - Users can disable entities they don't need
 
+- **Enhanced WIT Battery Sensors** - Added complete VPP battery power and energy registers
+  - **NEW:** VPP battery power registers (31200-31205)
+    - `battery_power` - Signed power (positive=charge, negative=discharge)
+    - `charge_power` and `discharge_power` - Unsigned power values
+    - Battery power now read from dedicated registers instead of V×I calculation
+  - **NEW:** Battery energy tracking (31206-31213)
+    - `charge_energy_today` / `charge_energy_total`
+    - `discharge_energy_today` / `discharge_energy_total`
+  - **NEW:** VPP battery state registers for redundancy
+    - Voltage, current, SOC, temperature from VPP range
+  - WIT users now get full battery monitoring suite instead of just 4 basic sensors
+  - More accurate power measurements from hardware registers vs calculated values
+
 
 **⚠️ Breaking Changes:**
 
@@ -710,6 +763,8 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 - Auto-detection makes this easy - just run the service!
 
 **Entity IDs unchanged** - Your dashboards and automations continue working
+
+</details>
 
 ---
 
