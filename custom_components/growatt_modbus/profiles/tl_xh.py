@@ -303,6 +303,14 @@ MIN_TL_XH_3000_10000_V201 = {
         3105: {'name': 'fault_code', 'scale': 1, 'unit': '', 'desc': 'Main fault code'},
         3106: {'name': 'warning_code', 'scale': 1, 'unit': '', 'desc': 'Main warning code'},
 
+        # === LEGACY BATTERY POWER REGISTERS (3178-3181) ===
+        # Some TL-XH models provide unsigned battery power in addition to VPP 31200+ signed power
+        # These are legacy/alternative registers - users can disable if not needed
+        3178: {'name': 'battery_discharge_power_legacy_high', 'scale': 1, 'unit': '', 'pair': 3179, 'desc': 'Legacy battery discharge power HIGH (unsigned)'},
+        3179: {'name': 'battery_discharge_power_legacy_low', 'scale': 1, 'unit': '', 'pair': 3178, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Legacy battery discharge power (unsigned, positive=discharge)'},
+        3180: {'name': 'battery_charge_power_legacy_high', 'scale': 1, 'unit': '', 'pair': 3181, 'desc': 'Legacy battery charge power HIGH (unsigned)'},
+        3181: {'name': 'battery_charge_power_legacy_low', 'scale': 1, 'unit': '', 'pair': 3180, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Legacy battery charge power (unsigned, positive=charge)'},
+
         # === VPP V2.01 BATTERY RANGE (31200+) ===
         # Status
         31000: {'name': 'equipment_status', 'scale': 1, 'unit': '', 'desc': 'Equipment running status'},
