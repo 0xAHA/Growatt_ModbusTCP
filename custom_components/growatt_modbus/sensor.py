@@ -857,35 +857,46 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 
                 raw_value = round(net_energy, 2)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
-            
+
             elif self._sensor_key == "grid_import_energy_today":
-                # Grid import energy with inversion support
-                # When CT clamp backwards: import data is in export register, export data is in load register
-                if invert_grid_power:
-                    # CT clamp backwards: read from opposite register
+                # Grid import energy - must be calculated for most inverters
+                # Only inverters with separate hardware import registers can use inversion shortcut
+
+                # Check if inverter has hardware import energy register
+                has_hardware_import = hasattr(data, "energy_from_grid_today")
+
+                if invert_grid_power and has_hardware_import:
+                    # CT clamp backwards AND inverter has hardware import register
                     raw_value = getattr(data, "energy_to_grid_today", 0)
                 else:
-                    # Normal: calculate from load - solar + export
+                    # Always calculate for inverters without hardware import registers (MIN, etc.)
+                    # Or calculate normally when inversion is off
                     load_energy = getattr(data, "load_energy_today", 0)
                     solar_energy = getattr(data, "energy_today", 0)
                     export_energy = getattr(data, "energy_to_grid_today", 0)
                     raw_value = max(0, load_energy - solar_energy + export_energy)
-                
+
                 raw_value = round(raw_value, 2)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
 
             elif self._sensor_key == "grid_import_energy_total":
-                # Grid import energy with inversion support
-                if invert_grid_power:
-                    # CT clamp backwards: read from opposite register
+                # Grid import energy - must be calculated for most inverters
+                # Only inverters with separate hardware import registers can use inversion shortcut
+
+                # Check if inverter has hardware import energy register
+                has_hardware_import = hasattr(data, "energy_from_grid_total")
+
+                if invert_grid_power and has_hardware_import:
+                    # CT clamp backwards AND inverter has hardware import register
                     raw_value = getattr(data, "energy_to_grid_total", 0)
                 else:
-                    # Normal: calculate from load - solar + export
+                    # Always calculate for inverters without hardware import registers (MIN, etc.)
+                    # Or calculate normally when inversion is off
                     load_energy = getattr(data, "load_energy_total", 0)
                     solar_energy = getattr(data, "energy_total", 0)
                     export_energy = getattr(data, "energy_to_grid_total", 0)
                     raw_value = max(0, load_energy - solar_energy + export_energy)
-                
+
                 raw_value = round(raw_value, 2)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
             

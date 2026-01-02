@@ -668,6 +668,14 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
   - Import sensor now correctly shows `max(0, grid_power)` after inversion
   - Previously showed swapped values when "Invert Grid Power" was ON
 
+- **Fixed Grid Import Energy Calculation** - Critical fix for all inverters with inversion enabled
+  - Import energy now correctly calculated for inverters without hardware import registers
+  - Affects: MIN, MOD, SPH-TL3, TL-XH, WIT profiles
+  - Previously showed incorrect import energy when "Invert Grid Power" was ON
+  - Import energy now always calculated as: `Load - Solar + Export`
+  - Example: Load 11.8 kWh - Solar 34.1 kWh + Export 25.4 kWh = Import 3.1 kWh ✅
+  - Previously incorrectly showed import = export (25.4 kWh = 25.4 kWh) ❌
+
 - **Fixed Battery Discharge Power Sign Convention** - Critical fix for TL-XH/SPH VPP 2.01 profiles
   - Register 31200-31201 now correctly marked as **signed** battery power
   - Per VPP Protocol V2.01 spec: positive=charge, negative=discharge

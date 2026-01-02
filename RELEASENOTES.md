@@ -130,6 +130,38 @@ No more need to manually configure polling rate!
 - Import sensor now correctly uses `max(0, grid_power)` after inversion
 - Export/import sensors now show correct unsigned values regardless of inversion setting
 
+### Critical: Grid Import Energy Calculation
+
+**Fixed a critical bug** in `grid_import_energy_today` and `grid_import_energy_total` calculation when "Invert Grid Power" is enabled.
+
+**The Problem:**
+- When "Invert Grid Power" was ON, import energy was directly read from export register
+- This incorrectly assumed ALL inverters have separate hardware import energy registers
+- Growatt inverters (MIN, MOD, SPH-TL3, TL-XH, WIT) **don't** have hardware import registers
+- Import energy must be calculated: `Import = Load - Solar + Export`
+- Caused import energy to show same value as export energy
+
+**User Report (MIN-10000TL-X):**
+- Solar: 34.1 kWh
+- Load: 11.8 kWh
+- Export: 25.4 kWh
+- Import: **25.4 kWh** ❌ (showed same as export!)
+- Expected: **3.1 kWh** (11.8 - 34.1 + 25.4)
+
+**The Fix:**
+- Added check for hardware import energy registers before using inversion shortcut
+- Code now checks `hasattr(data, "energy_from_grid_today")`
+- Since NO Growatt profiles have this register, import is **always calculated**
+- Import energy now correct regardless of inversion setting
+- Affects both daily and total import energy sensors
+
+**Profiles Fixed:**
+- MIN Series (all variants)
+- MOD Series
+- SPH-TL3 Series
+- TL-XH Series (all variants)
+- WIT Series
+
 ### Critical: Battery Discharge Power Sign Convention
 
 **Fixed a critical bug** in TL-XH/SPH VPP 2.01 profiles where battery discharge power was misinterpreted as unsigned.
@@ -196,13 +228,13 @@ If the recommendation differs from your current setting:
 
 **Why This is Needed:**
 
-Previous versions had a bug in export/import sensors when inversion was enabled. The bug is now fixed, but you should verify your current setting is correct to ensure accurate power flow visualization.
+Previous versions had bugs in export/import sensors and import energy calculation when inversion was enabled. The bugs are now fixed, but you should verify your current setting is correct to ensure accurate power flow visualization and energy monitoring.
 
 **What's NOT Affected:**
 - ✅ Entity IDs unchanged - All dashboards continue working
-- ✅ Energy totals always correct (never affected by inversion)
+- ✅ Export energy totals always correct (never affected by inversion)
+- ✅ Solar production totals always correct
 - ✅ Automations continue working
-- ✅ Only instantaneous grid power sensors affected
 
 ---
 
@@ -210,6 +242,8 @@ Previous versions had a bug in export/import sensors when inversion was enabled.
 
 Full list of changes:
 
+- `2d8d6d3` - Fix grid import energy calculation for MIN inverters with grid inversion enabled
+- `8d28cef` - Update version to v0.1.0 and finalize release documentation
 - `c0e0949` - Clean up battery power entity naming - remove _legacy and _low suffixes
 - `0913ecd` - Add legacy battery power registers (3178-3181) to MIN TL-XH profile
 - `c985a23` - Fix battery discharge power sign convention for TL-XH/SPH VPP 2.01 profiles
@@ -240,7 +274,8 @@ Full list of changes:
 
 Thank you to all users who reported issues and provided feedback! Special thanks for:
 - Grid power sign convention feedback
-- Battery discharge power sign convention bug report
+- Grid import energy calculation bug report (MIN-10000TL-X)
+- Battery discharge power sign convention bug report (TL-XH)
 - Morning energy spike reports
 - Device organization suggestions
 
