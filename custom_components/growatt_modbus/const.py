@@ -238,6 +238,54 @@ def get_device_type_for_sensor(sensor_key: str) -> str:
 
 
 # ============================================================================
+# CONTROL ENTITY DEVICE MAPPING
+# ============================================================================
+
+# Map control entity names to their parent device
+# Controls (number/select entities) are created from holding registers with 'access': 'RW'
+# They appear as CONFIG entities (hidden by default) under the appropriate device
+
+def get_device_type_for_control(control_name: str) -> str:
+    """Get the device type that a control entity belongs to.
+
+    Args:
+        control_name: The control register name (e.g., 'battery_charge_stop_soc', 'vpp_enable')
+
+    Returns:
+        Device type string (e.g., DEVICE_TYPE_BATTERY, DEVICE_TYPE_GRID)
+    """
+    # Battery controls → Battery device
+    if any(keyword in control_name for keyword in [
+        'battery', 'bms', 'soc', 'charge_power', 'discharge_power',
+        'ac_charge_power_rate', 'eod_voltage'
+    ]):
+        return DEVICE_TYPE_BATTERY
+
+    # Grid controls → Grid device
+    if any(keyword in control_name for keyword in [
+        'grid', 'ongrid', 'offgrid', 'vpp', 'export', 'import',
+        'phase_mode', 'phase_sequence', 'antibackflow'
+    ]):
+        return DEVICE_TYPE_GRID
+
+    # Load/demand controls → Load device
+    if any(keyword in control_name for keyword in [
+        'demand', 'load_pv'
+    ]):
+        return DEVICE_TYPE_LOAD
+
+    # PV/solar controls → Solar device
+    if any(keyword in control_name for keyword in [
+        'pv_', 'optimizer', 'pid'
+    ]):
+        return DEVICE_TYPE_SOLAR
+
+    # Everything else → Inverter device (default)
+    # Includes: time programming, system settings, operation mode, etc.
+    return DEVICE_TYPE_INVERTER
+
+
+# ============================================================================
 # ENTITY CATEGORIES
 # ============================================================================
 

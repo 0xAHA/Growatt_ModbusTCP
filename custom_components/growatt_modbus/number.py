@@ -13,7 +13,7 @@ from .const import (
     DOMAIN,
     WRITABLE_REGISTERS,
     CONF_REGISTER_MAP,
-    DEVICE_TYPE_INVERTER,
+    get_device_type_for_control,
 )
 from .coordinator import GrowattModbusCoordinator
 
@@ -75,8 +75,9 @@ class GrowattExportLimitPowerNumber(CoordinatorEntity, NumberEntity):
     @property
     def device_info(self) -> dict[str, Any]:
         """Return device information."""
-        # Export limit is a system-wide inverter setting
-        return self.coordinator.get_device_info(DEVICE_TYPE_INVERTER)
+        # Determine device based on control type
+        device_type = get_device_type_for_control('export_limit_power')
+        return self.coordinator.get_device_info(device_type)
 
     @property
     def native_value(self) -> float | None:
