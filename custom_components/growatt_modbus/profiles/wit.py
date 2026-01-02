@@ -118,8 +118,40 @@ WIT_4000_15000TL3 = {
         8093: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
         8094: {'name': 'battery_soh', 'scale': 1, 'unit': '%'},
 
-        # Battery temperature (VPP block observed on WIT)
-        31223: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        # ============================================================================
+        # VPP BATTERY RANGE (31200-31323): Battery Cluster Data
+        # ============================================================================
+        # Per VPP Protocol V2.02: Battery power and energy data
+
+        # Battery Cluster 1 Power (31200-31203)
+        # Per VPP Protocol: 31200-31201 is signed battery power (positive=charge, negative=discharge)
+        31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
+        31201: {'name': 'battery_power', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        # Note: 31202-31203 observed as charge_power on some profiles, may need user validation
+        31202: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 31203},
+        31203: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Note: 31204-31205 observed as discharge_power on some profiles, may need user validation
+        31204: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31205},
+        31205: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Battery Cluster 1 Energy (31206-31213)
+        # Note: Register layout may vary - these are based on MOD profile observations
+        31206: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207},
+        31207: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31208: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31209},
+        31209: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31210: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31211},
+        31211: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31210, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31212: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31213},
+        31213: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31212, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Battery Cluster 1 State (31214-31223)
+        31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
+        31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
+        31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
+        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
+        # Note: 31223 also observed as battery_temp on some WIT scans
+        31223: {'name': 'battery_temp_alt', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Alternative battery temp register'},
 
         # Power flow / consumption (8045-8086)
         8045: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 8046},
