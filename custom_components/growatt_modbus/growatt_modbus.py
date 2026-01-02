@@ -136,6 +136,7 @@ class GrowattData:
     # Export Control (writable registers)
     export_limit_mode: int = 0        # 0=Disabled, 1=RS485, 2=RS232, 3=CT
     export_limit_power: int = 0       # 0-1000 (0-100.0%)
+    active_power_rate: int = 100      # 0-100 (max output power %)
 
     # Device Info
     firmware_version: str = ""
@@ -1069,6 +1070,18 @@ class GrowattModbus:
                                data.export_limit_mode, data.export_limit_power)
             except Exception as e:
                 logger.debug(f"Could not read export control registers: {e}")
+
+        # --- Active Power Rate (3) --- Read if present in profile
+        if 3 in holding_map:
+            try:
+                power_rate_regs = self.read_holding_registers(3, 1)
+                logger.debug("[POWER CTRL] Raw active_power_rate from reg 3: %r", power_rate_regs)
+
+                if power_rate_regs is not None and len(power_rate_regs) >= 1:
+                    data.active_power_rate = int(power_rate_regs[0])
+                    logger.debug("[POWER CTRL] Read active_power_rate: %s%%", data.active_power_rate)
+            except Exception as e:
+                logger.debug(f"Could not read active_power_rate register: {e}")
 
     def get_status_text(self, status_code: int) -> str:
         """Convert status code to human readable text"""

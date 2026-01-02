@@ -129,6 +129,13 @@ WRITABLE_REGISTERS = {
         'scale': 0.1,  # Store as 0-1000, display as 0-100.0%
         'valid_range': (0, 1000),  # 0 = 0%, 1000 = 100%
         'unit': '%'
+    },
+    'active_power_rate': {
+        'register': 3,
+        'scale': 1,  # Direct percentage: 0-100
+        'valid_range': (0, 100),  # 0% to 100%
+        'unit': '%',
+        'desc': 'Maximum output power limitation'
     }
 }
 
