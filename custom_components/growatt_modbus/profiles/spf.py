@@ -112,8 +112,76 @@ SPF_3000_6000_ES_PLUS = {
         82: {'name': 'inverter_fan_speed', 'scale': 1, 'unit': '%', 'desc': 'Inverter fan speed percentage'},
     },
     'holding_registers': {
+        # System Control
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Active power rate control'},
+
+        # Output Priority Configuration
+        1: {'name': 'output_config', 'scale': 1, 'unit': '', 'access': 'RW',
+            'desc': 'Output source priority',
+            'values': {
+                0: 'SBU (Battery First)',
+                1: 'SOL (Solar First)',
+                2: 'UTI (Utility First)',
+                3: 'SUB (Solar & Utility First)'
+            }},
+
+        # Charge Priority Configuration
+        2: {'name': 'charge_config', 'scale': 1, 'unit': '', 'access': 'RW',
+            'desc': 'Charge source priority',
+            'values': {
+                0: 'CSO (Solar First)',
+                1: 'SNU (Solar & Utility)',
+                2: 'OSO (Solar Only)'
+            }},
+
+        # AC Input Mode
+        8: {'name': 'ac_input_mode', 'scale': 1, 'unit': '', 'access': 'RW',
+            'desc': 'AC input mode selection',
+            'values': {
+                0: 'APL (Appliance)',
+                1: 'UPS',
+                2: 'GEN (Generator)'
+            }},
+
+        # Battery Low Voltage/SOC Switch to Utility
+        # BATTERY TYPE DEPENDENT (see register 39)
+        # Non-Lithium (AGM/FLD/USE/USE2): 200-640 = 20.0V - 64.0V (scale 0.1V)
+        # Lithium: 5-100 = 0.5% - 10.0% (scale 0.1%)
+        37: {'name': 'bat_low_to_uti', 'scale': 0.1, 'unit': 'V/%', 'access': 'RW',
+             'valid_range': (5, 640),
+             'desc': 'Battery low voltage/SOC to switch to utility. Non-Lithium: 20.0-64.0V, Lithium: 0.5-10.0%',
+             'battery_dependent': True},
+
+        # AC Charge Current
+        38: {'name': 'ac_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
+             'valid_range': (0, 400),
+             'desc': 'AC charging current limit'},
+
+        # Battery Type
+        39: {'name': 'battery_type', 'scale': 1, 'unit': '', 'access': 'RW',
+             'desc': 'Battery type selection (can only be set in standby state)',
+             'values': {
+                 0: 'AGM',
+                 1: 'Flooded (FLD)',
+                 2: 'User Defined',
+                 3: 'Lithium',
+                 4: 'User Defined 2'
+             }},
+
+        # Generator Charge Current
+        83: {'name': 'gen_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
+             'valid_range': (0, 400),
+             'desc': 'Generator charging current limit'},
+
+        # AC to Battery Voltage/SOC Switch Point
+        # BATTERY TYPE DEPENDENT (see register 39)
+        # Non-Lithium (AGM/FLD/USE/USE2): 200-640 = 20.0V - 64.0V (scale 0.1V)
+        # Lithium: 5-100 = 0.5% - 10.0% (scale 0.1%)
+        95: {'name': 'ac_to_bat_volt', 'scale': 0.1, 'unit': 'V/%', 'access': 'RW',
+             'valid_range': (5, 640),
+             'desc': 'AC to battery voltage/SOC switch point. Non-Lithium: 20.0-64.0V, Lithium: 0.5-10.0%',
+             'battery_dependent': True},
     }
 }
 

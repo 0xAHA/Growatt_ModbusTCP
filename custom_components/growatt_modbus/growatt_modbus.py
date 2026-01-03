@@ -133,10 +133,20 @@ class GrowattData:
     fault_code: int = 0
     warning_code: int = 0
 
-    # Export Control (writable registers)
+    # Control registers (writable holding registers)
     export_limit_mode: int = 0        # 0=Disabled, 1=RS485, 2=RS232, 3=CT
     export_limit_power: int = 0       # 0-1000 (0-100.0%)
     active_power_rate: int = 100      # 0-100 (max output power %)
+
+    # SPF Off-Grid Control registers
+    output_config: int = 0            # 0=SBU, 1=SOL, 2=UTI, 3=SUB
+    charge_config: int = 0            # 0=CSO, 1=SNU, 2=OSO
+    ac_input_mode: int = 0            # 0=APL, 1=UPS, 2=GEN
+    battery_type: int = 0             # 0=AGM, 1=FLD, 2=USE, 3=Lithium, 4=USE2
+    ac_charge_current: int = 0        # 0-400 A
+    gen_charge_current: int = 0       # 0-400 A
+    bat_low_to_uti: int = 0           # Battery-dependent: Non-Lithium 200-640 (20-64V), Lithium 5-100 (0.5-10%)
+    ac_to_bat_volt: int = 0           # Battery-dependent: Non-Lithium 200-640 (20-64V), Lithium 5-100 (0.5-10%)
 
     # Device Info
     firmware_version: str = ""
@@ -1082,6 +1092,66 @@ class GrowattModbus:
                     logger.debug("[POWER CTRL] Read active_power_rate: %s%%", data.active_power_rate)
             except Exception as e:
                 logger.debug(f"Could not read active_power_rate register: {e}")
+
+        # --- SPF Off-Grid Controls --- Read if present in profile
+        # Read registers 1, 2, 8 (output config, charge config, AC input mode)
+        if any(reg in holding_map for reg in [1, 2, 8]):
+            try:
+                spf_ctrl_regs = self.read_holding_registers(1, 8)
+                logger.debug("[SPF CTRL] Raw SPF control regs 1-8: %r", spf_ctrl_regs)
+
+                if spf_ctrl_regs is not None and len(spf_ctrl_regs) >= 8:
+                    if 1 in holding_map:
+                        data.output_config = int(spf_ctrl_regs[0])
+                    if 2 in holding_map:
+                        data.charge_config = int(spf_ctrl_regs[1])
+                    if 8 in holding_map:
+                        data.ac_input_mode = int(spf_ctrl_regs[7])
+                    logger.debug("[SPF CTRL] output_config=%s, charge_config=%s, ac_input_mode=%s",
+                               data.output_config, data.charge_config, data.ac_input_mode)
+            except Exception as e:
+                logger.debug(f"Could not read SPF control registers 1-8: {e}")
+
+        # Read battery configuration registers (37-39)
+        if any(reg in holding_map for reg in [37, 38, 39]):
+            try:
+                battery_ctrl_regs = self.read_holding_registers(37, 3)
+                logger.debug("[SPF CTRL] Raw battery ctrl regs 37-39: %r", battery_ctrl_regs)
+
+                if battery_ctrl_regs is not None and len(battery_ctrl_regs) >= 3:
+                    if 37 in holding_map:
+                        data.bat_low_to_uti = int(battery_ctrl_regs[0])
+                    if 38 in holding_map:
+                        data.ac_charge_current = int(battery_ctrl_regs[1])
+                    if 39 in holding_map:
+                        data.battery_type = int(battery_ctrl_regs[2])
+                    logger.debug("[SPF CTRL] bat_low_to_uti=%s, ac_charge_current=%s, battery_type=%s",
+                               data.bat_low_to_uti, data.ac_charge_current, data.battery_type)
+            except Exception as e:
+                logger.debug(f"Could not read battery control registers 37-39: {e}")
+
+        # Read generator charge current (83) and AC to battery voltage (95)
+        if 83 in holding_map:
+            try:
+                gen_charge_regs = self.read_holding_registers(83, 1)
+                logger.debug("[SPF CTRL] Raw gen_charge_current from reg 83: %r", gen_charge_regs)
+
+                if gen_charge_regs is not None and len(gen_charge_regs) >= 1:
+                    data.gen_charge_current = int(gen_charge_regs[0])
+                    logger.debug("[SPF CTRL] gen_charge_current=%s A", data.gen_charge_current)
+            except Exception as e:
+                logger.debug(f"Could not read gen_charge_current register: {e}")
+
+        if 95 in holding_map:
+            try:
+                ac_to_bat_regs = self.read_holding_registers(95, 1)
+                logger.debug("[SPF CTRL] Raw ac_to_bat_volt from reg 95: %r", ac_to_bat_regs)
+
+                if ac_to_bat_regs is not None and len(ac_to_bat_regs) >= 1:
+                    data.ac_to_bat_volt = int(ac_to_bat_regs[0])
+                    logger.debug("[SPF CTRL] ac_to_bat_volt=%s", data.ac_to_bat_volt)
+            except Exception as e:
+                logger.debug(f"Could not read ac_to_bat_volt register: {e}")
 
     def get_status_text(self, status_code: int) -> str:
         """Convert status code to human readable text"""

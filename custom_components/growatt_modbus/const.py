@@ -111,8 +111,9 @@ SENSOR_TYPES = {
 }
 
 
-# WRITABLE REGISTERS - Export Control
+# WRITABLE REGISTERS - Control Entities
 WRITABLE_REGISTERS = {
+    # Grid-Tied Inverter Controls
     'export_limit_mode': {
         'register': 122,
         'scale': 1,
@@ -136,7 +137,83 @@ WRITABLE_REGISTERS = {
         'valid_range': (0, 100),  # 0% to 100%
         'unit': '%',
         'desc': 'Maximum output power limitation'
-    }
+    },
+
+    # SPF Off-Grid Inverter Controls
+    'output_config': {
+        'register': 1,
+        'scale': 1,
+        'valid_range': (0, 3),
+        'options': {
+            0: 'SBU (Battery First)',
+            1: 'SOL (Solar First)',
+            2: 'UTI (Utility First)',
+            3: 'SUB (Solar & Utility First)'
+        }
+    },
+    'charge_config': {
+        'register': 2,
+        'scale': 1,
+        'valid_range': (0, 2),
+        'options': {
+            0: 'CSO (Solar First)',
+            1: 'SNU (Solar & Utility)',
+            2: 'OSO (Solar Only)'
+        }
+    },
+    'ac_input_mode': {
+        'register': 8,
+        'scale': 1,
+        'valid_range': (0, 2),
+        'options': {
+            0: 'APL (Appliance)',
+            1: 'UPS',
+            2: 'GEN (Generator)'
+        }
+    },
+    'battery_type': {
+        'register': 39,
+        'scale': 1,
+        'valid_range': (0, 4),
+        'options': {
+            0: 'AGM',
+            1: 'Flooded (FLD)',
+            2: 'User Defined',
+            3: 'Lithium',
+            4: 'User Defined 2'
+        }
+    },
+    'ac_charge_current': {
+        'register': 38,
+        'scale': 1,
+        'valid_range': (0, 400),
+        'unit': 'A',
+        'desc': 'AC charging current limit'
+    },
+    'gen_charge_current': {
+        'register': 83,
+        'scale': 1,
+        'valid_range': (0, 400),
+        'unit': 'A',
+        'desc': 'Generator charging current limit'
+    },
+    # Battery-type-dependent registers (special handling required)
+    'bat_low_to_uti': {
+        'register': 37,
+        'scale': 0.1,
+        'valid_range': (5, 640),  # Full range: Lithium 0.5-10.0%, Non-Lithium 20.0-64.0V
+        'unit': 'V/%',  # Unit depends on battery_type
+        'desc': 'Battery low voltage/SOC switch to utility',
+        'battery_dependent': True
+    },
+    'ac_to_bat_volt': {
+        'register': 95,
+        'scale': 0.1,
+        'valid_range': (5, 640),  # Full range: Lithium 0.5-10.0%, Non-Lithium 20.0-64.0V
+        'unit': 'V/%',  # Unit depends on battery_type
+        'desc': 'AC to battery voltage/SOC switch point',
+        'battery_dependent': True
+    },
 }
 
 # Sensor offline behavior mapping
@@ -264,14 +341,18 @@ def get_device_type_for_control(control_name: str) -> str:
     # Battery controls → Battery device
     if any(keyword in control_name for keyword in [
         'battery', 'bms', 'soc', 'charge_power', 'discharge_power',
-        'ac_charge_power_rate', 'eod_voltage'
+        'ac_charge_power_rate', 'eod_voltage',
+        # SPF off-grid battery controls
+        'charge_config', 'charge_current', 'bat_low', 'ac_to_bat'
     ]):
         return DEVICE_TYPE_BATTERY
 
     # Grid controls → Grid device
     if any(keyword in control_name for keyword in [
         'grid', 'ongrid', 'offgrid', 'vpp', 'export', 'import',
-        'phase_mode', 'phase_sequence', 'antibackflow'
+        'phase_mode', 'phase_sequence', 'antibackflow',
+        # SPF off-grid AC input controls
+        'ac_input_mode'
     ]):
         return DEVICE_TYPE_GRID
 
@@ -288,7 +369,7 @@ def get_device_type_for_control(control_name: str) -> str:
         return DEVICE_TYPE_SOLAR
 
     # Everything else → Inverter device (default)
-    # Includes: time programming, system settings, operation mode, etc.
+    # Includes: time programming, system settings, operation mode, output priority, etc.
     return DEVICE_TYPE_INVERTER
 
 
