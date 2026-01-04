@@ -181,16 +181,20 @@ WIT_4000_15000TL3 = {
         8073: {'name': 'energy_to_grid_total_high', 'scale': 1, 'unit': '', 'pair': 8074},
         8074: {'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 8073, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
-        8077: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 8078},
-        8078: {'name': 'load_energy_today_low', 'scale': 1, 'unit': '', 'pair': 8077, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # Load Energy (8075-8078)
+        8075: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 8076},
+        8076: {'name': 'load_energy_today_low', 'scale': 1, 'unit': '', 'pair': 8075, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        8077: {'name': 'load_energy_total_high', 'scale': 1, 'unit': '', 'pair': 8078},
+        8078: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 8077, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
-        8079: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 8080},
+        # Power Flow (8079-8084) - Per VPP spec terminology
+        8079: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 8080, 'desc': 'Total load power (Ptoload)'},
         8080: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 8079, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
-        8081: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 8082},
+        8081: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 8082, 'desc': 'Total forward power (grid import)'},
         8082: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 8081, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
-        8083: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 8084},
+        8083: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 8084, 'desc': 'Total reverse power (grid export)'},
         8084: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 8083, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         8085: {'name': 'system_output_power_high', 'scale': 1, 'unit': '', 'pair': 8086},
