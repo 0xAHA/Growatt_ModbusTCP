@@ -123,27 +123,36 @@ WIT_4000_15000TL3 = {
         # ============================================================================
         # Per VPP Protocol V2.02: Battery power and energy data
 
-        # Battery Cluster 1 Power (31200-31203)
-        # Per VPP Protocol: 31200-31201 is signed battery power (positive=charge, negative=discharge)
-        31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_power', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        # Note: 31202-31203 observed as charge_power on some profiles, may need user validation
-        31202: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 31203},
-        31203: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        # Note: 31204-31205 observed as discharge_power on some profiles, may need user validation
-        31204: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31205},
-        31205: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Battery Cluster 1 Power & Energy (31200-31213)
+        # Per VPP Protocol V2.01/V2.02 Official Specification
 
-        # Battery Cluster 1 Energy (31206-31213)
-        # Note: Register layout may vary - these are based on MOD profile observations
-        31206: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207},
-        31207: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31208: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31209},
-        31209: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31210: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31211},
-        31211: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31210, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31212: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31213},
-        31213: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31212, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # 65: Charge/discharge power (INT32, signed: positive=charge, negative=discharge)
+        31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
+        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+
+        # 66: Daily charge of battery
+        31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203},
+        31203: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # 67: Cumulative charge of battery
+        31204: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31205},
+        31205: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # 68: Daily discharge capacity of battery
+        31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207},
+        31207: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # 69: Cumulative discharge of battery
+        31208: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31209},
+        31209: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # 70: Maximum allowable charging power of battery (this is a LIMIT, not actual power)
+        31210: {'name': 'max_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31211},
+        31211: {'name': 'max_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31210, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # 71: Maximum allowable discharge power of battery (this is a LIMIT, not actual power)
+        31212: {'name': 'max_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31213},
+        31213: {'name': 'max_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31212, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         # Battery Cluster 1 State (31214-31223)
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},

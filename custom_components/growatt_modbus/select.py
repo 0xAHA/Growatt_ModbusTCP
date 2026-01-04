@@ -35,22 +35,28 @@ async def async_setup_entry(
     holding_registers = register_map.get('holding_registers', {})
     
     entities = []
-    
-    # Export Limit Mode - only if register exists in this profile
-    export_mode_reg = WRITABLE_REGISTERS['export_limit_mode']['register']
-    if export_mode_reg in holding_registers:
+
+    # Auto-generate select entities for all writable registers with 'options'
+    for control_name, control_config in WRITABLE_REGISTERS.items():
+        if 'options' not in control_config:
+            continue  # Skip number controls
+
+        register_num = control_config['register']
+        if register_num not in holding_registers:
+            continue  # Skip if register not in this profile
+
         entities.append(
-            GrowattExportLimitModeSelect(coordinator, config_entry)
+            GrowattGenericSelect(coordinator, config_entry, control_name, control_config)
         )
-        _LOGGER.info("Export limit mode control enabled (register %d found)", export_mode_reg)
-    
+        _LOGGER.info("%s control enabled (register %d found)", control_name, register_num)
+
     if entities:
         _LOGGER.info("Created %d select entities for %s", len(entities), config_entry.data['name'])
         async_add_entities(entities)
 
 
-class GrowattExportLimitModeSelect(CoordinatorEntity, SelectEntity):
-    """Select entity for export limit mode."""
+class GrowattGenericSelect(CoordinatorEntity, SelectEntity):
+    """Generic select entity for any control with options."""
 
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -58,23 +64,43 @@ class GrowattExportLimitModeSelect(CoordinatorEntity, SelectEntity):
         self,
         coordinator: GrowattModbusCoordinator,
         config_entry: ConfigEntry,
+        control_name: str,
+        control_config: dict,
     ) -> None:
         """Initialize the select entity."""
         super().__init__(coordinator)
 
         self._config_entry = config_entry
-        self._attr_name = f"{config_entry.data['name']} Export Limit Mode"
-        self._attr_unique_id = f"{config_entry.entry_id}_export_limit_mode"
-        self._attr_icon = "mdi:transmission-tower-export"
+        self._control_name = control_name
+        self._control_config = control_config
 
-        # Set options from const.py
-        self._attr_options = list(WRITABLE_REGISTERS['export_limit_mode']['options'].values())
+        # Generate friendly name (e.g., "output_config" -> "Output Config")
+        friendly_name = control_name.replace('_', ' ').title()
+        self._attr_name = f"{config_entry.data['name']} {friendly_name}"
+        self._attr_unique_id = f"{config_entry.entry_id}_{control_name}"
+
+        # Set icon based on control type
+        self._attr_icon = self._get_icon(control_name)
+
+        # Set options from control_config
+        self._attr_options = list(control_config['options'].values())
+
+    def _get_icon(self, control_name: str) -> str:
+        """Get icon based on control name."""
+        icon_map = {
+            'export_limit_mode': 'mdi:transmission-tower-export',
+            'output_config': 'mdi:power-plug',
+            'charge_config': 'mdi:battery-charging',
+            'ac_input_mode': 'mdi:power-socket',
+            'battery_type': 'mdi:battery',
+        }
+        return icon_map.get(control_name, 'mdi:tune')
 
     @property
     def device_info(self) -> dict[str, Any]:
         """Return device information."""
         # Determine device based on control type
-        device_type = get_device_type_for_control('export_limit_mode')
+        device_type = get_device_type_for_control(self._control_name)
         return self.coordinator.get_device_info(device_type)
 
     @property
@@ -83,37 +109,37 @@ class GrowattExportLimitModeSelect(CoordinatorEntity, SelectEntity):
         data = self.coordinator.data
         if data is None:
             return None
-        
+
         # Read raw value from coordinator data
-        raw_value = getattr(data, 'export_limit_mode', None)
+        raw_value = getattr(data, self._control_name, None)
         if raw_value is None:
             return None
-        
+
         # Map numeric value to friendly name
-        options_map = WRITABLE_REGISTERS['export_limit_mode']['options']
+        options_map = self._control_config['options']
         return options_map.get(int(raw_value))
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
         # Reverse lookup: friendly name -> numeric value
-        options_map = WRITABLE_REGISTERS['export_limit_mode']['options']
+        options_map = self._control_config['options']
         value = next((k for k, v in options_map.items() if v == option), None)
-        
+
         if value is None:
             _LOGGER.error("Invalid option selected: %s", option)
             return
-        
+
         # Write to Modbus register
-        register = WRITABLE_REGISTERS['export_limit_mode']['register']
+        register = self._control_config['register']
         success = await self.hass.async_add_executor_job(
             self.coordinator.modbus_client.write_register,
             register,
             value
         )
-        
+
         if success:
-            _LOGGER.info("Set export_limit_mode to %s (value=%d)", option, value)
+            _LOGGER.info("Set %s to %s (value=%d)", self._control_name, option, value)
             # Request immediate refresh to show new value
             await self.coordinator.async_request_refresh()
         else:
-            _LOGGER.error("Failed to write export_limit_mode")
+            _LOGGER.error("Failed to write %s", self._control_name)

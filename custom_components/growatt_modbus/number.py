@@ -36,27 +36,156 @@ async def async_setup_entry(
     
     entities = []
 
-    # Export Limit Power - only if register exists in this profile
-    export_power_reg = WRITABLE_REGISTERS['export_limit_power']['register']
-    if export_power_reg in holding_registers:
-        entities.append(
-            GrowattExportLimitPowerNumber(coordinator, config_entry)
-        )
-        _LOGGER.info("Export limit power control enabled (register %d found)", export_power_reg)
+    # Auto-generate number entities for all writable registers without 'options'
+    for control_name, control_config in WRITABLE_REGISTERS.items():
+        if 'options' in control_config:
+            continue  # Skip select controls
 
-    # Active Power Rate - only if register exists in this profile
-    active_power_reg = WRITABLE_REGISTERS['active_power_rate']['register']
-    if active_power_reg in holding_registers:
+        register_num = control_config['register']
+        if register_num not in holding_registers:
+            continue  # Skip if register not in this profile
+
         entities.append(
-            GrowattActivePowerRateNumber(coordinator, config_entry)
+            GrowattGenericNumber(coordinator, config_entry, control_name, control_config)
         )
-        _LOGGER.info("Active power rate control enabled (register %d found)", active_power_reg)
+        _LOGGER.info("%s control enabled (register %d found)", control_name, register_num)
 
     if entities:
         _LOGGER.info("Created %d number entities for %s", len(entities), config_entry.data['name'])
         async_add_entities(entities)
 
 
+class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
+    """Generic number entity for any numeric control."""
+
+    _attr_mode = NumberMode.SLIDER
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        coordinator: GrowattModbusCoordinator,
+        config_entry: ConfigEntry,
+        control_name: str,
+        control_config: dict,
+    ) -> None:
+        """Initialize the number entity."""
+        super().__init__(coordinator)
+
+        self._config_entry = config_entry
+        self._control_name = control_name
+        self._control_config = control_config
+
+        # Generate friendly name
+        friendly_name = control_name.replace('_', ' ').title()
+        self._attr_name = f"{config_entry.data['name']} {friendly_name}"
+        self._attr_unique_id = f"{config_entry.entry_id}_{control_name}"
+
+        # Set icon
+        self._attr_icon = self._get_icon(control_name)
+
+        # Configure range and unit
+        self._configure_range_and_unit()
+
+    def _get_icon(self, control_name: str) -> str:
+        """Get icon based on control name."""
+        icon_map = {
+            'export_limit_power': 'mdi:speedometer',
+            'active_power_rate': 'mdi:speedometer',
+            'ac_charge_current': 'mdi:current-ac',
+            'gen_charge_current': 'mdi:current-ac',
+            'bat_low_to_uti': 'mdi:battery-alert',
+            'ac_to_bat_volt': 'mdi:battery-charging',
+        }
+        return icon_map.get(control_name, 'mdi:tune')
+
+    def _configure_range_and_unit(self):
+        """Configure min/max/step/unit based on control config and battery type."""
+        valid_range = self._control_config.get('valid_range', (0, 100))
+        scale = self._control_config.get('scale', 1)
+        unit = self._control_config.get('unit', '')
+
+        # Check if battery-dependent
+        if self._control_config.get('battery_dependent', False):
+            # Read battery type from coordinator data
+            battery_type = getattr(self.coordinator.data, 'battery_type', None) if self.coordinator.data else None
+            is_lithium = (battery_type == 3)  # 3 = Lithium
+
+            if is_lithium:
+                # Lithium: 5-100 raw = 0.5% - 10.0%
+                self._attr_native_min_value = 0.5
+                self._attr_native_max_value = 10.0
+                self._attr_native_step = 0.1
+                self._attr_native_unit_of_measurement = "%"
+            else:
+                # Non-Lithium: 200-640 raw = 20.0V - 64.0V
+                self._attr_native_min_value = 20.0
+                self._attr_native_max_value = 64.0
+                self._attr_native_step = 0.1
+                self._attr_native_unit_of_measurement = "V"
+        else:
+            # Normal number control
+            self._attr_native_min_value = float(valid_range[0]) * scale
+            self._attr_native_max_value = float(valid_range[1]) * scale
+
+            # Determine step based on scale
+            if scale >= 1:
+                self._attr_native_step = 1.0
+            elif scale == 0.1:
+                self._attr_native_step = 0.1
+            else:
+                self._attr_native_step = scale
+
+            self._attr_native_unit_of_measurement = unit
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """Return device information."""
+        device_type = get_device_type_for_control(self._control_name)
+        return self.coordinator.get_device_info(device_type)
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the current value."""
+        data = self.coordinator.data
+        if data is None:
+            return None
+
+        raw_value = getattr(data, self._control_name, None)
+        if raw_value is None:
+            return None
+
+        # Apply scale
+        scale = self._control_config.get('scale', 1)
+        return round(float(raw_value) * scale, 2)
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Update the current value."""
+        scale = self._control_config.get('scale', 1)
+
+        # Convert display value to raw value
+        raw_value = int(value / scale)
+
+        # Validate range
+        valid_range = self._control_config.get('valid_range', (0, 100))
+        raw_value = max(valid_range[0], min(raw_value, valid_range[1]))
+
+        # Write to Modbus register
+        register = self._control_config['register']
+        success = await self.hass.async_add_executor_job(
+            self.coordinator.modbus_client.write_register,
+            register,
+            raw_value
+        )
+
+        if success:
+            _LOGGER.info("Set %s to %.1f (raw=%d)", self._control_name, value, raw_value)
+            # Request immediate refresh to show new value
+            await self.coordinator.async_request_refresh()
+        else:
+            _LOGGER.error("Failed to write %s", self._control_name)
+
+
+# Legacy class for backwards compatibility (remove in future version)
 class GrowattExportLimitPowerNumber(CoordinatorEntity, NumberEntity):
     """Number entity for export limit power percentage."""
 
