@@ -98,6 +98,83 @@ Register mapping validated against:
 
 ---
 
+### WIT Load Energy Registers Off by 2 Addresses
+
+**Fixed load energy register addressing** that caused daily energy to never reset and continue counting at night.
+
+**The Problem:**
+- Users reported "Energy today continues producing in evening despite no sun"
+- Energy sensors appeared to count battery consumption as production
+- Daily energy values never reset at midnight
+- Root cause: Load energy registers were mapped 2 addresses too high
+
+**Per VPP Protocol Specification:**
+```
+8075-8076: Eload_today (Today energy of user load)
+8077-8078: Eload_total (Total energy of user load)
+```
+
+**Previous Incorrect Mapping:**
+```python
+8075-8076: MISSING from profile               # ❌ Daily load energy not available
+8077-8078: load_energy_today                  # ❌ WRONG - reading cumulative total!
+```
+
+**Corrected Mapping (v0.1.2):**
+```python
+8075-8076: load_energy_today   # ✅ Daily load energy (resets at midnight)
+8077-8078: load_energy_total   # ✅ Cumulative load energy (never resets)
+```
+
+**Why Energy "Produced at Night":**
+
+The integration was reading register 8077-8078 (cumulative TOTAL energy) instead of 8075-8076 (daily energy). Cumulative total energy:
+- Never resets at midnight
+- Keeps counting all load consumption (including from battery at night)
+- Appeared to "produce" energy in the evening when battery discharged to loads
+
+**Impact:**
+- ✅ Load energy today now properly resets at midnight
+- ✅ No more "ghost" energy production at night
+- ✅ Accurate daily energy tracking separate from total cumulative energy
+- ✅ New sensor: load_energy_total (cumulative consumption)
+
+---
+
+### VPP Power Register Terminology Clarification
+
+**Added VPP spec descriptions** to clarify confusing "forward/reverse" power terminology.
+
+**The Confusion:**
+- Users reported "export/import power values are incorrect"
+- "Power to user seems to correspond to network import" (this is CORRECT!)
+- VPP protocol uses meter perspective terminology
+
+**VPP Protocol Terminology (from official spec):**
+```
+8081-8082: "Ptouser total" = "Total forward power"   (Grid Import)
+8083-8084: "Ptogrid total" = "Total reverse power"   (Grid Export)
+8079-8080: "Ptoload total" = "Total load power"      (Consumption)
+```
+
+**What "Forward" and "Reverse" Mean:**
+
+In electrical metering terminology:
+- **Forward power** = Power flowing through meter in forward direction = Grid → House = **IMPORT**
+- **Reverse power** = Power flowing through meter in reverse direction = House → Grid = **EXPORT**
+
+**The WIT registers are CORRECTLY named** - the VPP spec just uses confusing terminology:
+- `power_to_user` (8081-8082) = Grid import ✅
+- `power_to_grid` (8083-8084) = Grid export ✅
+- `power_to_load` (8079-8080) = Load consumption ✅
+
+**Impact:**
+- ✅ No code changes needed - registers already correct
+- ✅ Added descriptions to clarify VPP terminology
+- ✅ Users now understand power_to_user = import is correct behavior
+
+---
+
 ## 🔧 Register Changes Summary
 
 **WIT Profile VPP Battery Registers (31200-31213):**
@@ -112,6 +189,21 @@ Register mapping validated against:
 | 31210-31211 | `charge_energy_today` | `max_charge_power` (BMS limit) |
 | 31212-31213 | `charge_energy_total` | `max_discharge_power` (BMS limit) |
 
+**WIT Profile Load Energy Registers (8075-8078):**
+
+| Register | v0.1.1 (Incorrect) | v0.1.2 (Corrected per VPP spec) |
+|----------|-------------------|----------------------------------|
+| 8075-8076 | (missing) | `load_energy_today` (daily) |
+| 8077-8078 | `load_energy_today` | `load_energy_total` (cumulative) |
+
+**WIT Profile Power Flow Registers (8079-8084):**
+
+| Register | Name | VPP Spec | Meaning |
+|----------|------|----------|---------|
+| 8079-8080 | `power_to_load` | "Ptoload total" | Load consumption ✅ |
+| 8081-8082 | `power_to_user` | "Total forward power" | Grid import ✅ |
+| 8083-8084 | `power_to_grid` | "Total reverse power" | Grid export ✅ |
+
 ---
 
 ## ✅ Resolved Issues
@@ -122,6 +214,10 @@ Register mapping validated against:
 - ✅ Battery discharge energy values match Growatt OSS dashboard
 - ✅ No more astronomical energy values (2895 kWh, 7238 kWh)
 - ✅ Charge/discharge power correctly derived from signed battery_power register
+- ✅ Load energy today properly resets at midnight
+- ✅ No more "ghost" energy production at night from battery discharge
+- ✅ Load energy total (cumulative) sensor now available
+- ✅ Power flow terminology clarified (power_to_user = grid import is correct)
 - ✅ VPP 2.01 protocol compliance verified
 
 ---
