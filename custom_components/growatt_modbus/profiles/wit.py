@@ -135,15 +135,17 @@ WIT_4000_15000TL3 = {
         31205: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         # Battery Cluster 1 Energy (31206-31213)
-        # Note: Register layout may vary - these are based on MOD profile observations
-        31206: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207},
-        31207: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31208: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31209},
-        31209: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31210: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31211},
-        31211: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31210, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31212: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31213},
-        31213: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31212, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # NOTE: Registers validated against real WIT inverter data
+        # 31206-31207 = DISCHARGE energy (not charge!)
+        # 31210-31211 = CHARGE energy (not discharge!)
+        31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207},
+        31207: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31208: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31209},
+        31209: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31210: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31211},
+        31211: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31210, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31212: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31213},
+        31213: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31212, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Battery Cluster 1 State (31214-31223)
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
