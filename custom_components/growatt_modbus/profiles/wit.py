@@ -128,7 +128,7 @@ WIT_4000_15000TL3 = {
 
         # 65: Charge/discharge power (INT32, signed: positive=charge, negative=discharge)
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_power', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
         # 66: Daily charge of battery
         31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203},
