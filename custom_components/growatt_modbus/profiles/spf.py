@@ -11,6 +11,13 @@ Key Features:
 - Load output for powering devices
 - Battery charge/discharge management
 - Detailed energy tracking for all power flows
+
+IMPORTANT - Battery Power Sign Convention:
+SPF uses INVERTED sign convention compared to VPP 2.01 standard:
+- SPF Hardware: Positive = Discharge, Negative = Charge
+- VPP 2.01:     Positive = Charge,    Negative = Discharge
+This profile uses negative scale (-0.1) on registers 77-78 to convert SPF's
+inverted convention to the standard convention used by Home Assistant and other models.
 """
 
 # SPF 3000-6000 ES PLUS (Off-grid inverter with battery)
@@ -45,8 +52,10 @@ SPF_3000_6000_ES_PLUS = {
         # Battery
         17: {'name': 'battery_voltage', 'scale': 0.01, 'unit': 'V', 'desc': 'Battery voltage (note: 0.01 scale for precision)'},
         18: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery state of charge'},
+        # SPF uses INVERTED sign convention vs VPP 2.01: positive=discharge, negative=charge
+        # Using negative scale (-0.1) to flip sign so coordinator interprets correctly
         77: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 78, 'signed': True, 'desc': 'Battery power (HIGH word, signed)'},
-        78: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 77, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery power (LOW word, +charge/-discharge)'},
+        78: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 77, 'combined_scale': -0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery power (LOW word, SPF: +discharge/-charge, inverted to standard convention)'},
 
         # Grid Input (AC input from grid/generator)
         20: {'name': 'grid_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'AC input voltage (grid/generator)'},
