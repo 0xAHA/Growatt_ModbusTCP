@@ -950,14 +950,25 @@ class GrowattModbus:
                 logger.debug(f"Battery power (signed): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {battery_power}W")
 
                 # Split into charge/discharge based on sign
+                charge_is_negative = self.register_map.get("negative_battery_power_charge", False)
                 if battery_power > 0:
-                    data.charge_power = battery_power
-                    data.discharge_power = 0.0
-                    logger.debug(f"  → Charging: {data.charge_power}W")
+                    if charge_is_negative:
+                        data.charge_power = 0.0
+                        data.discharge_power = battery_power
+                        logger.debug(f"  → Discharging: {data.discharge_power}W")
+                    else:
+                        data.charge_power = battery_power
+                        data.discharge_power = 0.0
+                        logger.debug(f"  → Charging: {data.charge_power}W")
                 elif battery_power < 0:
-                    data.charge_power = 0.0
-                    data.discharge_power = abs(battery_power)
-                    logger.debug(f"  → Discharging: {data.discharge_power}W")
+                    if charge_is_negative:
+                        data.charge_power = abs(battery_power)
+                        data.discharge_power = 0.0
+                        logger.debug(f"  → Charging: {data.charge_power}W")
+                    else:
+                        data.charge_power = 0.0
+                        data.discharge_power = abs(battery_power)
+                        logger.debug(f"  → Discharging: {data.discharge_power}W")
                 else:
                     data.charge_power = 0.0
                     data.discharge_power = 0.0
