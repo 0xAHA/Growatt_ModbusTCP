@@ -11,6 +11,13 @@ Key Features:
 - Load output for powering devices
 - Battery charge/discharge management
 - Detailed energy tracking for all power flows
+
+IMPORTANT - Battery Power Sign Convention:
+SPF uses INVERTED sign convention compared to VPP 2.01 standard:
+- SPF Hardware: Positive = Discharge, Negative = Charge
+- VPP 2.01:     Positive = Charge,    Negative = Discharge
+This profile uses negative scale (-0.1) on registers 77-78 to convert SPF's
+inverted convention to the standard convention used by Home Assistant and other models.
 """
 
 # SPF 3000-6000 ES PLUS (Off-grid inverter with battery)
@@ -45,8 +52,10 @@ SPF_3000_6000_ES_PLUS = {
         # Battery
         17: {'name': 'battery_voltage', 'scale': 0.01, 'unit': 'V', 'desc': 'Battery voltage (note: 0.01 scale for precision)'},
         18: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery state of charge'},
+        # SPF uses INVERTED sign convention vs VPP 2.01: positive=discharge, negative=charge
+        # Using negative scale (-0.1) to flip sign so coordinator interprets correctly
         77: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 78, 'signed': True, 'desc': 'Battery power (HIGH word, signed)'},
-        78: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 77, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery power (LOW word, +charge/-discharge)'},
+        78: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 77, 'combined_scale': -0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery power (LOW word, SPF: +discharge/-charge, inverted to standard convention)'},
 
         # Grid Input (AC input from grid/generator)
         20: {'name': 'grid_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'AC input voltage (grid/generator)'},
@@ -69,12 +78,14 @@ SPF_3000_6000_ES_PLUS = {
         30: {'name': 'time_total_high', 'scale': 1, 'unit': '', 'pair': 31, 'desc': 'Total work time (HIGH word)'},
         31: {'name': 'time_total_low', 'scale': 1, 'unit': '', 'pair': 30, 'combined_scale': 0.5, 'combined_unit': 's', 'desc': 'Total work time (LOW word, in seconds)'},
 
+        # Device Type Code (OffGrid Protocol)
+        34: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'desc': 'Device Type Code (OffGrid): 3400-3403 for SPF 3-6K ES PLUS series'},
+
         # Fault & Warning Codes
         40: {'name': 'fault_bit', 'scale': 1, 'unit': '', 'desc': 'Fault bit field'},
         41: {'name': 'warning_bit', 'scale': 1, 'unit': '', 'desc': 'Warning bit field'},
         42: {'name': 'fault_code', 'scale': 1, 'unit': '', 'desc': 'Fault value/code'},
         43: {'name': 'warning_code', 'scale': 1, 'unit': '', 'desc': 'Warning value/code'},
-        44: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'desc': 'Device Type Code: 034xx for SPF 3-6K series'},
 
         # === Energy Counters (all 32-bit pairs) ===
 
@@ -168,6 +179,10 @@ SPF_3000_6000_ES_PLUS = {
                  3: 'Lithium',
                  4: 'User Defined 2'
              }},
+
+        # Device Type Code (OffGrid Protocol - fallback location)
+        43: {'name': 'dtc_code_holding', 'scale': 1, 'unit': '', 'access': 'RO',
+             'desc': 'Device Type Code (OffGrid): 3400-3403 for SPF 3-6K ES PLUS series (fallback from input reg 34)'},
 
         # Generator Charge Current
         83: {'name': 'gen_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
