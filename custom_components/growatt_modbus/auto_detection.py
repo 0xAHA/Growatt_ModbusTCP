@@ -216,15 +216,75 @@ async def async_read_model_name(
         return None
 
 
+async def async_read_dtc_code_offgrid(
+    hass: HomeAssistant,
+    client: GrowattModbus,
+    device_id: int = 1
+) -> Optional[int]:
+    """
+    Read DTC (Device Type Code) from OffGrid protocol registers.
+
+    OffGrid inverters (SPF series) use a different register layout than VPP 2.01.
+    CRITICAL: Reading VPP registers (30000+, 31000+) causes POWER RESETS on SPF inverters!
+
+    OffGrid DTC locations:
+    - Input register 34 (PRIMARY - safe, read-only)
+    - Holding register 43 (FALLBACK)
+
+    Args:
+        hass: HomeAssistant instance
+        client: GrowattModbus client
+        device_id: Modbus device ID (default 1)
+
+    Returns:
+        DTC code (int) or None if read fails
+    """
+    # Try input register 34 first (safest - read-only)
+    try:
+        result = await hass.async_add_executor_job(
+            client.read_input_registers, 34, 1
+        )
+
+        if result is not None and len(result) > 0:
+            dtc_code = result[0]
+            if dtc_code and dtc_code > 0:
+                _LOGGER.info(f"✓ OffGrid DTC Detection - Read DTC code: {dtc_code} from input register 34")
+                return dtc_code
+
+    except Exception as e:
+        _LOGGER.debug(f"Could not read DTC from input register 34: {str(e)}")
+
+    # Fallback to holding register 43
+    try:
+        result = await hass.async_add_executor_job(
+            lambda: client.client.read_holding_registers(address=43, count=1)
+        )
+
+        if not result.isError():
+            dtc_code = result.registers[0]
+            if dtc_code and dtc_code > 0:
+                _LOGGER.info(f"✓ OffGrid DTC Detection - Read DTC code: {dtc_code} from holding register 43")
+                return dtc_code
+
+    except Exception as e:
+        _LOGGER.debug(f"Could not read DTC from holding register 43: {str(e)}")
+
+    _LOGGER.debug("No OffGrid DTC found in registers 34 or 43")
+    return None
+
+
 async def async_read_dtc_code(
     hass: HomeAssistant,
     client: GrowattModbus,
     device_id: int = 1
 ) -> Optional[int]:
     """
-    Read DTC (Device Type Code) from holding register 30000.
+    Read DTC (Device Type Code) from VPP 2.01 holding register 30000.
 
-    This is the most reliable way to identify the exact inverter model.
+    WARNING: This register causes POWER RESETS on OffGrid inverters (SPF series)!
+    Use async_read_dtc_code_offgrid() first to safely detect OffGrid models.
+
+    This is the standard DTC location for VPP 2.01 protocol inverters.
 
     Args:
         hass: HomeAssistant instance
@@ -246,7 +306,7 @@ async def async_read_dtc_code(
 
         dtc_code = result.registers[0]
         if dtc_code and dtc_code > 0:
-            _LOGGER.info(f"✓ DTC Detection - Read DTC code: {dtc_code} from holding register 30000")
+            _LOGGER.info(f"✓ VPP DTC Detection - Read DTC code: {dtc_code} from holding register 30000")
             return dtc_code
         else:
             _LOGGER.warning(f"DTC code register 30000 returned 0 or invalid value: {dtc_code}")
@@ -261,7 +321,17 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
     """
     Match DTC (Device Type Code) to a profile.
 
-    DTC codes from Growatt VPP Protocol documentation:
+    DTC Location by Protocol:
+    - OffGrid Protocol (SPF): Input reg 34 or Holding reg 43
+    - VPP 2.01 Protocol: Holding reg 30000
+
+    DTC Codes by Protocol:
+
+    ** OffGrid Protocol (SPF series) **
+    - SPF 3000-6000 ES PLUS: 3400-3403
+    CRITICAL: OffGrid inverters will RESET if VPP registers (30000+, 31000+) are accessed!
+
+    ** VPP 2.01 Protocol **
     - SPH 3000-6000TL BL: 3502
     - SPA 3000-6000TL BL: 3735
     - SPA 4000-10000TL3 BH-UP: 3725
@@ -270,17 +340,15 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
     - MIC/MIN 2500-6000TL-X/X2: 5200
     - MIN 7000-10000TL-X/X2: 5201
     - MOD-XH\MID-XH: 5400
+    - WIT 4-15kW: 5603
     - WIT 100KTL3-H: 5601
     - WIS 215KTL3: 5800
 
-    NOTE: DTC code presence indicates V2.01 protocol support, so we return V2.01 profiles.
-    Only official DTC codes from Growatt VPP 2.01 Protocol Table 3-1 are included.
-
     Args:
-        dtc_code: DTC code from register 30000
+        dtc_code: DTC code from OffGrid (reg 34/43) or VPP (reg 30000)
 
     Returns:
-        Profile key (V2.01 variant) or None if no match
+        Profile key or None if no match
     """
     # Only official DTC codes from Growatt VPP 2.01 Protocol documentation Table 3-1
     dtc_map = {
@@ -597,11 +665,15 @@ async def async_determine_inverter_type(
     Automatically determine the inverter type and return appropriate profile.
 
     Process:
-    1. Read DTC (Device Type Code) from register 30000 - most reliable
-    2. For ambiguous DTCs (shared codes), refine with additional register checks
-    3. Read model name from holding registers and match
-    4. If no match, detect series by probing registers
-    5. Return the appropriate profile
+    1. Try OffGrid DTC (register 34/43) FIRST - prevents SPF power resets
+    2. Try VPP DTC (register 30000) if OffGrid fails - standard method
+    3. For ambiguous DTCs (shared codes), refine with additional register checks
+    4. Read model name from holding registers and match
+    5. If no match, detect series by probing registers
+    6. Return the appropriate profile
+
+    CRITICAL: OffGrid inverters (SPF) will RESET if VPP registers (30000+, 31000+)
+    are accessed! We detect OffGrid models first to prevent this.
 
     Args:
         hass: HomeAssistant instance
@@ -613,19 +685,45 @@ async def async_determine_inverter_type(
     """
     _LOGGER.info("Starting automatic inverter type detection")
 
-    # Step 1: Try to read DTC code (most reliable method)
+    # Step 1: Try OffGrid DTC first (registers 34/43) - SAFE for all inverters
+    # This prevents SPF inverters from power reset when reading VPP registers
+    dtc_code = await async_read_dtc_code_offgrid(hass, client, device_id)
+
+    if dtc_code:
+        profile_key = detect_profile_from_dtc(dtc_code)
+
+        if profile_key:
+            # Check if this is an SPF (OffGrid) inverter
+            if profile_key.startswith('spf_'):
+                # SPF detected - skip VPP register probing to prevent resets
+                profile = get_profile(profile_key)
+                if profile:
+                    _LOGGER.info(f"✓ Auto-detected OffGrid inverter from DTC code {dtc_code}: {profile['name']}")
+                    _LOGGER.info("⚠ Skipping VPP register probing to prevent power reset on OffGrid inverter")
+                    return profile_key, profile
+
+            # Non-SPF OffGrid DTC or ambiguous - proceed with refinement
+            profile_key = await async_refine_dtc_detection(hass, client, dtc_code, profile_key, device_id)
+
+            profile = get_profile(profile_key)
+            if profile:
+                _LOGGER.info(f"✓ Auto-detected from OffGrid DTC code {dtc_code}: {profile['name']}")
+                return profile_key, profile
+
+    # Step 2: Try VPP 2.01 DTC (register 30000) if OffGrid detection failed
+    # Safe now because SPF would have been detected in Step 1
     dtc_code = await async_read_dtc_code(hass, client, device_id)
 
     if dtc_code:
         profile_key = detect_profile_from_dtc(dtc_code)
 
         if profile_key:
-            # Step 1.5: Refine DTC detection for ambiguous codes
+            # Step 2.5: Refine DTC detection for ambiguous codes
             profile_key = await async_refine_dtc_detection(hass, client, dtc_code, profile_key, device_id)
 
             profile = get_profile(profile_key)
             if profile:
-                _LOGGER.info(f"✓ Auto-detected from DTC code {dtc_code}: {profile['name']}")
+                _LOGGER.info(f"✓ Auto-detected from VPP DTC code {dtc_code}: {profile['name']}")
                 return profile_key, profile
 
     # Step 2: Try to read model name

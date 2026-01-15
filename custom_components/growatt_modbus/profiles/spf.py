@@ -78,12 +78,14 @@ SPF_3000_6000_ES_PLUS = {
         30: {'name': 'time_total_high', 'scale': 1, 'unit': '', 'pair': 31, 'desc': 'Total work time (HIGH word)'},
         31: {'name': 'time_total_low', 'scale': 1, 'unit': '', 'pair': 30, 'combined_scale': 0.5, 'combined_unit': 's', 'desc': 'Total work time (LOW word, in seconds)'},
 
+        # Device Type Code (OffGrid Protocol)
+        34: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'desc': 'Device Type Code (OffGrid): 3400-3403 for SPF 3-6K ES PLUS series'},
+
         # Fault & Warning Codes
         40: {'name': 'fault_bit', 'scale': 1, 'unit': '', 'desc': 'Fault bit field'},
         41: {'name': 'warning_bit', 'scale': 1, 'unit': '', 'desc': 'Warning bit field'},
         42: {'name': 'fault_code', 'scale': 1, 'unit': '', 'desc': 'Fault value/code'},
         43: {'name': 'warning_code', 'scale': 1, 'unit': '', 'desc': 'Warning value/code'},
-        44: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'desc': 'Device Type Code: 034xx for SPF 3-6K series'},
 
         # === Energy Counters (all 32-bit pairs) ===
 
@@ -177,6 +179,10 @@ SPF_3000_6000_ES_PLUS = {
                  3: 'Lithium',
                  4: 'User Defined 2'
              }},
+
+        # Device Type Code (OffGrid Protocol - fallback location)
+        43: {'name': 'dtc_code_holding', 'scale': 1, 'unit': '', 'access': 'RO',
+             'desc': 'Device Type Code (OffGrid): 3400-3403 for SPF 3-6K ES PLUS series (fallback from input reg 34)'},
 
         # Generator Charge Current
         83: {'name': 'gen_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
