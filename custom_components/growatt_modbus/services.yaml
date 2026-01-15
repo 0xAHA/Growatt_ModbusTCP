@@ -126,6 +126,13 @@ export_register_dump:
       default: true
       selector:
         boolean:
+    offgrid_mode:
+      name: OffGrid Mode (SPF Safety)
+      description: "**⚠️ CRITICAL FOR SPF INVERTERS:** Enable this if you have an Off-Grid inverter (SPF 3000-6000 ES PLUS). Off-Grid inverters will experience a POWER RESET if this is disabled. Leave disabled for grid-tied inverters (MIN, SPH, MOD, WIT, etc.)"
+      required: false
+      default: false
+      selector:
+        boolean:
 
 write_register:
   name: Write Modbus Register
