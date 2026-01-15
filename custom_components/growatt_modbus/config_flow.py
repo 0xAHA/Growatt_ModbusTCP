@@ -149,46 +149,21 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                     _LOGGER.error("Failed to connect to inverter")
                     errors["base"] = "cannot_connect"
                 else:
-                    _LOGGER.info("✓ Connected successfully, attempting auto-detection...")
+                    _LOGGER.info("✓ Connected successfully")
 
-                    # Attempt auto-detection
-                    profile_key, profile = await async_determine_inverter_type(
-                        self.hass,
-                        client,
-                        user_input.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID)
-                    )
-
-                    # Disconnect temporary client
+                    # Disconnect immediately - we'll reconnect in offgrid_check if needed
                     await self.hass.async_add_executor_job(client.disconnect)
 
-                    if profile_key and profile:
-                        # Auto-detection successful!
-                        _LOGGER.info(f"✓ Auto-detected: {profile['name']}")
+                    # Store connection details and proceed to OffGrid safety check
+                    self._discovered_data.update({
+                        CONF_HOST: user_input[CONF_HOST],
+                        CONF_PORT: user_input[CONF_PORT],
+                        CONF_SLAVE_ID: user_input[CONF_SLAVE_ID],
+                    })
 
-                        # Store discovered info for confirmation step
-                        self._discovered_data.update({
-                            CONF_HOST: user_input[CONF_HOST],
-                            CONF_PORT: user_input[CONF_PORT],
-                            CONF_SLAVE_ID: user_input[CONF_SLAVE_ID],
-                            CONF_INVERTER_SERIES: profile_key,
-                            CONF_REGISTER_MAP: profile["register_map"],
-                            "detected_profile": profile,
-                            "auto_detected": True,
-                        })
-
-                        # Show confirmation step
-                        return await self.async_step_confirm()
-                    else:
-                        # Auto-detection failed, go to manual selection
-                        _LOGGER.warning("Auto-detection failed, falling back to manual selection")
-                        self._discovered_data.update({
-                            CONF_HOST: user_input[CONF_HOST],
-                            CONF_PORT: user_input[CONF_PORT],
-                            CONF_SLAVE_ID: user_input[CONF_SLAVE_ID],
-                            "auto_detection_failed": True,
-                            "dtc_result": "Not readable (inverter uses legacy protocol)"
-                        })
-                        return await self.async_step_manual()
+                    # CRITICAL: Check if user has OffGrid inverter BEFORE autodetection
+                    # This prevents SPF power resets from reading VPP registers
+                    return await self.async_step_offgrid_check()
 
             except Exception as err:
                 _LOGGER.exception("Unexpected error during TCP setup")
@@ -256,46 +231,21 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                         )
                         errors["base"] = "cannot_connect"
                     else:
-                        _LOGGER.info("✓ Connected successfully, attempting auto-detection...")
+                        _LOGGER.info("✓ Connected successfully")
 
-                        # Attempt auto-detection
-                        profile_key, profile = await async_determine_inverter_type(
-                            self.hass,
-                            client,
-                            user_input.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID)
-                        )
-
-                        # Disconnect temporary client
+                        # Disconnect immediately - we'll reconnect in offgrid_check if needed
                         await self.hass.async_add_executor_job(client.disconnect)
 
-                        if profile_key and profile:
-                            # Auto-detection successful!
-                            _LOGGER.info(f"✓ Auto-detected: {profile['name']}")
+                        # Store connection details and proceed to OffGrid safety check
+                        self._discovered_data.update({
+                            CONF_DEVICE_PATH: device_path,
+                            CONF_BAUDRATE: user_input[CONF_BAUDRATE],
+                            CONF_SLAVE_ID: user_input[CONF_SLAVE_ID],
+                        })
 
-                            # Store discovered info for confirmation step
-                            self._discovered_data.update({
-                                CONF_DEVICE_PATH: device_path,
-                                CONF_BAUDRATE: user_input[CONF_BAUDRATE],
-                                CONF_SLAVE_ID: user_input[CONF_SLAVE_ID],
-                                CONF_INVERTER_SERIES: profile_key,
-                                CONF_REGISTER_MAP: profile["register_map"],
-                                "detected_profile": profile,
-                                "auto_detected": True,
-                            })
-
-                            # Show confirmation step
-                            return await self.async_step_confirm()
-                        else:
-                            # Auto-detection failed, go to manual selection
-                            _LOGGER.warning("Auto-detection failed, falling back to manual selection")
-                            self._discovered_data.update({
-                                CONF_DEVICE_PATH: device_path,
-                                CONF_BAUDRATE: user_input[CONF_BAUDRATE],
-                                CONF_SLAVE_ID: user_input[CONF_SLAVE_ID],
-                                "auto_detection_failed": True,
-                                "dtc_result": "Not readable (inverter uses legacy protocol)"
-                            })
-                            return await self.async_step_manual()
+                        # CRITICAL: Check if user has OffGrid inverter BEFORE autodetection
+                        # This prevents SPF power resets from reading VPP registers
+                        return await self.async_step_offgrid_check()
 
             except serial.SerialException as err:
                 _LOGGER.error(
@@ -363,6 +313,118 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
             errors=errors,
             description_placeholders={
                 "info": "Select your USB-to-RS485 adapter or enter the path manually"
+            }
+        )
+
+    async def async_step_offgrid_check(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """
+        CRITICAL SAFETY CHECK: Ask user if they have an Off-Grid (SPF) inverter.
+
+        Off-Grid inverters (SPF series) experience PHYSICAL POWER RESETS if VPP
+        registers (30000+, 31000+) are accessed during autodetection.
+
+        This step prevents power cuts by redirecting SPF users to manual selection.
+        """
+        errors = {}
+
+        if user_input is not None:
+            if user_input.get("has_offgrid"):
+                # User has Off-Grid inverter - redirect to manual selection (safe!)
+                _LOGGER.info("⚠️ User confirmed Off-Grid inverter - redirecting to manual selection to prevent power reset")
+                self._discovered_data["is_offgrid"] = True
+                return await self.async_step_manual()
+            else:
+                # User does NOT have Off-Grid inverter - safe to proceed with autodetection
+                _LOGGER.info("✓ User confirmed NOT Off-Grid inverter - proceeding with autodetection")
+
+                connection_type = self._discovered_data[CONF_CONNECTION_TYPE]
+
+                # Reconnect and attempt autodetection
+                try:
+                    # Create temporary client for auto-detection
+                    if connection_type == "tcp":
+                        client = GrowattModbus(
+                            connection_type="tcp",
+                            host=self._discovered_data[CONF_HOST],
+                            port=self._discovered_data[CONF_PORT],
+                            slave_id=self._discovered_data[CONF_SLAVE_ID],
+                            register_map="MIN_7000_10000TL_X"  # Temporary for connection
+                        )
+                    else:  # serial
+                        client = GrowattModbus(
+                            connection_type="serial",
+                            device=self._discovered_data[CONF_DEVICE_PATH],
+                            baudrate=self._discovered_data[CONF_BAUDRATE],
+                            slave_id=self._discovered_data[CONF_SLAVE_ID],
+                            register_map="MIN_7000_10000TL_X"  # Temporary for connection
+                        )
+
+                    # Connect
+                    if not await self.hass.async_add_executor_job(client.connect):
+                        _LOGGER.error("Failed to reconnect for autodetection")
+                        self._discovered_data["auto_detection_failed"] = True
+                        return await self.async_step_manual()
+
+                    _LOGGER.info("✓ Reconnected, attempting auto-detection...")
+
+                    # Attempt auto-detection (SAFE - user confirmed not SPF)
+                    profile_key, profile = await async_determine_inverter_type(
+                        self.hass,
+                        client,
+                        self._discovered_data[CONF_SLAVE_ID]
+                    )
+
+                    # Disconnect
+                    await self.hass.async_add_executor_job(client.disconnect)
+
+                    if profile_key and profile:
+                        # Auto-detection successful!
+                        _LOGGER.info(f"✓ Auto-detected: {profile['name']}")
+
+                        # Store discovered info for confirmation step
+                        self._discovered_data.update({
+                            CONF_INVERTER_SERIES: profile_key,
+                            CONF_REGISTER_MAP: profile["register_map"],
+                            "detected_profile": profile,
+                            "auto_detected": True,
+                        })
+
+                        # Show confirmation step
+                        return await self.async_step_confirm()
+                    else:
+                        # Auto-detection failed, go to manual selection
+                        _LOGGER.warning("Auto-detection failed, falling back to manual selection")
+                        self._discovered_data.update({
+                            "auto_detection_failed": True,
+                            "dtc_result": "Not readable (inverter uses legacy protocol)"
+                        })
+                        return await self.async_step_manual()
+
+                except Exception as err:
+                    _LOGGER.exception("Error during autodetection")
+                    self._discovered_data["auto_detection_failed"] = True
+                    return await self.async_step_manual()
+
+        # Show the OffGrid safety check form
+        schema = vol.Schema({
+            vol.Required("has_offgrid", default=False): bool,
+        })
+
+        return self.async_show_form(
+            step_id="offgrid_check",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={
+                "info": (
+                    "⚠️ CRITICAL SAFETY CHECK\n\n"
+                    "Do you have an Off-Grid inverter (SPF series)?\n\n"
+                    "Off-Grid inverters will experience a POWER RESET if auto-detection is attempted.\n\n"
+                    "• If YES: You will manually select your model (safe)\n"
+                    "• If NO: Automatic detection will proceed (safe for grid-tied models)\n\n"
+                    "Examples of Off-Grid models: SPF 3000-6000 ES PLUS"
+                )
             }
         )
 

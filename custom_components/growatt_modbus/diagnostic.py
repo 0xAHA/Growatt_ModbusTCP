@@ -34,7 +34,7 @@ SERVICE_EXPORT_DUMP = "export_register_dump"
 SERVICE_WRITE_REGISTER = "write_register"
 SERVICE_DETECT_GRID_ORIENTATION = "detect_grid_orientation"
 
-# Universal scan ranges - covers all Growatt series
+# Universal scan ranges - covers all Grid-Tied Growatt series
 # Split into chunks of max 125 registers to respect Modbus limits
 UNIVERSAL_SCAN_RANGES = [
     {"name": "Base Range 0-124", "start": 0, "count": 125},
@@ -50,6 +50,16 @@ UNIVERSAL_SCAN_RANGES = [
     {"name": "VPP Battery 2: 31300-31399", "start": 31300, "count": 100},  # Battery cluster 2 data (optional)
 ]
 
+# OffGrid scan ranges - SAFE for SPF series (prevents power resets!)
+# CRITICAL: OffGrid inverters RESET if VPP registers (30000+, 31000+) are accessed
+# Limits based on OffGrid Modbus Protocol documentation
+OFFGRID_SCAN_RANGES = [
+    {"name": "OffGrid Base Range 0-82", "start": 0, "count": 83},  # SPF primary range
+    {"name": "OffGrid Extended 83-165", "start": 83, "count": 83},  # Additional safe range
+    {"name": "OffGrid Upper 166-248", "start": 166, "count": 83},  # Extended range
+    {"name": "OffGrid Final 249-290", "start": 249, "count": 42},  # Up to input register limit (290)
+]
+
 # Service schema
 SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
     {
@@ -57,6 +67,7 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         vol.Optional("port", default=502): cv.port,
         vol.Optional("slave_id", default=1): vol.All(vol.Coerce(int), vol.Range(min=1, max=247)),
         vol.Optional("notify", default=True): cv.boolean,
+        vol.Optional("offgrid_mode", default=False): cv.boolean,  # CRITICAL: Enable for SPF to prevent power reset
     }
 )
 
@@ -129,12 +140,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         port = call.data.get("port", 502)
         slave_id = call.data.get("slave_id", 1)
         send_notification = call.data.get("notify", True)
-        
-        _LOGGER.info("Starting universal register scan at %s:%s", host, port)
-        
+        offgrid_mode = call.data.get("offgrid_mode", False)
+
+        if offgrid_mode:
+            _LOGGER.warning("⚠️ OffGrid mode ENABLED - skipping VPP registers to prevent power reset on SPF inverters")
+
+        _LOGGER.info("Starting %s register scan at %s:%s", "OffGrid" if offgrid_mode else "universal", host, port)
+
         # Run export in executor
         result = await hass.async_add_executor_job(
-            _export_registers_to_csv, hass, host, port, slave_id
+            _export_registers_to_csv, hass, host, port, slave_id, offgrid_mode
         )
         
         if result["success"]:
@@ -811,8 +826,13 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     return detection
 
 
-def _export_registers_to_csv(hass, host: str, port: int, slave_id: int) -> dict:
-    """Export all registers to CSV file with auto-detection (blocking)."""
+def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_mode: bool = False) -> dict:
+    """
+    Export all registers to CSV file with auto-detection (blocking).
+
+    Args:
+        offgrid_mode: If True, skip VPP registers (30000+, 31000+) to prevent SPF power resets
+    """
     result = {
         "success": False,
         "filename": "",
@@ -828,31 +848,39 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int) -> dict:
             result["error"] = f"Cannot connect to {host}:{port}"
             return result
 
-        _LOGGER.info("Connected, starting universal scan...")
+        mode_str = "OffGrid scan (safe for SPF)" if offgrid_mode else "universal scan"
+        _LOGGER.info(f"Connected, starting {mode_str}...")
 
         # Scan ALL ranges
         all_register_data = {}
         range_responses = {}
 
         # FIRST: Read DTC code and protocol version (holding registers - critical for identification)
-        _LOGGER.info("Reading identification registers (DTC code, protocol version)...")
-        id_registers = _read_registers_chunked(client, 30000, 100, slave_id, chunk_size=50, register_type='holding')
-        if id_registers:
-            all_register_data.update(id_registers)
-            dtc_found = 30000 in id_registers and id_registers[30000]['status'] == 'success' and id_registers[30000]['value']
-            protocol_found = 30099 in id_registers and id_registers[30099]['status'] == 'success' and id_registers[30099]['value']
-            if dtc_found or protocol_found:
-                _LOGGER.info(f"  DTC: {id_registers[30000]['value'] if dtc_found else 'Not found'}")
-                _LOGGER.info(f"  Protocol: {id_registers[30099]['value'] if protocol_found else 'Not found'}")
-                range_responses["VPP Identification (30000-30099)"] = 1 if (dtc_found or protocol_found) else 0
+        # SKIP if OffGrid mode to prevent SPF power resets!
+        if not offgrid_mode:
+            _LOGGER.info("Reading identification registers (DTC code, protocol version)...")
+            id_registers = _read_registers_chunked(client, 30000, 100, slave_id, chunk_size=50, register_type='holding')
+            if id_registers:
+                all_register_data.update(id_registers)
+                dtc_found = 30000 in id_registers and id_registers[30000]['status'] == 'success' and id_registers[30000]['value']
+                protocol_found = 30099 in id_registers and id_registers[30099]['status'] == 'success' and id_registers[30099]['value']
+                if dtc_found or protocol_found:
+                    _LOGGER.info(f"  DTC: {id_registers[30000]['value'] if dtc_found else 'Not found'}")
+                    _LOGGER.info(f"  Protocol: {id_registers[30099]['value'] if protocol_found else 'Not found'}")
+                    range_responses["VPP Identification (30000-30099)"] = 1 if (dtc_found or protocol_found) else 0
+                else:
+                    _LOGGER.info("  No identification registers found (likely legacy protocol)")
+                    range_responses["VPP Identification (30000-30099)"] = 0
             else:
-                _LOGGER.info("  No identification registers found (likely legacy protocol)")
                 range_responses["VPP Identification (30000-30099)"] = 0
         else:
-            range_responses["VPP Identification (30000-30099)"] = 0
+            _LOGGER.info("⚠️ Skipping VPP identification registers (OffGrid mode)")
+            range_responses["VPP Identification (SKIPPED - OffGrid mode)"] = 0
 
-        # THEN: Scan input register ranges
-        for range_config in UNIVERSAL_SCAN_RANGES:
+        # THEN: Scan input register ranges - use safe ranges for OffGrid mode
+        scan_ranges = OFFGRID_SCAN_RANGES if offgrid_mode else UNIVERSAL_SCAN_RANGES
+
+        for range_config in scan_ranges:
             range_name = range_config["name"]
             start = range_config["start"]
             count = range_config["count"]
@@ -870,9 +898,38 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int) -> dict:
             else:
                 range_responses[range_name] = 0
                 _LOGGER.info(f"{range_name}: No response")
-        
+
+        # Scan holding registers for OffGrid mode (up to register 426)
+        if offgrid_mode:
+            _LOGGER.info("Scanning OffGrid holding registers (0-426)...")
+            offgrid_holding_ranges = [
+                {"name": "OffGrid Holding 0-124", "start": 0, "count": 125},
+                {"name": "OffGrid Holding 125-249", "start": 125, "count": 125},
+                {"name": "OffGrid Holding 250-374", "start": 250, "count": 125},
+                {"name": "OffGrid Holding 375-426", "start": 375, "count": 52},  # Up to 426
+            ]
+
+            for range_config in offgrid_holding_ranges:
+                range_name = range_config["name"]
+                start = range_config["start"]
+                count = range_config["count"]
+
+                _LOGGER.info(f"Scanning {range_name}...")
+
+                registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=50, register_type='holding')
+
+                if registers:
+                    all_register_data.update(registers)
+                    # Count successful non-zero reads for range summary
+                    successful_count = sum(1 for r in registers.values() if r['status'] == 'success' and r['value'] > 0)
+                    range_responses[range_name] = successful_count
+                    _LOGGER.info(f"{range_name}: {successful_count} non-zero registers out of {len(registers)} attempted")
+                else:
+                    range_responses[range_name] = 0
+                    _LOGGER.info(f"{range_name}: No response")
+
         client.close()
-        
+
         # Auto-detect model
         detection = _detect_inverter_model(all_register_data)
         
