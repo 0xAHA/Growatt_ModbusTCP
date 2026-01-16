@@ -12,6 +12,11 @@ Key Features:
 - Battery charge/discharge management
 - Detailed energy tracking for all power flows
 
+Device Identification (Holding Registers):
+- Firmware Version: Registers 9-11 (ASCII, 6 chars)
+- Control Firmware Version: Registers 12-14 (ASCII, 6 chars)
+- Serial Number: Registers 23-27 (ASCII, 10 chars, numbered 5→1)
+
 IMPORTANT - Battery Power Sign Convention:
 SPF uses INVERTED sign convention compared to VPP 2.01 standard:
 - SPF Hardware: Positive = Discharge, Negative = Charge
@@ -154,6 +159,26 @@ SPF_3000_6000_ES_PLUS = {
                 1: 'UPS',
                 2: 'GEN (Generator)'
             }},
+
+        # === DEVICE IDENTIFICATION ===
+
+        # Firmware Version (ASCII, 2 chars per register = 6 chars total)
+        9: {'name': 'firmware_version_high', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Firmware version HIGH (ASCII)'},
+        10: {'name': 'firmware_version_medium', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Firmware version MEDIUM (ASCII)'},
+        11: {'name': 'firmware_version_low', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Firmware version LOW (ASCII)'},
+
+        # Control Firmware Version (ASCII, 2 chars per register = 6 chars total)
+        12: {'name': 'control_firmware_version_high', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Control firmware version HIGH (ASCII)'},
+        13: {'name': 'control_firmware_version_medium', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Control firmware version MEDIUM (ASCII)'},
+        14: {'name': 'control_firmware_version_low', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Control firmware version LOW (ASCII)'},
+
+        # Serial Number (ASCII, 2 chars per register = 10 chars total)
+        # Note: Numbered 5 to 1 (register 23 = serial_5, register 27 = serial_1)
+        23: {'name': 'serial_number_5', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Serial number chars 1-2 (ASCII)'},
+        24: {'name': 'serial_number_4', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Serial number chars 3-4 (ASCII)'},
+        25: {'name': 'serial_number_3', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Serial number chars 5-6 (ASCII)'},
+        26: {'name': 'serial_number_2', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Serial number chars 7-8 (ASCII)'},
+        27: {'name': 'serial_number_1', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Serial number chars 9-10 (ASCII)'},
 
         # Battery Low Voltage/SOC Switch to Utility
         # BATTERY TYPE DEPENDENT (see register 39)
