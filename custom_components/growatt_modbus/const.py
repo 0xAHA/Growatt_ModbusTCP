@@ -82,6 +82,8 @@ SENSOR_TYPES = {
         'load_energy_today', 'energy_to_user_today', 'grid_energy_today',
         # Battery daily sensors
         'battery_charge_today', 'battery_discharge_today',
+        # SPF Off-Grid daily battery sensors
+        'ac_charge_energy_today', 'ac_discharge_energy_today',
     ],
     
     # Lifetime total sensors - always retain last value
@@ -251,8 +253,10 @@ SENSOR_DEVICE_MAP = {
     # Inverter device - system health and status
     DEVICE_TYPE_INVERTER: {
         'status', 'last_update', 'fault_code', 'warning_code', 'derating_mode',
-        'inverter_temp', 'ipm_temp', 'boost_temp',
+        'inverter_temp', 'ipm_temp', 'boost_temp', 'dcdc_temp',
         'battery_derating_mode',  # Battery-related status on inverter
+        # SPF Off-Grid fan speeds
+        'inverter_fan_speed',
     },
 
     # Solar device - PV production and AC output
@@ -274,6 +278,8 @@ SENSOR_DEVICE_MAP = {
         'energy_today', 'energy_total',
         # Self-consumption percentage (related to solar utilization)
         'self_consumption_percentage',
+        # SPF Off-Grid MPPT fan
+        'mppt_fan_speed',
     },
 
     # Grid device - grid connection and import/export
@@ -291,6 +297,8 @@ SENSOR_DEVICE_MAP = {
         'load_energy_today', 'load_energy_total',
         'energy_to_user_today', 'energy_to_user_total',
         'self_consumption',
+        # SPF Off-Grid load percentage
+        'load_percentage',
     },
 
     # Battery device - storage
@@ -301,6 +309,8 @@ SENSOR_DEVICE_MAP = {
         'battery_charge_today', 'battery_discharge_today',
         'battery_charge_total', 'battery_discharge_total',
         'priority_mode',  # Battery priority mode
+        # SPF Off-Grid AC charge/discharge energy
+        'ac_charge_energy_today', 'ac_discharge_energy_today',
     },
 }
 
@@ -397,9 +407,11 @@ ENTITY_CATEGORY_MAP = {
         # Battery diagnostic
         'battery_voltage', 'battery_current', 'battery_temp',
         # Temperatures
-        'inverter_temp', 'ipm_temp', 'boost_temp',
+        'inverter_temp', 'ipm_temp', 'boost_temp', 'dcdc_temp',
         # Status codes
         'fault_code', 'warning_code', 'derating_mode', 'battery_derating_mode',
+        # SPF Off-Grid fan speeds
+        'mppt_fan_speed', 'inverter_fan_speed',
     },
 
     # Config entities - all control entities
