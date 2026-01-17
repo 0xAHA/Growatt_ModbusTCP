@@ -77,8 +77,8 @@ SPF_OFFGRID_SENSORS: Set[str] = {
     "ac_charge_energy_today", "ac_discharge_energy_today",
     # Fan speeds
     "mppt_fan_speed", "inverter_fan_speed",
-    # DC-DC temperature
-    "dcdc_temp",
+    # Temperatures
+    "dcdc_temp", "buck1_temp", "buck2_temp",
 }
 
 

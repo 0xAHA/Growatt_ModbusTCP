@@ -278,8 +278,8 @@ SENSOR_DEVICE_MAP = {
         'energy_today', 'energy_total',
         # Self-consumption percentage (related to solar utilization)
         'self_consumption_percentage',
-        # SPF Off-Grid MPPT fan
-        'mppt_fan_speed',
+        # SPF Off-Grid MPPT fan and buck temperatures
+        'mppt_fan_speed', 'buck1_temp', 'buck2_temp',
     },
 
     # Grid device - grid connection and import/export
@@ -408,6 +408,7 @@ ENTITY_CATEGORY_MAP = {
         'battery_voltage', 'battery_current', 'battery_temp',
         # Temperatures
         'inverter_temp', 'ipm_temp', 'boost_temp', 'dcdc_temp',
+        'buck1_temp', 'buck2_temp',
         # Status codes
         'fault_code', 'warning_code', 'derating_mode', 'battery_derating_mode',
         # SPF Off-Grid fan speeds

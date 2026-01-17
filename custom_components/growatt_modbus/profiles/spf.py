@@ -83,6 +83,10 @@ SPF_3000_6000_ES_PLUS = {
         30: {'name': 'time_total_high', 'scale': 1, 'unit': '', 'pair': 31, 'desc': 'Total work time (HIGH word)'},
         31: {'name': 'time_total_low', 'scale': 1, 'unit': '', 'pair': 30, 'combined_scale': 0.5, 'combined_unit': 's', 'desc': 'Total work time (LOW word, in seconds)'},
 
+        # Buck Converter Temperatures (MPPT temperatures)
+        32: {'name': 'buck1_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Buck1 temperature (PV1 MPPT)', 'signed': True},
+        33: {'name': 'buck2_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Buck2 temperature (PV2 MPPT)', 'signed': True},
+
         # Device Type Code (OffGrid Protocol)
         34: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'desc': 'Device Type Code (OffGrid): 3400-3403 for SPF 3-6K ES PLUS series'},
 

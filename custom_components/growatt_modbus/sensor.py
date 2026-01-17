@@ -456,6 +456,24 @@ SENSOR_DEFINITIONS = {
         "attr": "dcdc_temp",
         "condition": lambda data: hasattr(data, 'dcdc_temp') and data.dcdc_temp > 0,
     },
+    "buck1_temp": {
+        "name": "Buck1 Temperature",
+        "icon": "mdi:thermometer",
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfTemperature.CELSIUS,
+        "attr": "buck1_temp",
+        "condition": lambda data: hasattr(data, 'buck1_temp'),
+    },
+    "buck2_temp": {
+        "name": "Buck2 Temperature",
+        "icon": "mdi:thermometer",
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfTemperature.CELSIUS,
+        "attr": "buck2_temp",
+        "condition": lambda data: hasattr(data, 'buck2_temp'),
+    },
 
     # Battery Sensors
     "battery_voltage": {
