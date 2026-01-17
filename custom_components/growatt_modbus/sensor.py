@@ -447,7 +447,34 @@ SENSOR_DEFINITIONS = {
         "attr": "boost_temp",
         "condition": lambda data: data.boost_temp > 0,
     },
-    
+    "dcdc_temp": {
+        "name": "DC-DC Temperature",
+        "icon": "mdi:thermometer",
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfTemperature.CELSIUS,
+        "attr": "dcdc_temp",
+        "condition": lambda data: hasattr(data, 'dcdc_temp') and data.dcdc_temp > 0,
+    },
+    "buck1_temp": {
+        "name": "Buck1 Temperature",
+        "icon": "mdi:thermometer",
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfTemperature.CELSIUS,
+        "attr": "buck1_temp",
+        "condition": lambda data: hasattr(data, 'buck1_temp'),
+    },
+    "buck2_temp": {
+        "name": "Buck2 Temperature",
+        "icon": "mdi:thermometer",
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfTemperature.CELSIUS,
+        "attr": "buck2_temp",
+        "condition": lambda data: hasattr(data, 'buck2_temp'),
+    },
+
     # Battery Sensors
     "battery_voltage": {
         "name": "Battery Voltage",
@@ -547,6 +574,24 @@ SENSOR_DEFINITIONS = {
         "attr": "discharge_energy_total",
         "condition": lambda data: hasattr(data, 'discharge_energy_total') and data.discharge_energy_total > 0,
     },
+    "ac_charge_energy_today": {
+        "name": "AC Charge Energy Today",
+        "icon": "mdi:battery-charging-50",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "ac_charge_energy_today",
+        "condition": lambda data: hasattr(data, 'ac_charge_energy_today') and data.ac_charge_energy_today > 0,
+    },
+    "ac_discharge_energy_today": {
+        "name": "AC Discharge Energy Today",
+        "icon": "mdi:battery-charging-outline",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "ac_discharge_energy_today",
+        "condition": lambda data: hasattr(data, 'ac_discharge_energy_today') and data.ac_discharge_energy_today > 0,
+    },
 
     # System Sensors
     "status": {
@@ -577,6 +622,34 @@ SENSOR_DEFINITIONS = {
         "icon": "mdi:alert",
         "attr": "warning_code",
         "condition": lambda data: data.warning_code > 0,
+    },
+
+    # Load Sensors (SPF Off-Grid)
+    "load_percentage": {
+        "name": "Load Percentage",
+        "icon": "mdi:gauge",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": PERCENTAGE,
+        "attr": "load_percentage",
+        "condition": lambda data: hasattr(data, 'load_percentage'),
+    },
+
+    # Fan Speed Sensors (SPF Off-Grid)
+    "mppt_fan_speed": {
+        "name": "MPPT Fan Speed",
+        "icon": "mdi:fan",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": PERCENTAGE,
+        "attr": "mppt_fan_speed",
+        "condition": lambda data: hasattr(data, 'mppt_fan_speed'),
+    },
+    "inverter_fan_speed": {
+        "name": "Inverter Fan Speed",
+        "icon": "mdi:fan",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": PERCENTAGE,
+        "attr": "inverter_fan_speed",
+        "condition": lambda data: hasattr(data, 'inverter_fan_speed'),
     },
 }
 
