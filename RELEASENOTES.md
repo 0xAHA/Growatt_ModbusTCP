@@ -44,11 +44,23 @@ This release adds comprehensive support for SPF 3000-6000 ES PLUS off-grid inver
 - UI includes bold warning: "⚠️ CRITICAL FOR SPF INVERTERS"
 - **Status:** Prevents power resets during diagnostic register scans
 
-**Files Modified:**
+**Diagnostic Service Files Updated:**
+
+`diagnostic.py`:
+- Added `OFFGRID_SCAN_RANGES` constant defining safe register ranges for SPF
+- Added `offgrid_mode` parameter to `export_register_dump()` function
+- Modified register scanning logic to use safe ranges when `offgrid_mode=True`
+- Skips dangerous VPP registers (30000+, 31000+) in OffGrid mode
+
+`services.yaml`:
+- Added `offgrid_mode` boolean field to register scan service UI
+- Added description: "Enable for SPF/Off-Grid inverters to prevent power reset"
+- Added bold warning text: "⚠️ CRITICAL FOR SPF INVERTERS"
+- Defaults to `false` (safe for all inverter types)
+
+**Other Files Modified:**
 - `auto_detection.py`: Added `async_read_dtc_code_offgrid()`, modified detection order
 - `config_flow.py`: Added `async_step_offgrid_check()` mandatory safety prompt
-- `diagnostic.py`: Added `OFFGRID_SCAN_RANGES`, `offgrid_mode` parameter
-- `services.yaml`: Added `offgrid_mode` UI field with warning
 - `strings.json` + `en.json`: Added OffGrid safety check translations
 - `spf.py`: Fixed DTC location (input 34, holding 43 instead of incorrect input 44)
 
