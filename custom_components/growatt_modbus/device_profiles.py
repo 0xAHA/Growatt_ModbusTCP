@@ -70,6 +70,17 @@ SYSTEM_OUTPUT_SENSORS: Set[str] = {
     "system_output_power",
 }
 
+SPF_OFFGRID_SENSORS: Set[str] = {
+    # Load monitoring
+    "load_percentage",
+    # AC charge/discharge energy (from grid/generator)
+    "ac_charge_energy_today", "ac_discharge_energy_today",
+    # Fan speeds
+    "mppt_fan_speed", "inverter_fan_speed",
+    # Temperatures
+    "dcdc_temp", "buck1_temp", "buck2_temp",
+}
+
 
 # ============================================================================
 # INVERTER PROFILES
@@ -541,7 +552,8 @@ INVERTER_PROFILES = {
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
-            STATUS_SENSORS
+            STATUS_SENSORS |
+            SPF_OFFGRID_SENSORS
         ),
     },
 

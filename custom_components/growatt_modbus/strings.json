@@ -30,7 +30,7 @@
         }
       },
       "serial": {
-        "title": "Serial Connection Settings", 
+        "title": "Serial Connection Settings",
         "description": "Configure serial connection to your USB-to-RS485 adapter",
         "data": {
           "device_path": "Device Path",
@@ -41,6 +41,16 @@
           "device_path": "Serial device path (e.g., /dev/ttyUSB0 or COM3)",
           "baudrate": "Serial communication speed (usually 9600)",
           "slave_id": "Inverter Modbus address (usually 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Off-Grid Inverter Safety Check",
+        "description": "**CRITICAL SAFETY CHECK**\n\nDo you have an Off-Grid inverter (SPF series)?\n\nOff-Grid inverters will experience a POWER RESET if auto-detection is attempted.\n\n• If YES: You will manually select your model (safe)\n• If NO: Automatic detection will proceed (safe for grid-tied models)\n\nExamples of Off-Grid models: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "I have an Off-Grid (SPF) inverter"
+        },
+        "data_description": {
+          "has_offgrid": "Enable this ONLY if you have an SPF series off-grid inverter. Off-Grid inverters use a different protocol and will reset if VPP registers are accessed."
         }
       }
     },
