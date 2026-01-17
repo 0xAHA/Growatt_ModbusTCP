@@ -79,8 +79,10 @@ This release adds comprehensive support for SPF 3000-6000 ES PLUS off-grid inver
 - Battery power now correctly shows: Positive = Charge, Negative = Discharge
 - Matches Home Assistant and other Growatt model conventions
 
-**File Modified:**
-- `spf.py`: Register 78 scale changed to -0.1, added detailed sign convention documentation
+**SPF Profile Register File Updated (`profiles/spf.py`):**
+- Input register 78 (`battery_power`) scale modified from `+0.1` to `-0.1`
+- Added detailed sign convention documentation in register description
+- Inverts SPF hardware convention to match VPP 2.01 standard
 
 **Impact:**
 - ✅ Battery charge/discharge direction now correct
@@ -95,18 +97,21 @@ This release adds comprehensive support for SPF 3000-6000 ES PLUS off-grid inver
 
 **Added serial number and firmware version registers** for SPF 3000-6000 ES PLUS.
 
-**Registers Added (Holding):**
-- **9-11:** Firmware version (ASCII, 6 chars)
-- **12-14:** Control firmware version (ASCII, 6 chars)
-- **23-27:** Serial number (ASCII, 10 chars, numbered 5→1)
+**SPF Profile Register File Updated (`profiles/spf.py`):**
+
+Added 8 new holding register definitions to `holding_registers` dictionary:
+- **9-11:** Firmware version HIGH/MEDIUM/LOW (ASCII, 2 chars per register = 6 chars total)
+  - `firmware_version_high`, `firmware_version_medium`, `firmware_version_low`
+- **12-14:** Control firmware version HIGH/MEDIUM/LOW (ASCII, 2 chars per register = 6 chars total)
+  - `control_firmware_version_high`, `control_firmware_version_medium`, `control_firmware_version_low`
+- **23-27:** Serial number (ASCII, 2 chars per register = 10 chars total, numbered 5→1)
+  - `serial_number_5`, `serial_number_4`, `serial_number_3`, `serial_number_2`, `serial_number_1`
 
 **Benefits:**
 - Serial number displayed in Home Assistant device info
 - Firmware version visible for troubleshooting
 - Matches device identification available on VPP models
-
-**File Modified:**
-- `spf.py`: Added firmware and serial number holding registers with proper ASCII encoding
+- SPF profile now has complete device identification like other profiles
 
 ---
 
@@ -140,9 +145,14 @@ This release adds comprehensive support for SPF 3000-6000 ES PLUS off-grid inver
 - Main sensors (energy, load %) appear in main view
 - Proper icons, units, state classes, and device classes
 
-**Files Modified:**
-- `spf.py`: Added buck1_temp and buck2_temp input registers
-- `sensor.py`: Added 6 new sensor definitions
+**SPF Profile Register File Updated (`profiles/spf.py`):**
+
+Added 2 new input register definitions to `input_registers` dictionary:
+- **32:** `buck1_temp` - Buck1/PV1 MPPT temperature (scale 0.1, signed, -30 to 200°C)
+- **33:** `buck2_temp` - Buck2/PV2 MPPT temperature (scale 0.1, signed, -30 to 200°C)
+
+**Other Files Modified:**
+- `sensor.py`: Added 6 new sensor definitions (dcdc_temp, buck1_temp, buck2_temp, ac_charge_energy_today, ac_discharge_energy_today, load_percentage, mppt_fan_speed, inverter_fan_speed)
 - `const.py`: Added sensors to SENSOR_DEVICE_MAP, ENTITY_CATEGORY_MAP, SENSOR_TYPES
 - `device_profiles.py`: Created SPF_OFFGRID_SENSORS group, added to SPF profile
 
@@ -151,10 +161,39 @@ This release adds comprehensive support for SPF 3000-6000 ES PLUS off-grid inver
 - ✅ All user-requested sensors implemented
 - ✅ Organized by device for clean UI
 - ✅ Temperature monitoring for MPPT converters
+- ✅ SPF profile now has 10 additional sensors beyond basic monitoring
 
 ---
 
 ## 🔧 Technical Enhancements
+
+### SPF Profile Register File Updates Summary
+
+**Complete list of register changes to `profiles/spf.py`:**
+
+**Holding Registers Added:**
+- Register 9: `firmware_version_high` (ASCII)
+- Register 10: `firmware_version_medium` (ASCII)
+- Register 11: `firmware_version_low` (ASCII)
+- Register 12: `control_firmware_version_high` (ASCII)
+- Register 13: `control_firmware_version_medium` (ASCII)
+- Register 14: `control_firmware_version_low` (ASCII)
+- Register 23: `serial_number_5` (ASCII, chars 1-2)
+- Register 24: `serial_number_4` (ASCII, chars 3-4)
+- Register 25: `serial_number_3` (ASCII, chars 5-6)
+- Register 26: `serial_number_2` (ASCII, chars 7-8)
+- Register 27: `serial_number_1` (ASCII, chars 9-10)
+
+**Input Registers Added:**
+- Register 32: `buck1_temp` (Buck1/PV1 MPPT temperature, scale 0.1°C, signed)
+- Register 33: `buck2_temp` (Buck2/PV2 MPPT temperature, scale 0.1°C, signed)
+
+**Input Registers Modified:**
+- Register 78: `battery_power` scale changed from `+0.1` to `-0.1` (sign inversion fix)
+
+**Total Register Changes:** 14 registers added, 1 register modified
+
+---
 
 ### OffGrid Protocol Documentation
 
