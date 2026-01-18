@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.1.3-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.1.4-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -242,10 +242,11 @@ Access via **Settings** → **Devices & Services** → **Growatt Modbus** → **
 
 Your Growatt inverter and Home Assistant use **different sign conventions** for grid power:
 
-| Convention | Export (to grid) | Import (from grid) | Used By |
-|------------|------------------|---------------------|---------|
-| **IEC 61850 Standard** | ✅ Positive (+) | ⛔ Negative (-) | Growatt inverters, industrial systems, energy meters |
-| **Home Assistant** | ⛔ Negative (-) | ✅ Positive (+) | HA Power Flow visualization |
+
+| Convention             | Export (to grid) | Import (from grid) | Used By                                              |
+| ------------------------ | ------------------ | -------------------- | ------------------------------------------------------ |
+| **IEC 61850 Standard** | ✅ Positive (+)  | ⛔ Negative (-)    | Growatt inverters, industrial systems, energy meters |
+| **Home Assistant**     | ⛔ Negative (-)  | ✅ Positive (+)    | HA Power Flow visualization                          |
 
 **Why the difference?**
 
@@ -253,6 +254,7 @@ Your Growatt inverter and Home Assistant use **different sign conventions** for 
 - **Home Assistant** uses consumer perspective (import = power coming FROM grid = positive, like "spending money")
 
 **Example:**
+
 - You're generating 6 kW solar, consuming 1 kW, exporting 5 kW
 - **Inverter reports:** `grid_power = +5000 W` (positive = export, IEC standard ✓)
 - **HA expects:** `grid_power = -5000 W` (negative = export, for visualization)
@@ -273,12 +275,15 @@ This is why the **Invert Grid Power** setting exists!
 ```
 ✅ Auto-detected: IEC 61850 standard (exporting 5000W shows as positive) - inversion enabled
 ```
+
 or
+
 ```
 ⚠️ Solar production too low (200W) - using default (no inversion). Run detection service later.
 ```
 
 **If setup happens at night or indoors:**
+
 - Detection can't run (no solar production)
 - Default setting is used (no inversion)
 - Use the manual detection service below once solar is producing
@@ -292,11 +297,13 @@ service: growatt_modbus.detect_grid_orientation
 ```
 
 **Requirements:**
+
 - Solar must be producing > 1000 W
 - Must be exporting > 100 W to grid
 - Run during daytime with good sun
 
 The service will:
+
 1. Analyze your current power flow
 2. Detect which convention your inverter uses
 3. Compare with your current setting
@@ -308,11 +315,13 @@ The service will:
 **When to enable Invert Grid Power:**
 
 ✅ **Enable if:** Your inverter follows IEC 61850 (most Growatt inverters do)
+
 - Grid power shows **positive** when exporting
 - Power Flow graph shows incorrect direction
 - Consumption calculation is wrong (too high/too low)
 
 ❌ **Disable if:** Your readings are already in HA format
+
 - Grid power shows **negative** when exporting
 - Power Flow graph is correct
 - Or if the auto-detection recommends it
@@ -631,6 +640,7 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 **✨ New Features:**
 
 - **WIT Profile Battery Sensors** - Complete VPP battery monitoring suite
+
   - **NEW:** VPP battery power registers (31200-31205)
     - Battery Power (signed: positive=charge, negative=discharge)
     - Charge Power & Discharge Power (unsigned separate values)
@@ -641,8 +651,8 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
   - **NEW:** VPP battery state registers for redundancy
   - **Result:** WIT users now get **full battery monitoring suite** instead of just 4 basic sensors
   - **Fixes:** GitHub Issue #75 - WIT showing minimal battery sensors
-
 - **Control Entity Device Organization**
+
   - Controls now appear under their **logical device** instead of separate Controls device
   - Battery controls → Battery device (Configuration section)
   - Grid controls → Grid device (Configuration section)
@@ -680,7 +690,6 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
   - Entities categorized as Main/Diagnostic/Config for cleaner UI
   - **Automatic migration** from single device - no manual action needed!
   - Entity IDs preserved - dashboards and automations continue working
-
 - **Automatic Grid Orientation Detection** - Eliminates manual configuration
 
   - **Auto-detection during setup** - Correct setting applied automatically when adding integration
@@ -689,34 +698,33 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
   - Works with just 100W export (previously 500W) - much more practical
   - Shows persistent notification with detection results and applied setting
   - Comprehensive README documentation explaining IEC vs HA sign conventions
-
 - **Stale Daily Totals Debouncing** - Fixes morning energy spikes
 
   - Detects when inverter wakes up with yesterday's totals in volatile memory
   - 15-minute debounce window filters stale readings
   - Prevents false spikes in energy dashboards
-
 - **Default Options on Setup** - Proper defaults from first installation
+
   - 60-second scan interval set automatically
   - No need to manually configure polling rate
-
 
 **🐛 Bug Fixes:**
 
 - **Fixed Grid Export/Import Sensors** - Critical fix when inversion enabled
+
   - Export sensor now correctly shows `max(0, -grid_power)` after inversion
   - Import sensor now correctly shows `max(0, grid_power)` after inversion
   - Previously showed swapped values when "Invert Grid Power" was ON
-
 - **Fixed Grid Import Energy Calculation** - Critical fix for all inverters with inversion enabled
+
   - Import energy now correctly calculated for inverters without hardware import registers
   - Affects: MIN, MOD, SPH-TL3, TL-XH, WIT profiles
   - Previously showed incorrect import energy when "Invert Grid Power" was ON
   - Import energy now always calculated as: `Load - Solar + Export`
   - Example: Load 11.8 kWh - Solar 34.1 kWh + Export 25.4 kWh = Import 3.1 kWh ✅
   - Previously incorrectly showed import = export (25.4 kWh = 25.4 kWh) ❌
-
 - **Fixed Battery Discharge Power Sign Convention** - Critical fix for TL-XH/SPH VPP 2.01 profiles
+
   - Register 31200-31201 now correctly marked as **signed** battery power
   - Per VPP Protocol V2.01 spec: positive=charge, negative=discharge
   - Previously misinterpreted as unsigned, causing discharge to show as huge positive values
@@ -726,8 +734,8 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
     - `battery_charge_power` - Unsigned charge power (always positive)
     - `battery_power` - Signed VPP power (negative=discharge, positive=charge)
     - Users can disable entities they don't need
-
 - **Enhanced WIT Battery Sensors** - Added complete VPP battery power and energy registers
+
   - **NEW:** VPP battery power registers (31200-31205)
     - `battery_power` - Signed power (positive=charge, negative=discharge)
     - `charge_power` and `discharge_power` - Unsigned power values
@@ -740,24 +748,24 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
   - WIT users now get full battery monitoring suite instead of just 4 basic sensors
   - More accurate power measurements from hardware registers vs calculated values
 
-
 **⚠️ Breaking Changes:**
 
 **IMPORTANT:** After updating, **verify your grid power settings:**
 
 1. Run the detection service during daytime with solar producing:
+
    ```yaml
    service: growatt_modbus.detect_grid_orientation
    ```
-
 2. The service will analyze your setup and recommend whether to enable/disable "Invert Grid Power"
-
 3. If recommendation differs from current setting, update it:
+
    - Go to **Settings** → **Devices & Services** → **Growatt Modbus** → **Configure**
    - Toggle **Invert Grid Power** based on recommendation
    - Save and reload integration
 
 **Why this is needed:**
+
 - Previous versions had a bug in export/import sensors when inversion was enabled
 - The bug is now fixed, but you should verify your current setting is correct
 - Auto-detection makes this easy - just run the service!
@@ -793,7 +801,6 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 - **USB RS485 Adapter Support**
 
   - Now supports using a USB RS485/Modbus adapter, and not just Modbus TCP
-
 
 **🐛 Bug Fixes:**
 
