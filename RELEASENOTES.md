@@ -1,3 +1,11 @@
+# Release Notes - v0.1.5
+
+## Added current entity detail to register scan output
+
+Additional columns have been added to the Register Scan service, so that current entity information can be verified against expected behaviour.
+This reduces the load on users to get all entity info when raising issues.
+
+
 # Release Notes - v0.1.4
 
 ## Update Battery Power Scaling for WIT profile
