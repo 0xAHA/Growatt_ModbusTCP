@@ -68,6 +68,7 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         vol.Optional("slave_id", default=1): vol.All(vol.Coerce(int), vol.Range(min=1, max=247)),
         vol.Optional("notify", default=True): cv.boolean,
         vol.Optional("offgrid_mode", default=False): cv.boolean,  # CRITICAL: Enable for SPF to prevent power reset
+        vol.Optional("device_id"): cv.string,  # Optional: Include entity values from this device's coordinator
     }
 )
 
@@ -131,6 +132,62 @@ def _lookup_register_info(register_addr: int) -> Optional[str]:
     return None
 
 
+def _get_entity_value_for_register(register_addr: int, coordinator, register_type: str = 'input') -> Optional[str]:
+    """
+    Get the calculated entity value for a register from the coordinator.
+
+    Args:
+        register_addr: Register address to look up
+        coordinator: Coordinator instance with data and register_map
+        register_type: 'input' or 'holding'
+
+    Returns:
+        Formatted string with entity value(s) or None if not found
+    """
+    if not coordinator or not coordinator.data:
+        return None
+
+    # Get the register map from coordinator
+    if not hasattr(coordinator, '_client') or not hasattr(coordinator._client, 'register_map'):
+        return None
+
+    register_map = coordinator._client.register_map
+    register_dict = register_map.get('input_registers' if register_type == 'input' else 'holding_registers', {})
+
+    if register_addr not in register_dict:
+        return None
+
+    reg_info = register_dict[register_addr]
+    reg_name = reg_info.get('name', '')
+
+    # Check if this register maps to a coordinator data attribute
+    # Try to get the value from coordinator.data using the register name
+    entity_value = getattr(coordinator.data, reg_name, None)
+
+    if entity_value is None:
+        # Try common name variations (e.g., battery_power_low -> battery_power)
+        # For paired registers, the _low register usually has the combined value
+        if reg_name.endswith('_low'):
+            base_name = reg_name[:-4]  # Remove '_low'
+            entity_value = getattr(coordinator.data, base_name, None)
+        elif reg_name.endswith('_high'):
+            # High registers don't typically have separate entity values
+            return None
+
+    if entity_value is not None:
+        # Format the value with unit
+        unit = reg_info.get('combined_unit') or reg_info.get('unit', '')
+        if isinstance(entity_value, (int, float)):
+            if unit:
+                return f"{entity_value} {unit}"
+            else:
+                return str(entity_value)
+        else:
+            return str(entity_value)
+
+    return None
+
+
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Set up diagnostic services."""
 
@@ -141,6 +198,24 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         slave_id = call.data.get("slave_id", 1)
         send_notification = call.data.get("notify", True)
         offgrid_mode = call.data.get("offgrid_mode", False)
+        device_id = call.data.get("device_id")
+
+        # Get coordinator if device_id provided
+        coordinator = None
+        if device_id:
+            device_reg = dr.async_get(hass)
+            device_entry = device_reg.async_get(device_id)
+
+            if device_entry:
+                # Find coordinator for this device
+                for entry_id in device_entry.config_entries:
+                    if entry_id in hass.data.get(DOMAIN, {}):
+                        coordinator = hass.data[DOMAIN][entry_id]
+                        _LOGGER.info("Using coordinator from device %s for entity value mapping", device_id)
+                        break
+
+            if not coordinator:
+                _LOGGER.warning("Device ID provided but coordinator not found - entity values will not be included")
 
         if offgrid_mode:
             _LOGGER.warning("⚠️ OffGrid mode ENABLED - skipping VPP registers to prevent power reset on SPF inverters")
@@ -149,7 +224,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         # Run export in executor
         result = await hass.async_add_executor_job(
-            _export_registers_to_csv, hass, host, port, slave_id, offgrid_mode
+            _export_registers_to_csv, hass, host, port, slave_id, offgrid_mode, coordinator
         )
         
         if result["success"]:
@@ -826,12 +901,13 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     return detection
 
 
-def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_mode: bool = False) -> dict:
+def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_mode: bool = False, coordinator=None) -> dict:
     """
     Export all registers to CSV file with auto-detection (blocking).
 
     Args:
         offgrid_mode: If True, skip VPP registers (30000+, 31000+) to prevent SPF power resets
+        coordinator: Optional coordinator to include entity values in CSV
     """
     result = {
         "success": False,
@@ -980,7 +1056,9 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_
             # Register data header
             writer.writerow(["REGISTER DATA"])
             writer.writerow([])
-            writer.writerow([
+
+            # Add Entity Value column header if coordinator is available
+            header_row = [
                 "Register",
                 "Hex",
                 "Raw Value",
@@ -988,9 +1066,11 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_
                 "×0.01",
                 "Signed",
                 "32-bit Combined (with next reg)",
+                "Entity Value",
                 "Suggested Match",
                 "Status/Comment"
-            ])
+            ]
+            writer.writerow(header_row)
             
             # Write all registers sorted by address
             total = 0
@@ -1044,6 +1124,9 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_
                             signed = ""
                             combined_32bit = ""
 
+                        # Look up entity value from coordinator if available
+                        entity_value = _get_entity_value_for_register(reg_addr, coordinator, 'holding') or ""
+
                         # Look up suggested match from register map
                         suggested_match = _lookup_register_info(reg_addr) or ""
 
@@ -1061,6 +1144,7 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_
                             f"{scaled_001:.2f}" if scaled_001 != "" else "",
                             signed,
                             combined_32bit,
+                            entity_value,
                             suggested_match,
                             status_comment
                         ])
@@ -1123,6 +1207,9 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_
                                 signed = ""
                                 combined_32bit = ""
 
+                            # Look up entity value from coordinator if available
+                            entity_value = _get_entity_value_for_register(reg_addr, coordinator, 'input') or ""
+
                             # Look up suggested match from register map
                             suggested_match = _lookup_register_info(reg_addr) or ""
 
@@ -1134,6 +1221,7 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_
                                 f"{scaled_001:.2f}" if scaled_001 != "" else "",
                                 signed,
                                 combined_32bit,
+                                entity_value,
                                 suggested_match,
                                 status_comment
                             ])
