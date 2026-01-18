@@ -126,6 +126,44 @@ This release adds comprehensive support for SPF 3000-6000 ES PLUS off-grid inver
 
 ---
 
+### WIT Battery Power 10x Scaling Issue (Critical Issue)
+
+**Fixed battery power reading 10x too small** for WIT 4-15kW inverters.
+
+**The Problem:**
+- WIT users reported battery power showing ~12W instead of expected ~113W
+- Values were exactly 10x too small (12W vs 120W)
+- VPP 2.01/2.02 specification documents register 31200-31201 with 0.1W scale
+- **WIT firmware deviates from VPP spec** - actual scale is 1.0W, not 0.1W
+- V×I calculation confirmed issue: 53.2V × 2.2A = 117W, but register showed 12.1W with 0.1 scale
+
+**The Fix:**
+- Changed WIT profile register 31201 `combined_scale` from 0.1 to **1.0**
+- Only affects WIT profile (MOD/SPH/other VPP models unchanged)
+- Added documentation noting WIT firmware deviation from VPP specification
+
+**Evidence:**
+- Battery voltage: 53.2V, Current: 2.2A
+- V×I calculation: 53.2 × 2.2 = 117W ✅
+- BMS reading: 113W ✅
+- With 0.1 scale: 12.1W ❌ (10x too small)
+- With 1.0 scale: 121W ✅ (matches expected)
+
+**WIT Profile Register File Updated (`profiles/wit.py`):**
+- Input register 31201 (`battery_power_low`) combined_scale changed from `0.1` to `1.0`
+- Added detailed comment documenting WIT firmware deviation from VPP spec
+- Testing confirmed with ShineWiLan x2 (WIT 4-15kW) via ModbusTCP bridge
+
+**Impact:**
+- ✅ Battery power now shows correct magnitude (~120W instead of ~12W)
+- ✅ Matches V×I calculation and BMS readings
+- ✅ Charge/discharge power sensors now accurate
+- ✅ Energy tracking calculations corrected
+
+**Related:** Issue #75
+
+---
+
 ## ✨ New Features
 
 ### SPF Device Identification Registers
@@ -243,6 +281,19 @@ Added 2 new input register definitions to `input_registers` dictionary:
 
 ---
 
+### WIT Profile Register File Updates Summary
+
+**Complete list of register changes to `profiles/wit.py`:**
+
+**Input Registers Modified:**
+- Register 31201: `battery_power_low` combined_scale changed from `0.1` to `1.0` (WIT firmware deviation from VPP spec)
+
+**Total Register Changes:** 1 register modified (scale correction)
+
+**Note:** WIT firmware reports battery power in Watts (1.0 scale), not deciWatts (0.1 scale) as documented in VPP 2.01/2.02 specification. This is a confirmed firmware deviation unique to WIT series.
+
+---
+
 ### OffGrid Protocol Documentation
 
 **Comprehensive OffGrid protocol implementation** with register range documentation.
@@ -275,6 +326,7 @@ Added 2 new input register definitions to `input_registers` dictionary:
 - ✅ SPF firmware/serial number registers
 - ✅ SPF sensor definitions and device assignments
 - ✅ OffGrid translations
+- ✅ WIT battery power 10x scaling fix (user tested with ShineWiLan x2)
 
 **Awaiting User Confirmation:**
 
@@ -297,6 +349,12 @@ Added 2 new input register definitions to `input_registers` dictionary:
 3. Next time adding SPF device, you'll see OffGrid safety prompt
 4. Register scan service now has OffGrid mode checkbox
 
+**For WIT Users:**
+1. Battery power values will increase 10x (this is the correct fix)
+   - Example: 12W → 120W (now matches V×I calculation)
+2. Charge/discharge power sensors will show correct magnitudes
+3. Historical energy data may show discontinuity at upgrade time (expected)
+
 **For Other Users:**
 
 - No changes to VPP model behavior
@@ -308,14 +366,17 @@ Added 2 new input register definitions to `input_registers` dictionary:
 ## 📦 All Commits in v0.1.3
 
 1. Fix SPF battery power sign inversion (register 78 scale -0.1)
-2. Add OffGrid DTC detection function (input 34, holding 43)
-3. Add user confirmation safety prompt to config flow
-4. Add offgrid_mode parameter to register scan service
-5. Add OffGrid safety check translations (strings.json, en.json)
-6. Add firmware and serial number registers to SPF profile
-7. Add SPF off-grid specific sensors with device assignments
-8. Add Buck1 and Buck2 temperature sensors for SPF profile
-9. Add offgrid_mode UI field to services.yaml with warning
+2. Fix WIT battery power 10x scaling issue (register 31201 scale 0.1 → 1.0)
+3. Add OffGrid DTC detection function (input 34, holding 43)
+4. Add user confirmation safety prompt to config flow
+5. Add offgrid_mode parameter to register scan service
+6. Add OffGrid safety check translations (strings.json, en.json)
+7. Add firmware and serial number registers to SPF profile
+8. Add SPF off-grid specific sensors with device assignments
+9. Add Buck1 and Buck2 temperature sensors for SPF profile
+10. Add offgrid_mode UI field to services.yaml with warning
+11. Update release notes to document SPF profile register file updates
+12. Update release notes to document register scan service file updates
 
 ---
 
@@ -327,6 +388,12 @@ Special thanks to SPF 6000 ES PLUS users who:
 - Provided detailed power reset bug reports with firmware info
 - Shared register dump data showing firmware 100.05 DTC values
 - Requested specific sensor additions for complete off-grid monitoring
+
+Special thanks to **WIT 4-15kW users** who:
+- Reported battery power 10x scaling issue with detailed evidence
+- Provided V×I calculations and BMS readings confirming the bug
+- Tested the fix with ShineWiLan x2 via ModbusTCP bridge
+- Helped identify WIT firmware deviation from VPP specification
 
 ---
 

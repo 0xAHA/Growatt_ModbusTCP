@@ -133,6 +133,13 @@ export_register_dump:
       default: false
       selector:
         boolean:
+    device_id:
+      name: Device (Optional - for Entity Values)
+      description: "Optional: Select your Growatt device to include calculated entity values in the CSV. This helps verify that register scaling and calculations are correct by showing both raw register values and the actual entity values displayed in Home Assistant. Leave empty to scan without entity values."
+      required: false
+      selector:
+        device:
+          integration: growatt_modbus
 
 write_register:
   name: Write Modbus Register
