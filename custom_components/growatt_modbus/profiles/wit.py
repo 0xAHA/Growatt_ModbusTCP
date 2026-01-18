@@ -1,6 +1,11 @@
 """
 WIT Series - Three-Phase Hybrid Inverters with Advanced Storage
 Based on legacy Growatt Modbus Protocol
+
+NOTE (WIT-specific):
+- WIT uses base input ranges 0-249, optional 875-999, and battery block 8000-8124
+- VPP / cluster data is in 31xxx range (typically HOLDING registers), e.g. 31200-31223
+  -> These MUST be under holding_registers for most Modbus integrations, otherwise they won't be read.
 """
 
 # WIT 4000-15000TL3 (Three-phase hybrid with battery, 4-15kW residential)
@@ -9,9 +14,10 @@ WIT_4000_15000TL3 = {
     'description': 'Three-phase hybrid inverter with battery storage and UPS/EPS backup (4-15kW)',
     'notes': (
         'Uses 0-124, 125-249, 875-999, 8000-8124 and VPP (31000-31399) register ranges. '
-        'Battery data mapped to 8000-8124 range; battery temperature seen at 31223 (VPP block). '
+        'Battery data mapped to 8000-8124 range; battery temperature seen at 31222/31223 (VPP block). '
         'Features: UPS 10ms switching, time-of-use programming, VPP/demand management.'
     ),
+
     'input_registers': {
         # ============================================================================
         # BASE RANGE 0-124: PV, AC, and System Status (same as SPH-TL3)
@@ -125,47 +131,6 @@ WIT_4000_15000TL3 = {
         8094: {'name': 'battery_soh', 'scale': 1, 'unit': '%'},
 
         # ============================================================================
-        # VPP BATTERY RANGE (31200-31323): Battery Cluster Data
-        # ============================================================================
-        # NOTE:
-        # VPP spec says 0.1W, but WIT field testing shows 1.0W scale for 31200/31201.
-        # Example: 53.2V × 2.2A ≈ 117W matches ~121W when combined_scale=1.0.
-        # With 0.1 scale, value is ~12.1W (10x too small).
-        31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 1.0, 'combined_unit': 'W', 'signed': True},
-
-        # 66: Daily charge of battery
-        31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203},
-        31203: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-
-        # 67: Cumulative charge of battery
-        31204: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31205},
-        31205: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-
-        # 68: Daily discharge capacity of battery
-        31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207},
-        31207: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-
-        # 69: Cumulative discharge of battery
-        31208: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31209},
-        31209: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-
-        # 70: Maximum allowable charging power (LIMIT, not actual power)
-        31210: {'name': 'max_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31211},
-        31211: {'name': 'max_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31210, 'combined_scale': 0.1, 'combined_unit': 'W'},
-
-        # 71: Maximum allowable discharge power (LIMIT, not actual power)
-        31212: {'name': 'max_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31213},
-        31213: {'name': 'max_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31212, 'combined_scale': 0.1, 'combined_unit': 'W'},
-
-        # Battery Cluster State
-        31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
-        31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
-        31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
-        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
-        31223: {'name': 'battery_temp_alt', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Alternative battery temp register'},
-
-        # ============================================================================
         # Power flow / consumption (8045-8086)
         # ============================================================================
         8045: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 8046},
@@ -217,6 +182,46 @@ WIT_4000_15000TL3 = {
         # Device identification
         30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 5603 for WIT 4-15kW', 'default': 5603},
         30099: {'name': 'protocol_version', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'VPP Protocol version (202 = V2.02)', 'default': 202},
+
+        # ============================================================================
+        # VPP BATTERY RANGE (31200-31223): Battery Cluster Data (READ-ONLY)
+        # IMPORTANT: moved from input_registers -> holding_registers so charge/discharge totals appear.
+        # ============================================================================
+
+        # NOTE:
+        # VPP spec says 0.1W, but WIT field testing shows 1.0W scale for 31200/31201.
+        31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31201},
+        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31200, 'combined_scale': 1.0, 'combined_unit': 'W', 'signed': True},
+
+        # 66: Daily charge of battery
+        31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31203},
+        31203: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # 67: Cumulative charge of battery
+        31204: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31205},
+        31205: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # 68: Daily discharge capacity of battery
+        31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31207},
+        31207: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # 69: Cumulative discharge of battery
+        31208: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31209},
+        31209: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # 70/71: limits
+        31210: {'name': 'max_charge_power_high', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31211},
+        31211: {'name': 'max_charge_power_low', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31210, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        31212: {'name': 'max_discharge_power_high', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31213},
+        31213: {'name': 'max_discharge_power_low', 'scale': 1, 'unit': '', 'access': 'RO', 'pair': 31212, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Cluster state
+        31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'access': 'RO', 'maps_to': 'battery_voltage', 'signed': True},
+        31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'access': 'RO', 'maps_to': 'battery_current', 'signed': True},
+        31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'access': 'RO', 'maps_to': 'battery_soc'},
+        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'access': 'RO', 'maps_to': 'battery_temp', 'signed': True},
+        31223: {'name': 'battery_temp_alt', 'scale': 0.1, 'unit': '°C', 'access': 'RO', 'signed': True, 'desc': 'Alternative battery temp register'},
 
         # ============================================================================
         # EXTENDED RANGE 125-249: Advanced Grid Control
@@ -274,119 +279,10 @@ WIT_4000_15000TL3 = {
         # ============================================================================
         # BUSINESS STORAGE RANGE 875-999: Advanced Battery/Storage Features
         # ============================================================================
+
         875: {'name': 'ats_fw_build_5', 'scale': 1, 'unit': '', 'access': 'R', 'desc': 'ATS version (MB)'},
         876: {'name': 'ats_fw_build_4', 'scale': 1, 'unit': '', 'access': 'R', 'desc': 'ATS version (AA)'},
         877: {'name': 'ats_dsp1_fw_build', 'scale': 1, 'unit': '', 'access': 'R'},
         878: {'name': 'ats_dsp2_fw_build', 'scale': 1, 'unit': '', 'access': 'R'},
 
-        879: {'name': 'product_set_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
-        897: {'name': 'grid_reconnect_wait_time', 'scale': 1, 'unit': 's', 'access': 'RW', 'valid_range': (0, 65536), 'desc': 'Default 300s'},
-        900: {'name': 'sts_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
-        901: {'name': 'oil_engine_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
-
-        902: {'name': 'onoff_change_mode', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=-H, 1=-EP, 2=-UP',
-              'values': {0: 'Hybrid (-H)', 1: 'Economy (-EP)', 2: 'UPS (-UP)'}},
-        903: {'name': 'pcs_type', 'scale': 1, 'unit': '', 'access': 'RW',
-              'values': {0: 'All-in-one storage', 1: 'Energy storage machine'}},
-
-        904: {'name': 'battery_type', 'scale': 1, 'unit': '', 'access': 'RW',
-              'values': {0: 'Direct attach', 1: 'DC-DC'}},
-        905: {'name': 'ac_charge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'valid_range': (0, 100)},
-        906: {'name': 'battery_max_charge_voltage', 'scale': 0.1, 'unit': 'V', 'access': 'RW'},
-        907: {'name': 'battery_eod_voltage', 'scale': 0.1, 'unit': 'V', 'access': 'RW', 'desc': 'End of discharge voltage'},
-        910: {'name': 'battery_max_charge_current', 'scale': 0.1, 'unit': 'A', 'access': 'RW'},
-        911: {'name': 'battery_max_discharge_current', 'scale': 0.1, 'unit': 'A', 'access': 'RW'},
-        917: {'name': 'battery_capacity', 'scale': 1, 'unit': 'Ah', 'access': 'RW'},
-
-        908: {'name': 'ongrid_phase_mode', 'scale': 1, 'unit': '', 'access': 'RW',
-              'values': {0: '3P3W (3-phase 3-wire)', 1: '3P4W (3-phase 4-wire)'}},
-        909: {'name': 'offgrid_phase_mode', 'scale': 1, 'unit': '', 'access': 'RW',
-              'values': {0: '3P3W (3-phase 3-wire)', 1: '3P4W (3-phase 4-wire)'}},
-
-        912: {'name': 'ongrid_offgrid_mode', 'scale': 1, 'unit': '', 'access': 'RW',
-              'values': {0: 'Auto', 1: 'Manual'}},
-        913: {'name': 'ongrid_offgrid_set', 'scale': 1, 'unit': '', 'access': 'RW',
-              'desc': 'Manual mode only', 'values': {0: 'On-grid', 1: 'Off-grid'}},
-        914: {'name': 'offgrid_softstart_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
-        915: {'name': 'offgrid_softstart_time', 'scale': 0.1, 'unit': 's', 'access': 'RW', 'valid_range': (2, 20)},
-
-        918: {'name': 'vpp_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
-        919: {'name': 'vpp_active_power_set', 'scale': 0.1, 'unit': 'kW', 'access': 'RW'},
-
-        936: {'name': 'offgrid_voltage', 'scale': 1, 'unit': '', 'access': 'RW',
-              'values': {0: '220V', 1: '230V', 2: '240V', 3: '277V', 4: '127V'}},
-        937: {'name': 'offgrid_frequency', 'scale': 1, 'unit': '', 'access': 'RW',
-              'values': {0: '50Hz', 1: '60Hz'}},
-        938: {'name': 'load_pv_inverter', 'scale': 1, 'unit': '', 'access': 'RW',
-              'desc': 'PCS load port has inverter', 'values': {0: 'No', 1: 'Yes'}},
-        939: {'name': 'dg_start_soc', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'SOC to start oil engine'},
-        940: {'name': 'dg_stop_soc', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'SOC to stop oil engine'},
-
-        944: {'name': 'demand_discharge_limit', 'scale': 1, 'unit': 'kW', 'access': 'RW'},
-        945: {'name': 'demand_charge_limit', 'scale': 1, 'unit': 'kW', 'access': 'RW'},
-        946: {'name': 'demand_manage_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
-        947: {'name': 'power_unbalance_ctrl_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
-
-        948: {'name': 'pcs_parallel_num', 'scale': 1, 'unit': '', 'access': 'RW'},
-        973: {'name': 'parallel_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
-
-        949: {'name': 'ac_charge_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
-        950: {'name': 'offgrid_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
-
-        951: {'name': 'battery_charge_stop_soc', 'scale': 1, 'unit': '%', 'access': 'RW', 'valid_range': (0, 100)},
-        952: {'name': 'battery_discharge_stop_soc', 'scale': 1, 'unit': '%', 'access': 'RW', 'valid_range': (0, 100)},
-        998: {'name': 'offgrid_discharge_stop_soc', 'scale': 1, 'unit': '%', 'access': 'RW', 'valid_range': (0, 100)},
-
-        953: {'name': 'single_phase_antibackflow', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
-
-        # Time-of-Use Programming
-        954: {'name': 'time1_enable', 'scale': 1, 'unit': '', 'access': 'RW',
-              'desc': 'Bit13-14: 0=Load first, 1=Battery first, 2=Grid first; Bit15: 0=Disable, 1=Enable'},
-        955: {'name': 'time1_start', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Bit0-7: minutes, Bit8-12: hours'},
-        956: {'name': 'time1_end', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Bit0-7: minutes, Bit8-12: hours'},
-        957: {'name': 'time2_enable', 'scale': 1, 'unit': '', 'access': 'RW'},
-        958: {'name': 'time2_start', 'scale': 1, 'unit': '', 'access': 'RW'},
-        959: {'name': 'time2_end', 'scale': 1, 'unit': '', 'access': 'RW'},
-        960: {'name': 'time3_enable', 'scale': 1, 'unit': '', 'access': 'RW'},
-        961: {'name': 'time3_start', 'scale': 1, 'unit': '', 'access': 'RW'},
-        962: {'name': 'time3_end', 'scale': 1, 'unit': '', 'access': 'RW'},
-        963: {'name': 'time4_enable', 'scale': 1, 'unit': '', 'access': 'RW'},
-        964: {'name': 'time4_start', 'scale': 1, 'unit': '', 'access': 'RW'},
-        965: {'name': 'time4_end', 'scale': 1, 'unit': '', 'access': 'RW'},
-        966: {'name': 'time5_enable', 'scale': 1, 'unit': '', 'access': 'RW'},
-        967: {'name': 'time5_start', 'scale': 1, 'unit': '', 'access': 'RW'},
-        968: {'name': 'time5_end', 'scale': 1, 'unit': '', 'access': 'RW'},
-        969: {'name': 'time6_enable', 'scale': 1, 'unit': '', 'access': 'RW'},
-        970: {'name': 'time6_start', 'scale': 1, 'unit': '', 'access': 'RW'},
-        971: {'name': 'time6_end', 'scale': 1, 'unit': '', 'access': 'RW'},
-
-        972: {'name': 'bms_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
-        974: {'name': 'battery_charge_power_limit', 'scale': 0.1, 'unit': 'kW', 'access': 'RW'},
-        975: {'name': 'battery_discharge_power_limit', 'scale': 0.1, 'unit': 'kW', 'access': 'RW'},
-        976: {'name': 'ats_spec_power', 'scale': 0.01, 'unit': 'W', 'access': 'RW'},
-
-        987: {'name': 'esp_const_nc_enable', 'scale': 1, 'unit': '', 'access': 'RW',
-              'desc': 'Emergency stop config', 'values': {0: 'Valid low', 1: 'Valid high'}},
-
-        988: {'name': 'machine_type', 'scale': 1, 'unit': '', 'access': 'RW',
-              'desc': 'Machine type identifier', 'values': {0: 'WIT', 1: 'WIS'}},
-
-        989: {'name': 'force_power_slow_change', 'scale': 1, 'unit': '', 'access': 'RW',
-              'values': {0: 'Disable', 1: 'Enable'}},
-        990: {'name': 'force_power_time1', 'scale': 1, 'unit': '%', 'access': 'RW', 'valid_range': (0, 100), 'desc': 'WIS only'},
-        991: {'name': 'force_power_time2', 'scale': 1, 'unit': '%', 'access': 'RW', 'valid_range': (0, 100), 'desc': 'WIS only'},
-        992: {'name': 'force_power_time3', 'scale': 1, 'unit': '%', 'access': 'RW', 'valid_range': (0, 100), 'desc': 'WIS only'},
-        993: {'name': 'force_power_time4', 'scale': 1, 'unit': '%', 'access': 'RW', 'valid_range': (0, 100), 'desc': 'WIS only'},
-        994: {'name': 'force_power_time5', 'scale': 1, 'unit': '%', 'access': 'RW', 'valid_range': (0, 100), 'desc': 'WIS only'},
-        995: {'name': 'force_power_time6', 'scale': 1, 'unit': '%', 'access': 'RW', 'valid_range': (0, 100), 'desc': 'WIS only'},
-
-        996: {'name': 'backup_soc', 'scale': 1, 'unit': '%', 'access': 'RW', 'valid_range': (0, 100), 'desc': 'Default 50%'},
-        997: {'name': 'backup_soc_enable', 'scale': 1, 'unit': '', 'access': 'RW',
-              'desc': 'Backup SOC for demand management', 'values': {0: 'Disable', 1: 'Enable'}},
-    }
-}
-
-# Export all WIT profiles
-WIT_REGISTER_MAPS = {
-    'WIT_4000_15000TL3': WIT_4000_15000TL3,
-}
+        879:
