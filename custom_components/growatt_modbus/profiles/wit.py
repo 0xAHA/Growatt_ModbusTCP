@@ -209,7 +209,7 @@ WIT_4000_15000TL3 = {
         # ============================================================================
 
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
-        3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW'},
+        3: {'name': 'max_output_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW'},
 
         # Device identification
         30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 5603 for WIT 4-15kW', 'default': 5603},
