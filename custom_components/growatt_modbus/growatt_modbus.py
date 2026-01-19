@@ -837,13 +837,29 @@ class GrowattModbus:
             # ---- Perform actual write ---------------------------------------------
             logger.debug(f"[WRITE] Sending write_register({register}, {value}) to inverter")
 
-            result = self.client.write_register(
-                address=register,
-                value=value,
-                device_id=self.slave_id
-            )
+            # Try different keyword arguments for pymodbus version compatibility
+            result = None
+            try:
+                # Preferred for ModbusTcpClient / recent pymodbus
+                result = self.client.write_register(address=register, value=value, unit=self.slave_id)
+            except TypeError:
+                try:
+                    # Some versions use 'slave'
+                    result = self.client.write_register(address=register, value=value, slave=self.slave_id)
+                except TypeError:
+                    try:
+                        # Older/newer variants may accept 'device_id'
+                        result = self.client.write_register(address=register, value=value, device_id=self.slave_id)
+                    except TypeError:
+                        # Fallback: positional args only
+                        result = self.client.write_register(register, value)
 
-            if result.isError():
+            # Handle different pymodbus error APIs
+            if result is None:
+                logger.error('[WRITE] No response from write_register call')
+                return False
+
+            if hasattr(result, 'isError') and callable(getattr(result, 'isError')) and result.isError():
                 logger.error(f"[WRITE] Inverter responded with error: {result}")
                 return False
 
