@@ -145,23 +145,39 @@ WRITABLE_REGISTERS = {
     # WIT VPP / Remote power controls (field tested)
     # Holding registers: 201 (percent), 202 (enable)
     # =========================================================================
-    'vpp_remote_enable': {
-        'register': 202,
-        'scale': 1,
-        'valid_range': (0, 1),
-        'options': {
-            0: 'Disabled',
-            1: 'Enabled'
-        },
-        'desc': 'Enable/disable VPP remote power control'
-    },
-    'vpp_remote_cmd_percent': {
+    # =========================================================================
+    # WIT VPP / Remote power controls (field tested)
+    # Holding registers:
+    #   201 = Active Power Rate (%)
+    #   202 = Work Mode / Remote Command (0 standby, 1 charge, 2 discharge)
+    #   203 = Export Limit (W), 0 = zero export
+    # =========================================================================
+    'active_power_rate': {
         'register': 201,
         'scale': 1,
         'valid_range': (0, 100),
         'unit': '%',
-        'desc': 'VPP remote power command (percent)'
+        'desc': 'VPP remote active power command (percent) – requires work_mode'
     },
+    'work_mode': {
+        'register': 202,
+        'scale': 1,
+        'valid_range': (0, 2),
+        'options': {
+            0: 'Standby',
+            1: 'Charge',
+            2: 'Discharge'
+        },
+        'desc': 'VPP remote work mode / command'
+    },
+    'export_limit_w': {
+        'register': 203,
+        'scale': 1,
+        'valid_range': (0, 20000),
+        'unit': 'W',
+        'desc': 'Export limit in watts (0 = zero export)'
+    },
+
 
     # SPF Off-Grid Inverter Controls
     'output_config': {
