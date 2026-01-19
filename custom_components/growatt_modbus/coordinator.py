@@ -593,28 +593,51 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 # Fallback to profile name
                 self._model_name = profile.get("name", "Unknown Model")
 
-            # Read Protocol version (register 30099)
+            # Read Protocol version (register 30099 for VPP, 73 for offgrid)
             # If readable, shows actual protocol version (e.g., 2.01, 2.02, etc.)
-            try:
-                result = self._client.client.read_holding_registers(address=30099, count=1, device_id=self._slave_id)
-                if not result.isError() and len(result.registers) > 0:
-                    version_value = result.registers[0]
-                    if version_value > 0:
-                        # Format as version string (e.g., 201 -> "Protocol 2.01", 202 -> "Protocol 2.02")
-                        major = version_value // 100
-                        minor = version_value % 100
-                        self._protocol_version = f"Protocol {major}.{minor:02d}"
-                        _LOGGER.info(f"Detected protocol version: {self._protocol_version} (register 30099 = {version_value})")
+            if not profile.get("offgrid_protocol", False):
+                try:
+                    result = self._client.client.read_holding_registers(address=30099, count=1, device_id=self._slave_id)
+                    if not result.isError() and len(result.registers) > 0:
+                        version_value = result.registers[0]
+                        if version_value > 0:
+                            # Format as version string (e.g., 201 -> "Protocol 2.01", 202 -> "Protocol 2.02")
+                            major = version_value // 100
+                            minor = version_value % 100
+                            self._protocol_version = f"Protocol {major}.{minor:02d}"
+                            _LOGGER.info(f"Detected protocol version: {self._protocol_version} (register 30099 = {version_value})")
+                        else:
+                            self._protocol_version = "Protocol Legacy"
+                            _LOGGER.info("Protocol version register returned 0, using Protocol Legacy")
                     else:
+                        # Register not available - likely legacy protocol
                         self._protocol_version = "Protocol Legacy"
-                        _LOGGER.info("Protocol version register returned 0, using Protocol Legacy")
-                else:
-                    # Register not available - likely legacy protocol
+                        _LOGGER.debug("Could not read register 30099, assuming Protocol Legacy")
+                except Exception as e:
+                    _LOGGER.debug(f"Could not read protocol version (30099): {e}")
                     self._protocol_version = "Protocol Legacy"
-                    _LOGGER.debug("Could not read register 30099, assuming Protocol Legacy")
-            except Exception as e:
-                _LOGGER.debug(f"Could not read protocol version (30099): {e}")
-                self._protocol_version = "Protocol Legacy"
+            else:
+                # OffGrid profile selected
+                try:
+                    result = self._client.client.read_holding_registers(address=73, count=1, device_id=self._slave_id)
+                    if not result.isError() and len(result.registers) > 0:
+                        version_value = result.registers[0]
+                        if version_value > 0:
+                            # Format as version string (e.g., 201 -> "Protocol 2.01", 202 -> "Protocol 2.02")
+                            major = version_value // 100
+                            minor = version_value % 100
+                            self._protocol_version = f"Modbus {major}.{minor:02d}"
+                            _LOGGER.info(f"Detected protocol version: {self._protocol_version} (register 73 = {version_value})")
+                        else:
+                            self._protocol_version = "OffGrid Modbus"
+                            _LOGGER.info("Protocol version register returned 0, using OffGrid Modbus")
+                    else:
+                        # Register not available - likely legacy protocol
+                        self._protocol_version = "OffGrid Modbus"
+                        _LOGGER.debug("Could not read register 73, assuming OffGrid Modbus")
+                except Exception as e:
+                    _LOGGER.debug(f"Could not read protocol version (73): {e}")
+                    self._protocol_version = "OffGrid Modbus"
 
         except Exception as e:
             _LOGGER.error(f"Error reading device identification: {e}")
