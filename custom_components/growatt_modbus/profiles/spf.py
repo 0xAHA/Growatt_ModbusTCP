@@ -30,6 +30,7 @@ SPF_3000_6000_ES_PLUS = {
     'name': 'SPF 3000-6000 ES PLUS',
     'description': 'Off-grid solar inverter with battery storage and AC charging (3-6kW)',
     'notes': 'Uses 0-82 register range. Off-grid system with AC input, battery, and load output. No grid export.',
+    'offgrid_protocol': True,
     'input_registers': {
         # System Status
         0: {'name': 'inverter_status', 'scale': 1, 'unit': '', 'desc': '0=Standby, 1=No Use, 2=Discharge, 3=Fault, 4=Flash, 5=PV Charge, 6=AC Charge, 7=Combine Charge, 8=Combine Charge+Bypass, 9=PV Charge+Bypass, 10=AC Charge+Bypass, 11=Bypass, 12=PV Charge+Discharge'},
