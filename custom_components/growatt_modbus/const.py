@@ -293,8 +293,8 @@ SENSOR_DEVICE_MAP = {
         'status', 'last_update', 'fault_code', 'warning_code', 'derating_mode',
         'inverter_temp', 'ipm_temp', 'boost_temp', 'dcdc_temp',
         'battery_derating_mode',  # Battery-related status on inverter
-        # SPF Off-Grid fan speeds
-        'inverter_fan_speed',
+        # SPF Off-Grid fan speeds and DC voltage input
+        'inverter_fan_speed', 'output_dc_voltage',
     },
 
     # Solar device - PV production and AC output
@@ -306,6 +306,7 @@ SENSOR_DEVICE_MAP = {
         'pv_total_power',
         # AC output (single phase)
         'ac_voltage', 'ac_current', 'ac_power', 'ac_apparent_power', 'ac_frequency',
+        'inverter_current',  # SPF: separate inverter current measurement
         # AC output (three phase)
         'ac_voltage_r', 'ac_voltage_s', 'ac_voltage_t',
         'ac_voltage_rs', 'ac_voltage_st', 'ac_voltage_tr',

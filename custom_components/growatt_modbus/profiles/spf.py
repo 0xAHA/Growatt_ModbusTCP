@@ -76,6 +76,7 @@ SPF_3000_6000_ES_PLUS = {
         # AC Output (to load)
         22: {'name': 'ac_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'AC output voltage'},
         23: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'AC output frequency'},
+        24: {'name': 'output_dc_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Output DC voltage (battery voltage to inverter)'},
 
         # Temperatures
         25: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Inverter temperature', 'signed': True},
@@ -92,8 +93,9 @@ SPF_3000_6000_ES_PLUS = {
         32: {'name': 'buck1_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Buck1 temperature (PV1 MPPT)', 'signed': True},
         33: {'name': 'buck2_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Buck2 temperature (PV2 MPPT)', 'signed': True},
 
-        # Device Type Code (OffGrid Protocol)
-        34: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'desc': 'Device Type Code (OffGrid): 3400-3403 for SPF 3-6K ES PLUS series'},
+        # AC Output Current
+        34: {'name': 'ac_current', 'scale': 0.1, 'unit': 'A', 'desc': 'AC output current (to loads)'},
+        35: {'name': 'inverter_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Inverter output current'},
 
         # Fault & Warning Codes
         40: {'name': 'fault_bit', 'scale': 1, 'unit': '', 'desc': 'Fault bit field'},
@@ -214,9 +216,9 @@ SPF_3000_6000_ES_PLUS = {
                  4: 'User Defined 2'
              }},
 
-        # Device Type Code (OffGrid Protocol - fallback location)
-        43: {'name': 'dtc_code_holding', 'scale': 1, 'unit': '', 'access': 'RO',
-             'desc': 'Device Type Code (OffGrid): 3400-3403 for SPF 3-6K ES PLUS series (fallback from input reg 34)'},
+        # Device Type Code (OffGrid Protocol v0.11)
+        44: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO',
+             'desc': 'Device Type Code (OffGrid): 034xx for SPF 3-6K ES PLUS series', 'default': 3400},
 
         # Generator Charge Current
         83: {'name': 'gen_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',

@@ -502,6 +502,22 @@ SENSOR_DEFINITIONS = {
         "attr": "battery_current",
         "condition": lambda data: hasattr(data, 'battery_current') and data.battery_voltage > 0,
     },
+    "inverter_current": {
+        "name": "Inverter Current",
+        "icon": "mdi:current-ac",
+        "device_class": SensorDeviceClass.CURRENT,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricCurrent.AMPERE,
+        "attr": "inverter_current",
+    },
+    "output_dc_voltage": {
+        "name": "Output DC Voltage",
+        "icon": "mdi:lightning-bolt",
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricPotential.VOLT,
+        "attr": "output_dc_voltage",
+    },
     "battery_soc": {
         "name": "Battery SOC",
         "icon": "mdi:battery",
