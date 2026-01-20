@@ -75,7 +75,7 @@ SENSOR_TYPES = {
         # Three-phase power sensors
         'ac_power_r', 'ac_power_s', 'ac_power_t',
     ],
-    
+
     # Daily total sensors - retain until midnight, then reset
     'daily_total': [
         'energy_today', 'energy_to_grid_today', 'grid_import_energy_today',
@@ -85,7 +85,7 @@ SENSOR_TYPES = {
         # SPF Off-Grid daily battery sensors
         'ac_charge_energy_today', 'ac_discharge_energy_today',
     ],
-    
+
     # Lifetime total sensors - always retain last value
     'lifetime_total': [
         'energy_total', 'energy_to_grid_total', 'grid_import_energy_total',
@@ -93,11 +93,12 @@ SENSOR_TYPES = {
         # Battery lifetime sensors
         'battery_charge_total', 'battery_discharge_total',
     ],
-    
+
     # Diagnostic sensors - go unavailable when offline
     'diagnostic': [
         'pv1_voltage', 'pv1_current', 'pv2_voltage', 'pv2_current',
-        'pv3_voltage', 'pv3_current', 'ac_voltage', 'ac_current',
+        'pv3_voltage', 'pv3_current',
+        'ac_voltage', 'ac_current',
         'ac_frequency', 'inverter_temp', 'ipm_temp', 'boost_temp',
         'self_consumption_percentage',
         # Battery diagnostic sensors
@@ -106,12 +107,11 @@ SENSOR_TYPES = {
         'ac_voltage_r', 'ac_voltage_s', 'ac_voltage_t',
         'ac_current_r', 'ac_current_s', 'ac_current_t',
     ],
-    
+
     # Status sensors - show "offline" when not responding
-    'status': ['status', 'derating_mode', 'fault_code', 'warning_code', 
+    'status': ['status', 'derating_mode', 'fault_code', 'warning_code',
                'priority_mode', 'battery_derating_mode'],
 }
-
 
 # WRITABLE REGISTERS - Control Entities
 WRITABLE_REGISTERS = {
@@ -133,13 +133,51 @@ WRITABLE_REGISTERS = {
         'valid_range': (0, 1000),  # 0 = 0%, 1000 = 100%
         'unit': '%'
     },
-    'active_power_rate': {
+    'max_output_power_rate': {
         'register': 3,
         'scale': 1,  # Direct percentage: 0-100
         'valid_range': (0, 100),  # 0% to 100%
         'unit': '%',
         'desc': 'Maximum output power limitation'
     },
+
+    # =========================================================================
+    # WIT VPP / Remote power controls (field tested)
+    # Holding registers: 201 (percent), 202 (enable)
+    # =========================================================================
+    # =========================================================================
+    # WIT VPP / Remote power controls (field tested)
+    # Holding registers:
+    #   201 = Active Power Rate (%)
+    #   202 = Work Mode / Remote Command (0 standby, 1 charge, 2 discharge)
+    #   203 = Export Limit (W), 0 = zero export
+    # =========================================================================
+    'active_power_rate': {
+        'register': 201,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'VPP remote active power command (percent) – requires work_mode'
+    },
+    'work_mode': {
+        'register': 202,
+        'scale': 1,
+        'valid_range': (0, 2),
+        'options': {
+            0: 'Standby',
+            1: 'Charge',
+            2: 'Discharge'
+        },
+        'desc': 'VPP remote work mode / command'
+    },
+    'export_limit_w': {
+        'register': 203,
+        'scale': 1,
+        'valid_range': (0, 20000),
+        'unit': 'W',
+        'desc': 'Export limit in watts (0 = zero export)'
+    },
+
 
     # SPF Off-Grid Inverter Controls
     'output_config': {
@@ -220,11 +258,11 @@ WRITABLE_REGISTERS = {
 
 # Sensor offline behavior mapping
 SENSOR_OFFLINE_BEHAVIOR = {
-    'power': 0,              # Power sensors go to 0W
-    'daily_total': 'retain', # Daily totals retain until midnight
+    'power': 0,                 # Power sensors go to 0W
+    'daily_total': 'retain',    # Daily totals retain until midnight
     'lifetime_total': 'retain', # Lifetime totals always retain
-    'diagnostic': None,      # Diagnostic sensors go unavailable
-    'status': 'offline',     # Status shows "offline"
+    'diagnostic': None,         # Diagnostic sensors go unavailable
+    'status': 'offline',        # Status shows "offline"
 }
 
 
@@ -335,10 +373,6 @@ def get_device_type_for_sensor(sensor_key: str) -> str:
 # CONTROL ENTITY DEVICE MAPPING
 # ============================================================================
 
-# Map control entity names to their parent device
-# Controls (number/select entities) are created from holding registers with 'access': 'RW'
-# They appear as CONFIG entities (hidden by default) under the appropriate device
-
 def get_device_type_for_control(control_name: str) -> str:
     """Get the device type that a control entity belongs to.
 
@@ -378,8 +412,6 @@ def get_device_type_for_control(control_name: str) -> str:
     ]):
         return DEVICE_TYPE_SOLAR
 
-    # Everything else → Inverter device (default)
-    # Includes: time programming, system settings, operation mode, output priority, etc.
     return DEVICE_TYPE_INVERTER
 
 
@@ -387,49 +419,27 @@ def get_device_type_for_control(control_name: str) -> str:
 # ENTITY CATEGORIES
 # ============================================================================
 
-# Entity category assignments for better UI organization
-# - None (default): Main sensors shown prominently
-# - "diagnostic": Technical details shown in separate diagnostic tab
-# - "config": Configuration entities (hidden by default)
-
 ENTITY_CATEGORY_MAP = {
-    # Diagnostic entities - voltages, currents, temperatures, technical details
     'diagnostic': {
-        # PV diagnostic
         'pv1_voltage', 'pv1_current',
         'pv2_voltage', 'pv2_current',
         'pv3_voltage', 'pv3_current',
-        # AC diagnostic
         'ac_voltage', 'ac_current', 'ac_frequency',
         'ac_voltage_r', 'ac_voltage_s', 'ac_voltage_t',
         'ac_voltage_rs', 'ac_voltage_st', 'ac_voltage_tr',
         'ac_current_r', 'ac_current_s', 'ac_current_t',
-        # Battery diagnostic
         'battery_voltage', 'battery_current', 'battery_temp',
-        # Temperatures
         'inverter_temp', 'ipm_temp', 'boost_temp', 'dcdc_temp',
         'buck1_temp', 'buck2_temp',
-        # Status codes
         'fault_code', 'warning_code', 'derating_mode', 'battery_derating_mode',
-        # SPF Off-Grid fan speeds
         'mppt_fan_speed', 'inverter_fan_speed',
     },
-
-    # Config entities - all control entities
-    # Note: These are handled in number.py and select.py
     'config': set(),
 }
 
 
 def get_entity_category(sensor_key: str) -> str | None:
-    """Get the entity category for a sensor.
-
-    Args:
-        sensor_key: The sensor key
-
-    Returns:
-        Entity category string ('diagnostic', 'config') or None for main sensors
-    """
+    """Get the entity category for a sensor."""
     for category, sensors in ENTITY_CATEGORY_MAP.items():
         if sensor_key in sensors:
             return category
@@ -482,7 +492,7 @@ def get_derating_name(derating_code: int) -> str:
 def get_status_name(status_code: int) -> dict:
     """Get human-readable status name and description."""
     return STATUS_CODES.get(
-        status_code, 
+        status_code,
         {'name': f'Unknown ({status_code})', 'desc': 'Unknown status code'}
     )
 
@@ -492,48 +502,23 @@ def get_status_name(status_code: int) -> dict:
 # ============================================================================
 
 def combine_registers(high: int, low: int) -> int:
-    """Combine two 16-bit registers into 32-bit value.
-    
-    Args:
-        high: High word (upper 16 bits)
-        low: Low word (lower 16 bits)
-        
-    Returns:
-        Combined 32-bit unsigned integer
-    """
+    """Combine two 16-bit registers into 32-bit value."""
     return (high << 16) | low
 
 
 def scale_value(raw_value: float, scale: float) -> float:
-    """Apply scaling factor to raw register value.
-    
-    Args:
-        raw_value: Raw value from register
-        scale: Scaling factor (e.g., 0.1 for 1 decimal place)
-        
-    Returns:
-        Scaled value
-    """
+    """Apply scaling factor to raw register value."""
     return raw_value * scale
 
 
 def get_register_info(register_map_name: str, register_type: str, address: int) -> dict | None:
-    """Get information about a specific register.
-    
-    Args:
-        register_map_name: Profile key (e.g., 'MIN_7000_10000TL_X')
-        register_type: 'input' or 'holding'
-        address: Register address
-        
-    Returns:
-        Register info dict or None if not found
-    """
+    """Get information about a specific register."""
     if register_map_name not in REGISTER_MAPS:
         return None
-    
+
     register_map = REGISTER_MAPS[register_map_name]
     registers = register_map.get(f'{register_type}_registers', {})
-    
+
     return registers.get(address, None)
 
 
@@ -546,34 +531,36 @@ if __name__ == "__main__":
     print("=" * 60)
     print()
     list_profiles()
-    
+
     print("\n" + "=" * 60)
     print("\nExample: Reading MIN-7000-10000TL-X PV1 Power")
     print("-" * 60)
-    
+
     # Example: Combining 32-bit power register
     profile = get_profile('MIN_7000_10000TL_X')
     if profile:
         pv1_high_addr = 3005
         pv1_low_addr = 3006
-        
+
         pv1_high_info = profile['input_registers'].get(pv1_high_addr)
         pv1_low_info = profile['input_registers'].get(pv1_low_addr)
-        
+
         print(f"Register {pv1_high_addr}: {pv1_high_info['name']}")
         print(f"Register {pv1_low_addr}: {pv1_low_info['name']}")
         print(f"Pair: {pv1_low_info.get('pair')} (should be {pv1_high_addr})")
         print(f"Combined scale: {pv1_low_info.get('combined_scale')}")
         print(f"Combined unit: {pv1_low_info.get('combined_unit')}")
-        
+
         # Example values
         example_high = 0
         example_low = 12450
         combined = combine_registers(example_high, example_low)
         scaled = scale_value(combined, 0.1)
-        
+
         print(f"\nExample reading:")
         print(f"  HIGH word: {example_high}")
         print(f"  LOW word: {example_low}")
         print(f"  Combined: {combined}")
         print(f"  Scaled: {scaled}W")
+
+

@@ -209,7 +209,7 @@ WIT_4000_15000TL3 = {
         # ============================================================================
 
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
-        3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW'},
+        3: {'name': 'max_output_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW'},
 
         # Device identification
         30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 5603 for WIT 4-15kW', 'default': 5603},
@@ -246,12 +246,17 @@ WIT_4000_15000TL3 = {
         # Intelligent Control
         180: {'name': 'meter_link_set', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Missed, 1=Received'},
         181: {'name': 'optimizer_count_set', 'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 64)},
-
-        # PID Control
-        201: {'name': 'pid_working_mode', 'scale': 1, 'unit': '', 'access': 'W', 'desc': '0=Auto, 1=Continuous, 2=All night'},
-        202: {'name': 'pid_on_off', 'scale': 1, 'unit': '', 'access': 'W', 'desc': '0=On, 1=Off'},
-        203: {'name': 'pid_voltage_option', 'scale': 1, 'unit': 'V', 'access': 'W', 'valid_range': (300, 1000)},
-
+        # VPP REMOTE CONTROL (WIT SPECIFIC)
+        # 201 = Active power rate (%)
+        # 202 = Work mode / remote command (0 standby, 1 charge, 2 discharge)
+        # 203 = Export limit (W), 0 = zero export
+        201: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'W', 'valid_range': (0, 100),
+              'desc': 'VPP remote active power command (percent) – requires work_mode'},
+        202: {'name': 'work_mode', 'scale': 1, 'unit': '', 'access': 'W',
+              'values': {0: 'Standby', 1: 'Charge', 2: 'Discharge'},
+              'desc': 'VPP remote work mode / command'},
+        203: {'name': 'export_limit_w', 'scale': 1, 'unit': 'W', 'access': 'W', 'valid_range': (0, 20000),
+              'desc': 'Export limit in watts (0 = zero export)'},
         # Serial Number (209-223, 2 chars per register)
         209: {'name': 'serial_1_2', 'scale': 1, 'unit': '', 'access': 'R'},
         210: {'name': 'serial_3_4', 'scale': 1, 'unit': '', 'access': 'R'},

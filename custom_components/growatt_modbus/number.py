@@ -41,6 +41,11 @@ async def async_setup_entry(
         if 'options' in control_config:
             continue  # Skip select controls
 
+        # WIT-specific: avoid exposing legacy output limiter controls as 'Active Power' sliders
+        # Only expose VPP remote controls (201/202/203) for WIT.
+        if register_map_name and register_map_name.startswith('WIT_') and control_name in {'max_output_power_rate'}:
+            continue
+
         register_num = control_config['register']
         if register_num not in holding_registers:
             continue  # Skip if register not in this profile
@@ -76,7 +81,12 @@ class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
         self._control_config = control_config
 
         # Generate friendly name
-        friendly_name = control_name.replace('_', ' ').title()
+        friendly_overrides = {
+            'active_power_rate': 'VPP Active Power Rate',
+            'export_limit_w': 'VPP Export Limit (W)',
+            'max_output_power_rate': 'Max Output Power Rate',
+        }
+        friendly_name = friendly_overrides.get(control_name, control_name.replace('_', ' ').title())
         self._attr_name = f"{config_entry.data['name']} {friendly_name}"
         self._attr_unique_id = f"{config_entry.entry_id}_{control_name}"
 
