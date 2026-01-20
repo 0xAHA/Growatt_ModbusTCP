@@ -888,15 +888,20 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
             elif self._sensor_key == "house_consumption":
                 # House consumption
                 load = getattr(data, "power_to_load", 0)
-                
+
                 if load == 0:
+                    # Try self_consumption_power (SPH TL-HU variant uses this for total load)
+                    load = getattr(data, "self_consumption_power", 0)
+
+                if load == 0:
+                    # Fallback calculation from solar production and grid export
                     solar = getattr(data, "pv_total_power", 0)
                     export = getattr(data, "power_to_grid", 0)
                     if export > 0:
                         load = max(0, solar - export)
                     else:
                         load = solar
-                
+
                 raw_value = round(max(0, load), 1)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
             
