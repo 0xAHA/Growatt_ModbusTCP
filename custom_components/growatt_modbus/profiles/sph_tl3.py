@@ -29,7 +29,13 @@ SPH_TL3_3000_10000 = {
         8: {'name': 'pv2_current', 'scale': 0.1, 'unit': 'A'},
         9: {'name': 'pv2_power_high', 'scale': 1, 'unit': '', 'pair': 10},
         10: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        
+
+        # PV String 3 (optional - present on models with 3 MPPT inputs)
+        11: {'name': 'pv3_voltage', 'scale': 0.1, 'unit': 'V'},
+        12: {'name': 'pv3_current', 'scale': 0.1, 'unit': 'A'},
+        13: {'name': 'pv3_power_high', 'scale': 1, 'unit': '', 'pair': 14},
+        14: {'name': 'pv3_power_low', 'scale': 1, 'unit': '', 'pair': 13, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
         # AC Grid Frequency
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
 

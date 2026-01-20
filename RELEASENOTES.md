@@ -130,6 +130,43 @@ Updated `house_consumption` sensor calculation in `sensor.py` to use fallback pr
 
 **Related:** Issue #83
 
+### Add PV3 support to SPH TL3 profile
+
+Added third PV string (PV3) support for **SPH TL3 models with 3 MPPT inputs**.
+
+**New Registers (`profiles/sph_tl3.py`):**
+- Register 11: `pv3_voltage` (0.1V scale)
+- Register 12: `pv3_current` (0.1A scale)
+- Registers 13-14: `pv3_power` (32-bit pair, 0.1W combined scale)
+
+**New Sensors:**
+- **PV3 Voltage** - Appears in **Solar device**
+- **PV3 Current** - Appears in **Solar device**
+- **PV3 Power** - Appears in **Solar device**
+
+**Impact:**
+
+- ✅ SPH models with 3 MPPT inputs now display all three PV string measurements
+- ✅ Compatible with 2-string models - PV3 sensors simply show zero/unavailable
+- ✅ Follows standard register mapping used by MOD/MIN/TL-XH profiles
+
+**Note:** PV3 registers are optional and only populated on models with 3 MPPT inputs physically installed.
+
+### Add integration version to register scan output
+
+Register scan CSV now includes integration version in metadata header.
+
+**Changes:**
+- Added "Integration Version" row at top of CSV metadata section
+- Version automatically read from `manifest.json`
+- Example output: `Integration Version,0.1.7`
+
+**Benefits:**
+
+- ✅ Users reporting issues automatically include version context
+- ✅ Easier to track which features were available at scan time
+- ✅ No manual version reporting needed for diagnostics
+
 ---
 
 # Release Notes - v0.1.6

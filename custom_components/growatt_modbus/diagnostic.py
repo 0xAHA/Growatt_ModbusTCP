@@ -1,6 +1,8 @@
 """Diagnostic service for Growatt Modbus Integration."""
 import logging
 import csv
+import json
+import os
 from datetime import datetime
 from typing import Any, Dict, List, Tuple, Optional
 
@@ -28,6 +30,17 @@ except ImportError:
     HOLDING_REGISTERS = {}
 
 _LOGGER = logging.getLogger(__name__)
+
+def _get_integration_version() -> str:
+    """Get integration version from manifest.json."""
+    try:
+        manifest_path = os.path.join(os.path.dirname(__file__), "manifest.json")
+        with open(manifest_path, 'r') as f:
+            manifest = json.load(f)
+            return manifest.get("version", "unknown")
+    except Exception as e:
+        _LOGGER.warning(f"Could not read integration version: {e}")
+        return "unknown"
 
 # Service names
 SERVICE_EXPORT_DUMP = "export_register_dump"
@@ -1020,6 +1033,7 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_
             
             # Metadata section
             writer.writerow(["SCAN METADATA"])
+            writer.writerow(["Integration Version", _get_integration_version()])
             writer.writerow(["Timestamp", datetime.now().isoformat()])
             writer.writerow(["Host", f"{host}:{port}"])
             writer.writerow(["Slave ID", slave_id])
