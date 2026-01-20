@@ -196,8 +196,8 @@ SPF_3000_6000_ES_PLUS = {
 
         # AC Charge Current
         38: {'name': 'ac_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
-             'valid_range': (0, 400),
-             'desc': 'AC charging current limit'},
+             'valid_range': (0, 80),
+             'desc': 'AC charging current limit (SPF 6000 hardware max: 80A)'},
 
         # Battery Type
         39: {'name': 'battery_type', 'scale': 1, 'unit': '', 'access': 'RW',
@@ -216,8 +216,8 @@ SPF_3000_6000_ES_PLUS = {
 
         # Generator Charge Current
         83: {'name': 'gen_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
-             'valid_range': (0, 400),
-             'desc': 'Generator charging current limit'},
+             'valid_range': (0, 80),
+             'desc': 'Generator charging current limit (SPF 6000 hardware max: 80A)'},
 
         # AC to Battery Voltage/SOC Switch Point
         # BATTERY TYPE DEPENDENT (see register 39)
