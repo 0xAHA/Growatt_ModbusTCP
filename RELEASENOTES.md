@@ -1,3 +1,118 @@
+# Release Notes - v0.1.7
+
+## SPF Off-Grid AC Output Current Fix
+
+**Fixed missing AC current measurements** for SPF 3000-6000 ES PLUS off-grid inverters (Issue #99).
+
+### The Problem
+
+SPF users reported AC Current and AC Voltage showing as zero in Home Assistant, despite these values appearing correctly in the official Growatt app. Analysis of the OffGrid Modbus Protocol v0.11 specification revealed several missing AC output registers.
+
+### The Fix
+
+Added missing AC output measurement registers to the SPF profile based on OffGrid Protocol v0.11:
+
+**New Registers (`profiles/spf.py`):**
+- **Register 34:** `ac_current` - AC output current to loads (0.1A scale)
+- **Register 35:** `inverter_current` - Inverter output current (0.1A scale)
+- **Registers 11-12:** `ac_apparent_power` - AC output apparent power to loads (32-bit, 0.1 VA scale)
+- **Register 24:** `output_dc_voltage` - Battery voltage to inverter (0.1V scale)
+
+**New Sensors (`sensor.py`):**
+- **AC Current** - Appears in **Solar device** (measures AC output to connected loads)
+- **Inverter Current** - Appears in **Solar device** (measures inverter output current)
+- **AC Apparent Power** - Appears in **Solar device** (enables power factor calculations)
+- **Output DC Voltage** - Appears in **Inverter device** (battery voltage feeding inverter)
+
+**Updated Device Mappings (`const.py`):**
+- Added `ac_current`, `ac_apparent_power`, and `inverter_current` to Solar device
+- Added `output_dc_voltage` to Inverter device
+
+### Note: Register 34 Was Previously Incorrect
+
+Register 34 was incorrectly defined as `dtc_code` in earlier versions. The OffGrid Protocol v0.11 specification shows register 34 is actually **AC Output Current** (the DTC is at INPUT register 44, not holding register 34).
+
+### Impact
+
+- ✅ SPF users can now see AC current measurements (previously showing zero)
+- ✅ AC apparent power enables power factor monitoring
+- ✅ All AC output measurements now available in Solar device
+- ✅ Matches official Growatt app functionality
+
+**Related:** Issue #99
+
+---
+
+## SPF DTC Register Location Fix
+
+**Fixed SPF auto-detection** to use correct DTC (Device Type Code) register location per OffGrid Protocol v0.11.
+
+### The Problem
+
+The DTC register was incorrectly identified as holding register 44, but the OffGrid Protocol v0.11 DTC code table (showing 034xx for SPF) indicates register type INPUT, not HOLDING.
+
+### The Fix
+
+**Updated Auto-Detection (`auto_detection.py`):**
+- **PRIMARY:** Check INPUT register 44 first (per Protocol v0.11)
+- **FALLBACK:** Check holding register 43 (firmware compatibility)
+- **LEGACY:** Check input register 34 (backward compatibility, now used for ac_current)
+
+**Updated SPF Profile (`profiles/spf.py`):**
+- Removed incorrect DTC definition at holding register 44
+- Added documentation note explaining DTC is at INPUT register 44
+- Clarified holding register 43 is fallback only for some firmware versions
+
+### Impact
+
+- ✅ SPF auto-detection now checks correct register type (INPUT vs HOLDING)
+- ✅ Maintains backward compatibility with older firmware versions
+- ✅ Follows OffGrid Protocol v0.11 specification
+
+---
+
+## Bug Fixes
+
+### Read protocol version from right address when using OffGrid profiles
+
+Fixed illegal address error when reading firmware version on SPF inverters.
+
+**Credit:** @Cris-ET in #98
+
+### Fix SPF charge current max values
+
+Changed AC and Generator charging current limits from 400A to **80A** to match SPF 6000 hardware specifications.
+
+**Note for Users:** If you see max values of 400 in the Home Assistant interface after updating to v0.1.6 or v0.1.7, this may be due to browser caching. Try:
+1. Hard refresh your browser (Ctrl+F5 / Cmd+Shift+R)
+2. Clear browser cache
+3. Reload the integration in Home Assistant
+
+The number controls should show correct max value of 80A after clearing cache.
+
+**Affected Controls:**
+- **AC Charge Current** - Battery device (max 80A)
+- **Generator Charge Current** - Battery device (max 80A)
+
+**Credit:** @0xAHA in #100
+
+---
+
+# Release Notes - v0.1.6
+
+## WIT VPP Remote Power Controls
+
+**Added VPP remote control functionality** for WIT series inverters with VPP capability.
+
+**New Controls:**
+- **Active Power Rate** (register 201) - VPP remote active power command (%)
+- **Work Mode** (register 202) - VPP remote work mode (Standby/Charge/Discharge)
+- **Export Limit** (register 203) - Export limit in watts (0 = zero export)
+
+**Credit:** @linksu79 in #96
+
+---
+
 # Release Notes - v0.1.5
 
 ## Added current entity detail to register scan output

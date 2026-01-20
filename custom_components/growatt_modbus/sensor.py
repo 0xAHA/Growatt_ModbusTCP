@@ -153,6 +153,14 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfPower.WATT,
         "attr": "ac_power",
     },
+    "ac_apparent_power": {
+        "name": "AC Apparent Power",
+        "icon": "mdi:power-plug",
+        "device_class": SensorDeviceClass.APPARENT_POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfApparentPower.VOLT_AMPERE,
+        "attr": "ac_apparent_power",
+    },
     "system_output_power": {
         "name": "System Output Power",
         "icon": "mdi:power-plug",
@@ -493,6 +501,22 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "battery_current",
         "condition": lambda data: hasattr(data, 'battery_current') and data.battery_voltage > 0,
+    },
+    "inverter_current": {
+        "name": "Inverter Current",
+        "icon": "mdi:current-ac",
+        "device_class": SensorDeviceClass.CURRENT,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricCurrent.AMPERE,
+        "attr": "inverter_current",
+    },
+    "output_dc_voltage": {
+        "name": "Output DC Voltage",
+        "icon": "mdi:lightning-bolt",
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricPotential.VOLT,
+        "attr": "output_dc_voltage",
     },
     "battery_soc": {
         "name": "Battery SOC",

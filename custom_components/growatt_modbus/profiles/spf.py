@@ -47,9 +47,13 @@ SPF_3000_6000_ES_PLUS = {
         5: {'name': 'pv2_power_high', 'scale': 1, 'unit': '', 'pair': 6, 'desc': 'PV2 charge power (HIGH word)'},
         6: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'pair': 5, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'PV2 charge power (LOW word)'},
 
-        # Load Power (output to connected devices)
-        9: {'name': 'load_power_high', 'scale': 1, 'unit': '', 'pair': 10, 'desc': 'Load power consumption (HIGH word)'},
-        10: {'name': 'load_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Load power consumption (LOW word)'},
+        # AC Output Power (active power to loads)
+        9: {'name': 'load_power_high', 'scale': 1, 'unit': '', 'pair': 10, 'desc': 'AC output active power (HIGH word)'},
+        10: {'name': 'load_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'AC output active power (LOW word)'},
+
+        # AC Output Apparent Power (to loads)
+        11: {'name': 'ac_apparent_power_high', 'scale': 1, 'unit': '', 'pair': 12, 'desc': 'AC output apparent power (HIGH word)'},
+        12: {'name': 'ac_apparent_power_low', 'scale': 1, 'unit': '', 'pair': 11, 'combined_scale': 0.1, 'combined_unit': 'VA', 'desc': 'AC output apparent power (LOW word)'},
 
         # AC Charge Power (from grid/generator to battery)
         13: {'name': 'ac_charge_power_high', 'scale': 1, 'unit': '', 'pair': 14, 'desc': 'AC charge power (HIGH word)'},
@@ -72,6 +76,7 @@ SPF_3000_6000_ES_PLUS = {
         # AC Output (to load)
         22: {'name': 'ac_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'AC output voltage'},
         23: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'AC output frequency'},
+        24: {'name': 'output_dc_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Output DC voltage (battery voltage to inverter)'},
 
         # Temperatures
         25: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Inverter temperature', 'signed': True},
@@ -88,8 +93,9 @@ SPF_3000_6000_ES_PLUS = {
         32: {'name': 'buck1_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Buck1 temperature (PV1 MPPT)', 'signed': True},
         33: {'name': 'buck2_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Buck2 temperature (PV2 MPPT)', 'signed': True},
 
-        # Device Type Code (OffGrid Protocol)
-        34: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'desc': 'Device Type Code (OffGrid): 3400-3403 for SPF 3-6K ES PLUS series'},
+        # AC Output Current
+        34: {'name': 'ac_current', 'scale': 0.1, 'unit': 'A', 'desc': 'AC output current (to loads)'},
+        35: {'name': 'inverter_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Inverter output current'},
 
         # Fault & Warning Codes
         40: {'name': 'fault_bit', 'scale': 1, 'unit': '', 'desc': 'Fault bit field'},
@@ -210,9 +216,9 @@ SPF_3000_6000_ES_PLUS = {
                  4: 'User Defined 2'
              }},
 
-        # Device Type Code (OffGrid Protocol - fallback location)
-        43: {'name': 'dtc_code_holding', 'scale': 1, 'unit': '', 'access': 'RO',
-             'desc': 'Device Type Code (OffGrid): 3400-3403 for SPF 3-6K ES PLUS series (fallback from input reg 34)'},
+        # NOTE: Device Type Code (DTC) is at INPUT register 44, not holding registers
+        # DTC is used during auto-detection only (034xx for SPF 3-6K ES PLUS series)
+        # Holding register 43 may contain DTC as fallback on some firmware versions
 
         # Generator Charge Current
         83: {'name': 'gen_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
