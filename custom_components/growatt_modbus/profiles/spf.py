@@ -47,9 +47,13 @@ SPF_3000_6000_ES_PLUS = {
         5: {'name': 'pv2_power_high', 'scale': 1, 'unit': '', 'pair': 6, 'desc': 'PV2 charge power (HIGH word)'},
         6: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'pair': 5, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'PV2 charge power (LOW word)'},
 
-        # Load Power (output to connected devices)
-        9: {'name': 'load_power_high', 'scale': 1, 'unit': '', 'pair': 10, 'desc': 'Load power consumption (HIGH word)'},
-        10: {'name': 'load_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Load power consumption (LOW word)'},
+        # AC Output Power (active power to loads)
+        9: {'name': 'load_power_high', 'scale': 1, 'unit': '', 'pair': 10, 'desc': 'AC output active power (HIGH word)'},
+        10: {'name': 'load_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'AC output active power (LOW word)'},
+
+        # AC Output Apparent Power (to loads)
+        11: {'name': 'ac_apparent_power_high', 'scale': 1, 'unit': '', 'pair': 12, 'desc': 'AC output apparent power (HIGH word)'},
+        12: {'name': 'ac_apparent_power_low', 'scale': 1, 'unit': '', 'pair': 11, 'combined_scale': 0.1, 'combined_unit': 'VA', 'desc': 'AC output apparent power (LOW word)'},
 
         # AC Charge Power (from grid/generator to battery)
         13: {'name': 'ac_charge_power_high', 'scale': 1, 'unit': '', 'pair': 14, 'desc': 'AC charge power (HIGH word)'},

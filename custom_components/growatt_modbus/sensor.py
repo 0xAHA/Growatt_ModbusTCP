@@ -153,6 +153,14 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfPower.WATT,
         "attr": "ac_power",
     },
+    "ac_apparent_power": {
+        "name": "AC Apparent Power",
+        "icon": "mdi:power-plug",
+        "device_class": SensorDeviceClass.APPARENT_POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfApparentPower.VOLT_AMPERE,
+        "attr": "ac_apparent_power",
+    },
     "system_output_power": {
         "name": "System Output Power",
         "icon": "mdi:power-plug",
