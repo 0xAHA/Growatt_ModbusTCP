@@ -227,9 +227,10 @@ async def async_read_dtc_code_offgrid(
     OffGrid inverters (SPF series) use a different register layout than VPP 2.01.
     CRITICAL: Reading VPP registers (30000+, 31000+) causes POWER RESETS on SPF inverters!
 
-    OffGrid DTC locations:
-    - Input register 34 (PRIMARY - safe, read-only)
+    OffGrid DTC locations (Protocol v0.11):
+    - Input register 44 (PRIMARY per Protocol v0.11)
     - Holding register 43 (FALLBACK)
+    - Input register 34 (LEGACY - now used for ac_current in newer protocol)
 
     Args:
         hass: HomeAssistant instance
@@ -239,20 +240,20 @@ async def async_read_dtc_code_offgrid(
     Returns:
         DTC code (int) or None if read fails
     """
-    # Try input register 34 first (safest - read-only)
+    # Try input register 44 first (Protocol v0.11 standard)
     try:
         result = await hass.async_add_executor_job(
-            client.read_input_registers, 34, 1
+            client.read_input_registers, 44, 1
         )
 
         if result is not None and len(result) > 0:
             dtc_code = result[0]
             if dtc_code and dtc_code > 0:
-                _LOGGER.info(f"✓ OffGrid DTC Detection - Read DTC code: {dtc_code} from input register 34")
+                _LOGGER.info(f"✓ OffGrid DTC Detection - Read DTC code: {dtc_code} from input register 44")
                 return dtc_code
 
     except Exception as e:
-        _LOGGER.debug(f"Could not read DTC from input register 34: {str(e)}")
+        _LOGGER.debug(f"Could not read DTC from input register 44: {str(e)}")
 
     # Fallback to holding register 43
     try:
@@ -269,7 +270,22 @@ async def async_read_dtc_code_offgrid(
     except Exception as e:
         _LOGGER.debug(f"Could not read DTC from holding register 43: {str(e)}")
 
-    _LOGGER.debug("No OffGrid DTC found in registers 34 or 43")
+    # Legacy: Try input register 34 (backward compatibility - this register now used for ac_current)
+    try:
+        result = await hass.async_add_executor_job(
+            client.read_input_registers, 34, 1
+        )
+
+        if result is not None and len(result) > 0:
+            dtc_code = result[0]
+            if dtc_code and dtc_code > 0 and dtc_code in (3400, 3401, 3402, 3403):  # Only accept valid SPF DTC codes
+                _LOGGER.info(f"✓ OffGrid DTC Detection - Read DTC code: {dtc_code} from input register 34 (legacy)")
+                return dtc_code
+
+    except Exception as e:
+        _LOGGER.debug(f"Could not read DTC from input register 34: {str(e)}")
+
+    _LOGGER.debug("No OffGrid DTC found in registers 44, 43, or 34")
     return None
 
 
@@ -345,7 +361,7 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
     - WIS 215KTL3: 5800
 
     Args:
-        dtc_code: DTC code from OffGrid (reg 34/43) or VPP (reg 30000)
+        dtc_code: DTC code from OffGrid (reg 44/43/34) or VPP (reg 30000)
 
     Returns:
         Profile key or None if no match

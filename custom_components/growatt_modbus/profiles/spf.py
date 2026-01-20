@@ -216,9 +216,9 @@ SPF_3000_6000_ES_PLUS = {
                  4: 'User Defined 2'
              }},
 
-        # Device Type Code (OffGrid Protocol v0.11)
-        44: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO',
-             'desc': 'Device Type Code (OffGrid): 034xx for SPF 3-6K ES PLUS series', 'default': 3400},
+        # NOTE: Device Type Code (DTC) is at INPUT register 44, not holding registers
+        # DTC is used during auto-detection only (034xx for SPF 3-6K ES PLUS series)
+        # Holding register 43 may contain DTC as fallback on some firmware versions
 
         # Generator Charge Current
         83: {'name': 'gen_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
