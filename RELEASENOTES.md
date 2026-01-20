@@ -96,6 +96,40 @@ The number controls should show correct max value of 80A after clearing cache.
 
 **Credit:** @0xAHA in #100
 
+### Fix SPH 10000TL-HU house consumption calculation
+
+Fixed incorrect load power calculation for **SPH 10000TL-HU (single-phase HU variant)** inverters (Issue #83).
+
+**The Problem:**
+
+The SPH 10000TL-HU variant uses storage protocol (1000-1124 register range) but has a different register mapping than the standard three-phase SPH TL3 models:
+- Standard SPH TL3: Uses registers 1021-1022 for `power_to_load` (load consumption)
+- SPH 10000TL-HU: Registers 1021-1022 are **not populated** (always zero)
+- SPH 10000TL-HU: Uses registers 1037-1038 (`self_consumption_power`) for total load consumption
+
+User reported:
+- House Consumption sensor showing **424W** (solar production)
+- Actual load consumption was **2087W** (visible in register 1037-1038)
+- Shelly EM meter confirmed load was much higher than displayed
+
+**The Fix:**
+
+Updated `house_consumption` sensor calculation in `sensor.py` to use fallback priority:
+1. Try `power_to_load` (registers 1021-1022) - standard location for most SPH models
+2. If zero, try `self_consumption_power` (registers 1037-1038) - SPH TL-HU variant location
+3. If still zero, calculate from `solar - export` - legacy fallback
+
+**Impact:**
+
+- ✅ SPH 10000TL-HU users now see correct House Consumption values in **Load device**
+- ✅ Self Consumption sensor calculations now also correct (dependent on house consumption)
+- ✅ Maintains compatibility with standard SPH TL3 three-phase models
+- ✅ No profile change required - fix automatically detects which registers are populated
+
+**Note:** Users should continue using the **SPH TL3 - 10000** profile. The HU variant uses the same storage protocol, just with this register mapping difference which is now handled automatically.
+
+**Related:** Issue #83
+
 ---
 
 # Release Notes - v0.1.6
