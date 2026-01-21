@@ -160,9 +160,9 @@ WIT_4000_15000TL3 = {
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
         31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
-        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
+        31223: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
         # Note: 31223 also observed as battery_temp on some WIT scans
-        31223: {'name': 'battery_temp_alt', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Alternative battery temp register'},
+        #31223: {'name': 'battery_temp_alt', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Alternative battery temp register'},
 
         # Power flow / consumption (8045-8086)
         8045: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 8046},
