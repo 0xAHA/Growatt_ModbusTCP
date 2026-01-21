@@ -197,10 +197,15 @@ class GrowattModbus:
             self.connection_id = f"{device}"
 
         logger.info(f"Initializing {self.register_map['name']} profile for {self.connection_id}")
-        
+
         # Cache for raw register data
         self._register_cache = {}
-        
+
+        # Battery power scale auto-detection (WIT profile specific)
+        self._battery_power_scale_override = None  # None = use profile default, 0.1 or 1.0 = detected scale
+        self._battery_power_scale_samples = []  # Store validation samples
+        self._battery_power_scale_validated = False  # Set to True once detection is complete
+
         if connection_type == 'tcp':
             if not TCP_AVAILABLE:
                 raise ImportError("pymodbus not available for TCP connection")
@@ -350,6 +355,66 @@ class GrowattModbus:
             logger.debug("Exception reading holding registers %d-%d: %s", start_address, start_address + count - 1, e)
             return None
 
+    def _detect_battery_power_scale(self, voltage: float, current: float, power_register_value: int) -> Optional[float]:
+        """
+        Auto-detect correct battery power scale using V×I validation.
+
+        WIT inverters have firmware variants - some use 0.1W scale (VPP spec), some use 1.0W.
+        This method validates which scale is correct by comparing V×I with register reading.
+
+        Args:
+            voltage: Battery voltage in volts
+            current: Battery current in amps (absolute value)
+            power_register_value: Raw 32-bit power register value
+
+        Returns:
+            Detected scale (0.1 or 1.0), or None if detection uncertain
+        """
+        # Skip detection if already validated
+        if self._battery_power_scale_validated:
+            return self._battery_power_scale_override
+
+        # Calculate expected power from V×I
+        expected_power = abs(voltage * current)
+
+        # Skip detection if power is too small (avoid noise/measurement errors)
+        if expected_power < 50:  # Less than 50W
+            return None
+
+        # Test both possible scales
+        power_with_0_1_scale = abs(power_register_value) * 0.1
+        power_with_1_0_scale = abs(power_register_value) * 1.0
+
+        # Calculate relative errors
+        error_0_1 = abs(power_with_0_1_scale - expected_power) / expected_power if expected_power > 0 else 1.0
+        error_1_0 = abs(power_with_1_0_scale - expected_power) / expected_power if expected_power > 0 else 1.0
+
+        # Determine which scale is better (allow 20% tolerance for measurement variation)
+        detected_scale = None
+        if error_0_1 < 0.20 and error_0_1 < error_1_0:
+            detected_scale = 0.1
+        elif error_1_0 < 0.20 and error_1_0 < error_0_1:
+            detected_scale = 1.0
+
+        # Store sample for validation
+        if detected_scale is not None:
+            self._battery_power_scale_samples.append(detected_scale)
+
+            # Validate after collecting 3 consistent samples
+            if len(self._battery_power_scale_samples) >= 3:
+                # Check if samples are consistent
+                if all(s == detected_scale for s in self._battery_power_scale_samples[-3:]):
+                    self._battery_power_scale_override = detected_scale
+                    self._battery_power_scale_validated = True
+                    logger.info(
+                        f"WIT Battery Power Scale Auto-Detected: {detected_scale}W "
+                        f"(V={voltage:.1f}V, I={current:.1f}A, Expected={expected_power:.0f}W, "
+                        f"With 0.1={power_with_0_1_scale:.0f}W, With 1.0={power_with_1_0_scale:.0f}W)"
+                    )
+                    return detected_scale
+
+        return None
+
     def _get_register_value(self, address: int) -> Optional[float]:
         """
         Get scaled value from register, handling 32-bit pairs automatically
@@ -387,12 +452,19 @@ class GrowattModbus:
             
             # Combine 32-bit value
             combined = (high_value << 16) | low_value
-            
+
             # Handle signed values if specified
             if reg_info.get('signed') or pair_info.get('signed'):
                 if combined > 0x7FFFFFFF:  # If sign bit is set
                     combined = combined - 0x100000000
-            
+
+            # WIT Battery Power Scale Override (auto-detected if needed)
+            reg_name = reg_info.get('name') or pair_info.get('name')
+            if reg_name in ('battery_power_low', 'battery_power') and self._battery_power_scale_override is not None:
+                # Use detected scale instead of profile default
+                combined_scale = self._battery_power_scale_override
+                logger.debug(f"Applying detected battery power scale override: {combined_scale}W")
+
             return combined * combined_scale
         
         else:
@@ -962,6 +1034,21 @@ class GrowattModbus:
                 raw_low = self._register_cache.get(addr, 0)
                 pair_addr = self._find_register_by_name('battery_power_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
+
+                # WIT Battery Power Scale Auto-Detection (before applying scale)
+                # Combine raw 32-bit value for detection
+                combined_raw = (raw_high << 16) | raw_low
+                if combined_raw > 0x7FFFFFFF:  # Handle signed
+                    combined_raw = combined_raw - 0x100000000
+
+                # Attempt scale detection if we have V and I data
+                if data.battery_voltage > 0 and data.battery_current != 0:
+                    detected_scale = self._detect_battery_power_scale(
+                        data.battery_voltage,
+                        abs(data.battery_current),
+                        abs(combined_raw)
+                    )
+
                 battery_power = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery power (signed): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {battery_power}W")
 
