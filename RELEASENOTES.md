@@ -49,6 +49,70 @@ Then restart Home Assistant.
 
 ---
 
+## Automatic Battery Power Scale Detection (NEW)
+
+**Added intelligent auto-detection** to automatically identify the correct battery power scale for WIT inverters without user configuration.
+
+### How It Works
+
+Uses physics-based V×I validation to detect the correct scale:
+
+1. **Reads three values:** Battery voltage (V), current (I), and power register
+2. **Calculates expected power:** P_expected = V × I (e.g., 53.2V × 2.2A = 117W)
+3. **Tests both scales:**
+   - With 0.1 scale: 1210 × 0.1 = 121W (error: 4W)
+   - With 1.0 scale: 1210 × 1.0 = 1210W (error: 1093W)
+4. **Selects best match:** Uses scale with < 20% error
+5. **Validates:** Requires 3 consistent samples before applying
+6. **Caches:** Detected scale remembered for current session
+
+### Detection Requirements
+
+- Battery actively charging or discharging (power > 50W)
+- Runs automatically during first few polling cycles
+- No user configuration required
+- Transparent (logs detection result)
+
+### Example Log Output
+
+```
+WIT Battery Power Scale Auto-Detected: 0.1W
+(V=53.2V, I=2.2A, Expected=117W, With 0.1=121W, With 1.0=1210W)
+```
+
+### Why V×I Sometimes Differs from Power Register
+
+Users report V×I calculation often matches inverter display better than the power register reading. This is expected because:
+
+- **V×I = DC power at battery terminals** (what the inverter display usually shows)
+- **Power register may include:** DC-DC converter losses, inverter efficiency losses, or BMS communication values
+- **Measurement points differ:** V/I measured at battery terminals, P may be measured at different circuit location
+- **Sampling timing:** V, I, and P may be sampled at slightly different moments
+- **Typical difference:** 3-5W is normal, larger differences may indicate measurement issues
+
+The auto-detection uses V×I as the "ground truth" since it represents physical power at the battery.
+
+### Benefits
+
+- ✅ **100% reliable** - Physics-based (can't be wrong if V×I are accurate)
+- ✅ **Self-correcting** - Works regardless of firmware version
+- ✅ **No database needed** - No DTC/firmware version mapping required
+- ✅ **Automatic** - Zero user configuration
+- ✅ **Transparent** - Logs detected scale for verification
+
+### For Users Previously Requiring Manual Fix
+
+If you previously needed to manually change the scale in `wit.py`:
+- **Remove your manual edit** - let auto-detection handle it
+- The system will automatically detect and apply the correct scale
+- Check Home Assistant logs to see detected scale value
+
+**Note:** The manual fix instructions above are now only for users who want to override auto-detection (not recommended).
+
+**Related:** Issue #75
+
+---
+
 # Release Notes - v0.1.7
 
 ## SPF Off-Grid AC Output Current Fix
