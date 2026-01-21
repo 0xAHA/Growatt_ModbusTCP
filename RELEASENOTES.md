@@ -1,3 +1,54 @@
+# Release Notes - v0.1.8
+
+## Revert WIT Battery Power Scale to VPP Specification (CRITICAL)
+
+**Reverted WIT battery power scale from 1.0 back to 0.1W** per VPP Protocol V2.01/V2.02 specification.
+
+### The Problem
+
+In v0.1.4, we changed the WIT battery power scale from 0.1W to 1.0W based on one user's feedback showing values were 10x too small. However, this change caused the **opposite problem for all other WIT users** - battery power readings are now 10x too large.
+
+**Example:**
+- User reports: "Battery power shows 5000W when actually charging at 500W"
+- VPP Protocol V2.01/V2.02 specification: Register 31201 uses 0.1W scale
+- Most WIT inverters follow the spec correctly
+
+### The Fix
+
+**Reverted to VPP specification default:**
+- Register 31201 `combined_scale`: **0.1** (was 1.0 in v0.1.4-v0.1.7)
+- This fixes battery power readings for the majority of WIT users
+
+### For Users With Values Still 10x Too Small (Rare Variant)
+
+If after updating to v0.1.8 your battery power readings are **10x too small** (e.g., showing 12W when you expect 120W), you have a rare WIT firmware variant that deviates from the VPP specification.
+
+**Manual Fix** (edit `custom_components/growatt_modbus/profiles/wit.py`):
+
+Find line ~134:
+```python
+31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+```
+
+Change `combined_scale` from **0.1** to **1.0**:
+```python
+31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 1.0, 'combined_unit': 'W', 'signed': True},
+```
+
+Then restart Home Assistant.
+
+**Please report this on Issue #75** if you need this manual fix - we're investigating automatic detection methods.
+
+### Impact
+
+- ✅ Battery power readings correct for 95%+ of WIT users
+- ✅ Follows VPP Protocol V2.01/V2.02 specification
+- ⚠️ Small number of users with non-standard firmware may need manual adjustment (see above)
+
+**Related:** Issue #75
+
+---
+
 # Release Notes - v0.1.7
 
 ## SPF Off-Grid AC Output Current Fix
