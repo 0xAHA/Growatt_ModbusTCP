@@ -90,18 +90,30 @@ update_register_map:
 
 export_register_dump:
   name: Universal Register Scanner
-  description: Scan ALL register ranges, auto-detect your inverter model, and export complete register dump to CSV. File saved to /config/growatt_register_scan_[timestamp].csv
+  description: Scan ALL register ranges, auto-detect your inverter model, and export complete register dump to CSV. Supports both TCP and USB/Serial connections. File saved to /config/growatt_register_scan_[timestamp].csv
   fields:
+    connection_type:
+      name: Connection Type
+      description: Select TCP (RS485-to-Ethernet adapter) or Serial (RS485-to-USB adapter)
+      required: false
+      default: "tcp"
+      selector:
+        select:
+          options:
+            - label: "TCP (Ethernet)"
+              value: "tcp"
+            - label: "Serial (USB)"
+              value: "serial"
     host:
-      name: IP Address
-      description: IP address of your RS485-TCP adapter
-      required: true
+      name: IP Address (TCP only)
+      description: IP address of your RS485-TCP adapter (required for TCP connection)
+      required: false
       example: "192.168.1.60"
       selector:
         text:
     port:
-      name: Port
-      description: Modbus TCP port (usually 502)
+      name: Port (TCP only)
+      description: Modbus TCP port (usually 502, required for TCP connection)
       required: false
       default: 502
       selector:
@@ -109,6 +121,27 @@ export_register_dump:
           min: 1
           max: 65535
           mode: box
+    device:
+      name: Serial Device (Serial only)
+      description: Serial port path for USB adapter (required for Serial connection)
+      required: false
+      example: "/dev/ttyUSB0 or COM3"
+      selector:
+        text:
+    baudrate:
+      name: Baudrate (Serial only)
+      description: Serial communication speed (usually 9600 for Growatt)
+      required: false
+      default: 9600
+      selector:
+        select:
+          options:
+            - 4800
+            - 9600
+            - 19200
+            - 38400
+            - 57600
+            - 115200
     slave_id:
       name: Slave ID
       description: Modbus slave/unit ID (usually 1)

@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Tuple, Optional
 
 import voluptuous as vol
-from pymodbus.client import ModbusTcpClient
 
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import device_registry as dr
@@ -76,8 +75,18 @@ OFFGRID_SCAN_RANGES = [
 # Service schema
 SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
     {
-        vol.Required("host"): cv.string,
+        # Connection type selection
+        vol.Optional("connection_type", default="tcp"): vol.In(["tcp", "serial"]),
+
+        # TCP parameters (required if connection_type=tcp)
+        vol.Optional("host"): cv.string,
         vol.Optional("port", default=502): cv.port,
+
+        # Serial parameters (required if connection_type=serial)
+        vol.Optional("device"): cv.string,  # e.g., /dev/ttyUSB0, COM3
+        vol.Optional("baudrate", default=9600): vol.In([4800, 9600, 19200, 38400, 57600, 115200]),
+
+        # Common parameters
         vol.Optional("slave_id", default=1): vol.All(vol.Coerce(int), vol.Range(min=1, max=247)),
         vol.Optional("notify", default=True): cv.boolean,
         vol.Optional("offgrid_mode", default=False): cv.boolean,  # CRITICAL: Enable for SPF to prevent power reset
@@ -206,12 +215,25 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def export_register_dump(call: ServiceCall) -> None:
         """Universal register scanner - scans all ranges and auto-detects model."""
-        host = call.data["host"]
+        connection_type = call.data.get("connection_type", "tcp")
+        host = call.data.get("host")
         port = call.data.get("port", 502)
+        device = call.data.get("device")
+        baudrate = call.data.get("baudrate", 9600)
         slave_id = call.data.get("slave_id", 1)
         send_notification = call.data.get("notify", True)
         offgrid_mode = call.data.get("offgrid_mode", False)
         device_id = call.data.get("device_id")
+
+        # Validate required parameters based on connection type
+        if connection_type == "tcp":
+            if not host:
+                _LOGGER.error("host parameter required for TCP connection")
+                return
+        elif connection_type == "serial":
+            if not device:
+                _LOGGER.error("device parameter required for serial connection")
+                return
 
         # Get coordinator if device_id provided
         coordinator = None
@@ -233,11 +255,15 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         if offgrid_mode:
             _LOGGER.warning("⚠️ OffGrid mode ENABLED - skipping VPP registers to prevent power reset on SPF inverters")
 
-        _LOGGER.info("Starting %s register scan at %s:%s", "OffGrid" if offgrid_mode else "universal", host, port)
+        # Log connection info
+        if connection_type == "tcp":
+            _LOGGER.info("Starting %s register scan at %s:%s", "OffGrid" if offgrid_mode else "universal", host, port)
+        else:
+            _LOGGER.info("Starting %s register scan on %s @ %d baud", "OffGrid" if offgrid_mode else "universal", device, baudrate)
 
         # Run export in executor
         result = await hass.async_add_executor_job(
-            _export_registers_to_csv, hass, host, port, slave_id, offgrid_mode, coordinator
+            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode, coordinator
         )
         
         if result["success"]:
@@ -914,11 +940,17 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     return detection
 
 
-def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_mode: bool = False, coordinator=None) -> dict:
+def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False, coordinator=None) -> dict:
     """
     Export all registers to CSV file with auto-detection (blocking).
 
     Args:
+        connection_type: 'tcp' or 'serial'
+        host: IP address for TCP connection
+        port: Port for TCP connection
+        device: Serial device path for serial connection
+        baudrate: Serial baudrate for serial connection
+        slave_id: Modbus slave ID
         offgrid_mode: If True, skip VPP registers (30000+, 31000+) to prevent SPF power resets
         coordinator: Optional coordinator to include entity values in CSV
     """
@@ -931,10 +963,33 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_
     }
 
     try:
-        # Connect with longer timeout
-        client = ModbusTcpClient(host=host, port=port, timeout=15)
+        # Connect with appropriate client type
+        if connection_type == "tcp":
+            try:
+                from pymodbus.client import ModbusTcpClient
+            except ImportError:
+                from pymodbus.client.sync import ModbusTcpClient
+
+            client = ModbusTcpClient(host=host, port=port, timeout=15)
+            connection_str = f"{host}:{port}"
+        else:  # serial
+            try:
+                from pymodbus.client import ModbusSerialClient
+            except ImportError:
+                from pymodbus.client.sync import ModbusSerialClient
+
+            client = ModbusSerialClient(
+                port=device,
+                baudrate=baudrate,
+                timeout=15,
+                parity='N',
+                stopbits=1,
+                bytesize=8
+            )
+            connection_str = f"{device} @ {baudrate} baud"
+
         if not client.connect():
-            result["error"] = f"Cannot connect to {host}:{port}"
+            result["error"] = f"Cannot connect to {connection_str}"
             return result
 
         mode_str = "OffGrid scan (safe for SPF)" if offgrid_mode else "universal scan"
@@ -1035,7 +1090,8 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_
             writer.writerow(["SCAN METADATA"])
             writer.writerow(["Integration Version", _get_integration_version()])
             writer.writerow(["Timestamp", datetime.now().isoformat()])
-            writer.writerow(["Host", f"{host}:{port}"])
+            writer.writerow(["Connection", connection_str])
+            writer.writerow(["Connection Type", connection_type.upper()])
             writer.writerow(["Slave ID", slave_id])
             writer.writerow([])
             
