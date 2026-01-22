@@ -123,7 +123,7 @@ def _read_single_register(client, register: int, register_type: str = 'input') -
     Read a single Modbus register.
 
     Args:
-        client: Modbus client with read_input_registers or read_holding_registers method
+        client: GrowattModbus client with read_input_registers or read_holding_registers methods
         register: Register address to read
         register_type: 'input' or 'holding'
 
@@ -132,38 +132,23 @@ def _read_single_register(client, register: int, register_type: str = 'input') -
     """
     try:
         # Choose read method based on register type
+        # GrowattModbus methods return Optional[list] - list on success, None on error
         if register_type == 'holding':
-            response = client.read_holding_registers(address=register, count=1)
+            result = client.read_holding_registers(start_address=register, count=1)
         else:  # 'input'
-            response = client.read_input_registers(address=register, count=1)
+            result = client.read_input_registers(start_address=register, count=1)
 
-        if not response.isError():
+        if result is not None and len(result) > 0:
             return {
                 'success': True,
-                'value': response.registers[0],
+                'value': result[0],
                 'error': None
             }
         else:
-            # Extract error information
-            error_msg = str(response)
-            if hasattr(response, 'exception_code'):
-                error_code = response.exception_code
-                error_names = {
-                    1: "Illegal Function",
-                    2: "Illegal Data Address",
-                    3: "Illegal Data Value",
-                    4: "Slave Device Failure",
-                    5: "Acknowledge",
-                    6: "Slave Device Busy",
-                    10: "Gateway Path Unavailable",
-                    11: "Gateway Target Failed to Respond"
-                }
-                error_msg = error_names.get(error_code, f"Error Code {error_code}")
-
             return {
                 'success': False,
                 'value': None,
-                'error': error_msg
+                'error': "Register read failed or returned no data"
             }
 
     except Exception as e:
