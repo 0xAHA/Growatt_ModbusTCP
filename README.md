@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.1.6-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.1.9-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -12,6 +12,29 @@ A native Home Assistant integration for Growatt solar inverters using direct Mod
 - **Primary:** Growatt VPP Protocol V2.01 with automatic model detection via Device Type Code (DTC)
 - **Fallback:** Legacy protocols (V1.39, V3.05) with manual model selection for older inverters
 - **Smart Detection:** Automatically uses best available protocol based on inverter capabilities
+
+---
+
+## 🌱 Early Adopter Notice - Help Us Grow!
+
+> **This integration is actively evolving with your help!**
+>
+> We're building something great together, and your real-world testing is invaluable. This integration supports many Growatt inverter models, but some profiles are based on official documentation and haven't been verified with actual hardware yet.
+>
+> **How You Can Help:**
+>
+> - ✅ **Test and report** - Try the integration with your inverter and let us know how it works
+> - 📊 **Share register scans** - Use the built-in Universal Scanner to help us verify or improve profiles
+> - 🐛 **Report issues** - Found incorrect values or missing sensors? [Open an issue](https://github.com/0xAHA/Growatt_ModbusTCP/issues) with your inverter model
+> - 💡 **Share feedback** - Your experience helps us prioritize features and fixes
+> - ⭐ **Star the repo** - Show support and help others discover this integration
+>
+> **Current Status:**
+> - Core functionality is stable and tested on multiple inverter models
+> - New features and profiles added regularly based on community feedback
+> - Active development with responsive issue resolution
+>
+> Together we're building the most comprehensive local Growatt integration for Home Assistant. Thank you for being part of this journey! 🙏
 
 ---
 

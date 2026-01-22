@@ -1,3 +1,98 @@
+# Release Notes
+
+## 🌱 Early Adopter Notice - Help Us Grow!
+
+> **This integration is actively evolving with your help!**
+>
+> We're building something great together, and your real-world testing is invaluable. This integration supports many Growatt inverter models, but some profiles are based on official documentation and haven't been verified with actual hardware yet.
+>
+> **How You Can Help:**
+>
+> - ✅ **Test and report** - Try the integration with your inverter and let us know how it works
+> - 📊 **Share register scans** - Use the built-in Universal Scanner to help us verify or improve profiles
+> - 🐛 **Report issues** - Found incorrect values or missing sensors? [Open an issue](https://github.com/0xAHA/Growatt_ModbusTCP/issues) with your inverter model
+> - 💡 **Share feedback** - Your experience helps us prioritize features and fixes
+> - ⭐ **Star the repo** - Show support and help others discover this integration
+>
+> **Current Status:**
+> - Core functionality is stable and tested on multiple inverter models
+> - New features and profiles added regularly based on community feedback
+> - Active development with responsive issue resolution
+>
+> Together we're building the most comprehensive local Growatt integration for Home Assistant. Thank you for being part of this journey! 🙏
+
+---
+
+# Release Notes - v0.1.9
+
+## USB/Serial Adapter Support for Diagnostic Services
+
+**Added support for USB/Serial RS485 adapters** to the Universal Register Scanner service, making it accessible for users without TCP/Ethernet adapters.
+
+### The Enhancement
+
+Previously, the `export_register_dump` service only supported TCP connections (RS485-to-Ethernet adapters). Many users have USB RS485 adapters and couldn't use the diagnostic scanner without a TCP adapter.
+
+### What's New
+
+**Connection Type Selection:**
+- **TCP Mode:** Uses IP address and port (existing functionality)
+- **Serial Mode:** Uses device path and baudrate (NEW)
+
+**New Parameters:**
+- `connection_type`: Select "tcp" or "serial" (defaults to tcp for backward compatibility)
+- `device`: Serial port path (e.g., /dev/ttyUSB0, COM3) - required for serial mode
+- `baudrate`: Serial communication speed (4800, 9600, 19200, 38400, 57600, 115200) - default 9600
+
+### How to Use
+
+**Developer Tools → Services → growatt_modbus.export_register_dump**
+
+For USB/Serial adapter:
+```yaml
+service: growatt_modbus.export_register_dump
+data:
+  connection_type: serial
+  device: "/dev/ttyUSB0"  # or "COM3" on Windows
+  baudrate: 9600
+  slave_id: 1
+  offgrid_mode: false  # Set true for SPF inverters
+```
+
+For TCP adapter (unchanged):
+```yaml
+service: growatt_modbus.export_register_dump
+data:
+  connection_type: tcp
+  host: "192.168.1.60"
+  port: 502
+  slave_id: 1
+  offgrid_mode: false
+```
+
+### Technical Details
+
+**Backend Changes:**
+- Updated `_export_registers_to_csv()` to support both ModbusTcpClient and ModbusSerialClient
+- Automatic detection of pymodbus version (2.x vs 3.x)
+- CSV metadata now shows connection type and full connection string
+
+**UI Changes:**
+- Connection type selector in service UI
+- Conditional parameter labels ("TCP only", "Serial only")
+- Baudrate dropdown with common values
+
+### Benefits
+
+- ✅ Users with USB RS485 adapters can now use register scanner
+- ✅ No need to purchase TCP adapter just for diagnostics
+- ✅ Seamless switching between connection types
+- ✅ Full backward compatibility (defaults to TCP)
+
+**Note:** The `write_register` service already supports both connection types automatically, as it uses the coordinator's configured client.
+
+---
+
 # Release Notes - v0.1.8
 
 ## Revert WIT Battery Power Scale to VPP Specification (CRITICAL)
