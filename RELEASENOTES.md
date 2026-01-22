@@ -25,6 +25,81 @@
 
 # Release Notes - v0.1.9
 
+## Register Read Service - Profile-Aware Register Inspector
+
+**New diagnostic service** that allows you to read and inspect any specific Modbus register with detailed profile-aware output. Perfect for debugging, validating profile mappings, and troubleshooting sensor issues.
+
+### The Feature
+
+A developer-friendly service that reads any register and displays comprehensive information in a persistent notification:
+
+- **Raw register value** and common interpretations
+- **Profile mapping info** (name, scale, unit) if register is in your profile
+- **Automatic paired register detection** - reads and combines 32-bit values automatically
+- **Signed value handling** - shows signed interpretations for INT16 and INT32 values
+- **Current entity value** from Home Assistant (if available)
+- **Works with existing devices** - no need to re-enter connection details
+
+### How to Use
+
+**Developer Tools → Services → growatt_modbus.read_register**
+
+```yaml
+service: growatt_modbus.read_register
+data:
+  device_id: <your_device_id>  # Select from dropdown
+  register: 3                  # Register address to read
+  register_type: input         # "input" or "holding"
+```
+
+### Example Output
+
+When reading WIT battery power register (31201):
+
+```
+📋 Register 31201 (Input)
+
+Register: 31201 (0x79E1)
+Type: Input
+Raw Value: 5234
+
+Profile Info:
+• Name: `battery_power_low`
+• Scale: ×1
+• Unit:
+• Scaled Value: 5234
+
+Paired Register Detected:
+• Pair Address: 31200 (0x79E0)
+• Pair Raw Value: 0
+
+Combined 32-bit Value:
+• Raw Combined: 5234
+• Combined Scale: ×0.1
+• Computed Value: 523.4 W
+
+Current Entity Value:
+• 523.4 W
+```
+
+### Use Cases
+
+- **Profile Development** - Verify register mappings and scales are correct
+- **Troubleshooting** - Check raw register values vs entity values
+- **Scale Validation** - Compare computed values with actual measurements
+- **Paired Register Testing** - Validate 32-bit value combinations
+- **Quick Register Inspection** - No need for full register scans
+
+### Benefits
+
+- ✅ Instant register inspection without full scans
+- ✅ Automatic paired register detection and calculation
+- ✅ Profile-aware output shows exactly how values are processed
+- ✅ Works with any configured device (TCP or Serial)
+- ✅ Persistent notification output for easy reference
+
+---
+
 ## USB/Serial Adapter Support for Diagnostic Services
 
 **Added support for USB/Serial RS485 adapters** to the Universal Register Scanner service, making it accessible for users without TCP/Ethernet adapters.

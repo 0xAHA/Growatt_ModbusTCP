@@ -656,6 +656,64 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 
 ---
 
+## 🆕 What's New in v0.1.9
+
+**Register Read Service & USB/Serial Diagnostics:**
+
+**✨ New Features:**
+
+- **Register Read Service** - Profile-aware register inspector for debugging and validation
+
+  - New `growatt_modbus.read_register` service for instant register inspection
+  - **Automatic paired register detection** - reads and combines 32-bit values automatically
+  - Shows raw value, profile info (name, scale, unit), and computed values
+  - Displays current entity value from Home Assistant for comparison
+  - **Use Cases:**
+    - Validate profile mappings during development
+    - Troubleshoot incorrect sensor values
+    - Verify scale factors and signed interpretations
+    - Inspect any register without full scans
+  - **Example:** Read battery power register (31201) to see raw value, paired register (31200), 32-bit combination, scale (×0.1), and final computed value (523.4 W)
+  - Works with any configured device (TCP or Serial) - no connection re-entry needed
+
+- **USB/Serial Support for Register Scanner**
+
+  - `export_register_dump` service now supports USB RS485 adapters
+  - Select connection type: TCP (Ethernet) or Serial (USB)
+  - No need to purchase TCP adapter just for diagnostics
+  - Seamless switching between connection types
+  - Full backward compatibility (defaults to TCP)
+
+**🔧 Enhancements:**
+
+- Register read service provides detailed output in persistent notifications
+- Automatic handling of signed/unsigned interpretations
+- Paired register calculations shown step-by-step for transparency
+- Service UI includes register type selector (Input/Holding)
+
+**Developer Tools → Services:**
+```yaml
+# Read any register
+service: growatt_modbus.read_register
+data:
+  device_id: <select_your_device>
+  register: 3  # e.g., PV1 voltage
+  register_type: input
+
+# Register scan via USB
+service: growatt_modbus.export_register_dump
+data:
+  connection_type: serial
+  device: "/dev/ttyUSB0"
+  baudrate: 9600
+  slave_id: 1
+```
+
+---
+
+<details>
+<summary>📋 Previous Release: v0.1.1</summary>
+
 ## 🆕 What's New in v0.1.1
 
 **WIT Battery Sensors & Control Device Organization (Issue #75):**
@@ -691,6 +749,8 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 - Added device mapping infrastructure for future control entity auto-generation
 - Control entities automatically assigned to correct device based on function
 - Tested and validated on MIN-10000TL-X hardware
+
+</details>
 
 ---
 
