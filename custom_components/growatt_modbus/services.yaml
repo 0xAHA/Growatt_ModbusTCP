@@ -218,3 +218,36 @@ detect_grid_orientation:
       selector:
         device:
           integration: growatt_modbus
+
+read_register:
+  name: Read Register
+  description: Read a specific Modbus register with detailed profile-aware output. Shows raw value, scale, paired register calculations, and entity values in a persistent notification.
+  fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device
+      required: true
+      selector:
+        device:
+          integration: growatt_modbus
+    register:
+      name: Register Address
+      description: Register address to read (e.g., 3 for PV1 voltage, 31201 for battery power)
+      required: true
+      example: 3
+      selector:
+        number:
+          min: 0
+          max: 65535
+          mode: box
+    register_type:
+      name: Register Type
+      description: Type of register to read
+      default: "input"
+      selector:
+        select:
+          options:
+            - label: "Input Register (Read-Only Sensors)"
+              value: "input"
+            - label: "Holding Register (Settings/Control)"
+              value: "holding"

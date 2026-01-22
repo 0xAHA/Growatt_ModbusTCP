@@ -45,6 +45,7 @@ def _get_integration_version() -> str:
 SERVICE_EXPORT_DUMP = "export_register_dump"
 SERVICE_WRITE_REGISTER = "write_register"
 SERVICE_DETECT_GRID_ORIENTATION = "detect_grid_orientation"
+SERVICE_READ_REGISTER = "read_register"
 
 # Universal scan ranges - covers all Grid-Tied Growatt series
 # Split into chunks of max 125 registers to respect Modbus limits
@@ -107,6 +108,70 @@ SERVICE_DETECT_GRID_ORIENTATION_SCHEMA = vol.Schema(
         vol.Optional("device_id"): cv.string,  # If not provided, uses first found integration
     }
 )
+
+SERVICE_READ_REGISTER_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): cv.string,
+        vol.Required("register"): vol.All(vol.Coerce(int), vol.Range(min=0, max=65535)),
+        vol.Optional("register_type", default="input"): vol.In(["input", "holding"]),
+    }
+)
+
+
+def _read_single_register(client, register: int, register_type: str = 'input') -> dict:
+    """
+    Read a single Modbus register.
+
+    Args:
+        client: Modbus client with read_input_registers or read_holding_registers method
+        register: Register address to read
+        register_type: 'input' or 'holding'
+
+    Returns:
+        dict with 'success', 'value', and 'error' keys
+    """
+    try:
+        # Choose read method based on register type
+        if register_type == 'holding':
+            response = client.read_holding_registers(address=register, count=1)
+        else:  # 'input'
+            response = client.read_input_registers(address=register, count=1)
+
+        if not response.isError():
+            return {
+                'success': True,
+                'value': response.registers[0],
+                'error': None
+            }
+        else:
+            # Extract error information
+            error_msg = str(response)
+            if hasattr(response, 'exception_code'):
+                error_code = response.exception_code
+                error_names = {
+                    1: "Illegal Function",
+                    2: "Illegal Data Address",
+                    3: "Illegal Data Value",
+                    4: "Slave Device Failure",
+                    5: "Acknowledge",
+                    6: "Slave Device Busy",
+                    10: "Gateway Path Unavailable",
+                    11: "Gateway Target Failed to Respond"
+                }
+                error_msg = error_names.get(error_code, f"Error Code {error_code}")
+
+            return {
+                'success': False,
+                'value': None,
+                'error': error_msg
+            }
+
+    except Exception as e:
+        return {
+            'success': False,
+            'value': None,
+            'error': f"{type(e).__name__}: {str(e)}"
+        }
 
 
 def _lookup_register_info(register_addr: int) -> Optional[str]:
@@ -552,6 +617,178 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             current_invert_setting, recommended_invert, confidence
         )
 
+    async def read_register(call: ServiceCall) -> None:
+        """Read a specific Modbus register with detailed profile-aware output."""
+        device_id = call.data["device_id"]
+        register = call.data["register"]
+        register_type = call.data.get("register_type", "input")
+
+        _LOGGER.info("Read register service called: device=%s, register=%d, type=%s", device_id, register, register_type)
+
+        # Get device registry
+        device_reg = dr.async_get(hass)
+        device_entry = device_reg.async_get(device_id)
+
+        if not device_entry:
+            _LOGGER.error("Device %s not found", device_id)
+            raise ValueError(f"Device {device_id} not found")
+
+        # Find the config entry for this device
+        config_entry_id = None
+        for entry_id in device_entry.config_entries:
+            if entry_id in hass.data.get(DOMAIN, {}):
+                config_entry_id = entry_id
+                break
+
+        if not config_entry_id:
+            _LOGGER.error("No config entry found for device %s", device_id)
+            raise ValueError(f"No config entry found for device {device_id}")
+
+        # Get the coordinator
+        coordinator = hass.data[DOMAIN][config_entry_id]
+
+        if not coordinator:
+            _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
+            raise ValueError(f"Coordinator not found for device {device_id}")
+
+        # Read the register using the coordinator's client
+        read_result = await hass.async_add_executor_job(
+            lambda: _read_single_register(coordinator._client, register, register_type)
+        )
+
+        if not read_result["success"]:
+            error_msg = read_result.get("error", "Unknown error")
+            _LOGGER.error("Failed to read register %d: %s", register, error_msg)
+
+            await hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "title": f"❌ Register Read Failed: {register}",
+                    "message": f"**Error reading register {register} ({register_type}):**\n\n{error_msg}",
+                    "notification_id": "growatt_register_read",
+                },
+            )
+            return
+
+        # Build notification message
+        raw_value = read_result["value"]
+        message_lines = [
+            f"**Register:** {register} (0x{register:04X})",
+            f"**Type:** {register_type.capitalize()}",
+            f"**Raw Value:** {raw_value}",
+        ]
+
+        # Check if register is in profile
+        register_map = coordinator._client.register_map
+        register_dict = register_map.get('input_registers' if register_type == 'input' else 'holding_registers', {})
+
+        if register in register_dict:
+            reg_info = register_dict[register]
+            reg_name = reg_info.get('name', 'Unknown')
+            scale = reg_info.get('scale', 1)
+            unit = reg_info.get('unit', '')
+            pair = reg_info.get('pair')
+            combined_scale = reg_info.get('combined_scale')
+            combined_unit = reg_info.get('combined_unit', '')
+            is_signed = reg_info.get('signed', False)
+
+            message_lines.append(f"\n**Profile Info:**")
+            message_lines.append(f"• Name: `{reg_name}`")
+            message_lines.append(f"• Scale: ×{scale}")
+            if unit:
+                message_lines.append(f"• Unit: {unit}")
+
+            # Calculate scaled value for this register alone
+            scaled_value = raw_value * scale
+            if unit:
+                message_lines.append(f"• Scaled Value: {scaled_value} {unit}")
+            else:
+                message_lines.append(f"• Scaled Value: {scaled_value}")
+
+            # Handle signed interpretation
+            if is_signed and raw_value > 32767:
+                signed_value = raw_value - 65536
+                message_lines.append(f"• Signed Value: {signed_value}")
+
+            # Check for paired register
+            if pair is not None:
+                message_lines.append(f"\n**Paired Register Detected:**")
+                message_lines.append(f"• Pair Address: {pair} (0x{pair:04X})")
+
+                # Read the paired register
+                pair_result = await hass.async_add_executor_job(
+                    lambda: _read_single_register(coordinator._client, pair, register_type)
+                )
+
+                if pair_result["success"]:
+                    pair_value = pair_result["value"]
+                    message_lines.append(f"• Pair Raw Value: {pair_value}")
+
+                    # Determine which is high/low
+                    if register < pair:
+                        # Current register is high word
+                        high_word = raw_value
+                        low_word = pair_value
+                    else:
+                        # Current register is low word
+                        high_word = pair_value
+                        low_word = raw_value
+
+                    # Combine into 32-bit value
+                    combined_raw = (high_word << 16) | low_word
+
+                    # Handle signed 32-bit if specified
+                    if is_signed and combined_raw > 0x7FFFFFFF:
+                        combined_raw = combined_raw - 0x100000000
+
+                    message_lines.append(f"\n**Combined 32-bit Value:**")
+                    message_lines.append(f"• Raw Combined: {combined_raw}")
+
+                    # Apply combined scale if specified
+                    if combined_scale is not None:
+                        combined_computed = combined_raw * combined_scale
+                        if combined_unit:
+                            message_lines.append(f"• Combined Scale: ×{combined_scale}")
+                            message_lines.append(f"• **Computed Value: {combined_computed} {combined_unit}**")
+                        else:
+                            message_lines.append(f"• Combined Scale: ×{combined_scale}")
+                            message_lines.append(f"• **Computed Value: {combined_computed}**")
+                    else:
+                        message_lines.append(f"• (No combined scale defined)")
+                else:
+                    message_lines.append(f"• ⚠️ Failed to read paired register: {pair_result.get('error', 'Unknown error')}")
+        else:
+            message_lines.append(f"\n**Profile Info:**")
+            message_lines.append(f"• ⚠️ Register {register} not defined in current profile")
+            message_lines.append(f"• Profile: `{coordinator._client.register_map.get('profile_name', 'Unknown')}`")
+
+            # Provide common interpretations
+            message_lines.append(f"\n**Common Interpretations:**")
+            message_lines.append(f"• ×0.1 = {raw_value * 0.1}")
+            message_lines.append(f"• ×0.01 = {raw_value * 0.01}")
+            if raw_value > 32767:
+                signed = raw_value - 65536
+                message_lines.append(f"• Signed (INT16) = {signed}")
+
+        # Try to get entity value from coordinator
+        entity_value = _get_entity_value_for_register(register, coordinator, register_type)
+        if entity_value:
+            message_lines.append(f"\n**Current Entity Value:**")
+            message_lines.append(f"• {entity_value}")
+
+        _LOGGER.info("Successfully read register %d: raw=%d", register, raw_value)
+
+        await hass.services.async_call(
+            "persistent_notification",
+            "create",
+            {
+                "title": f"📋 Register {register} ({register_type.capitalize()})",
+                "message": "\n".join(message_lines),
+                "notification_id": "growatt_register_read",
+            },
+        )
+
     # Register services
     hass.services.async_register(
         DOMAIN,
@@ -572,6 +809,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_DETECT_GRID_ORIENTATION,
         detect_grid_orientation,
         schema=SERVICE_DETECT_GRID_ORIENTATION_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_READ_REGISTER,
+        read_register,
+        schema=SERVICE_READ_REGISTER_SCHEMA,
     )
 
 
