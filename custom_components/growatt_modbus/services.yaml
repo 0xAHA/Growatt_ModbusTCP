@@ -91,6 +91,7 @@ update_register_map:
 export_register_dump:
   name: Universal Register Scanner
   description: Scan ALL register ranges, auto-detect your inverter model, and export complete register dump to CSV. Supports both TCP and USB/Serial connections. File saved to /config/growatt_register_scan_[timestamp].csv
+  target:
   fields:
     connection_type:
       name: Connection Type
@@ -136,12 +137,12 @@ export_register_dump:
       selector:
         select:
           options:
-            - 4800
-            - 9600
-            - 19200
-            - 38400
-            - 57600
-            - 115200
+            - "4800"
+            - "9600"
+            - "19200"
+            - "38400"
+            - "57600"
+            - "115200"
     slave_id:
       name: Slave ID
       description: Modbus slave/unit ID (usually 1)
