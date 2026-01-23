@@ -673,9 +673,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             # Calculate scaled value for this register alone
             scaled_value = raw_value * scale
             if unit:
-                message_lines.append(f"• Scaled Value: {scaled_value} {unit}")
+                message_lines.append(f"• Scaled Value: {scaled_value:.2f} {unit}")
             else:
-                message_lines.append(f"• Scaled Value: {scaled_value}")
+                message_lines.append(f"• Scaled Value: {scaled_value:.2f}")
 
             # Handle signed interpretation
             if is_signed and raw_value > 32767:
@@ -728,17 +728,17 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                         combined_computed = combined_raw * combined_scale
                         if combined_unit:
                             message_lines.append(f"• Combined Scale: ×{combined_scale}")
-                            message_lines.append(f"• **Computed Value: {combined_computed} {combined_unit}**")
+                            message_lines.append(f"• **Computed Value: {combined_computed:.2f} {combined_unit}**")
                         else:
                             message_lines.append(f"• Combined Scale: ×{combined_scale}")
-                            message_lines.append(f"• **Computed Value: {combined_computed}**")
+                            message_lines.append(f"• **Computed Value: {combined_computed:.2f}**")
                     else:
                         # No combined scale defined - provide common interpretations
                         message_lines.append(f"• ⚠️ No combined scale defined in profile")
                         message_lines.append(f"\n**Possible Interpretations:**")
-                        message_lines.append(f"• ×0.1 = {combined_raw * 0.1}")
-                        message_lines.append(f"• ×0.01 = {combined_raw * 0.01}")
-                        message_lines.append(f"• ×1 = {combined_raw}")
+                        message_lines.append(f"• ×0.1 = {combined_raw * 0.1:.2f}")
+                        message_lines.append(f"• ×0.01 = {combined_raw * 0.01:.2f}")
+                        message_lines.append(f"• ×1 = {combined_raw:.2f}")
                 else:
                     message_lines.append(f"• ⚠️ Failed to read paired register: {pair_result.get('error', 'Unknown error')}")
         else:
@@ -748,8 +748,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
             # Provide common interpretations
             message_lines.append(f"\n**Common Interpretations:**")
-            message_lines.append(f"• ×0.1 = {raw_value * 0.1}")
-            message_lines.append(f"• ×0.01 = {raw_value * 0.01}")
+            message_lines.append(f"• ×0.1 = {raw_value * 0.1:.2f}")
+            message_lines.append(f"• ×0.01 = {raw_value * 0.01:.2f}")
             if raw_value > 32767:
                 signed = raw_value - 65536
                 message_lines.append(f"• Signed (INT16) = {signed}")
