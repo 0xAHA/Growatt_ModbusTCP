@@ -90,7 +90,7 @@ update_register_map:
 
 export_register_dump:
   name: Universal Register Scanner
-  description: Scan ALL register ranges, auto-detect your inverter model, and export complete register dump to CSV. Supports both TCP and USB/Serial connections. File saved to /config/growatt_register_scan_[timestamp].csv
+  description: Scan ALL register ranges, auto-detect your inverter model, and export complete register dump to CSV. Supports both TCP and USB/Serial connections. Entity values are automatically included if you have a configured device with matching connection parameters. File saved to /config/growatt_register_scan_[timestamp].csv
   target:
   fields:
     connection_type:
@@ -167,13 +167,6 @@ export_register_dump:
       default: false
       selector:
         boolean:
-    device_id:
-      name: Device (Optional - for Entity Values)
-      description: "Optional: Select your Growatt device to include calculated entity values in the CSV. This helps verify that register scaling and calculations are correct by showing both raw register values and the actual entity values displayed in Home Assistant. Leave empty to scan without entity values."
-      required: false
-      selector:
-        device:
-          integration: growatt_modbus
 
 write_register:
   name: Write Modbus Register

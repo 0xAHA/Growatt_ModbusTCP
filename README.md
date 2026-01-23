@@ -676,13 +676,14 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
   - **Example:** Read battery power register (31201) to see raw value, paired register (31200), 32-bit combination, scale (×0.1), and final computed value (523.4 W)
   - Works with any configured device (TCP or Serial) - no connection re-entry needed
 
-- **USB/Serial Support for Register Scanner**
+- **USB/Serial Support & Auto-Detection for Register Scanner**
 
   - `export_register_dump` service now supports USB RS485 adapters
+  - **Auto-detects coordinator** by matching connection parameters (no device selection needed!)
+  - **Entity values automatically included** when scanning a configured device
+  - Removed confusing sub-device selector (Inverter/Solar/Grid/Load/Battery)
   - Select connection type: TCP (Ethernet) or Serial (USB)
-  - No need to purchase TCP adapter just for diagnostics
-  - Seamless switching between connection types
-  - Full backward compatibility (defaults to TCP)
+  - Example: Scan `192.168.1.60:502` automatically includes entity values if you have a device configured at that address
 
 **🔧 Enhancements:**
 
@@ -690,6 +691,7 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 - Automatic handling of signed/unsigned interpretations
 - Paired register calculations shown step-by-step for transparency
 - Service UI includes register type selector (Input/Holding)
+- Cleaner, more intuitive register scanner UI
 
 **Developer Tools → Services:**
 ```yaml

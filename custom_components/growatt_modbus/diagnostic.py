@@ -91,7 +91,6 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         vol.Optional("slave_id", default=1): vol.All(vol.Coerce(int), vol.Range(min=1, max=247)),
         vol.Optional("notify", default=True): cv.boolean,
         vol.Optional("offgrid_mode", default=False): cv.boolean,  # CRITICAL: Enable for SPF to prevent power reset
-        vol.Optional("device_id"): cv.string,  # Optional: Include entity values from this device's coordinator
     }
 )
 
@@ -273,7 +272,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         slave_id = call.data.get("slave_id", 1)
         send_notification = call.data.get("notify", True)
         offgrid_mode = call.data.get("offgrid_mode", False)
-        device_id = call.data.get("device_id")
 
         # Validate required parameters based on connection type
         if connection_type == "tcp":
@@ -285,23 +283,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 _LOGGER.error("device parameter required for serial connection")
                 return
 
-        # Get coordinator if device_id provided
-        coordinator = None
-        if device_id:
-            device_reg = dr.async_get(hass)
-            device_entry = device_reg.async_get(device_id)
-
-            if device_entry:
-                # Find coordinator for this device
-                for entry_id in device_entry.config_entries:
-                    if entry_id in hass.data.get(DOMAIN, {}):
-                        coordinator = hass.data[DOMAIN][entry_id]
-                        _LOGGER.info("Using coordinator from device %s for entity value mapping", device_id)
-                        break
-
-            if not coordinator:
-                _LOGGER.warning("Device ID provided but coordinator not found - entity values will not be included")
-
         if offgrid_mode:
             _LOGGER.warning("⚠️ OffGrid mode ENABLED - skipping VPP registers to prevent power reset on SPF inverters")
 
@@ -311,9 +292,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         else:
             _LOGGER.info("Starting %s register scan on %s @ %d baud", "OffGrid" if offgrid_mode else "universal", device, baudrate)
 
-        # Run export in executor
+        # Run export in executor - coordinator will be auto-detected based on connection parameters
         result = await hass.async_add_executor_job(
-            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode, coordinator
+            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode
         )
         
         if result["success"]:
@@ -1169,7 +1150,7 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     return detection
 
 
-def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False, coordinator=None) -> dict:
+def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False) -> dict:
     """
     Export all registers to CSV file with auto-detection (blocking).
 
@@ -1181,7 +1162,8 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         baudrate: Serial baudrate for serial connection
         slave_id: Modbus slave ID
         offgrid_mode: If True, skip VPP registers (30000+, 31000+) to prevent SPF power resets
-        coordinator: Optional coordinator to include entity values in CSV
+
+    Note: Coordinator is auto-detected by matching connection parameters
     """
     result = {
         "success": False,
@@ -1223,6 +1205,35 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
 
         mode_str = "OffGrid scan (safe for SPF)" if offgrid_mode else "universal scan"
         _LOGGER.info(f"Connected, starting {mode_str}...")
+
+        # Auto-detect coordinator by matching connection parameters
+        coordinator = None
+        if hass.data.get(DOMAIN):
+            for entry_id, coord in hass.data[DOMAIN].items():
+                if not coord or not hasattr(coord, 'entry'):
+                    continue
+
+                entry_data = coord.entry.data
+
+                # Match based on connection type
+                if connection_type == "tcp":
+                    # Match TCP connections by host and port
+                    if (entry_data.get("connection_type") == "tcp" and
+                        entry_data.get("host") == host and
+                        entry_data.get("port", 502) == port):
+                        coordinator = coord
+                        _LOGGER.info(f"Auto-detected coordinator for {host}:{port} - entity values will be included")
+                        break
+                else:  # serial
+                    # Match Serial connections by device path
+                    if (entry_data.get("connection_type") == "serial" and
+                        entry_data.get("device") == device):
+                        coordinator = coord
+                        _LOGGER.info(f"Auto-detected coordinator for {device} - entity values will be included")
+                        break
+
+        if not coordinator:
+            _LOGGER.info("No matching coordinator found - entity values will not be included in CSV")
 
         # Scan ALL ranges
         all_register_data = {}

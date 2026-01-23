@@ -100,24 +100,32 @@ Current Entity Value:
 
 ---
 
-## USB/Serial Adapter Support for Diagnostic Services
+## USB/Serial Adapter Support & Auto-Detection for Register Scanner
 
-**Added support for USB/Serial RS485 adapters** to the Universal Register Scanner service, making it accessible for users without TCP/Ethernet adapters.
+**Enhanced Universal Register Scanner** with USB/Serial adapter support and automatic entity value detection.
 
 ### The Enhancement
 
-Previously, the `export_register_dump` service only supported TCP connections (RS485-to-Ethernet adapters). Many users have USB RS485 adapters and couldn't use the diagnostic scanner without a TCP adapter.
+Previously, the `export_register_dump` service only supported TCP connections and required manual device selection for entity values (showing all sub-devices confusingly). Now it supports both connection types and automatically includes entity values when scanning a configured device.
 
 ### What's New
 
 **Connection Type Selection:**
-- **TCP Mode:** Uses IP address and port (existing functionality)
+- **TCP Mode:** Uses IP address and port
 - **Serial Mode:** Uses device path and baudrate (NEW)
 
-**New Parameters:**
-- `connection_type`: Select "tcp" or "serial" (defaults to tcp for backward compatibility)
-- `device`: Serial port path (e.g., /dev/ttyUSB0, COM3) - required for serial mode
-- `baudrate`: Serial communication speed (4800, 9600, 19200, 38400, 57600, 115200) - default 9600
+**Automatic Entity Value Detection:**
+- **No device selector needed** - removed confusing sub-device selection
+- **Auto-detects coordinator** by matching your connection parameters (host/port or serial device)
+- **Entity values automatically included** if you're scanning a configured device
+- **Cleaner, simpler UI** - just provide connection details
+
+**Connection Parameters:**
+- `connection_type`: Select "tcp" or "serial" (defaults to tcp)
+- `host` / `port`: For TCP connections (RS485-to-Ethernet adapters)
+- `device` / `baudrate`: For Serial connections (RS485-to-USB adapters)
+- `slave_id`: Modbus slave ID (usually 1)
+- `offgrid_mode`: Safety mode for SPF inverters
 
 ### How to Use
 
@@ -160,11 +168,13 @@ data:
 ### Benefits
 
 - ✅ Users with USB RS485 adapters can now use register scanner
-- ✅ No need to purchase TCP adapter just for diagnostics
+- ✅ **No confusing device selector** - auto-detects based on connection parameters
+- ✅ **Entity values automatically included** when scanning configured devices
+- ✅ Cleaner, more intuitive service UI
 - ✅ Seamless switching between connection types
 - ✅ Full backward compatibility (defaults to TCP)
 
-**Note:** The `write_register` service already supports both connection types automatically, as it uses the coordinator's configured client.
+**Example:** If you scan `192.168.1.60:502`, the service automatically finds your configured device at that address and includes all entity values in the CSV for easy comparison with raw register values.
 
 ---
 
