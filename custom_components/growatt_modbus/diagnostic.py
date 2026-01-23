@@ -640,9 +640,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         # Build notification message
         raw_value = read_result["value"]
 
-        # Get profile name
-        register_map = coordinator._client.register_map
-        profile_name = register_map.get('profile_name', 'Unknown')
+        # Get profile name from coordinator client
+        profile_name = getattr(coordinator._client, 'register_map_name', 'Unknown')
 
         message_lines = [
             f"**Register:** {register} (0x{register:04X})",
@@ -652,6 +651,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         ]
 
         # Check if register is in profile
+        register_map = coordinator._client.register_map
         register_dict = register_map.get('input_registers' if register_type == 'input' else 'holding_registers', {})
 
         if register in register_dict:
@@ -744,7 +744,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         else:
             message_lines.append(f"\n**Profile Info:**")
             message_lines.append(f"• ⚠️ Register {register} not defined in current profile")
-            message_lines.append(f"• Profile: `{coordinator._client.register_map.get('profile_name', 'Unknown')}`")
+            message_lines.append(f"• Profile: `{profile_name}`")
 
             # Provide common interpretations
             message_lines.append(f"\n**Common Interpretations:**")
