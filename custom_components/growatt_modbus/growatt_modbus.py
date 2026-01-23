@@ -945,7 +945,7 @@ class GrowattModbus:
 
 
     def _find_register_by_name(self, name: str) -> Optional[int]:
-        """Find register address by its name or alias"""
+        """Find register address by its name, alias, or maps_to attribute"""
         input_regs = self.register_map['input_registers']
         for addr, reg_info in input_regs.items():
             # Check exact name match
@@ -953,6 +953,9 @@ class GrowattModbus:
                 return addr
             # Check alias match (for 3-phase compatibility)
             if reg_info.get('alias') == name:
+                return addr
+            # Check maps_to match (for VPP registers that map to standard names)
+            if reg_info.get('maps_to') == name:
                 return addr
         return None
     
