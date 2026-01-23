@@ -1,3 +1,183 @@
+# Release Notes
+
+## 🌱 Early Adopter Notice - Help Us Grow!
+
+> **This integration is actively evolving with your help!**
+>
+> We're building something great together, and your real-world testing is invaluable. This integration supports many Growatt inverter models, but some profiles are based on official documentation and haven't been verified with actual hardware yet.
+>
+> **How You Can Help:**
+>
+> - ✅ **Test and report** - Try the integration with your inverter and let us know how it works
+> - 📊 **Share register scans** - Use the built-in Universal Scanner to help us verify or improve profiles
+> - 🐛 **Report issues** - Found incorrect values or missing sensors? [Open an issue](https://github.com/0xAHA/Growatt_ModbusTCP/issues) with your inverter model
+> - 💡 **Share feedback** - Your experience helps us prioritize features and fixes
+> - ⭐ **Star the repo** - Show support and help others discover this integration
+>
+> **Current Status:**
+> - Core functionality is stable and tested on multiple inverter models
+> - New features and profiles added regularly based on community feedback
+> - Active development with responsive issue resolution
+>
+> Together we're building the most comprehensive local Growatt integration for Home Assistant. Thank you for being part of this journey! 🙏
+
+---
+
+# Release Notes - v0.1.9
+
+## Register Read Service - Profile-Aware Register Inspector
+
+**New diagnostic service** that allows you to read and inspect any specific Modbus register with detailed profile-aware output. Perfect for debugging, validating profile mappings, and troubleshooting sensor issues.
+
+### The Feature
+
+A developer-friendly service that reads any register and displays comprehensive information in a persistent notification:
+
+- **Raw register value** and common interpretations
+- **Profile mapping info** (name, scale, unit) if register is in your profile
+- **Automatic paired register detection** - reads and combines 32-bit values automatically
+- **Signed value handling** - shows signed interpretations for INT16 and INT32 values
+- **Current entity value** from Home Assistant (if available)
+- **Works with existing devices** - no need to re-enter connection details
+
+### How to Use
+
+**Developer Tools → Services → growatt_modbus.read_register**
+
+```yaml
+service: growatt_modbus.read_register
+data:
+  device_id: <your_device_id>  # Select from dropdown
+  register: 3                  # Register address to read
+  register_type: input         # "input" or "holding"
+```
+
+### Example Output
+
+When reading WIT battery power register (31201):
+
+```
+📋 Register 31201 (Input)
+
+Register: 31201 (0x79E1)
+Type: Input
+Raw Value: 5234
+
+Profile Info:
+• Name: `battery_power_low`
+• Scale: ×1
+• Unit:
+• Scaled Value: 5234
+
+Paired Register Detected:
+• Pair Address: 31200 (0x79E0)
+• Pair Raw Value: 0
+
+Combined 32-bit Value:
+• Raw Combined: 5234
+• Combined Scale: ×0.1
+• Computed Value: 523.4 W
+
+Current Entity Value:
+• 523.4 W
+```
+
+### Use Cases
+
+- **Profile Development** - Verify register mappings and scales are correct
+- **Troubleshooting** - Check raw register values vs entity values
+- **Scale Validation** - Compare computed values with actual measurements
+- **Paired Register Testing** - Validate 32-bit value combinations
+- **Quick Register Inspection** - No need for full register scans
+
+### Benefits
+
+- ✅ Instant register inspection without full scans
+- ✅ Automatic paired register detection and calculation
+- ✅ Profile-aware output shows exactly how values are processed
+- ✅ Works with any configured device (TCP or Serial)
+- ✅ Persistent notification output for easy reference
+
+---
+
+## USB/Serial Adapter Support & Auto-Detection for Register Scanner
+
+**Enhanced Universal Register Scanner** with USB/Serial adapter support and automatic entity value detection.
+
+### The Enhancement
+
+Previously, the `export_register_dump` service only supported TCP connections and required manual device selection for entity values (showing all sub-devices confusingly). Now it supports both connection types and automatically includes entity values when scanning a configured device.
+
+### What's New
+
+**Connection Type Selection:**
+- **TCP Mode:** Uses IP address and port
+- **Serial Mode:** Uses device path and baudrate (NEW)
+
+**Automatic Entity Value Detection:**
+- **No device selector needed** - removed confusing sub-device selection
+- **Auto-detects coordinator** by matching your connection parameters (host/port or serial device)
+- **Entity values automatically included** if you're scanning a configured device
+- **Cleaner, simpler UI** - just provide connection details
+
+**Connection Parameters:**
+- `connection_type`: Select "tcp" or "serial" (defaults to tcp)
+- `host` / `port`: For TCP connections (RS485-to-Ethernet adapters)
+- `device` / `baudrate`: For Serial connections (RS485-to-USB adapters)
+- `slave_id`: Modbus slave ID (usually 1)
+- `offgrid_mode`: Safety mode for SPF inverters
+
+### How to Use
+
+**Developer Tools → Services → growatt_modbus.export_register_dump**
+
+For USB/Serial adapter:
+```yaml
+service: growatt_modbus.export_register_dump
+data:
+  connection_type: serial
+  device: "/dev/ttyUSB0"  # or "COM3" on Windows
+  baudrate: 9600
+  slave_id: 1
+  offgrid_mode: false  # Set true for SPF inverters
+```
+
+For TCP adapter (unchanged):
+```yaml
+service: growatt_modbus.export_register_dump
+data:
+  connection_type: tcp
+  host: "192.168.1.60"
+  port: 502
+  slave_id: 1
+  offgrid_mode: false
+```
+
+### Technical Details
+
+**Backend Changes:**
+- Updated `_export_registers_to_csv()` to support both ModbusTcpClient and ModbusSerialClient
+- Automatic detection of pymodbus version (2.x vs 3.x)
+- CSV metadata now shows connection type and full connection string
+
+**UI Changes:**
+- Connection type selector in service UI
+- Conditional parameter labels ("TCP only", "Serial only")
+- Baudrate dropdown with common values
+
+### Benefits
+
+- ✅ Users with USB RS485 adapters can now use register scanner
+- ✅ **No confusing device selector** - auto-detects based on connection parameters
+- ✅ **Entity values automatically included** when scanning configured devices
+- ✅ Cleaner, more intuitive service UI
+- ✅ Seamless switching between connection types
+- ✅ Full backward compatibility (defaults to TCP)
+
+**Example:** If you scan `192.168.1.60:502`, the service automatically finds your configured device at that address and includes all entity values in the CSV for easy comparison with raw register values.
+
+---
+
 # Release Notes - v0.1.8
 
 ## Revert WIT Battery Power Scale to VPP Specification (CRITICAL)

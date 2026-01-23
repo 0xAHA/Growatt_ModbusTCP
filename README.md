@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.1.6-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.1.9-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -12,6 +12,29 @@ A native Home Assistant integration for Growatt solar inverters using direct Mod
 - **Primary:** Growatt VPP Protocol V2.01 with automatic model detection via Device Type Code (DTC)
 - **Fallback:** Legacy protocols (V1.39, V3.05) with manual model selection for older inverters
 - **Smart Detection:** Automatically uses best available protocol based on inverter capabilities
+
+---
+
+## 🌱 Early Adopter Notice - Help Us Grow!
+
+> **This integration is actively evolving with your help!**
+>
+> We're building something great together, and your real-world testing is invaluable. This integration supports many Growatt inverter models, but some profiles are based on official documentation and haven't been verified with actual hardware yet.
+>
+> **How You Can Help:**
+>
+> - ✅ **Test and report** - Try the integration with your inverter and let us know how it works
+> - 📊 **Share register scans** - Use the built-in Universal Scanner to help us verify or improve profiles
+> - 🐛 **Report issues** - Found incorrect values or missing sensors? [Open an issue](https://github.com/0xAHA/Growatt_ModbusTCP/issues) with your inverter model
+> - 💡 **Share feedback** - Your experience helps us prioritize features and fixes
+> - ⭐ **Star the repo** - Show support and help others discover this integration
+>
+> **Current Status:**
+> - Core functionality is stable and tested on multiple inverter models
+> - New features and profiles added regularly based on community feedback
+> - Active development with responsive issue resolution
+>
+> Together we're building the most comprehensive local Growatt integration for Home Assistant. Thank you for being part of this journey! 🙏
 
 ---
 
@@ -633,6 +656,66 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 
 ---
 
+## 🆕 What's New in v0.1.9
+
+**Register Read Service & USB/Serial Diagnostics:**
+
+**✨ New Features:**
+
+- **Register Read Service** - Profile-aware register inspector for debugging and validation
+
+  - New `growatt_modbus.read_register` service for instant register inspection
+  - **Automatic paired register detection** - reads and combines 32-bit values automatically
+  - Shows raw value, profile info (name, scale, unit), and computed values
+  - Displays current entity value from Home Assistant for comparison
+  - **Use Cases:**
+    - Validate profile mappings during development
+    - Troubleshoot incorrect sensor values
+    - Verify scale factors and signed interpretations
+    - Inspect any register without full scans
+  - **Example:** Read battery power register (31201) to see raw value, paired register (31200), 32-bit combination, scale (×0.1), and final computed value (523.4 W)
+  - Works with any configured device (TCP or Serial) - no connection re-entry needed
+
+- **USB/Serial Support & Auto-Detection for Register Scanner**
+
+  - `export_register_dump` service now supports USB RS485 adapters
+  - **Auto-detects coordinator** by matching connection parameters (no device selection needed!)
+  - **Entity values automatically included** when scanning a configured device
+  - Removed confusing sub-device selector (Inverter/Solar/Grid/Load/Battery)
+  - Select connection type: TCP (Ethernet) or Serial (USB)
+  - Example: Scan `192.168.1.60:502` automatically includes entity values if you have a device configured at that address
+
+**🔧 Enhancements:**
+
+- Register read service provides detailed output in persistent notifications
+- Automatic handling of signed/unsigned interpretations
+- Paired register calculations shown step-by-step for transparency
+- Service UI includes register type selector (Input/Holding)
+- Cleaner, more intuitive register scanner UI
+
+**Developer Tools → Services:**
+```yaml
+# Read any register
+service: growatt_modbus.read_register
+data:
+  device_id: <select_your_device>
+  register: 3  # e.g., PV1 voltage
+  register_type: input
+
+# Register scan via USB
+service: growatt_modbus.export_register_dump
+data:
+  connection_type: serial
+  device: "/dev/ttyUSB0"
+  baudrate: 9600
+  slave_id: 1
+```
+
+---
+
+<details>
+<summary>📋 Previous Release: v0.1.1</summary>
+
 ## 🆕 What's New in v0.1.1
 
 **WIT Battery Sensors & Control Device Organization (Issue #75):**
@@ -668,6 +751,8 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 - Added device mapping infrastructure for future control entity auto-generation
 - Control entities automatically assigned to correct device based on function
 - Tested and validated on MIN-10000TL-X hardware
+
+</details>
 
 ---
 
