@@ -639,14 +639,19 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         # Build notification message
         raw_value = read_result["value"]
+
+        # Get profile name
+        register_map = coordinator._client.register_map
+        profile_name = register_map.get('profile_name', 'Unknown')
+
         message_lines = [
             f"**Register:** {register} (0x{register:04X})",
             f"**Type:** {register_type.capitalize()}",
+            f"**Profile:** {profile_name}",
             f"**Raw Value:** {raw_value}",
         ]
 
         # Check if register is in profile
-        register_map = coordinator._client.register_map
         register_dict = register_map.get('input_registers' if register_type == 'input' else 'holding_registers', {})
 
         if register in register_dict:
@@ -711,6 +716,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     message_lines.append(f"\n**Combined 32-bit Value:**")
                     message_lines.append(f"• Raw Combined: {combined_raw}")
 
+                    # Check for combined_scale - may be on current register OR paired register
+                    if combined_scale is None and pair in register_dict:
+                        pair_info = register_dict[pair]
+                        combined_scale = pair_info.get('combined_scale')
+                        if combined_unit == '' and combined_scale is not None:
+                            combined_unit = pair_info.get('combined_unit', '')
+
                     # Apply combined scale if specified
                     if combined_scale is not None:
                         combined_computed = combined_raw * combined_scale
@@ -721,7 +733,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                             message_lines.append(f"• Combined Scale: ×{combined_scale}")
                             message_lines.append(f"• **Computed Value: {combined_computed}**")
                     else:
-                        message_lines.append(f"• (No combined scale defined)")
+                        # No combined scale defined - provide common interpretations
+                        message_lines.append(f"• ⚠️ No combined scale defined in profile")
+                        message_lines.append(f"\n**Possible Interpretations:**")
+                        message_lines.append(f"• ×0.1 = {combined_raw * 0.1}")
+                        message_lines.append(f"• ×0.01 = {combined_raw * 0.01}")
+                        message_lines.append(f"• ×1 = {combined_raw}")
                 else:
                     message_lines.append(f"• ⚠️ Failed to read paired register: {pair_result.get('error', 'Unknown error')}")
         else:
