@@ -140,14 +140,21 @@ SPH_7000_10000 = {
     }
 }
 
-# SPH 7000-10000 with Storage Range (for models with 1000-1124 registers)
-SPH_7000_10000_STORAGE = {
-    'name': 'SPH Series 7-10kW with Storage Range',
-    'description': 'Single-phase hybrid inverter with battery storage (7-10kW) and extended energy registers',
-    'notes': 'Uses 0-124 and 1000-1124 register ranges. Single-phase with detailed power flow and energy tracking.',
+# SPH/SPM 8000-10000 HU (High-power models with 3 MPPTs and storage range)
+SPH_8000_10000_HU = {
+    'name': 'SPH/SPM 8000-10000TL-HU',
+    'description': 'Single-phase hybrid inverter with battery storage and 3 MPPT inputs (8-10kW). Models: SPH/SPM 8000-10000TL-HU.',
+    'notes': 'Uses 0-124 and 1000-1124 register ranges. Single-phase with 3 PV strings, detailed power flow and energy tracking.',
     'input_registers': {
         # === BASE RANGE (0-124) - Same as SPH_7000_10000 ===
         **SPH_7000_10000['input_registers'],
+
+        # PV String 3 (optional - present on HU models with 3 MPPT inputs)
+        # Note: These override inherited battery registers at 13-14 since battery is in storage range (1000+)
+        11: {'name': 'pv3_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'PV3 voltage (0 if not connected)'},
+        12: {'name': 'pv3_current', 'scale': 0.1, 'unit': 'A', 'desc': 'PV3 current (0 if not connected)'},
+        13: {'name': 'pv3_power_high', 'scale': 1, 'unit': '', 'pair': 14, 'desc': 'PV3 power HIGH (0 if not connected)'},
+        14: {'name': 'pv3_power_low', 'scale': 1, 'unit': '', 'pair': 13, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'PV3 power LOW (0 if not connected)'},
 
         # === STORAGE RANGE (1000-1124) - Power Flow and Energy Breakdown ===
 
@@ -424,7 +431,7 @@ SPH_7000_10000_V201 = {
 SPH_REGISTER_MAPS = {
     'SPH_3000_6000': SPH_3000_6000,
     'SPH_7000_10000': SPH_7000_10000,
-    'SPH_7000_10000_STORAGE': SPH_7000_10000_STORAGE,
+    'SPH_8000_10000_HU': SPH_8000_10000_HU,
     'SPH_3000_6000_V201': SPH_3000_6000_V201,
     'SPH_7000_10000_V201': SPH_7000_10000_V201,
 }
