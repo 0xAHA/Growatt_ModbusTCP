@@ -23,6 +23,269 @@
 
 ---
 
+# Release Notes - v0.2.0
+
+## NEW: SPH/SPM 8000-10000TL-HU Profile 🔋
+
+**New dedicated profile** for SPH/SPM 8000-10000TL-HU models with 3 MPPT inputs and storage range registers. This profile provides the most accurate power flow tracking and energy measurements for these high-capacity single-phase hybrid inverters.
+
+### What Models Are Supported
+
+- **SPH 8000TL-HU** - Single-phase hybrid with 3 MPPTs (8kW)
+- **SPH 10000TL-HU** - Single-phase hybrid with 3 MPPTs (10kW)
+- **SPM 8000TL-HU** - Single-phase hybrid with 3 MPPTs (8kW)
+- **SPM 10000TL-HU** - Single-phase hybrid with 3 MPPTs (10kW)
+
+**Key Hardware Features These Models Have:**
+- **3 MPPT inputs** (supports up to 3 independent PV strings)
+- **Up to 200A** charging/discharging current
+- **1.5 DC/AC ratio** (15kW max PV on 10kW inverter)
+- **Extended register range** (1000-1124) with detailed power flow tracking
+- **Hardware energy registers** for grid import/export (critical for accurate energy dashboard)
+
+### Profile Key Features
+
+**Register Ranges:**
+- **Base Range (0-124):** Standard PV, AC, and system status
+- **PV3 Support (11-14):** Third PV string voltage, current, and power
+- **Storage Range (1000-1124):** Battery state, power flow, and energy breakdown
+
+**Critical Power Flow Registers:**
+- `1015-1016`: Power to user (grid import when positive)
+- `1021-1022`: Total load power consumption
+- `1029-1030`: Power to grid (signed: negative=export, positive=import)
+
+**Hardware Energy Registers (Most Important for Energy Dashboard):**
+- `1044-1047`: Grid import energy (today + total) - **Use these instead of calculated values!**
+- `1048-1051`: Grid export energy (today + total) - **Hardware measured, not calculated!**
+- `1052-1055`: Battery discharge energy (today + total)
+- `1056-1059`: Battery charge energy (today + total)
+- `1060-1063`: Load consumption energy (today + total)
+
+**Battery Monitoring (Storage Range):**
+- `1009-1012`: Separate discharge/charge power registers
+- `1013`: Battery voltage (storage range version)
+- `1014`: Battery SOC (storage range version)
+- `1040`: Battery temperature (storage range version)
+
+### Expected Sensors With This Profile
+
+When using the `SPH_8000_10000_HU` profile, you should see:
+
+**PV Sensors (3 strings):**
+- `sensor.{name}_pv1_voltage/current/power`
+- `sensor.{name}_pv2_voltage/current/power`
+- `sensor.{name}_pv3_voltage/current/power` ⭐ **NEW - Shows 0 if not connected**
+- `sensor.{name}_pv_total_power`
+
+**AC Output:**
+- `sensor.{name}_ac_voltage/current/power/frequency`
+
+**Battery (Enhanced):**
+- `sensor.{name}_battery_voltage` (from register 1013)
+- `sensor.{name}_battery_soc` (from register 1014)
+- `sensor.{name}_battery_temp` (from register 1040)
+- `sensor.{name}_discharge_power` (from registers 1009-1010)
+- `sensor.{name}_charge_power` (from registers 1011-1012)
+
+**Power Flow (Storage Range - Most Accurate):**
+- `sensor.{name}_power_to_user` (grid import power)
+- `sensor.{name}_power_to_grid` (grid export/import, signed)
+- `sensor.{name}_power_to_load` (total load consumption)
+- `sensor.{name}_self_consumption_power`
+- `sensor.{name}_self_consumption_percentage`
+
+**Energy Tracking (Hardware Registers - Critical!):**
+- `sensor.{name}_energy_to_user_today/total` ⭐ **Grid import energy (hardware)**
+- `sensor.{name}_energy_to_grid_today/total` ⭐ **Grid export energy (hardware)**
+- `sensor.{name}_discharge_energy_today/total`
+- `sensor.{name}_charge_energy_today/total`
+- `sensor.{name}_load_energy_today/total`
+
+**System Status:**
+- `sensor.{name}_system_work_mode`
+- `sensor.{name}_inverter_temp/fault_code/warning_code`
+
+### Migration from Other Profiles
+
+**If you're currently using `SPH_7000_10000`:**
+
+This base profile doesn't have the storage range (1000-1124), so you're missing:
+- Hardware grid import/export energy registers
+- Detailed power flow sensors
+- PV3 support
+
+**To migrate:** Reconfigure your integration and select `SPH_8000_10000_HU` profile.
+
+**If you're currently using `SPH_TL3` (THREE-PHASE):**
+
+❌ **Wrong profile!** SPH_TL3 is for three-phase inverters. The HU models are single-phase.
+
+**Issues you're experiencing:**
+- Only 2 PV strings visible (expecting 3)
+- Missing Phase S and Phase T sensors (because you're single-phase)
+- Incorrect grid import energy totals (using wrong registers)
+- Missing `ac_power_phase_r` residual consumption data
+
+**To migrate:** Reconfigure your integration and select `SPH_8000_10000_HU` profile.
+
+### How to Switch Profiles
+
+1. Go to **Settings** → **Devices & Services** → **Growatt Modbus**
+2. Click **CONFIGURE** on your integration
+3. Select **SPH/SPM 8000-10000TL-HU** from the profile dropdown
+4. Click **Submit**
+5. Wait for next poll cycle (~30 seconds) for sensors to update
+
+**Note:** Sensor entity IDs may change. You may need to update automations/dashboards.
+
+### Energy Dashboard Configuration
+
+**For accurate energy tracking, use the hardware energy registers:**
+
+**Grid Import Energy (From Grid):**
+```yaml
+sensor.{name}_energy_to_user_total
+```
+- **Register:** 1046-1047 (hardware measured)
+- **Why:** Hardware counter from inverter, not calculated
+
+**Grid Export Energy (To Grid):**
+```yaml
+sensor.{name}_energy_to_grid_total
+```
+- **Register:** 1050-1051 (hardware measured)
+- **Why:** Hardware counter from inverter, not calculated
+
+**Load Consumption:**
+```yaml
+sensor.{name}_load_energy_total
+```
+- **Register:** 1062-1063 (hardware measured)
+
+**Battery Discharge:**
+```yaml
+sensor.{name}_discharge_energy_total
+```
+- **Register:** 1054-1055 (hardware measured)
+
+**Battery Charge:**
+```yaml
+sensor.{name}_charge_energy_total
+```
+- **Register:** 1058-1059 (hardware measured)
+
+### PV3 Behavior
+
+The PV3 sensors (registers 11-14) will:
+- ✅ **Show 0W/0V/0A** when no panels connected to PV3 input
+- ✅ **Update with real values** when panels are connected
+- ✅ **Be visible in Home Assistant** regardless of connection status
+
+This is intentional - you can see all 3 PV inputs even if only using 1 or 2.
+
+### What We Need You to Test and Confirm
+
+Since this profile is newly created based on hardware specifications and register scans, please test and report:
+
+**Critical Tests:**
+
+1. **PV3 Detection:**
+   - Do you see `sensor.{name}_pv3_voltage`, `sensor.{name}_pv3_current`, `sensor.{name}_pv3_power`?
+   - If you have panels on PV3, do they show correct values?
+   - If you DON'T have panels on PV3, do they show 0?
+
+2. **Grid Energy Accuracy:**
+   - Does `sensor.{name}_energy_to_user_total` match your electricity meter import reading?
+   - Does `sensor.{name}_energy_to_grid_total` match your electricity meter export reading?
+   - Do the daily values (`*_today`) reset at midnight?
+   - Are the totals stable (not jumping backwards)?
+
+3. **Power Flow Accuracy:**
+   - Does `sensor.{name}_power_to_user` show positive when importing from grid?
+   - Does `sensor.{name}_power_to_grid` show negative when exporting to grid?
+   - Does `sensor.{name}_power_to_load` match your actual house consumption?
+
+4. **Battery Registers:**
+   - Is `sensor.{name}_battery_soc` (register 1014) showing reasonable values (0-100%)?
+   - Are discharge/charge power sensors working correctly?
+   - Do battery energy counters increment properly?
+
+5. **Register 1014 (Battery SOC):**
+   - **Previous scan showed value 12851** which seems invalid (should be 0-100)
+   - Does this register now show a valid SOC percentage?
+   - Or should we use a different register for battery SOC on HU models?
+
+**Please Report:**
+- ✅ What sensors are working correctly
+- ❌ What values seem wrong or missing
+- 📊 Use `growatt_modbus.read_register` service to check specific register values
+- 🔍 Run a register scan (`export_register_dump`) and share if you find issues
+
+**Where to Report:**
+- [GitHub Issue for SPH_8000_10000_HU validation](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
+- Include your exact model (e.g., "SPH 10000TL-HU")
+- Include register scan CSV if possible
+
+### Known Considerations
+
+**Battery SOC Register (1014):**
+- Previous scan showed unusual value (12851 instead of 0-100)
+- May need to use register 17 from base range instead
+- **Please test and report which register gives correct SOC**
+
+**Energy Register Validation:**
+- Hardware energy registers (1044-1063) are new additions
+- Need real-world validation that totals match utility meters
+- Please compare with your actual import/export readings
+
+**PV3 on Non-HU Models:**
+- If you have a standard SPH 7000/10000 (not HU), registers 13-14 are battery voltage/current
+- This profile is specifically for HU models with 3 MPPT inputs
+- Using this profile on non-HU models may show incorrect battery data
+
+### Benefits of This Profile
+
+- ✅ **3 PV String Support** - See all MPPT inputs
+- ✅ **Hardware Energy Counters** - Most accurate grid import/export tracking
+- ✅ **Detailed Power Flow** - Real-time visibility of where power is going
+- ✅ **Energy Dashboard Ready** - Hardware registers work perfectly with HA Energy Dashboard
+- ✅ **Single-Phase Correct** - No phantom Phase S/T sensors
+- ✅ **Storage Range Access** - Full visibility into battery and power flow
+
+### Auto-Detection Support ✨
+
+The SPH_8000_10000_HU profile is **automatically detected** by the Universal Register Scanner!
+
+**Detection Logic:**
+- ✅ Single-phase (no Phase S/T at registers 42-49)
+- ✅ Storage range responding (registers 1000-1124)
+- ✅ **PV3 present at register 11** (key differentiator from SPH_7000_10000)
+
+When you run `export_register_dump` service, the scanner will:
+1. Detect if you have a single-phase inverter with storage range
+2. Check register 11 for PV3 voltage presence
+3. If PV3 present → **SPH_8000_10000_HU** (3 MPPT model)
+4. If PV3 absent → **SPH_7000_10000** (2 MPPT model)
+
+**Works even at night!** The fallback detection logic checks for register 11 presence regardless of whether PV3 has panels connected.
+
+**Manual Selection:**
+You can also manually select the profile during integration setup if you prefer.
+
+### Related Changes
+
+- Renamed from `SPH_7000_10000_STORAGE` to `SPH_8000_10000_HU` for clarity
+- Added registers 11-14 for PV3 support (overrides inherited battery registers)
+- Updated profile description to mention HU models specifically
+- Added comprehensive documentation for expected sensors
+- **Added auto-detection logic** in Universal Register Scanner
+- Detection works in both active and night/standby modes
+
+**Commits:** dca2406 (profile), [current] (auto-detection)
+
+---
+
 # Release Notes - v0.1.9
 
 ## Register Read Service - Profile-Aware Register Inspector

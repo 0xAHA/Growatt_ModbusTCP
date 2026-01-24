@@ -1048,13 +1048,23 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
             else:
                 # Single-phase SPH
                 detection["reasoning"].append("✗ No 3-phase detected → Single-phase SPH")
-                
+
                 if has_storage_range or has_battery_at_1013:
-                    detection["model"] = "SPH 7000-10000"
-                    detection["confidence"] = "High"
-                    detection["profile_key"] = "sph_7000_10000"
-                    detection["register_map"] = "SPH_7000_10000"
-                    detection["reasoning"].append("✓ Storage range or battery at 1013 → SPH 7-10kW")
+                    # Check for PV3 to differentiate SPH_8000_10000_HU from SPH_7000_10000
+                    if has_pv3_at_11:
+                        detection["model"] = "SPH/SPM 8000-10000TL-HU"
+                        detection["confidence"] = "High"
+                        detection["profile_key"] = "sph_8000_10000_hu"
+                        detection["register_map"] = "SPH_8000_10000_HU"
+                        detection["reasoning"].append("✓ Storage range + PV3 at register 11 → SPH/SPM 8-10kW HU (3 MPPT)")
+                        detection["reasoning"].append("  → HU models have 3 MPPT inputs and extended energy registers")
+                    else:
+                        detection["model"] = "SPH 7000-10000"
+                        detection["confidence"] = "High"
+                        detection["profile_key"] = "sph_7000_10000"
+                        detection["register_map"] = "SPH_7000_10000"
+                        detection["reasoning"].append("✓ Storage range or battery at 1013 → SPH 7-10kW")
+                        detection["reasoning"].append("✗ No PV3 at register 11 → Standard model (2 MPPT)")
                 else:
                     detection["model"] = "SPH 3000-6000"
                     detection["confidence"] = "High"
@@ -1101,11 +1111,19 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
             # Check for single-phase battery system (SPH)
             elif (has_battery_at_13 or has_battery_at_1013 or has_storage_range) and has_0_124:
                 if has_storage_range or has_battery_at_1013:
-                    detection["model"] = "SPH 7000-10000 (Night/Standby Mode)"
-                    detection["confidence"] = "Medium"
-                    detection["profile_key"] = "sph_7000_10000"
-                    detection["register_map"] = "SPH_7000_10000"
-                    detection["reasoning"].append("✓ Found battery indicators in storage range → SPH 7-10kW")
+                    # Check for PV3 to differentiate SPH_8000_10000_HU from SPH_7000_10000
+                    if has_pv3_at_11:
+                        detection["model"] = "SPH/SPM 8000-10000TL-HU (Night/Standby Mode)"
+                        detection["confidence"] = "Medium"
+                        detection["profile_key"] = "sph_8000_10000_hu"
+                        detection["register_map"] = "SPH_8000_10000_HU"
+                        detection["reasoning"].append("✓ Found storage range + PV3 at register 11 → SPH/SPM 8-10kW HU (3 MPPT)")
+                    else:
+                        detection["model"] = "SPH 7000-10000 (Night/Standby Mode)"
+                        detection["confidence"] = "Medium"
+                        detection["profile_key"] = "sph_7000_10000"
+                        detection["register_map"] = "SPH_7000_10000"
+                        detection["reasoning"].append("✓ Found battery indicators in storage range → SPH 7-10kW")
                 else:
                     detection["model"] = "SPH 3000-6000 (Night/Standby Mode)"
                     detection["confidence"] = "Medium"

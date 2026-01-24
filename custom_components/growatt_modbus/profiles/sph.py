@@ -140,6 +140,79 @@ SPH_7000_10000 = {
     }
 }
 
+# SPH/SPM 8000-10000 HU (High-power models with 3 MPPTs and storage range)
+SPH_8000_10000_HU = {
+    'name': 'SPH/SPM 8000-10000TL-HU',
+    'description': 'Single-phase hybrid inverter with battery storage and 3 MPPT inputs (8-10kW). Models: SPH/SPM 8000-10000TL-HU.',
+    'notes': 'Uses 0-124 and 1000-1124 register ranges. Single-phase with 3 PV strings, detailed power flow and energy tracking.',
+    'input_registers': {
+        # === BASE RANGE (0-124) - Same as SPH_7000_10000 ===
+        **SPH_7000_10000['input_registers'],
+
+        # PV String 3 (optional - present on HU models with 3 MPPT inputs)
+        # Note: These override inherited battery registers at 13-14 since battery is in storage range (1000+)
+        11: {'name': 'pv3_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'PV3 voltage (0 if not connected)'},
+        12: {'name': 'pv3_current', 'scale': 0.1, 'unit': 'A', 'desc': 'PV3 current (0 if not connected)'},
+        13: {'name': 'pv3_power_high', 'scale': 1, 'unit': '', 'pair': 14, 'desc': 'PV3 power HIGH (0 if not connected)'},
+        14: {'name': 'pv3_power_low', 'scale': 1, 'unit': '', 'pair': 13, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'PV3 power LOW (0 if not connected)'},
+
+        # === STORAGE RANGE (1000-1124) - Power Flow and Energy Breakdown ===
+
+        # System Work Mode
+        1000: {'name': 'system_work_mode', 'scale': 1, 'unit': '', 'desc': 'Work mode'},
+
+        # Battery Discharge/Charge Power
+        1009: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 1010},
+        1010: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 1009, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1011: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 1012},
+        1012: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 1011, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Battery State (overlaps with base range 13, 17, 18)
+        1013: {'name': 'battery_voltage_storage', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage'},
+        1014: {'name': 'battery_soc_storage', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
+        1040: {'name': 'battery_temp_storage', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
+        1041: {'name': 'battery_type', 'scale': 1, 'unit': ''},
+
+        # Power Flow - Critical for grid import/export tracking
+        1015: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 1016, 'desc': 'Power to user (grid import when positive)'},
+        1016: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 1015, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1021: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'Total load power consumption'},
+        1022: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1029: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 1030, 'desc': 'Power to grid (negative=export, positive=import)'},
+        1030: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 1029, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        1037: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 1038},
+        1038: {'name': 'self_consumption_power_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1039: {'name': 'self_consumption_percentage', 'scale': 1, 'unit': '%'},
+
+        # Energy Breakdown - Hardware registers for grid import/export
+        1044: {'name': 'energy_to_user_today_high', 'scale': 1, 'unit': '', 'pair': 1045, 'desc': 'Grid import energy today'},
+        1045: {'name': 'energy_to_user_today_low', 'scale': 1, 'unit': '', 'pair': 1044, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1046: {'name': 'energy_to_user_total_high', 'scale': 1, 'unit': '', 'pair': 1047, 'desc': 'Grid import energy total'},
+        1047: {'name': 'energy_to_user_total_low', 'scale': 1, 'unit': '', 'pair': 1046, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1048: {'name': 'energy_to_grid_today_high', 'scale': 1, 'unit': '', 'pair': 1049, 'desc': 'Grid export energy today'},
+        1049: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 1048, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1050: {'name': 'energy_to_grid_total_high', 'scale': 1, 'unit': '', 'pair': 1051, 'desc': 'Grid export energy total'},
+        1051: {'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 1050, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1052: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1053},
+        1053: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1054: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1055},
+        1055: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1056: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1057},
+        1057: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1056, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1058: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1059},
+        1059: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1058, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1060: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1061},
+        1061: {'name': 'load_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1060, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1062: {'name': 'load_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1063},
+        1063: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1062, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    },
+    'holding_registers': {
+        **SPH_7000_10000['holding_registers'],
+        1008: {'name': 'system_enable', 'scale': 1, 'unit': '', 'access': 'RW'},
+        1044: {'name': 'priority', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Load, 1=Battery, 2=Grid'},
+    }
+}
+
 # SPH 3000-6000 V2.01 Protocol (V1.39 + VPP 2.01 registers)
 # V2.01 adds 30000+ range on top of legacy registers for complete functionality
 SPH_3000_6000_V201 = {
@@ -358,6 +431,7 @@ SPH_7000_10000_V201 = {
 SPH_REGISTER_MAPS = {
     'SPH_3000_6000': SPH_3000_6000,
     'SPH_7000_10000': SPH_7000_10000,
+    'SPH_8000_10000_HU': SPH_8000_10000_HU,
     'SPH_3000_6000_V201': SPH_3000_6000_V201,
     'SPH_7000_10000_V201': SPH_7000_10000_V201,
 }
