@@ -95,6 +95,7 @@
         "mod_6000_15000_tl3_xh": "MOD 6-15K (3Ph Hybrid)",
         "sph_3000_6000": "SPH 3-6K (1Ph Hybrid)",
         "sph_7000_10000": "SPH 7-10K (1Ph Hybrid)",
+        "sph_8000_10000_hu": "SPH/SPM 8-10K HU (1Ph, 3MPPT)",
         "sph_tl3_3000_10000": "SPH-TL3 3-10K (3Ph Hybrid)",
         "spf_3000_6000_es_plus": "SPF 3-6K (Off-grid)",
         "tl_xh_3000_10000": "MIN 3-10K TL-XH (1Ph Hybrid)",
