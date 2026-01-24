@@ -436,6 +436,29 @@ INVERTER_PROFILES = {
         ),
     },
 
+    "sph_8000_10000_hu": {
+        "name": "SPH/SPM 8000-10000TL-HU",
+        "description": "Single-phase hybrid inverter with battery and 3 MPPT inputs (8-10kW)",
+        "register_map": "SPH_8000_10000_HU",
+        "phases": 1,
+        "has_pv3": True,
+        "has_battery": True,
+        "max_power_kw": 10.0,
+        "sensors": (
+            BASIC_PV_SENSORS |
+            PV3_SENSORS |
+            BASIC_AC_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
+            ENERGY_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
+            BATTERY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
     # SPH V2.01 VPP Protocol
     "sph_3000_6000_v201": {
         "name": "SPH Series 3-6kW (V2.01)",
