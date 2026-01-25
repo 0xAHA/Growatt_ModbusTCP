@@ -156,6 +156,13 @@ SPH_8000_10000_HU = {
         13: {'name': 'pv3_power_high', 'scale': 1, 'unit': '', 'pair': 14, 'desc': 'PV3 power HIGH (0 if not connected)'},
         14: {'name': 'pv3_power_low', 'scale': 1, 'unit': '', 'pair': 13, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'PV3 power LOW (0 if not connected)'},
 
+        # Override inherited battery registers (15, 17, 18, 19) - HU models use BMS registers (1086-1089) instead
+        # Rename base registers to prevent sensor name conflicts with BMS registers
+        15: {'name': 'battery_power_calc', 'scale': 1, 'unit': 'W', 'signed': True, 'desc': 'Calculated battery power (use with caution, BMS data more accurate)'},
+        17: {'name': 'battery_soc_legacy', 'scale': 1, 'unit': '%', 'desc': 'Legacy SOC register (ignore - use BMS SOC at 1086)'},
+        18: {'name': 'battery_temp_legacy', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Legacy temp register (ignore - use BMS temp at 1089)'},
+        19: {'name': 'bms_type_legacy', 'scale': 1, 'unit': '', 'desc': 'Legacy BMS type (ignore - use BMS info at 1082+)'},
+
         # === STORAGE RANGE (1000-1124) - Power Flow and Energy Breakdown ===
 
         # System Work Mode
@@ -166,12 +173,6 @@ SPH_8000_10000_HU = {
         1010: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 1009, 'combined_scale': 0.1, 'combined_unit': 'W'},
         1011: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 1012},
         1012: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 1011, 'combined_scale': 0.1, 'combined_unit': 'W'},
-
-        # Battery State (overlaps with base range 13, 17, 18)
-        1013: {'name': 'battery_voltage_storage', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage'},
-        1014: {'name': 'battery_soc_storage', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
-        1040: {'name': 'battery_temp_storage', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
-        1041: {'name': 'battery_type', 'scale': 1, 'unit': ''},
 
         # Power Flow - Critical for grid import/export tracking
         1015: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 1016, 'desc': 'Power to user (grid import when positive)'},
@@ -205,6 +206,33 @@ SPH_8000_10000_HU = {
         1061: {'name': 'load_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1060, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1062: {'name': 'load_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1063},
         1063: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1062, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # BMS Information (1082-1124) - Battery Management System data
+        # Per Growatt Modbus RTU Protocol V1.24 specification
+        1082: {'name': 'bms_status_old', 'scale': 1, 'unit': '', 'desc': 'Status Old from BMS'},
+        1083: {'name': 'bms_status', 'scale': 1, 'unit': '', 'desc': 'Status from BMS'},
+        1084: {'name': 'bms_error_old', 'scale': 1, 'unit': '', 'desc': 'Error info Old from BMS'},
+        1085: {'name': 'bms_error', 'scale': 1, 'unit': '', 'desc': 'Error information from BMS'},
+        1086: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'SOC from BMS (actual battery state of charge)'},
+        1087: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery voltage from BMS'},
+        1088: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Battery current from BMS', 'signed': True},
+        1089: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Battery temperature from BMS', 'signed': True},
+        1090: {'name': 'bms_max_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Max charge/discharge current from BMS'},
+        1091: {'name': 'bms_gauge_rm', 'scale': 1, 'unit': '', 'desc': 'Gauge RM from BMS'},
+        1092: {'name': 'bms_gauge_fcc', 'scale': 1, 'unit': '', 'desc': 'Gauge FCC from BMS'},
+        1093: {'name': 'bms_fw_version', 'scale': 1, 'unit': '', 'desc': 'BMS firmware version'},
+        1094: {'name': 'bms_delta_volt', 'scale': 0.001, 'unit': 'V', 'desc': 'Delta V from BMS'},
+        1095: {'name': 'bms_cycle_count', 'scale': 1, 'unit': '', 'desc': 'Cycle Count from BMS'},
+        1096: {'name': 'bms_soh', 'scale': 1, 'unit': '%', 'desc': 'SOH (State of Health) from BMS'},
+        1097: {'name': 'bms_constant_volt', 'scale': 0.1, 'unit': 'V', 'desc': 'CV voltage (float/absorption) from BMS'},
+        1098: {'name': 'bms_warn_info_old', 'scale': 1, 'unit': '', 'desc': 'Warning info old from BMS'},
+        1099: {'name': 'bms_warn_info', 'scale': 1, 'unit': '', 'desc': 'Warning info from BMS'},
+        1108: {'name': 'bms_max_cell_volt', 'scale': 0.001, 'unit': 'V', 'desc': 'Maximum single battery voltage'},
+        1109: {'name': 'bms_min_cell_volt', 'scale': 0.001, 'unit': 'V', 'desc': 'Lowest single battery voltage'},
+        1110: {'name': 'bms_module_num', 'scale': 1, 'unit': '', 'desc': 'Battery parallel number'},
+        1111: {'name': 'bms_battery_count', 'scale': 1, 'unit': '', 'desc': 'Number of batteries'},
+        1119: {'name': 'bms_max_soc', 'scale': 1, 'unit': '%', 'desc': 'Parallel maximum SOC'},
+        1120: {'name': 'bms_min_soc', 'scale': 1, 'unit': '%', 'desc': 'Parallel minimum SOC'},
     },
     'holding_registers': {
         **SPH_7000_10000['holding_registers'],

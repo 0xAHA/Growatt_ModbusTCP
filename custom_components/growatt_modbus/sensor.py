@@ -98,16 +98,14 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "pv3_voltage",
-        "condition": lambda data: data.pv3_voltage > 0 or data.pv3_power > 0,
     },
     "pv3_current": {
         "name": "PV3 Current",
-        "icon": "mdi:current-dc", 
+        "icon": "mdi:current-dc",
         "device_class": SensorDeviceClass.CURRENT,
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "pv3_current",
-        "condition": lambda data: data.pv3_voltage > 0 or data.pv3_power > 0,
     },
     "pv3_power": {
         "name": "PV3 Power",
@@ -116,7 +114,6 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfPower.WATT,
         "attr": "pv3_power",
-        "condition": lambda data: data.pv3_voltage > 0 or data.pv3_power > 0,
     },
     
     # Solar Total
