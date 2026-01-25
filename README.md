@@ -5,6 +5,8 @@
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
+<a href="https://www.buymeacoffee.com/0xAHA" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+
 A native Home Assistant integration for Growatt solar inverters using direct Modbus RTU/TCP communication. Get real-time data straight from your inverter without relying on cloud services! 🚀
 
 **Protocol Support:**
@@ -30,6 +32,7 @@ A native Home Assistant integration for Growatt solar inverters using direct Mod
 > - ⭐ **Star the repo** - Show support and help others discover this integration
 >
 > **Current Status:**
+>
 > - Core functionality is stable and tested on multiple inverter models
 > - New features and profiles added regularly based on community feedback
 > - Active development with responsive issue resolution
@@ -675,7 +678,6 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
     - Inspect any register without full scans
   - **Example:** Read battery power register (31201) to see raw value, paired register (31200), 32-bit combination, scale (×0.1), and final computed value (523.4 W)
   - Works with any configured device (TCP or Serial) - no connection re-entry needed
-
 - **USB/Serial Support & Auto-Detection for Register Scanner**
 
   - `export_register_dump` service now supports USB RS485 adapters
@@ -694,6 +696,7 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 - Cleaner, more intuitive register scanner UI
 
 **Developer Tools → Services:**
+
 ```yaml
 # Read any register
 service: growatt_modbus.read_register
