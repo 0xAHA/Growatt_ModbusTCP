@@ -427,11 +427,12 @@ INVERTER_PROFILES = {
         "description": "Single-phase hybrid inverter with battery storage (7-10kW)",
         "register_map": "SPH_7000_10000",
         "phases": 1,
-        "has_pv3": False,
+        "has_pv3": True,  # 7-10kW models have 3 PV strings (registers 11-14)
         "has_battery": True,
         "max_power_kw": 10.0,
         "sensors": (
             BASIC_PV_SENSORS |
+            PV3_SENSORS |  # 7-10kW models have 3 PV strings
             BASIC_AC_SENSORS |
             GRID_SENSORS |
             POWER_FLOW_SENSORS |
@@ -497,12 +498,13 @@ INVERTER_PROFILES = {
         "description": "Single-phase hybrid inverter with battery (7-10kW) and VPP Protocol V2.01",
         "register_map": "SPH_7000_10000_V201",
         "phases": 1,
-        "has_pv3": False,
+        "has_pv3": True,  # 7-10kW models have 3 PV strings (registers 11-14)
         "has_battery": True,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
         "sensors": (
             BASIC_PV_SENSORS |
+            PV3_SENSORS |  # 7-10kW models have 3 PV strings
             BASIC_AC_SENSORS |
             GRID_SENSORS |
             POWER_FLOW_SENSORS |
@@ -722,7 +724,7 @@ PROFILE_DISPLAY_NAMES = {
     "SPH (7-10kW)": {
         "base": "sph_7000_10000",
         "v201": "sph_7000_10000_v201",
-        "description": "Hybrid with battery, 2 PV strings",
+        "description": "Hybrid with battery, 3 PV strings",
     },
     "SPH/SPM HU (8-10kW)": {
         "base": "sph_8000_10000_hu",
