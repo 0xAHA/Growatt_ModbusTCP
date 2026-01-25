@@ -127,22 +127,99 @@ Direct USB connection via RS485-to-USB adapter (e.g., `/dev/ttyUSB0` or `COM3`)
 
 ## 📥 Installation
 
-### HACS (Recommended)
+### Prerequisites
 
-1. Open **HACS** → **Integrations**
-2. Click **⋮** menu → **Custom repositories**
-3. Add: `https://github.com/0xAHA/Growatt_ModbusTCP`
-4. Category: **Integration**
-5. Find "Growatt Modbus Integration" → **Download**
-6. **Restart Home Assistant**
-7. **Settings** → **Devices & Services** → **Add Integration** → **Growatt Modbus**
+- Home Assistant 2023.1 or newer
+- [HACS](https://hacs.xyz/) installed (for HACS installation method)
+- RS485-to-TCP adapter or RS485-to-USB adapter configured and accessible
+- Inverter connected to adapter via RS485 (A/B wiring)
 
-### Manual Installation
+### Method 1: HACS (Recommended)
 
-1. Download [latest release](https://github.com/0xAHA/Growatt_ModbusTCP/releases)
-2. Extract to `custom_components/growatt_modbus/`
-3. **Restart Home Assistant**
-4. **Settings** → **Devices & Services** → **Add Integration** → **Growatt Modbus**
+**Step 1: Add Custom Repository**
+
+1. Open **HACS** in Home Assistant
+2. Click the **⋮** menu (top right)
+3. Select **Custom repositories**
+4. Enter repository URL: `https://github.com/0xAHA/Growatt_ModbusTCP`
+5. Select category: **Integration**
+6. Click **Add**
+
+**Step 2: Install Integration**
+
+1. In HACS, search for **"Growatt Modbus Integration"**
+2. Click on the integration
+3. Click **Download**
+4. Select the latest version
+5. Click **Download** again to confirm
+
+**Step 3: Restart Home Assistant**
+
+1. Go to **Settings** → **System** → **Restart**
+2. Click **Restart** and wait for restart to complete
+
+**Step 4: Add Integration**
+
+1. Go to **Settings** → **Devices & Services**
+2. Click **+ Add Integration** (bottom right)
+3. Search for **"Growatt Modbus"**
+4. Follow the configuration wizard
+
+### Method 2: Manual Installation
+
+**Step 1: Download Integration**
+
+1. Download the [latest release](https://github.com/0xAHA/Growatt_ModbusTCP/releases)
+2. Extract the ZIP file
+
+**Step 2: Copy Files**
+
+1. Navigate to your Home Assistant `config` directory
+2. If it doesn't exist, create a `custom_components` folder
+3. Copy the `growatt_modbus` folder into `custom_components`
+4. Final path should be: `config/custom_components/growatt_modbus/`
+
+**Step 3: Verify Installation**
+
+Check that these files exist:
+```
+config/
+└── custom_components/
+    └── growatt_modbus/
+        ├── __init__.py
+        ├── manifest.json
+        ├── config_flow.py
+        ├── sensor.py
+        └── ... (other files)
+```
+
+**Step 4: Restart and Configure**
+
+1. **Restart Home Assistant**
+2. Go to **Settings** → **Devices & Services**
+3. Click **+ Add Integration**
+4. Search for **"Growatt Modbus"**
+5. Follow the configuration wizard
+
+### Verification
+
+After installation, verify the integration appears:
+
+1. Go to **Settings** → **Devices & Services**
+2. Look for **Growatt Modbus** in the integrations list
+3. If missing, check **Settings** → **System** → **Logs** for errors
+
+### Updating
+
+**HACS:**
+- HACS will notify you of updates
+- Click **Update** in HACS when available
+- Restart Home Assistant after update
+
+**Manual:**
+- Download new release
+- Replace files in `custom_components/growatt_modbus/`
+- Restart Home Assistant
 
 ---
 
