@@ -91,7 +91,6 @@ update_register_map:
 export_register_dump:
   name: Universal Register Scanner
   description: Scan ALL register ranges, auto-detect your inverter model, and export complete register dump to CSV. Supports both TCP and USB/Serial connections. Entity values are automatically included if you have a configured device with matching connection parameters. File saved to /config/growatt_register_scan_[timestamp].csv
-  target: {}
   fields:
     connection_type:
       name: Connection Type
