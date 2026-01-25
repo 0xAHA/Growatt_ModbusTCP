@@ -91,6 +91,7 @@ update_register_map:
 export_register_dump:
   name: Universal Register Scanner
   description: Scan ALL register ranges, auto-detect your inverter model, and export complete register dump to CSV. Supports both TCP and USB/Serial connections. Entity values are automatically included if you have a configured device with matching connection parameters. File saved to /config/growatt_register_scan_[timestamp].csv
+  target:
   fields:
     connection_type:
       name: Connection Type
@@ -132,16 +133,16 @@ export_register_dump:
       name: Baudrate (Serial only)
       description: Serial communication speed (usually 9600 for Growatt)
       required: false
-      default: 9600
+      default: "9600"
       selector:
         select:
           options:
-            - 4800
-            - 9600
-            - 19200
-            - 38400
-            - 57600
-            - 115200
+            - "4800"
+            - "9600"
+            - "19200"
+            - "38400"
+            - "57600"
+            - "115200"
     slave_id:
       name: Slave ID
       description: Modbus slave/unit ID (usually 1)
