@@ -132,7 +132,7 @@ export_register_dump:
       name: Baudrate (Serial only)
       description: Serial communication speed (usually 9600 for Growatt)
       required: false
-      default: 9600
+      default: "9600"
       selector:
         select:
           options:
