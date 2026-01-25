@@ -23,6 +23,216 @@
 
 ---
 
+# Release Notes - v0.2.1
+
+## CRITICAL FIXES for SPH_8000_10000_HU Profile 🔧
+
+**Three critical bugs fixed** based on user testing and official Growatt Modbus RTU Protocol V1.24 specification.
+
+---
+
+### 1. Battery SOC/Voltage/Temp Now Working ✅
+
+**PROBLEM:** Battery sensors were unavailable or showing garbage data
+- `battery_soc` showing "unavailable" (should be 65%)
+- `battery_temp` showing "unavailable" (should be 19°C)
+- Register 1014 contained value 12851 instead of 0-100%
+
+**ROOT CAUSE:** Profile was using wrong storage registers (1013, 1014, 1040) instead of BMS registers
+
+**SOLUTION:** Switched to correct BMS registers per official Growatt spec:
+
+| Sensor | Register | Old Register | Status |
+|--------|----------|--------------|--------|
+| `battery_soc` | **1086** | 1014 (wrong) | ✅ Now shows 65% |
+| `battery_voltage` | **1087** | 1013 (wrong) | ✅ Now works |
+| `battery_current` | **1088** | 1013 (wrong) | ✅ Now works |
+| `battery_temp` | **1089** | 1040 (wrong) | ✅ Now shows 19°C |
+
+**USER CONFIRMED:**
+- Register 1086 = 65% SOC ✅
+- Register 1089 = 19°C ✅
+- Register 1097 = 57.4V float/absorption voltage ✅
+
+---
+
+### 2. PV3 Sensors Now Visible ✅
+
+**PROBLEM:** PV3 sensors not appearing even though PV3 supported
+- `pv3_voltage`, `pv3_current`, `pv3_power` were hidden
+- User could only see PV1 and PV2
+
+**ROOT CAUSE:** Sensor creation had condition `pv3_voltage > 0 or pv3_power > 0`
+- Since PV3 not connected (0V/0W), sensors weren't created
+
+**SOLUTION:** Removed creation conditions from PV3 sensors
+- PV3 sensors now always visible (like PV1/PV2)
+- Shows 0V/0A/0W when not connected
+- Will show real values when panels connected
+
+---
+
+### 3. Battery Energy Sensors Now Available ✅
+
+**PROBLEM:** "battery discharge today" and related sensors unavailable
+
+**ROOT CAUSE:** Register names didn't match expected sensor names
+- Profile had: `discharge_energy_today`
+- HA expected: `battery_discharge_today`
+- Result: Sensors not created
+
+**SOLUTION:** Renamed all battery energy registers:
+
+| Sensor | Registers | Old Name | New Name ✅ |
+|--------|-----------|----------|-------------|
+| Battery Discharge Today | 1052-1053 | `discharge_energy_today` | `battery_discharge_today` |
+| Battery Discharge Total | 1054-1055 | `discharge_energy_total` | `battery_discharge_total` |
+| Battery Charge Today | 1056-1057 | `charge_energy_today` | `battery_charge_today` |
+| Battery Charge Total | 1058-1059 | `charge_energy_total` | `battery_charge_total` |
+
+---
+
+### 4. USB/Serial Register Scanner Fixed 🐛
+
+**PROBLEM:** Universal register scanner failing with serial connections
+- Error: "value must be one of [4800,9600,...] for dictionary value @data['baudrate']. Got None"
+
+**ROOT CAUSE:** Type mismatch between schema and UI
+- Schema expected: integers (9600)
+- Service UI provided: strings ("9600")
+
+**SOLUTION:** Fixed baudrate options to integers in services.yaml
+
+---
+
+## NEW: Comprehensive BMS Monitoring 📊
+
+Added **13 new BMS (Battery Management System) sensors** from official Growatt Modbus spec:
+
+### BMS Status & Diagnostics
+
+| Sensor | Register | Description |
+|--------|----------|-------------|
+| `sensor.{name}_bms_status` | 1083 | BMS status code |
+| `sensor.{name}_bms_error` | 1085 | BMS error information |
+| `sensor.{name}_bms_warn_info` | 1099 | BMS warning information |
+
+### Battery Health Monitoring
+
+| Sensor | Register | Description |
+|--------|----------|-------------|
+| `sensor.{name}_battery_state_of_health` | 1096 | Battery SOH (State of Health) % |
+| `sensor.{name}_bms_cycle_count` | 1095 | Battery charge/discharge cycle count |
+| `sensor.{name}_bms_max_current` | 1090 | Max charge/discharge current (A) |
+| `sensor.{name}_bms_constant_volt` | 1097 | CV voltage / Float voltage (V) |
+
+### Cell Voltage Monitoring
+
+| Sensor | Register | Description |
+|--------|----------|-------------|
+| `sensor.{name}_bms_max_cell_volt` | 1108 | Maximum single cell voltage (V) |
+| `sensor.{name}_bms_min_cell_volt` | 1109 | Minimum single cell voltage (V) |
+
+### Parallel Battery Data
+
+| Sensor | Register | Description |
+|--------|----------|-------------|
+| `sensor.{name}_bms_module_num` | 1110 | Number of battery modules in parallel |
+| `sensor.{name}_bms_battery_count` | 1111 | Total number of batteries |
+| `sensor.{name}_bms_max_soc` | 1119 | Maximum SOC in parallel system (%) |
+| `sensor.{name}_bms_min_soc` | 1120 | Minimum SOC in parallel system (%) |
+
+---
+
+## Complete Sensor Checklist for SPH_8000_10000_HU
+
+Use this checklist to verify all sensors after updating:
+
+### ✅ Core Battery Sensors (Fixed)
+- [ ] `sensor.{name}_battery_soc` (Reg 1086) - Should show ~65%
+- [ ] `sensor.{name}_battery_voltage` (Reg 1087) - Should show battery voltage
+- [ ] `sensor.{name}_battery_current` (Reg 1088) - Should show charging/discharging current
+- [ ] `sensor.{name}_battery_temp` (Reg 1089) - Should show ~19°C
+
+### ✅ PV Sensors (All 3 MPPTs)
+- [ ] `sensor.{name}_pv1_voltage` (Reg 3)
+- [ ] `sensor.{name}_pv1_current` (Reg 4)
+- [ ] `sensor.{name}_pv1_power` (Reg 5-6)
+- [ ] `sensor.{name}_pv2_voltage` (Reg 7)
+- [ ] `sensor.{name}_pv2_current` (Reg 8)
+- [ ] `sensor.{name}_pv2_power` (Reg 9-10)
+- [ ] `sensor.{name}_pv3_voltage` (Reg 11) - Should show 0V if not connected
+- [ ] `sensor.{name}_pv3_current` (Reg 12) - Should show 0A if not connected
+- [ ] `sensor.{name}_pv3_power` (Reg 13-14) - Should show 0W if not connected
+
+### ✅ Battery Energy Sensors (Fixed)
+- [ ] `sensor.{name}_battery_discharge_today` (Reg 1052-1053)
+- [ ] `sensor.{name}_battery_discharge_total` (Reg 1054-1055)
+- [ ] `sensor.{name}_battery_charge_today` (Reg 1056-1057)
+- [ ] `sensor.{name}_battery_charge_total` (Reg 1058-1059)
+
+### ✅ BMS Diagnostic Sensors (New)
+- [ ] `sensor.{name}_bms_status` (Reg 1083)
+- [ ] `sensor.{name}_bms_error` (Reg 1085)
+- [ ] `sensor.{name}_bms_warn_info` (Reg 1099)
+- [ ] `sensor.{name}_battery_state_of_health` (Reg 1096) - SOH %
+- [ ] `sensor.{name}_bms_cycle_count` (Reg 1095)
+- [ ] `sensor.{name}_bms_max_current` (Reg 1090)
+- [ ] `sensor.{name}_bms_constant_volt` (Reg 1097) - Should show ~57.4V
+- [ ] `sensor.{name}_bms_max_cell_volt` (Reg 1108)
+- [ ] `sensor.{name}_bms_min_cell_volt` (Reg 1109)
+- [ ] `sensor.{name}_bms_module_num` (Reg 1110)
+- [ ] `sensor.{name}_bms_battery_count` (Reg 1111)
+- [ ] `sensor.{name}_bms_max_soc` (Reg 1119)
+- [ ] `sensor.{name}_bms_min_soc` (Reg 1120)
+
+### ✅ Power Flow Sensors
+- [ ] `sensor.{name}_power_to_user` (Reg 1015-1016) - Grid import power
+- [ ] `sensor.{name}_power_to_grid` (Reg 1029-1030) - Grid export power
+- [ ] `sensor.{name}_power_to_load` (Reg 1021-1022) - Load consumption
+
+### ✅ Energy Tracking Sensors
+- [ ] `sensor.{name}_energy_to_user_today` (Reg 1044-1045) - Grid import today
+- [ ] `sensor.{name}_energy_to_user_total` (Reg 1046-1047) - Grid import total
+- [ ] `sensor.{name}_energy_to_grid_today` (Reg 1048-1049) - Grid export today
+- [ ] `sensor.{name}_energy_to_grid_total` (Reg 1050-1051) - Grid export total
+- [ ] `sensor.{name}_load_energy_today` (Reg 1060-1061)
+- [ ] `sensor.{name}_load_energy_total` (Reg 1062-1063)
+
+---
+
+## How to Update
+
+1. **Pull latest code** from repository
+2. **Restart Home Assistant**
+3. **Reload the Growatt Modbus integration:**
+   - Settings → Devices & Services → Growatt Modbus
+   - Click "⋮" → Reload
+4. **Verify sensors** using checklist above
+5. **Ignore legacy sensors** (if visible):
+   - `battery_soc_legacy` - Use main `battery_soc` instead
+   - `battery_temp_legacy` - Use main `battery_temp` instead
+   - `battery_power_calc` - Less accurate than BMS data
+
+---
+
+## Files Modified
+
+- `profiles/sph.py` - BMS registers, removed wrong storage registers, fixed battery energy naming
+- `sensor.py` - Added 13 BMS sensor definitions, removed PV3 creation conditions
+- `device_profiles.py` - Added BMS_SENSORS group, added to SPH_8000_10000_HU profile
+- `services.yaml` - Fixed baudrate type from strings to integers
+
+---
+
+## Commits
+
+- b81485f - Fix SPH_8000_10000_HU battery SOC and PV3 sensors
+- b3b208d - Fix battery energy sensor naming for SPH_8000_10000_HU
+- [current] - Add BMS sensor definitions and fix USB/serial scanner
+
+---
+
 # Release Notes - v0.2.0
 
 ## NEW: SPH/SPM 8000-10000TL-HU Profile 🔋

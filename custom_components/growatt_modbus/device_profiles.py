@@ -50,6 +50,14 @@ BATTERY_SENSORS: Set[str] = {
     "battery_charge_total", "battery_discharge_total",
 }
 
+BMS_SENSORS: Set[str] = {
+    "bms_status", "bms_error", "bms_warn_info",
+    "bms_max_current", "bms_cycle_count", "bms_soh",
+    "bms_constant_volt", "bms_max_cell_volt", "bms_min_cell_volt",
+    "bms_module_num", "bms_battery_count",
+    "bms_max_soc", "bms_min_soc",
+}
+
 TEMPERATURE_SENSORS: Set[str] = {
     "inverter_temp", "ipm_temp", "boost_temp",
 }
@@ -454,6 +462,7 @@ INVERTER_PROFILES = {
             ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
+            BMS_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
         ),
