@@ -25,6 +25,7 @@ The integration supports **residential and small commercial** Growatt inverters 
 | **MIN TL-XH 3000-10000** | MIN 6000/10000 TL-XH | 2-3 | Yes | V2.01 | ⚠️ Untested | MIN hybrid with battery, DTC 5100, 3-6kW: 2 strings, 7-10kW: 3 strings |
 | **SPH 3000-6000** | SPH 3000-6000 | 2 | Yes | V2.01 + Legacy | ⚠️ Untested | Storage hybrid, 3-6kW |
 | **SPH 7000-10000** | SPH 7000-10000 | 2 | Yes | V2.01 + Legacy | ⚠️ Untested | Storage hybrid, 7-10kW |
+| **SPH/SPM 8000-10000 HU** | SPH/SPM 8000-10000 HU | 3 | Yes | V2.01 + Legacy | ✅ **Tested** | Storage hybrid with BMS monitoring, 8-10kW, 3 PV strings |
 
 ### Single-Phase Off-Grid Inverters
 
@@ -57,45 +58,53 @@ The integration supports **residential and small commercial** Growatt inverters 
 
 Different inverter models create different sensors based on their hardware capabilities:
 
-| Sensor | MIC | MIN 3-6k | MIN 7-10k | MIN TL-XH | TL-XH | SPH 3-6k | SPH 7-10k | SPF | SPH-TL3 | MID | MOD | WIT |
-|--------|:---:|:--------:|:---------:|:---------:|:-----:|:--------:|:---------:|:---:|:-------:|:---:|:---:|:---:|
-| **Solar Input (PV Strings)** | | | | | | | | | | | | |
-| PV1 Voltage/Current/Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| PV2 Voltage/Current/Power | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| PV3 Voltage/Current/Power | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| Solar Total Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **AC Output (Single-Phase)** | | | | | | | | | | | | |
-| AC Voltage | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| AC Current | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| AC Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| AC Frequency | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **AC Output (Three-Phase)** | | | | | | | | | | | | |
-| AC Phase R/S/T Voltage | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| AC Phase R/S/T Current | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| AC Phase R/S/T Power | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| AC Total Power | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| **Power Flow (Calculated)** | | | | | | | | | | | | |
-| Grid Export Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Grid Import Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Self Consumption | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| House Consumption | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Power Flow (From Registers)** | | | | | | | | | | | | |
-| Power to Grid | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Power to Load | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Power to User | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| **Battery (Hybrid Only)** | | | | | | | | | | | | |
-| Battery Voltage/Current/Power | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Battery SOC | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Battery Temperature | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| **Energy Totals** | | | | | | | | | | | | |
-| Energy Today/Total | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Energy to Grid Today/Total | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Load Energy Today/Total | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **System & Diagnostics** | | | | | | | | | | | | |
-| Inverter Temperature | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| IPM Temperature | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Boost Temperature | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Status/Derating/Faults | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Sensor | MIC | MIN 3-6k | MIN 7-10k | MIN TL-XH | TL-XH | SPH 3-6k | SPH 7-10k | SPH 8-10k HU | SPF | SPH-TL3 | MID | MOD | WIT |
+|--------|:---:|:--------:|:---------:|:---------:|:-----:|:--------:|:---------:|:------------:|:---:|:-------:|:---:|:---:|:---:|
+| **Solar Input (PV Strings)** | | | | | | | | | | | | | |
+| PV1 Voltage/Current/Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| PV2 Voltage/Current/Power | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| PV3 Voltage/Current/Power | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Solar Total Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **AC Output (Single-Phase)** | | | | | | | | | | | | | |
+| AC Voltage | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| AC Current | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| AC Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| AC Frequency | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **AC Output (Three-Phase)** | | | | | | | | | | | | | |
+| AC Phase R/S/T Voltage | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| AC Phase R/S/T Current | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| AC Phase R/S/T Power | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| AC Total Power | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **Power Flow (Calculated)** | | | | | | | | | | | | | |
+| Grid Export Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Grid Import Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Self Consumption | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| House Consumption | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Power Flow (From Registers)** | | | | | | | | | | | | | |
+| Power to Grid | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Power to Load | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Power to User | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| **Battery (Hybrid Only)** | | | | | | | | | | | | | |
+| Battery Voltage/Current/Power | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Battery SOC | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Battery Temperature | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Battery Charge/Discharge Energy | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| **BMS Monitoring (HU Models Only)** | | | | | | | | | | | | | |
+| BMS Status/Error/Warning | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Battery State of Health (SOH) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| BMS Cycle Count | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| BMS Max/Min Cell Voltage | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| BMS Max/Min SOC | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| BMS Constant Voltage | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Energy Totals** | | | | | | | | | | | | | |
+| Energy Today/Total | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Energy to Grid Today/Total | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Load Energy Today/Total | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **System & Diagnostics** | | | | | | | | | | | | | |
+| Inverter Temperature | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| IPM Temperature | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Boost Temperature | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Status/Derating/Faults | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 **Legend:**
 - ✅ Available for this model
@@ -185,6 +194,7 @@ For **legacy protocol** inverters (no V2.01 support):
 |-----------|------------|-------------|-------------|
 | **SPH 3000-6000** | 2 | 3-6kW | Storage hybrid, 2 PV strings |
 | **SPH 7000-10000** | 2 | 7-10kW | Storage hybrid, 2 PV strings |
+| **SPH/SPM 8000-10000 HU** | 3 | 8-10kW | Storage hybrid with BMS, 3 PV strings |
 | **TL-XH 3000-10000** | 3 | 3-10kW | Hybrid with battery, 3 PV strings |
 | **TL-XH US 3000-10000** | 3 | 3-10kW | US version hybrid, 3 PV strings |
 
