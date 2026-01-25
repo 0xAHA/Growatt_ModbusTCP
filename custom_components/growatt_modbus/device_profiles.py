@@ -731,16 +731,6 @@ PROFILE_DISPLAY_NAMES = {
         "v201": "sph_8000_10000_hu",  # HU only has one profile
         "description": "Hybrid with BMS monitoring, 3 PV strings",
     },
-    "TL-XH (3-10kW)": {
-        "base": "tl_xh_3000_10000",
-        "v201": "tl_xh_3000_10000_v201",
-        "description": "Hybrid with battery, 3 PV strings",
-    },
-    "TL-XH US (3-10kW)": {
-        "base": "tl_xh_us_3000_10000",
-        "v201": "tl_xh_us_3000_10000_v201",
-        "description": "US version hybrid, 3 PV strings",
-    },
     "MIN TL-XH (3-10kW)": {
         "base": "min_tl_xh_3000_10000_v201",  # Only V2.01 available
         "v201": "min_tl_xh_3000_10000_v201",
