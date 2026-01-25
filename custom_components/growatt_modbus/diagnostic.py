@@ -85,7 +85,7 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
 
         # Serial parameters (required if connection_type=serial)
         vol.Optional("device"): cv.string,  # e.g., /dev/ttyUSB0, COM3
-        vol.Optional("baudrate", default=9600): vol.In([4800, 9600, 19200, 38400, 57600, 115200]),
+        vol.Optional("baudrate", default=9600): vol.All(vol.Coerce(int), vol.In([4800, 9600, 19200, 38400, 57600, 115200])),
 
         # Common parameters
         vol.Optional("slave_id", default=1): vol.All(vol.Coerce(int), vol.Range(min=1, max=247)),
