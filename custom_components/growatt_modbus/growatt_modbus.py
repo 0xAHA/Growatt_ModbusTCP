@@ -1136,7 +1136,44 @@ class GrowattModbus:
 
             if data.battery_voltage > 0:
                 logger.debug(f"Battery summary: {data.battery_voltage}V, {data.battery_current}A, {data.battery_soc}%, {data.battery_temp}°C, Charge={data.charge_power}W, Discharge={data.discharge_power}W")
-            
+
+            # BMS Information (SPH HU and other models with BMS monitoring)
+            # Registers 1082-1120 contain detailed battery management system data
+            bms_attrs = [
+                ('bms_status_old', 'BMS Status Old'),
+                ('bms_status', 'BMS Status'),
+                ('bms_error_old', 'BMS Error Old'),
+                ('bms_error', 'BMS Error'),
+                ('bms_max_current', 'BMS Max Current'),
+                ('bms_gauge_rm', 'BMS Gauge RM'),
+                ('bms_gauge_fcc', 'BMS Gauge FCC'),
+                ('bms_fw_version', 'BMS FW Version'),
+                ('bms_delta_volt', 'BMS Delta Volt'),
+                ('bms_cycle_count', 'BMS Cycle Count'),
+                ('bms_soh', 'Battery State of Health'),
+                ('bms_constant_volt', 'BMS Constant Voltage'),
+                ('bms_warn_info_old', 'BMS Warning Old'),
+                ('bms_warn_info', 'BMS Warning'),
+                ('bms_max_cell_volt', 'BMS Max Cell Voltage'),
+                ('bms_min_cell_volt', 'BMS Min Cell Voltage'),
+                ('bms_module_num', 'BMS Module Count'),
+                ('bms_battery_count', 'BMS Battery Count'),
+                ('bms_max_soc', 'BMS Max SOC'),
+                ('bms_min_soc', 'BMS Min SOC'),
+            ]
+
+            bms_found = False
+            for attr_name, friendly_name in bms_attrs:
+                addr = self._find_register_by_name(attr_name)
+                if addr:
+                    value = self._get_register_value(addr)
+                    if value is not None:
+                        setattr(data, attr_name, value)
+                        if not bms_found:
+                            logger.debug(f"BMS data available - reading BMS attributes")
+                            bms_found = True
+                        logger.debug(f"  {friendly_name} from reg {addr}: {value}")
+
         except Exception as e:
             logger.debug(f"Battery data not available: {e}")
 
