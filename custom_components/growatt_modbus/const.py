@@ -241,17 +241,17 @@ WRITABLE_REGISTERS = {
     'bat_low_to_uti': {
         'register': 37,
         'scale': 0.1,
-        'valid_range': (5, 640),  # Full range: Lithium 0.5-10.0%, Non-Lithium 20.0-64.0V
+        'valid_range': (0, 1000),  # Full range: Lithium 0-100%, Non-Lithium 20.0-64.0V
         'unit': 'V/%',  # Unit depends on battery_type
-        'desc': 'Battery low voltage/SOC switch to utility',
+        'desc': 'Battery to Grid: SOC level to switch from battery to utility',
         'battery_dependent': True
     },
     'ac_to_bat_volt': {
         'register': 95,
         'scale': 0.1,
-        'valid_range': (5, 640),  # Full range: Lithium 0.5-10.0%, Non-Lithium 20.0-64.0V
+        'valid_range': (0, 1000),  # Full range: Lithium 0-100%, Non-Lithium 20.0-64.0V
         'unit': 'V/%',  # Unit depends on battery_type
-        'desc': 'AC to battery voltage/SOC switch point',
+        'desc': 'Grid to Battery: SOC level to switch back from utility to battery mode',
         'battery_dependent': True
     },
 
