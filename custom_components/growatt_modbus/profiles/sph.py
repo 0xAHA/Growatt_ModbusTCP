@@ -64,8 +64,83 @@ SPH_3000_6000 = {
         112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
     },
     'holding_registers': {
+        # Basic Control
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW'},
+
+        # Battery Management Control (1000+ range)
+        1044: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Priority mode selection',
+               'valid_range': (0, 2),
+               'values': {
+                   0: 'Load First',
+                   1: 'Battery First',
+                   2: 'Grid First'
+               }},
+
+        # Discharge Control
+        1070: {'name': 'discharge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100),
+               'desc': 'Battery discharge power rate limit (0-100%)'},
+        1071: {'name': 'discharge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100),
+               'desc': 'SOC level to stop battery discharge (0-100%)'},
+
+        # Charge Control
+        1090: {'name': 'charge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100),
+               'desc': 'Battery charge power rate limit (0-100%)'},
+        1091: {'name': 'charge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100),
+               'desc': 'SOC level to stop battery charge (0-100%)'},
+        1092: {'name': 'ac_charge_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Enable charging from AC (grid/backup)',
+               'values': {
+                   0: 'Disabled',
+                   1: 'Enabled'
+               }},
+
+        # Time Period 1 Control (for time-based charging/discharging)
+        1100: {'name': 'time_period_1_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (0, 2359),
+               'desc': 'Period 1 start time in HHMM format (e.g., 530 = 05:30, 2300 = 23:00)'},
+        1101: {'name': 'time_period_1_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (0, 2359),
+               'desc': 'Period 1 end time in HHMM format (e.g., 530 = 05:30, 2300 = 23:00)'},
+        1102: {'name': 'time_period_1_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Enable time period 1',
+               'values': {
+                   0: 'Disabled',
+                   1: 'Enabled'
+               }},
+
+        # Time Period 2 Control
+        1103: {'name': 'time_period_2_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (0, 2359),
+               'desc': 'Period 2 start time in HHMM format'},
+        1104: {'name': 'time_period_2_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (0, 2359),
+               'desc': 'Period 2 end time in HHMM format'},
+        1105: {'name': 'time_period_2_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Enable time period 2',
+               'values': {
+                   0: 'Disabled',
+                   1: 'Enabled'
+               }},
+
+        # Time Period 3 Control
+        1106: {'name': 'time_period_3_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (0, 2359),
+               'desc': 'Period 3 start time in HHMM format'},
+        1107: {'name': 'time_period_3_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (0, 2359),
+               'desc': 'Period 3 end time in HHMM format'},
+        1108: {'name': 'time_period_3_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Enable time period 3',
+               'values': {
+                   0: 'Disabled',
+                   1: 'Enabled'
+               }},
     }
 }
 
@@ -135,8 +210,83 @@ SPH_7000_10000 = {
         112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
     },
     'holding_registers': {
-        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW'},
+        # Basic Control
+        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW'},
+
+        # Battery Management Control (1000+ range)
+        1044: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Priority mode selection',
+               'valid_range': (0, 2),
+               'values': {
+                   0: 'Load First',
+                   1: 'Battery First',
+                   2: 'Grid First'
+               }},
+
+        # Discharge Control
+        1070: {'name': 'discharge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100),
+               'desc': 'Battery discharge power rate limit (0-100%)'},
+        1071: {'name': 'discharge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100),
+               'desc': 'SOC level to stop battery discharge (0-100%)'},
+
+        # Charge Control
+        1090: {'name': 'charge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100),
+               'desc': 'Battery charge power rate limit (0-100%)'},
+        1091: {'name': 'charge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100),
+               'desc': 'SOC level to stop battery charge (0-100%)'},
+        1092: {'name': 'ac_charge_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Enable charging from AC (grid/backup)',
+               'values': {
+                   0: 'Disabled',
+                   1: 'Enabled'
+               }},
+
+        # Time Period 1 Control (for time-based charging/discharging)
+        1100: {'name': 'time_period_1_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (0, 2359),
+               'desc': 'Period 1 start time in HHMM format (e.g., 530 = 05:30, 2300 = 23:00)'},
+        1101: {'name': 'time_period_1_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (0, 2359),
+               'desc': 'Period 1 end time in HHMM format (e.g., 530 = 05:30, 2300 = 23:00)'},
+        1102: {'name': 'time_period_1_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Enable time period 1',
+               'values': {
+                   0: 'Disabled',
+                   1: 'Enabled'
+               }},
+
+        # Time Period 2 Control
+        1103: {'name': 'time_period_2_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (0, 2359),
+               'desc': 'Period 2 start time in HHMM format'},
+        1104: {'name': 'time_period_2_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (0, 2359),
+               'desc': 'Period 2 end time in HHMM format'},
+        1105: {'name': 'time_period_2_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Enable time period 2',
+               'values': {
+                   0: 'Disabled',
+                   1: 'Enabled'
+               }},
+
+        # Time Period 3 Control
+        1106: {'name': 'time_period_3_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (0, 2359),
+               'desc': 'Period 3 start time in HHMM format'},
+        1107: {'name': 'time_period_3_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (0, 2359),
+               'desc': 'Period 3 end time in HHMM format'},
+        1108: {'name': 'time_period_3_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Enable time period 3',
+               'values': {
+                   0: 'Disabled',
+                   1: 'Enabled'
+               }},
     }
 }
 

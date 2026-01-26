@@ -254,6 +254,131 @@ WRITABLE_REGISTERS = {
         'desc': 'AC to battery voltage/SOC switch point',
         'battery_dependent': True
     },
+
+    # SPH Hybrid Inverter Battery Management Controls (1000+ range)
+    'priority_mode': {
+        'register': 1044,
+        'scale': 1,
+        'valid_range': (0, 2),
+        'options': {
+            0: 'Load First',
+            1: 'Battery First',
+            2: 'Grid First'
+        },
+        'desc': 'Battery priority mode'
+    },
+    'discharge_power_rate': {
+        'register': 1070,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'Battery discharge power rate limit (0-100%)'
+    },
+    'discharge_stopped_soc': {
+        'register': 1071,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'SOC level to stop battery discharge'
+    },
+    'charge_power_rate': {
+        'register': 1090,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'Battery charge power rate limit (0-100%)'
+    },
+    'charge_stopped_soc': {
+        'register': 1091,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'SOC level to stop battery charge'
+    },
+    'ac_charge_enable': {
+        'register': 1092,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'Enable charging from AC (grid/backup)'
+    },
+
+    # Time Period Controls (HHMM format: 530 = 05:30, 2300 = 23:00)
+    'time_period_1_start': {
+        'register': 1100,
+        'scale': 1,
+        'valid_range': (0, 2359),
+        'unit': '',
+        'desc': 'Period 1 start time (HHMM format: e.g., 530 = 05:30)'
+    },
+    'time_period_1_end': {
+        'register': 1101,
+        'scale': 1,
+        'valid_range': (0, 2359),
+        'unit': '',
+        'desc': 'Period 1 end time (HHMM format: e.g., 2300 = 23:00)'
+    },
+    'time_period_1_enable': {
+        'register': 1102,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'Enable time period 1'
+    },
+    'time_period_2_start': {
+        'register': 1103,
+        'scale': 1,
+        'valid_range': (0, 2359),
+        'unit': '',
+        'desc': 'Period 2 start time (HHMM format)'
+    },
+    'time_period_2_end': {
+        'register': 1104,
+        'scale': 1,
+        'valid_range': (0, 2359),
+        'unit': '',
+        'desc': 'Period 2 end time (HHMM format)'
+    },
+    'time_period_2_enable': {
+        'register': 1105,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'Enable time period 2'
+    },
+    'time_period_3_start': {
+        'register': 1106,
+        'scale': 1,
+        'valid_range': (0, 2359),
+        'unit': '',
+        'desc': 'Period 3 start time (HHMM format)'
+    },
+    'time_period_3_end': {
+        'register': 1107,
+        'scale': 1,
+        'valid_range': (0, 2359),
+        'unit': '',
+        'desc': 'Period 3 end time (HHMM format)'
+    },
+    'time_period_3_enable': {
+        'register': 1108,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'Enable time period 3'
+    },
 }
 
 # Sensor offline behavior mapping
@@ -388,7 +513,9 @@ def get_device_type_for_control(control_name: str) -> str:
         'battery', 'bms', 'soc', 'charge_power', 'discharge_power',
         'ac_charge_power_rate', 'eod_voltage',
         # SPF off-grid battery controls
-        'charge_config', 'charge_current', 'bat_low', 'ac_to_bat'
+        'charge_config', 'charge_current', 'bat_low', 'ac_to_bat',
+        # SPH hybrid battery controls
+        'priority_mode', 'time_period', 'ac_charge_enable'
     ]):
         return DEVICE_TYPE_BATTERY
 
