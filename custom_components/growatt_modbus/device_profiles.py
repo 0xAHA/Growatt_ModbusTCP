@@ -794,9 +794,10 @@ def get_available_profiles(legacy_only: bool = False, friendly_names: bool = Tru
         or profile ID to display name (if friendly_names=False)
     """
     if friendly_names:
-        # Return user-friendly names
+        # Return user-friendly names in alphabetical order
         profiles = {}
-        for display_name, profile_info in PROFILE_DISPLAY_NAMES.items():
+        for display_name in sorted(PROFILE_DISPLAY_NAMES.keys()):
+            profile_info = PROFILE_DISPLAY_NAMES[display_name]
             # Use base profile for legacy-only, otherwise use v201 as default
             if legacy_only:
                 profile_id = profile_info["base"]
