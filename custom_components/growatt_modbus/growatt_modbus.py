@@ -741,6 +741,18 @@ class GrowattModbus:
             if ac_freq_addr:
                 data.ac_frequency = self._get_register_value(ac_freq_addr) or 0.0
 
+            # AC Apparent Power (SPF Off-Grid, some other models)
+            ac_apparent_power_addr = self._find_register_by_name('ac_apparent_power_low')
+            if ac_apparent_power_addr:
+                data.ac_apparent_power = self._get_register_value(ac_apparent_power_addr) or 0.0
+                logger.debug(f"AC Apparent Power from reg {ac_apparent_power_addr}: {data.ac_apparent_power} VA")
+
+            # Load Percentage (SPF Off-Grid)
+            load_percentage_addr = self._find_register_by_name('load_percentage')
+            if load_percentage_addr:
+                data.load_percentage = self._get_register_value(load_percentage_addr) or 0.0
+                logger.debug(f"Load Percentage from reg {load_percentage_addr}: {data.load_percentage}%")
+
             # Three-Phase AC Output (individual phases)
             # Phase R
             ac_voltage_r_addr = self._find_register_by_name('ac_voltage_r')
