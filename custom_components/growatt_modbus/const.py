@@ -476,6 +476,14 @@ SENSOR_DEVICE_MAP = {
         'priority_mode',  # Battery priority mode
         # SPF Off-Grid AC charge/discharge energy
         'ac_charge_energy_today', 'ac_discharge_energy_today',
+        # BMS sensors (SPH HU and other models with battery management)
+        'bms_status', 'bms_status_old', 'bms_error', 'bms_error_old',
+        'bms_warn_info', 'bms_warn_info_old', 'bms_max_current',
+        'bms_cycle_count', 'bms_soh', 'bms_constant_volt',
+        'bms_max_cell_volt', 'bms_min_cell_volt',
+        'bms_module_num', 'bms_battery_count',
+        'bms_max_soc', 'bms_min_soc',
+        'bms_gauge_rm', 'bms_gauge_fcc', 'bms_fw_version', 'bms_delta_volt',
     },
 }
 
