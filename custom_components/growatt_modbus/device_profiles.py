@@ -81,6 +81,8 @@ SYSTEM_OUTPUT_SENSORS: Set[str] = {
 SPF_OFFGRID_SENSORS: Set[str] = {
     # Load monitoring
     "load_percentage",
+    # AC apparent power (VA)
+    "ac_apparent_power",
     # AC charge/discharge energy (from grid/generator)
     "ac_charge_energy_today", "ac_discharge_energy_today",
     # Fan speeds

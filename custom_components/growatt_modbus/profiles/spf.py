@@ -191,13 +191,13 @@ SPF_3000_6000_ES_PLUS = {
         26: {'name': 'serial_number_2', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Serial number chars 7-8 (ASCII)'},
         27: {'name': 'serial_number_1', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Serial number chars 9-10 (ASCII)'},
 
-        # Battery Low Voltage/SOC Switch to Utility
+        # Battery Low Voltage/SOC Switch to Utility (Battery to Grid)
         # BATTERY TYPE DEPENDENT (see register 39)
         # Non-Lithium (AGM/FLD/USE/USE2): 200-640 = 20.0V - 64.0V (scale 0.1V)
-        # Lithium: 5-100 = 0.5% - 10.0% (scale 0.1%)
+        # Lithium: 0-1000 = 0% - 100% (scale 0.1%)
         37: {'name': 'bat_low_to_uti', 'scale': 0.1, 'unit': 'V/%', 'access': 'RW',
-             'valid_range': (5, 640),
-             'desc': 'Battery low voltage/SOC to switch to utility. Non-Lithium: 20.0-64.0V, Lithium: 0.5-10.0%',
+             'valid_range': (0, 1000),
+             'desc': 'Battery to Grid: SOC level to switch from battery to utility. Non-Lithium: 20.0-64.0V, Lithium: 0-100%',
              'battery_dependent': True},
 
         # AC Charge Current
@@ -225,13 +225,13 @@ SPF_3000_6000_ES_PLUS = {
              'valid_range': (0, 80),
              'desc': 'Generator charging current limit (SPF 6000 hardware max: 80A)'},
 
-        # AC to Battery Voltage/SOC Switch Point
+        # AC to Battery Voltage/SOC Switch Point (Grid to Battery)
         # BATTERY TYPE DEPENDENT (see register 39)
         # Non-Lithium (AGM/FLD/USE/USE2): 200-640 = 20.0V - 64.0V (scale 0.1V)
-        # Lithium: 5-100 = 0.5% - 10.0% (scale 0.1%)
+        # Lithium: 0-1000 = 0% - 100% (scale 0.1%)
         95: {'name': 'ac_to_bat_volt', 'scale': 0.1, 'unit': 'V/%', 'access': 'RW',
-             'valid_range': (5, 640),
-             'desc': 'AC to battery voltage/SOC switch point. Non-Lithium: 20.0-64.0V, Lithium: 0.5-10.0%',
+             'valid_range': (0, 1000),
+             'desc': 'Grid to Battery: SOC level to switch back from utility to battery mode. Non-Lithium: 20.0-64.0V, Lithium: 0-100%',
              'battery_dependent': True},
     }
 }

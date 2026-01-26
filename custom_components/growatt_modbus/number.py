@@ -121,10 +121,10 @@ class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
             is_lithium = (battery_type == 3)  # 3 = Lithium
 
             if is_lithium:
-                # Lithium: 5-100 raw = 0.5% - 10.0%
-                self._attr_native_min_value = 0.5
-                self._attr_native_max_value = 10.0
-                self._attr_native_step = 0.1
+                # Lithium: 0-1000 raw = 0% - 100%
+                self._attr_native_min_value = 0.0
+                self._attr_native_max_value = 100.0
+                self._attr_native_step = 1.0
                 self._attr_native_unit_of_measurement = "%"
             else:
                 # Non-Lithium: 200-640 raw = 20.0V - 64.0V

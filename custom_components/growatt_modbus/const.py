@@ -452,10 +452,24 @@ def get_entity_category(sensor_key: str) -> str | None:
 # ============================================================================
 
 STATUS_CODES = {
+    # Grid-tied inverter status codes (MIN, MIC, SPH, MOD series)
     0: {'name': 'Waiting', 'desc': 'Waiting for sufficient PV power or grid conditions'},
     1: {'name': 'Normal', 'desc': 'Operating normally'},
     3: {'name': 'Fault', 'desc': 'Fault condition detected'},
     5: {'name': 'Standby', 'desc': 'Inverter in standby mode'},
+
+    # SPF off-grid inverter status codes (additional codes 2, 4, 6-12)
+    # Note: SPF uses different meanings for codes 0, 1, 3, 5
+    # 0 = Standby (off-grid), 1 = No Use, 5 = PV Charge (off-grid)
+    2: {'name': 'Discharge', 'desc': 'Battery discharging to load'},
+    4: {'name': 'Flash', 'desc': 'Firmware update mode'},
+    6: {'name': 'AC Charge', 'desc': 'Charging battery from AC input (grid/generator)'},
+    7: {'name': 'Combine Charge', 'desc': 'Charging from both PV and AC'},
+    8: {'name': 'Combine Charge+Bypass', 'desc': 'Charging from PV+AC with AC bypass to load'},
+    9: {'name': 'PV Charge+Bypass', 'desc': 'Charging from PV with AC bypass to load'},
+    10: {'name': 'AC Charge+Bypass', 'desc': 'Charging from AC with AC bypass to load'},
+    11: {'name': 'Bypass', 'desc': 'AC input bypassed directly to load'},
+    12: {'name': 'PV Charge+Discharge', 'desc': 'Charging battery from PV while discharging to load'},
 }
 
 
