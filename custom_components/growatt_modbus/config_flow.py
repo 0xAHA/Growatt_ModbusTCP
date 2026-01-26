@@ -20,6 +20,7 @@ from .const import (
     CONF_CONNECTION_TYPE,
     CONF_DEVICE_PATH,
     CONF_BAUDRATE,
+    CONF_INVERT_BATTERY_POWER,
     DEFAULT_PORT,
     DEFAULT_SLAVE_ID,
     DEFAULT_BAUDRATE,
@@ -822,7 +823,8 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
         current_scan_interval = self.config_entry.options.get("scan_interval", 60)  # Default 60 seconds
         current_offline_scan_interval = self.config_entry.options.get("offline_scan_interval", 300)
         current_timeout = self.config_entry.options.get("timeout", 10)
-        current_invert = self.config_entry.options.get("invert_grid_power", False)
+        current_invert_grid = self.config_entry.options.get("invert_grid_power", False)
+        current_invert_battery = self.config_entry.options.get("invert_battery_power", False)
 
         # Get user-friendly profiles
         available_profiles = get_available_profiles(legacy_only=False, friendly_names=True)
@@ -853,7 +855,11 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
             vol.Required(
                 "invert_grid_power",
-                default=current_invert
+                default=current_invert_grid
+            ): bool,
+            vol.Required(
+                "invert_battery_power",
+                default=current_invert_battery
             ): bool,
         })
 

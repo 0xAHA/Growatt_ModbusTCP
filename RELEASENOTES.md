@@ -23,6 +23,193 @@
 
 ---
 
+# Release Notes - v0.2.3
+
+## 🔋 Separate Battery Power Inversion Option (Fixes #121) ⚡
+
+**Independent control for grid and battery power inversion!**
+
+Grid power and battery power are measured by **different sensors** (AC vs DC side), so they need separate inversion options when readings are backwards.
+
+### New Option: "Invert Battery Power"
+
+Previously, there was only "Invert Grid Power" for backwards CT clamps. Now there are **two independent options**:
+
+1. **Invert Grid Power** - For backwards CT clamp (AC side measurement)
+   - CT clamp measures current between inverter and grid
+   - When installed backwards: import/export swapped
+   - Enable this option to fix grid power readings
+
+2. **Invert Battery Power** - For inverters with opposite battery sign convention (DC side measurement)
+   - Battery power measured internally by inverter (V×I)
+   - Some WIT firmware reports opposite sign (positive=discharge, negative=charge)
+   - Enable this option to fix battery power readings
+
+### Why Separate Options?
+
+Looking at the Growatt power control diagram:
+- **Grid power (Pm):** Measured by CT clamp on **AC side** (between inverter and grid)
+- **Battery power (Pbat):** Measured **internally** on **DC side** (battery voltage × current)
+
+These are **completely independent measurements** using different sensors, so a backwards CT clamp only affects grid power, NOT battery power.
+
+### Configuration
+
+Go to: **Settings → Devices & Services → Growatt Modbus → Configure**
+
+You can now enable:
+- Neither option (default)
+- Invert Grid Power only (backwards CT clamp)
+- Invert Battery Power only (opposite battery sign convention)
+- Both options (backwards CT clamp AND opposite battery sign)
+
+**Users can enable either or both as needed for their specific hardware.**
+
+### For WIT Users (Issue #121)
+
+If you have a WIT inverter with "Invert Grid Power" enabled and battery power still shows backwards:
+1. Keep "Invert Grid Power" enabled (your CT clamp is backwards)
+2. Also enable "Invert Battery Power" (your firmware has opposite sign convention)
+3. Restart Home Assistant
+4. Both grid and battery power should now show correct direction
+
+---
+
+## 🔋 SPH HU BMS Sensors Now Visible 📊
+
+**FIXED:** SPH/SPM 8-10kW HU users were not seeing BMS sensor entities despite having BMS monitoring capability.
+
+### What Was Wrong
+
+The BMS registers (1082-1120) were:
+- ✅ Defined in SPH HU profile
+- ✅ Being read from the inverter
+- ✅ Sensors defined in sensor.py
+- ❌ **Data attributes never populated** → sensors showed as unavailable
+
+### What's Fixed
+
+Added BMS data reading in the battery data section. SPH HU users will now see **20 BMS sensors** under the **Battery device**:
+
+**Status & Monitoring:**
+- BMS Status - Current BMS operating status
+- BMS Error - Error codes from BMS
+- BMS Warning - Warning information from BMS
+
+**Battery Health:**
+- Battery State of Health (SOH) - Battery health percentage
+- BMS Cycle Count - Total charge/discharge cycles
+- BMS Max Current - Maximum charge/discharge current limit
+
+**Cell Monitoring:**
+- BMS Max Cell Voltage - Highest cell voltage in pack
+- BMS Min Cell Voltage - Lowest cell voltage in pack
+- BMS Constant Voltage - CV voltage setting (float/absorption)
+- BMS Delta Volt - Voltage difference between cells
+
+**Parallel Battery Systems:**
+- BMS Max SOC - Highest SOC among parallel batteries
+- BMS Min SOC - Lowest SOC among parallel batteries
+- BMS Module Count - Number of battery modules in parallel
+- BMS Battery Count - Total number of batteries
+
+**Advanced Metrics:**
+- BMS Gauge RM - Remaining capacity gauge
+- BMS Gauge FCC - Full charge capacity gauge
+- BMS FW Version - Battery management firmware version
+
+### Device Assignment
+
+BMS sensors now correctly appear under:
+- ✅ **[Name] Battery** device
+- ❌ ~~[Name] Inverter device~~ (previous incorrect default)
+
+### 🧪 Testing Required - SPH HU Users
+
+If you have an **SPH 8000, SPM 8000, SPH 10000, or SPM 10000 HU** model:
+
+1. **Check Battery device:**
+   - Go to Settings → Devices & Services → [Your Inverter] Battery
+   - Verify BMS sensors are now visible
+
+2. **Verify values:**
+   - BMS SOH should show battery health %
+   - BMS Cycle Count should show charge cycles
+   - Cell voltages should show reasonable values (3.0-3.6V typical for LiFePO4)
+
+3. **Enable debug logging** to see BMS data being read:
+   ```yaml
+   logger:
+     default: info
+     logs:
+       custom_components.growatt_modbus: debug
+   ```
+   Look for: `"BMS data available - reading BMS attributes"`
+
+4. **Report issues:**
+   - If sensors still missing → Check debug logs and open issue
+   - If values look wrong → Share your battery specs and readings
+
+---
+
+## 🔌 SPF AC Apparent Power & Load Percentage Now Working ⚡
+
+**FIXED:** SPF 6000 ES Plus users reporting AC Apparent Power and Load Percentage showing as "Unknown"
+
+### What Was Wrong
+
+Both sensors were:
+- ✅ Defined in SPF profile
+- ✅ Registers being read from inverter
+- ✅ Sensors defined in sensor.py
+- ❌ **Data attributes never populated** → sensors showed "Unknown"
+
+### What's Fixed
+
+Added data population for both attributes:
+
+**AC Apparent Power:**
+- Registers: 11-12 (32-bit pair)
+- Shows AC output apparent power in VA
+- Includes reactive power component (not just active watts)
+
+**Load Percentage:**
+- Register: 27
+- Shows load as percentage of inverter rated capacity (0-100%)
+- Example: 2kW load on 6kW inverter = 33%
+
+Both sensors appear under the **Solar device**.
+
+### 🧪 Testing Required - SPF Users
+
+If you have an **SPF 3000, 4000, 5000, or 6000 ES Plus**:
+
+1. **Check for sensors:**
+   - `sensor.growatt_ac_apparent_power` (VA)
+   - `sensor.growatt_load_percentage` (%)
+
+2. **Verify values with load:**
+   - Turn on some AC loads
+   - AC Apparent Power should increase
+   - Load Percentage should show % of rated capacity
+
+3. **Debug logging:**
+   ```yaml
+   logger:
+     default: info
+     logs:
+       custom_components.growatt_modbus: debug
+   ```
+   Look for:
+   - `"AC Apparent Power from reg 12: XXX VA"`
+   - `"Load Percentage from reg 27: XX%"`
+
+4. **Report issues:**
+   - Still showing "Unknown" → Share debug logs
+   - Values look wrong → Share load details and readings
+
+---
+
 # Release Notes - v0.2.2
 
 ## 🔋 SPH Battery Control Entities Added (Addresses #120) ⚡

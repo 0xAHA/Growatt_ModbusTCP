@@ -155,12 +155,12 @@ class GrowattData:
 class GrowattModbus:
     """Growatt MIN series Modbus client"""
     
-    def __init__(self, connection_type='tcp', host='192.168.1.100', port=502, 
-             device='/dev/ttyUSB0', baudrate=9600, slave_id=1, 
-             register_map='MIN_7000_10000TL_X', timeout=10):
+    def __init__(self, connection_type='tcp', host='192.168.1.100', port=502,
+             device='/dev/ttyUSB0', baudrate=9600, slave_id=1,
+             register_map='MIN_7000_10000TL_X', timeout=10, invert_battery_power=False):
         """
         Initialize Modbus connection
-        
+
         Args:
             connection_type: 'tcp' for RS485-to-TCP converter, 'serial' for RS485-to-USB
             host: IP address for TCP connection
@@ -170,6 +170,7 @@ class GrowattModbus:
             slave_id: Modbus slave ID (usually 1)
             register_map: Which register mapping to use (see const.py)
             timeout: Connection timeout in seconds (default: 10)
+            invert_battery_power: Invert battery power sign for inverters with opposite convention (default: False)
         """
         self.connection_type = connection_type
         self.slave_id = slave_id
@@ -177,6 +178,7 @@ class GrowattModbus:
         self.last_read_time = 0
         self.min_read_interval = 1.0  # 1 second minimum between reads
         self._timeout = timeout
+        self._invert_battery_power = invert_battery_power
 
         # Store connection details for logging
         self.host = host
@@ -739,6 +741,18 @@ class GrowattModbus:
             if ac_freq_addr:
                 data.ac_frequency = self._get_register_value(ac_freq_addr) or 0.0
 
+            # AC Apparent Power (SPF Off-Grid, some other models)
+            ac_apparent_power_addr = self._find_register_by_name('ac_apparent_power_low')
+            if ac_apparent_power_addr:
+                data.ac_apparent_power = self._get_register_value(ac_apparent_power_addr) or 0.0
+                logger.debug(f"AC Apparent Power from reg {ac_apparent_power_addr}: {data.ac_apparent_power} VA")
+
+            # Load Percentage (SPF Off-Grid)
+            load_percentage_addr = self._find_register_by_name('load_percentage')
+            if load_percentage_addr:
+                data.load_percentage = self._get_register_value(load_percentage_addr) or 0.0
+                logger.debug(f"Load Percentage from reg {load_percentage_addr}: {data.load_percentage}%")
+
             # Three-Phase AC Output (individual phases)
             # Phase R
             ac_voltage_r_addr = self._find_register_by_name('ac_voltage_r')
@@ -1052,7 +1066,13 @@ class GrowattModbus:
                 battery_power = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery power (signed): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {battery_power}W")
 
+                # Apply inversion if configured (for inverters with opposite sign convention)
+                if self._invert_battery_power:
+                    battery_power = -battery_power
+                    logger.debug(f"  → Inverted battery power: {battery_power}W (invert_battery_power=True)")
+
                 # Split into charge/discharge based on sign
+                # Convention: positive=charging, negative=discharging
                 if battery_power > 0:
                     data.charge_power = battery_power
                     data.discharge_power = 0.0
@@ -1128,7 +1148,44 @@ class GrowattModbus:
 
             if data.battery_voltage > 0:
                 logger.debug(f"Battery summary: {data.battery_voltage}V, {data.battery_current}A, {data.battery_soc}%, {data.battery_temp}°C, Charge={data.charge_power}W, Discharge={data.discharge_power}W")
-            
+
+            # BMS Information (SPH HU and other models with BMS monitoring)
+            # Registers 1082-1120 contain detailed battery management system data
+            bms_attrs = [
+                ('bms_status_old', 'BMS Status Old'),
+                ('bms_status', 'BMS Status'),
+                ('bms_error_old', 'BMS Error Old'),
+                ('bms_error', 'BMS Error'),
+                ('bms_max_current', 'BMS Max Current'),
+                ('bms_gauge_rm', 'BMS Gauge RM'),
+                ('bms_gauge_fcc', 'BMS Gauge FCC'),
+                ('bms_fw_version', 'BMS FW Version'),
+                ('bms_delta_volt', 'BMS Delta Volt'),
+                ('bms_cycle_count', 'BMS Cycle Count'),
+                ('bms_soh', 'Battery State of Health'),
+                ('bms_constant_volt', 'BMS Constant Voltage'),
+                ('bms_warn_info_old', 'BMS Warning Old'),
+                ('bms_warn_info', 'BMS Warning'),
+                ('bms_max_cell_volt', 'BMS Max Cell Voltage'),
+                ('bms_min_cell_volt', 'BMS Min Cell Voltage'),
+                ('bms_module_num', 'BMS Module Count'),
+                ('bms_battery_count', 'BMS Battery Count'),
+                ('bms_max_soc', 'BMS Max SOC'),
+                ('bms_min_soc', 'BMS Min SOC'),
+            ]
+
+            bms_found = False
+            for attr_name, friendly_name in bms_attrs:
+                addr = self._find_register_by_name(attr_name)
+                if addr:
+                    value = self._get_register_value(addr)
+                    if value is not None:
+                        setattr(data, attr_name, value)
+                        if not bms_found:
+                            logger.debug(f"BMS data available - reading BMS attributes")
+                            bms_found = True
+                        logger.debug(f"  {friendly_name} from reg {addr}: {value}")
+
         except Exception as e:
             logger.debug(f"Battery data not available: {e}")
 
