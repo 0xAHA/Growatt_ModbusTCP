@@ -208,6 +208,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             # Get timeout from options (default 10 seconds)
             timeout = self.entry.options.get("timeout", 10)
 
+            # Get invert_grid_power option (also used for battery power inversion)
+            invert_battery_power = self.entry.options.get(CONF_INVERT_GRID_POWER, False)
+
             # Get connection type (default to tcp for backward compatibility)
             connection_type = self.config.get(CONF_CONNECTION_TYPE, "tcp")
 
@@ -219,10 +222,11 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     port=self.config[CONF_PORT],
                     slave_id=self.config[CONF_SLAVE_ID],
                     register_map=register_map,
-                    timeout=timeout
+                    timeout=timeout,
+                    invert_battery_power=invert_battery_power
                 )
-                _LOGGER.debug("Initialized TCP Growatt client at %s:%s",
-                             self.config[CONF_HOST], self.config[CONF_PORT])
+                _LOGGER.debug("Initialized TCP Growatt client at %s:%s (invert_battery_power=%s)",
+                             self.config[CONF_HOST], self.config[CONF_PORT], invert_battery_power)
             else:  # serial
                 self._client = GrowattModbus(
                     connection_type="serial",
@@ -230,10 +234,11 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     baudrate=self.config[CONF_BAUDRATE],
                     slave_id=self.config[CONF_SLAVE_ID],
                     register_map=register_map,
-                    timeout=timeout
+                    timeout=timeout,
+                    invert_battery_power=invert_battery_power
                 )
-                _LOGGER.debug("Initialized Serial Growatt client at %s @ %s baud",
-                             self.config[CONF_DEVICE_PATH], self.config[CONF_BAUDRATE])
+                _LOGGER.debug("Initialized Serial Growatt client at %s @ %s baud (invert_battery_power=%s)",
+                             self.config[CONF_DEVICE_PATH], self.config[CONF_BAUDRATE], invert_battery_power)
 
             _LOGGER.debug("Using register map: %s", register_map)
 
