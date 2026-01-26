@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Tuple, Optional
 
 import voluptuous as vol
-from pymodbus.client import ModbusTcpClient
 
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import device_registry as dr
@@ -46,6 +45,7 @@ def _get_integration_version() -> str:
 SERVICE_EXPORT_DUMP = "export_register_dump"
 SERVICE_WRITE_REGISTER = "write_register"
 SERVICE_DETECT_GRID_ORIENTATION = "detect_grid_orientation"
+SERVICE_READ_REGISTER = "read_register"
 
 # Universal scan ranges - covers all Grid-Tied Growatt series
 # Split into chunks of max 125 registers to respect Modbus limits
@@ -76,12 +76,21 @@ OFFGRID_SCAN_RANGES = [
 # Service schema
 SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
     {
-        vol.Required("host"): cv.string,
+        # Connection type selection
+        vol.Optional("connection_type", default="tcp"): vol.In(["tcp", "serial"]),
+
+        # TCP parameters (required if connection_type=tcp)
+        vol.Optional("host"): cv.string,
         vol.Optional("port", default=502): cv.port,
+
+        # Serial parameters (required if connection_type=serial)
+        vol.Optional("device"): cv.string,  # e.g., /dev/ttyUSB0, COM3
+        vol.Optional("baudrate", default=9600): vol.All(vol.Coerce(int), vol.In([4800, 9600, 19200, 38400, 57600, 115200])),
+
+        # Common parameters
         vol.Optional("slave_id", default=1): vol.All(vol.Coerce(int), vol.Range(min=1, max=247)),
         vol.Optional("notify", default=True): cv.boolean,
         vol.Optional("offgrid_mode", default=False): cv.boolean,  # CRITICAL: Enable for SPF to prevent power reset
-        vol.Optional("device_id"): cv.string,  # Optional: Include entity values from this device's coordinator
     }
 )
 
@@ -98,6 +107,55 @@ SERVICE_DETECT_GRID_ORIENTATION_SCHEMA = vol.Schema(
         vol.Optional("device_id"): cv.string,  # If not provided, uses first found integration
     }
 )
+
+SERVICE_READ_REGISTER_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): cv.string,
+        vol.Required("register"): vol.All(vol.Coerce(int), vol.Range(min=0, max=65535)),
+        vol.Optional("register_type", default="input"): vol.In(["input", "holding"]),
+    }
+)
+
+
+def _read_single_register(client, register: int, register_type: str = 'input') -> dict:
+    """
+    Read a single Modbus register.
+
+    Args:
+        client: GrowattModbus client with read_input_registers or read_holding_registers methods
+        register: Register address to read
+        register_type: 'input' or 'holding'
+
+    Returns:
+        dict with 'success', 'value', and 'error' keys
+    """
+    try:
+        # Choose read method based on register type
+        # GrowattModbus methods return Optional[list] - list on success, None on error
+        if register_type == 'holding':
+            result = client.read_holding_registers(start_address=register, count=1)
+        else:  # 'input'
+            result = client.read_input_registers(start_address=register, count=1)
+
+        if result is not None and len(result) > 0:
+            return {
+                'success': True,
+                'value': result[0],
+                'error': None
+            }
+        else:
+            return {
+                'success': False,
+                'value': None,
+                'error': "Register read failed or returned no data"
+            }
+
+    except Exception as e:
+        return {
+            'success': False,
+            'value': None,
+            'error': f"{type(e).__name__}: {str(e)}"
+        }
 
 
 def _lookup_register_info(register_addr: int) -> Optional[str]:
@@ -206,38 +264,37 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def export_register_dump(call: ServiceCall) -> None:
         """Universal register scanner - scans all ranges and auto-detects model."""
-        host = call.data["host"]
+        connection_type = call.data.get("connection_type", "tcp")
+        host = call.data.get("host")
         port = call.data.get("port", 502)
+        device = call.data.get("device")
+        baudrate = call.data.get("baudrate", 9600)
         slave_id = call.data.get("slave_id", 1)
         send_notification = call.data.get("notify", True)
         offgrid_mode = call.data.get("offgrid_mode", False)
-        device_id = call.data.get("device_id")
 
-        # Get coordinator if device_id provided
-        coordinator = None
-        if device_id:
-            device_reg = dr.async_get(hass)
-            device_entry = device_reg.async_get(device_id)
-
-            if device_entry:
-                # Find coordinator for this device
-                for entry_id in device_entry.config_entries:
-                    if entry_id in hass.data.get(DOMAIN, {}):
-                        coordinator = hass.data[DOMAIN][entry_id]
-                        _LOGGER.info("Using coordinator from device %s for entity value mapping", device_id)
-                        break
-
-            if not coordinator:
-                _LOGGER.warning("Device ID provided but coordinator not found - entity values will not be included")
+        # Validate required parameters based on connection type
+        if connection_type == "tcp":
+            if not host:
+                _LOGGER.error("host parameter required for TCP connection")
+                return
+        elif connection_type == "serial":
+            if not device:
+                _LOGGER.error("device parameter required for serial connection")
+                return
 
         if offgrid_mode:
             _LOGGER.warning("⚠️ OffGrid mode ENABLED - skipping VPP registers to prevent power reset on SPF inverters")
 
-        _LOGGER.info("Starting %s register scan at %s:%s", "OffGrid" if offgrid_mode else "universal", host, port)
+        # Log connection info
+        if connection_type == "tcp":
+            _LOGGER.info("Starting %s register scan at %s:%s", "OffGrid" if offgrid_mode else "universal", host, port)
+        else:
+            _LOGGER.info("Starting %s register scan on %s @ %d baud", "OffGrid" if offgrid_mode else "universal", device, baudrate)
 
-        # Run export in executor
+        # Run export in executor - coordinator will be auto-detected based on connection parameters
         result = await hass.async_add_executor_job(
-            _export_registers_to_csv, hass, host, port, slave_id, offgrid_mode, coordinator
+            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode
         )
         
         if result["success"]:
@@ -526,6 +583,195 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             current_invert_setting, recommended_invert, confidence
         )
 
+    async def read_register(call: ServiceCall) -> None:
+        """Read a specific Modbus register with detailed profile-aware output."""
+        device_id = call.data["device_id"]
+        register = call.data["register"]
+        register_type = call.data.get("register_type", "input")
+
+        _LOGGER.info("Read register service called: device=%s, register=%d, type=%s", device_id, register, register_type)
+
+        # Get device registry
+        device_reg = dr.async_get(hass)
+        device_entry = device_reg.async_get(device_id)
+
+        if not device_entry:
+            _LOGGER.error("Device %s not found", device_id)
+            raise ValueError(f"Device {device_id} not found")
+
+        # Find the config entry for this device
+        config_entry_id = None
+        for entry_id in device_entry.config_entries:
+            if entry_id in hass.data.get(DOMAIN, {}):
+                config_entry_id = entry_id
+                break
+
+        if not config_entry_id:
+            _LOGGER.error("No config entry found for device %s", device_id)
+            raise ValueError(f"No config entry found for device {device_id}")
+
+        # Get the coordinator
+        coordinator = hass.data[DOMAIN][config_entry_id]
+
+        if not coordinator:
+            _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
+            raise ValueError(f"Coordinator not found for device {device_id}")
+
+        # Read the register using the coordinator's client
+        read_result = await hass.async_add_executor_job(
+            lambda: _read_single_register(coordinator._client, register, register_type)
+        )
+
+        if not read_result["success"]:
+            error_msg = read_result.get("error", "Unknown error")
+            _LOGGER.error("Failed to read register %d: %s", register, error_msg)
+
+            await hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "title": f"❌ Register Read Failed: {register}",
+                    "message": f"**Error reading register {register} ({register_type}):**\n\n{error_msg}",
+                    "notification_id": "growatt_register_read",
+                },
+            )
+            return
+
+        # Build notification message
+        raw_value = read_result["value"]
+
+        # Get profile name from coordinator client
+        profile_name = getattr(coordinator._client, 'register_map_name', 'Unknown')
+
+        message_lines = [
+            f"**Register:** {register} (0x{register:04X})",
+            f"**Type:** {register_type.capitalize()}",
+            f"**Profile:** {profile_name}",
+            f"**Raw Value:** {raw_value}",
+        ]
+
+        # Check if register is in profile
+        register_map = coordinator._client.register_map
+        register_dict = register_map.get('input_registers' if register_type == 'input' else 'holding_registers', {})
+
+        if register in register_dict:
+            reg_info = register_dict[register]
+            reg_name = reg_info.get('name', 'Unknown')
+            scale = reg_info.get('scale', 1)
+            unit = reg_info.get('unit', '')
+            pair = reg_info.get('pair')
+            combined_scale = reg_info.get('combined_scale')
+            combined_unit = reg_info.get('combined_unit', '')
+            is_signed = reg_info.get('signed', False)
+
+            message_lines.append(f"\n**Profile Info:**")
+            message_lines.append(f"• Name: `{reg_name}`")
+            message_lines.append(f"• Scale: ×{scale}")
+            if unit:
+                message_lines.append(f"• Unit: {unit}")
+
+            # Calculate scaled value for this register alone
+            scaled_value = raw_value * scale
+            if unit:
+                message_lines.append(f"• Scaled Value: {scaled_value:.2f} {unit}")
+            else:
+                message_lines.append(f"• Scaled Value: {scaled_value:.2f}")
+
+            # Handle signed interpretation
+            if is_signed and raw_value > 32767:
+                signed_value = raw_value - 65536
+                message_lines.append(f"• Signed Value: {signed_value}")
+
+            # Check for paired register
+            if pair is not None:
+                message_lines.append(f"\n**Paired Register Detected:**")
+                message_lines.append(f"• Pair Address: {pair} (0x{pair:04X})")
+
+                # Read the paired register
+                pair_result = await hass.async_add_executor_job(
+                    lambda: _read_single_register(coordinator._client, pair, register_type)
+                )
+
+                if pair_result["success"]:
+                    pair_value = pair_result["value"]
+                    message_lines.append(f"• Pair Raw Value: {pair_value}")
+
+                    # Determine which is high/low
+                    if register < pair:
+                        # Current register is high word
+                        high_word = raw_value
+                        low_word = pair_value
+                    else:
+                        # Current register is low word
+                        high_word = pair_value
+                        low_word = raw_value
+
+                    # Combine into 32-bit value
+                    combined_raw = (high_word << 16) | low_word
+
+                    # Handle signed 32-bit if specified
+                    if is_signed and combined_raw > 0x7FFFFFFF:
+                        combined_raw = combined_raw - 0x100000000
+
+                    message_lines.append(f"\n**Combined 32-bit Value:**")
+                    message_lines.append(f"• Raw Combined: {combined_raw}")
+
+                    # Check for combined_scale - may be on current register OR paired register
+                    if combined_scale is None and pair in register_dict:
+                        pair_info = register_dict[pair]
+                        combined_scale = pair_info.get('combined_scale')
+                        if combined_unit == '' and combined_scale is not None:
+                            combined_unit = pair_info.get('combined_unit', '')
+
+                    # Apply combined scale if specified
+                    if combined_scale is not None:
+                        combined_computed = combined_raw * combined_scale
+                        if combined_unit:
+                            message_lines.append(f"• Combined Scale: ×{combined_scale}")
+                            message_lines.append(f"• **Computed Value: {combined_computed:.2f} {combined_unit}**")
+                        else:
+                            message_lines.append(f"• Combined Scale: ×{combined_scale}")
+                            message_lines.append(f"• **Computed Value: {combined_computed:.2f}**")
+                    else:
+                        # No combined scale defined - provide common interpretations
+                        message_lines.append(f"• ⚠️ No combined scale defined in profile")
+                        message_lines.append(f"\n**Possible Interpretations:**")
+                        message_lines.append(f"• ×0.1 = {combined_raw * 0.1:.2f}")
+                        message_lines.append(f"• ×0.01 = {combined_raw * 0.01:.2f}")
+                        message_lines.append(f"• ×1 = {combined_raw:.2f}")
+                else:
+                    message_lines.append(f"• ⚠️ Failed to read paired register: {pair_result.get('error', 'Unknown error')}")
+        else:
+            message_lines.append(f"\n**Profile Info:**")
+            message_lines.append(f"• ⚠️ Register {register} not defined in current profile")
+            message_lines.append(f"• Profile: `{profile_name}`")
+
+            # Provide common interpretations
+            message_lines.append(f"\n**Common Interpretations:**")
+            message_lines.append(f"• ×0.1 = {raw_value * 0.1:.2f}")
+            message_lines.append(f"• ×0.01 = {raw_value * 0.01:.2f}")
+            if raw_value > 32767:
+                signed = raw_value - 65536
+                message_lines.append(f"• Signed (INT16) = {signed}")
+
+        # Try to get entity value from coordinator
+        entity_value = _get_entity_value_for_register(register, coordinator, register_type)
+        if entity_value:
+            message_lines.append(f"\n**Current Entity Value:**")
+            message_lines.append(f"• {entity_value}")
+
+        _LOGGER.info("Successfully read register %d: raw=%d", register, raw_value)
+
+        await hass.services.async_call(
+            "persistent_notification",
+            "create",
+            {
+                "title": f"📋 Register {register} ({register_type.capitalize()})",
+                "message": "\n".join(message_lines),
+                "notification_id": "growatt_register_read",
+            },
+        )
+
     # Register services
     hass.services.async_register(
         DOMAIN,
@@ -546,6 +792,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_DETECT_GRID_ORIENTATION,
         detect_grid_orientation,
         schema=SERVICE_DETECT_GRID_ORIENTATION_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_READ_REGISTER,
+        read_register,
+        schema=SERVICE_READ_REGISTER_SCHEMA,
     )
 
 
@@ -795,13 +1048,23 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
             else:
                 # Single-phase SPH
                 detection["reasoning"].append("✗ No 3-phase detected → Single-phase SPH")
-                
+
                 if has_storage_range or has_battery_at_1013:
-                    detection["model"] = "SPH 7000-10000"
-                    detection["confidence"] = "High"
-                    detection["profile_key"] = "sph_7000_10000"
-                    detection["register_map"] = "SPH_7000_10000"
-                    detection["reasoning"].append("✓ Storage range or battery at 1013 → SPH 7-10kW")
+                    # Check for PV3 to differentiate SPH_8000_10000_HU from SPH_7000_10000
+                    if has_pv3_at_11:
+                        detection["model"] = "SPH/SPM 8000-10000TL-HU"
+                        detection["confidence"] = "High"
+                        detection["profile_key"] = "sph_8000_10000_hu"
+                        detection["register_map"] = "SPH_8000_10000_HU"
+                        detection["reasoning"].append("✓ Storage range + PV3 at register 11 → SPH/SPM 8-10kW HU (3 MPPT)")
+                        detection["reasoning"].append("  → HU models have 3 MPPT inputs and extended energy registers")
+                    else:
+                        detection["model"] = "SPH 7000-10000"
+                        detection["confidence"] = "High"
+                        detection["profile_key"] = "sph_7000_10000"
+                        detection["register_map"] = "SPH_7000_10000"
+                        detection["reasoning"].append("✓ Storage range or battery at 1013 → SPH 7-10kW")
+                        detection["reasoning"].append("✗ No PV3 at register 11 → Standard model (2 MPPT)")
                 else:
                     detection["model"] = "SPH 3000-6000"
                     detection["confidence"] = "High"
@@ -848,11 +1111,19 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
             # Check for single-phase battery system (SPH)
             elif (has_battery_at_13 or has_battery_at_1013 or has_storage_range) and has_0_124:
                 if has_storage_range or has_battery_at_1013:
-                    detection["model"] = "SPH 7000-10000 (Night/Standby Mode)"
-                    detection["confidence"] = "Medium"
-                    detection["profile_key"] = "sph_7000_10000"
-                    detection["register_map"] = "SPH_7000_10000"
-                    detection["reasoning"].append("✓ Found battery indicators in storage range → SPH 7-10kW")
+                    # Check for PV3 to differentiate SPH_8000_10000_HU from SPH_7000_10000
+                    if has_pv3_at_11:
+                        detection["model"] = "SPH/SPM 8000-10000TL-HU (Night/Standby Mode)"
+                        detection["confidence"] = "Medium"
+                        detection["profile_key"] = "sph_8000_10000_hu"
+                        detection["register_map"] = "SPH_8000_10000_HU"
+                        detection["reasoning"].append("✓ Found storage range + PV3 at register 11 → SPH/SPM 8-10kW HU (3 MPPT)")
+                    else:
+                        detection["model"] = "SPH 7000-10000 (Night/Standby Mode)"
+                        detection["confidence"] = "Medium"
+                        detection["profile_key"] = "sph_7000_10000"
+                        detection["register_map"] = "SPH_7000_10000"
+                        detection["reasoning"].append("✓ Found battery indicators in storage range → SPH 7-10kW")
                 else:
                     detection["model"] = "SPH 3000-6000 (Night/Standby Mode)"
                     detection["confidence"] = "Medium"
@@ -914,13 +1185,20 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     return detection
 
 
-def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_mode: bool = False, coordinator=None) -> dict:
+def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False) -> dict:
     """
     Export all registers to CSV file with auto-detection (blocking).
 
     Args:
+        connection_type: 'tcp' or 'serial'
+        host: IP address for TCP connection
+        port: Port for TCP connection
+        device: Serial device path for serial connection
+        baudrate: Serial baudrate for serial connection
+        slave_id: Modbus slave ID
         offgrid_mode: If True, skip VPP registers (30000+, 31000+) to prevent SPF power resets
-        coordinator: Optional coordinator to include entity values in CSV
+
+    Note: Coordinator is auto-detected by matching connection parameters
     """
     result = {
         "success": False,
@@ -931,14 +1209,66 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_
     }
 
     try:
-        # Connect with longer timeout
-        client = ModbusTcpClient(host=host, port=port, timeout=15)
+        # Connect with appropriate client type
+        if connection_type == "tcp":
+            try:
+                from pymodbus.client import ModbusTcpClient
+            except ImportError:
+                from pymodbus.client.sync import ModbusTcpClient
+
+            client = ModbusTcpClient(host=host, port=port, timeout=15)
+            connection_str = f"{host}:{port}"
+        else:  # serial
+            try:
+                from pymodbus.client import ModbusSerialClient
+            except ImportError:
+                from pymodbus.client.sync import ModbusSerialClient
+
+            client = ModbusSerialClient(
+                port=device,
+                baudrate=baudrate,
+                timeout=15,
+                parity='N',
+                stopbits=1,
+                bytesize=8
+            )
+            connection_str = f"{device} @ {baudrate} baud"
+
         if not client.connect():
-            result["error"] = f"Cannot connect to {host}:{port}"
+            result["error"] = f"Cannot connect to {connection_str}"
             return result
 
         mode_str = "OffGrid scan (safe for SPF)" if offgrid_mode else "universal scan"
         _LOGGER.info(f"Connected, starting {mode_str}...")
+
+        # Auto-detect coordinator by matching connection parameters
+        coordinator = None
+        if hass.data.get(DOMAIN):
+            for entry_id, coord in hass.data[DOMAIN].items():
+                if not coord or not hasattr(coord, 'entry'):
+                    continue
+
+                entry_data = coord.entry.data
+
+                # Match based on connection type
+                if connection_type == "tcp":
+                    # Match TCP connections by host and port
+                    if (entry_data.get("connection_type") == "tcp" and
+                        entry_data.get("host") == host and
+                        entry_data.get("port", 502) == port):
+                        coordinator = coord
+                        _LOGGER.info(f"Auto-detected coordinator for {host}:{port} - entity values will be included")
+                        break
+                else:  # serial
+                    # Match Serial connections by device path
+                    if (entry_data.get("connection_type") == "serial" and
+                        entry_data.get("device") == device):
+                        coordinator = coord
+                        _LOGGER.info(f"Auto-detected coordinator for {device} - entity values will be included")
+                        break
+
+        if not coordinator:
+            _LOGGER.info("No matching coordinator found - entity values will not be included in CSV")
 
         # Scan ALL ranges
         all_register_data = {}
@@ -1035,7 +1365,8 @@ def _export_registers_to_csv(hass, host: str, port: int, slave_id: int, offgrid_
             writer.writerow(["SCAN METADATA"])
             writer.writerow(["Integration Version", _get_integration_version()])
             writer.writerow(["Timestamp", datetime.now().isoformat()])
-            writer.writerow(["Host", f"{host}:{port}"])
+            writer.writerow(["Connection", connection_str])
+            writer.writerow(["Connection Type", connection_type.upper()])
             writer.writerow(["Slave ID", slave_id])
             writer.writerow([])
             

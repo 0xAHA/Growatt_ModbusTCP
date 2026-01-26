@@ -96,6 +96,7 @@
         "mod_6000_15000_tl3_xh": "MOD 6000-15000TL3-XH (3-phase hybrid, 6-15kW)",
         "sph_3000_6000": "SPH 3000-6000 (Single-phase hybrid with battery, 3-6kW)",
         "sph_7000_10000": "SPH 7000-10000 (Single-phase hybrid with battery, 7-10kW)",
+        "sph_8000_10000_hu": "SPH/SPM 8000-10000TL-HU (Single-phase hybrid, 3 MPPT, 8-10kW)",
         "sph_tl3_3000_10000": "SPH-TL3 3000-10000 (3-phase hybrid with battery, 3-10kW)",
         "tl_xh_3000_10000": "TL-XH 3000-10000 (Hybrid with battery, 3-10kW)",
         "tl_xh_us_3000_10000": "TL-XH US 3000-10000 (US Hybrid with battery, 3-10kW)",

@@ -127,11 +127,10 @@ WIT_4000_15000TL3 = {
         # Per VPP Protocol V2.01/V2.02 Official Specification
 
         # 65: Charge/discharge power (INT32, signed: positive=charge, negative=discharge)
-        # NOTE: VPP spec says 0.1W scale, but real-world WIT testing shows 1.0W scale
-        # User testing: 53.2V × 2.2A = 117W matches register reading with 1.0 scale (121W)
-        # With 0.1 scale, reading was 10x too small (12.1W). WIT firmware deviates from spec.
+        # VPP spec: 0.1W scale (standard for most WIT inverters)
+        # NOTE: Some rare WIT variants may use 1.0W scale - see v0.1.8 release notes for manual fix
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 1.0, 'combined_unit': 'W', 'signed': True},
+        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
         # 66: Daily charge of battery
         31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203},

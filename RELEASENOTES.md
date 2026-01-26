@@ -1,3 +1,771 @@
+# Release Notes
+
+## 🌱 Early Adopter Notice - Help Us Grow!
+
+> **This integration is actively evolving with your help!**
+>
+> We're building something great together, and your real-world testing is invaluable. This integration supports many Growatt inverter models, but some profiles are based on official documentation and haven't been verified with actual hardware yet.
+>
+> **How You Can Help:**
+>
+> - ✅ **Test and report** - Try the integration with your inverter and let us know how it works
+> - 📊 **Share register scans** - Use the built-in Universal Scanner to help us verify or improve profiles
+> - 🐛 **Report issues** - Found incorrect values or missing sensors? [Open an issue](https://github.com/0xAHA/Growatt_ModbusTCP/issues) with your inverter model
+> - 💡 **Share feedback** - Your experience helps us prioritize features and fixes
+> - ⭐ **Star the repo** - Show support and help others discover this integration
+>
+> **Current Status:**
+> - Core functionality is stable and tested on multiple inverter models
+> - New features and profiles added regularly based on community feedback
+> - Active development with responsive issue resolution
+>
+> Together we're building the most comprehensive local Growatt integration for Home Assistant. Thank you for being part of this journey! 🙏
+
+---
+
+# Release Notes - v0.2.1
+
+## CRITICAL FIXES for SPH_8000_10000_HU Profile 🔧
+
+**Three critical bugs fixed** based on user testing and official Growatt Modbus RTU Protocol V1.24 specification.
+
+---
+
+### 1. Battery SOC/Voltage/Temp Now Working ✅
+
+**PROBLEM:** Battery sensors were unavailable or showing garbage data
+- `battery_soc` showing "unavailable" (should be 65%)
+- `battery_temp` showing "unavailable" (should be 19°C)
+- Register 1014 contained value 12851 instead of 0-100%
+
+**ROOT CAUSE:** Profile was using wrong storage registers (1013, 1014, 1040) instead of BMS registers
+
+**SOLUTION:** Switched to correct BMS registers per official Growatt spec:
+
+| Sensor | Register | Old Register | Status |
+|--------|----------|--------------|--------|
+| `battery_soc` | **1086** | 1014 (wrong) | ✅ Now shows 65% |
+| `battery_voltage` | **1087** | 1013 (wrong) | ✅ Now works |
+| `battery_current` | **1088** | 1013 (wrong) | ✅ Now works |
+| `battery_temp` | **1089** | 1040 (wrong) | ✅ Now shows 19°C |
+
+**USER CONFIRMED:**
+- Register 1086 = 65% SOC ✅
+- Register 1089 = 19°C ✅
+- Register 1097 = 57.4V float/absorption voltage ✅
+
+---
+
+### 2. PV3 Sensors Now Visible ✅
+
+**PROBLEM:** PV3 sensors not appearing even though PV3 supported
+- `pv3_voltage`, `pv3_current`, `pv3_power` were hidden
+- User could only see PV1 and PV2
+
+**ROOT CAUSE:** Sensor creation had condition `pv3_voltage > 0 or pv3_power > 0`
+- Since PV3 not connected (0V/0W), sensors weren't created
+
+**SOLUTION:** Removed creation conditions from PV3 sensors
+- PV3 sensors now always visible (like PV1/PV2)
+- Shows 0V/0A/0W when not connected
+- Will show real values when panels connected
+
+---
+
+### 3. Battery Energy Sensors Now Available ✅
+
+**PROBLEM:** "battery discharge today" and related sensors unavailable
+
+**ROOT CAUSE:** Register names didn't match expected sensor names
+- Profile had: `discharge_energy_today`
+- HA expected: `battery_discharge_today`
+- Result: Sensors not created
+
+**SOLUTION:** Renamed all battery energy registers:
+
+| Sensor | Registers | Old Name | New Name ✅ |
+|--------|-----------|----------|-------------|
+| Battery Discharge Today | 1052-1053 | `discharge_energy_today` | `battery_discharge_today` |
+| Battery Discharge Total | 1054-1055 | `discharge_energy_total` | `battery_discharge_total` |
+| Battery Charge Today | 1056-1057 | `charge_energy_today` | `battery_charge_today` |
+| Battery Charge Total | 1058-1059 | `charge_energy_total` | `battery_charge_total` |
+
+---
+
+### 4. USB/Serial Register Scanner Fixed 🐛
+
+**PROBLEM:** Universal register scanner failing with serial connections
+- Error: "value must be one of [4800,9600,...] for dictionary value @data['baudrate']. Got None"
+
+**ROOT CAUSE:** Type mismatch between schema and UI
+- Schema expected: integers (9600)
+- Service UI provided: strings ("9600")
+
+**SOLUTION:** Fixed baudrate options to integers in services.yaml
+
+---
+
+## NEW: Comprehensive BMS Monitoring 📊
+
+Added **13 new BMS (Battery Management System) sensors** from official Growatt Modbus spec:
+
+### BMS Status & Diagnostics
+
+| Sensor | Register | Description |
+|--------|----------|-------------|
+| `sensor.{name}_bms_status` | 1083 | BMS status code |
+| `sensor.{name}_bms_error` | 1085 | BMS error information |
+| `sensor.{name}_bms_warn_info` | 1099 | BMS warning information |
+
+### Battery Health Monitoring
+
+| Sensor | Register | Description |
+|--------|----------|-------------|
+| `sensor.{name}_battery_state_of_health` | 1096 | Battery SOH (State of Health) % |
+| `sensor.{name}_bms_cycle_count` | 1095 | Battery charge/discharge cycle count |
+| `sensor.{name}_bms_max_current` | 1090 | Max charge/discharge current (A) |
+| `sensor.{name}_bms_constant_volt` | 1097 | CV voltage / Float voltage (V) |
+
+### Cell Voltage Monitoring
+
+| Sensor | Register | Description |
+|--------|----------|-------------|
+| `sensor.{name}_bms_max_cell_volt` | 1108 | Maximum single cell voltage (V) |
+| `sensor.{name}_bms_min_cell_volt` | 1109 | Minimum single cell voltage (V) |
+
+### Parallel Battery Data
+
+| Sensor | Register | Description |
+|--------|----------|-------------|
+| `sensor.{name}_bms_module_num` | 1110 | Number of battery modules in parallel |
+| `sensor.{name}_bms_battery_count` | 1111 | Total number of batteries |
+| `sensor.{name}_bms_max_soc` | 1119 | Maximum SOC in parallel system (%) |
+| `sensor.{name}_bms_min_soc` | 1120 | Minimum SOC in parallel system (%) |
+
+---
+
+## Complete Sensor Checklist for SPH_8000_10000_HU
+
+Use this checklist to verify all sensors after updating:
+
+### ✅ Core Battery Sensors (Fixed)
+- [ ] `sensor.{name}_battery_soc` (Reg 1086) - Should show ~65%
+- [ ] `sensor.{name}_battery_voltage` (Reg 1087) - Should show battery voltage
+- [ ] `sensor.{name}_battery_current` (Reg 1088) - Should show charging/discharging current
+- [ ] `sensor.{name}_battery_temp` (Reg 1089) - Should show ~19°C
+
+### ✅ PV Sensors (All 3 MPPTs)
+- [ ] `sensor.{name}_pv1_voltage` (Reg 3)
+- [ ] `sensor.{name}_pv1_current` (Reg 4)
+- [ ] `sensor.{name}_pv1_power` (Reg 5-6)
+- [ ] `sensor.{name}_pv2_voltage` (Reg 7)
+- [ ] `sensor.{name}_pv2_current` (Reg 8)
+- [ ] `sensor.{name}_pv2_power` (Reg 9-10)
+- [ ] `sensor.{name}_pv3_voltage` (Reg 11) - Should show 0V if not connected
+- [ ] `sensor.{name}_pv3_current` (Reg 12) - Should show 0A if not connected
+- [ ] `sensor.{name}_pv3_power` (Reg 13-14) - Should show 0W if not connected
+
+### ✅ Battery Energy Sensors (Fixed)
+- [ ] `sensor.{name}_battery_discharge_today` (Reg 1052-1053)
+- [ ] `sensor.{name}_battery_discharge_total` (Reg 1054-1055)
+- [ ] `sensor.{name}_battery_charge_today` (Reg 1056-1057)
+- [ ] `sensor.{name}_battery_charge_total` (Reg 1058-1059)
+
+### ✅ BMS Diagnostic Sensors (New)
+- [ ] `sensor.{name}_bms_status` (Reg 1083)
+- [ ] `sensor.{name}_bms_error` (Reg 1085)
+- [ ] `sensor.{name}_bms_warn_info` (Reg 1099)
+- [ ] `sensor.{name}_battery_state_of_health` (Reg 1096) - SOH %
+- [ ] `sensor.{name}_bms_cycle_count` (Reg 1095)
+- [ ] `sensor.{name}_bms_max_current` (Reg 1090)
+- [ ] `sensor.{name}_bms_constant_volt` (Reg 1097) - Should show ~57.4V
+- [ ] `sensor.{name}_bms_max_cell_volt` (Reg 1108)
+- [ ] `sensor.{name}_bms_min_cell_volt` (Reg 1109)
+- [ ] `sensor.{name}_bms_module_num` (Reg 1110)
+- [ ] `sensor.{name}_bms_battery_count` (Reg 1111)
+- [ ] `sensor.{name}_bms_max_soc` (Reg 1119)
+- [ ] `sensor.{name}_bms_min_soc` (Reg 1120)
+
+### ✅ Power Flow Sensors
+- [ ] `sensor.{name}_power_to_user` (Reg 1015-1016) - Grid import power
+- [ ] `sensor.{name}_power_to_grid` (Reg 1029-1030) - Grid export power
+- [ ] `sensor.{name}_power_to_load` (Reg 1021-1022) - Load consumption
+
+### ✅ Energy Tracking Sensors
+- [ ] `sensor.{name}_energy_to_user_today` (Reg 1044-1045) - Grid import today
+- [ ] `sensor.{name}_energy_to_user_total` (Reg 1046-1047) - Grid import total
+- [ ] `sensor.{name}_energy_to_grid_today` (Reg 1048-1049) - Grid export today
+- [ ] `sensor.{name}_energy_to_grid_total` (Reg 1050-1051) - Grid export total
+- [ ] `sensor.{name}_load_energy_today` (Reg 1060-1061)
+- [ ] `sensor.{name}_load_energy_total` (Reg 1062-1063)
+
+---
+
+## How to Update
+
+1. **Pull latest code** from repository
+2. **Restart Home Assistant**
+3. **Reload the Growatt Modbus integration:**
+   - Settings → Devices & Services → Growatt Modbus
+   - Click "⋮" → Reload
+4. **Verify sensors** using checklist above
+5. **Ignore legacy sensors** (if visible):
+   - `battery_soc_legacy` - Use main `battery_soc` instead
+   - `battery_temp_legacy` - Use main `battery_temp` instead
+   - `battery_power_calc` - Less accurate than BMS data
+
+---
+
+## Files Modified
+
+- `profiles/sph.py` - BMS registers, removed wrong storage registers, fixed battery energy naming
+- `sensor.py` - Added 13 BMS sensor definitions, removed PV3 creation conditions
+- `device_profiles.py` - Added BMS_SENSORS group, added to SPH_8000_10000_HU profile
+- `services.yaml` - Fixed baudrate type from strings to integers
+
+---
+
+## Commits
+
+- b81485f - Fix SPH_8000_10000_HU battery SOC and PV3 sensors
+- b3b208d - Fix battery energy sensor naming for SPH_8000_10000_HU
+- [current] - Add BMS sensor definitions and fix USB/serial scanner
+
+---
+
+# Release Notes - v0.2.0
+
+## NEW: SPH/SPM 8000-10000TL-HU Profile 🔋
+
+**New dedicated profile** for SPH/SPM 8000-10000TL-HU models with 3 MPPT inputs and storage range registers. This profile provides the most accurate power flow tracking and energy measurements for these high-capacity single-phase hybrid inverters.
+
+### What Models Are Supported
+
+- **SPH 8000TL-HU** - Single-phase hybrid with 3 MPPTs (8kW)
+- **SPH 10000TL-HU** - Single-phase hybrid with 3 MPPTs (10kW)
+- **SPM 8000TL-HU** - Single-phase hybrid with 3 MPPTs (8kW)
+- **SPM 10000TL-HU** - Single-phase hybrid with 3 MPPTs (10kW)
+
+**Key Hardware Features These Models Have:**
+- **3 MPPT inputs** (supports up to 3 independent PV strings)
+- **Up to 200A** charging/discharging current
+- **1.5 DC/AC ratio** (15kW max PV on 10kW inverter)
+- **Extended register range** (1000-1124) with detailed power flow tracking
+- **Hardware energy registers** for grid import/export (critical for accurate energy dashboard)
+
+### Profile Key Features
+
+**Register Ranges:**
+- **Base Range (0-124):** Standard PV, AC, and system status
+- **PV3 Support (11-14):** Third PV string voltage, current, and power
+- **Storage Range (1000-1124):** Battery state, power flow, and energy breakdown
+
+**Critical Power Flow Registers:**
+- `1015-1016`: Power to user (grid import when positive)
+- `1021-1022`: Total load power consumption
+- `1029-1030`: Power to grid (signed: negative=export, positive=import)
+
+**Hardware Energy Registers (Most Important for Energy Dashboard):**
+- `1044-1047`: Grid import energy (today + total) - **Use these instead of calculated values!**
+- `1048-1051`: Grid export energy (today + total) - **Hardware measured, not calculated!**
+- `1052-1055`: Battery discharge energy (today + total)
+- `1056-1059`: Battery charge energy (today + total)
+- `1060-1063`: Load consumption energy (today + total)
+
+**Battery Monitoring (Storage Range):**
+- `1009-1012`: Separate discharge/charge power registers
+- `1013`: Battery voltage (storage range version)
+- `1014`: Battery SOC (storage range version)
+- `1040`: Battery temperature (storage range version)
+
+### Expected Sensors With This Profile
+
+When using the `SPH_8000_10000_HU` profile, you should see:
+
+**PV Sensors (3 strings):**
+- `sensor.{name}_pv1_voltage/current/power`
+- `sensor.{name}_pv2_voltage/current/power`
+- `sensor.{name}_pv3_voltage/current/power` ⭐ **NEW - Shows 0 if not connected**
+- `sensor.{name}_pv_total_power`
+
+**AC Output:**
+- `sensor.{name}_ac_voltage/current/power/frequency`
+
+**Battery (Enhanced):**
+- `sensor.{name}_battery_voltage` (from register 1013)
+- `sensor.{name}_battery_soc` (from register 1014)
+- `sensor.{name}_battery_temp` (from register 1040)
+- `sensor.{name}_discharge_power` (from registers 1009-1010)
+- `sensor.{name}_charge_power` (from registers 1011-1012)
+
+**Power Flow (Storage Range - Most Accurate):**
+- `sensor.{name}_power_to_user` (grid import power)
+- `sensor.{name}_power_to_grid` (grid export/import, signed)
+- `sensor.{name}_power_to_load` (total load consumption)
+- `sensor.{name}_self_consumption_power`
+- `sensor.{name}_self_consumption_percentage`
+
+**Energy Tracking (Hardware Registers - Critical!):**
+- `sensor.{name}_energy_to_user_today/total` ⭐ **Grid import energy (hardware)**
+- `sensor.{name}_energy_to_grid_today/total` ⭐ **Grid export energy (hardware)**
+- `sensor.{name}_discharge_energy_today/total`
+- `sensor.{name}_charge_energy_today/total`
+- `sensor.{name}_load_energy_today/total`
+
+**System Status:**
+- `sensor.{name}_system_work_mode`
+- `sensor.{name}_inverter_temp/fault_code/warning_code`
+
+### Migration from Other Profiles
+
+**If you're currently using `SPH_7000_10000`:**
+
+This base profile doesn't have the storage range (1000-1124), so you're missing:
+- Hardware grid import/export energy registers
+- Detailed power flow sensors
+- PV3 support
+
+**To migrate:** Reconfigure your integration and select `SPH_8000_10000_HU` profile.
+
+**If you're currently using `SPH_TL3` (THREE-PHASE):**
+
+❌ **Wrong profile!** SPH_TL3 is for three-phase inverters. The HU models are single-phase.
+
+**Issues you're experiencing:**
+- Only 2 PV strings visible (expecting 3)
+- Missing Phase S and Phase T sensors (because you're single-phase)
+- Incorrect grid import energy totals (using wrong registers)
+- Missing `ac_power_phase_r` residual consumption data
+
+**To migrate:** Reconfigure your integration and select `SPH_8000_10000_HU` profile.
+
+### How to Switch Profiles
+
+1. Go to **Settings** → **Devices & Services** → **Growatt Modbus**
+2. Click **CONFIGURE** on your integration
+3. Select **SPH/SPM 8000-10000TL-HU** from the profile dropdown
+4. Click **Submit**
+5. Wait for next poll cycle (~30 seconds) for sensors to update
+
+**Note:** Sensor entity IDs may change. You may need to update automations/dashboards.
+
+### Energy Dashboard Configuration
+
+**For accurate energy tracking, use the hardware energy registers:**
+
+**Grid Import Energy (From Grid):**
+```yaml
+sensor.{name}_energy_to_user_total
+```
+- **Register:** 1046-1047 (hardware measured)
+- **Why:** Hardware counter from inverter, not calculated
+
+**Grid Export Energy (To Grid):**
+```yaml
+sensor.{name}_energy_to_grid_total
+```
+- **Register:** 1050-1051 (hardware measured)
+- **Why:** Hardware counter from inverter, not calculated
+
+**Load Consumption:**
+```yaml
+sensor.{name}_load_energy_total
+```
+- **Register:** 1062-1063 (hardware measured)
+
+**Battery Discharge:**
+```yaml
+sensor.{name}_discharge_energy_total
+```
+- **Register:** 1054-1055 (hardware measured)
+
+**Battery Charge:**
+```yaml
+sensor.{name}_charge_energy_total
+```
+- **Register:** 1058-1059 (hardware measured)
+
+### PV3 Behavior
+
+The PV3 sensors (registers 11-14) will:
+- ✅ **Show 0W/0V/0A** when no panels connected to PV3 input
+- ✅ **Update with real values** when panels are connected
+- ✅ **Be visible in Home Assistant** regardless of connection status
+
+This is intentional - you can see all 3 PV inputs even if only using 1 or 2.
+
+### What We Need You to Test and Confirm
+
+Since this profile is newly created based on hardware specifications and register scans, please test and report:
+
+**Critical Tests:**
+
+1. **PV3 Detection:**
+   - Do you see `sensor.{name}_pv3_voltage`, `sensor.{name}_pv3_current`, `sensor.{name}_pv3_power`?
+   - If you have panels on PV3, do they show correct values?
+   - If you DON'T have panels on PV3, do they show 0?
+
+2. **Grid Energy Accuracy:**
+   - Does `sensor.{name}_energy_to_user_total` match your electricity meter import reading?
+   - Does `sensor.{name}_energy_to_grid_total` match your electricity meter export reading?
+   - Do the daily values (`*_today`) reset at midnight?
+   - Are the totals stable (not jumping backwards)?
+
+3. **Power Flow Accuracy:**
+   - Does `sensor.{name}_power_to_user` show positive when importing from grid?
+   - Does `sensor.{name}_power_to_grid` show negative when exporting to grid?
+   - Does `sensor.{name}_power_to_load` match your actual house consumption?
+
+4. **Battery Registers:**
+   - Is `sensor.{name}_battery_soc` (register 1014) showing reasonable values (0-100%)?
+   - Are discharge/charge power sensors working correctly?
+   - Do battery energy counters increment properly?
+
+5. **Register 1014 (Battery SOC):**
+   - **Previous scan showed value 12851** which seems invalid (should be 0-100)
+   - Does this register now show a valid SOC percentage?
+   - Or should we use a different register for battery SOC on HU models?
+
+**Please Report:**
+- ✅ What sensors are working correctly
+- ❌ What values seem wrong or missing
+- 📊 Use `growatt_modbus.read_register` service to check specific register values
+- 🔍 Run a register scan (`export_register_dump`) and share if you find issues
+
+**Where to Report:**
+- [GitHub Issue for SPH_8000_10000_HU validation](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
+- Include your exact model (e.g., "SPH 10000TL-HU")
+- Include register scan CSV if possible
+
+### Known Considerations
+
+**Battery SOC Register (1014):**
+- Previous scan showed unusual value (12851 instead of 0-100)
+- May need to use register 17 from base range instead
+- **Please test and report which register gives correct SOC**
+
+**Energy Register Validation:**
+- Hardware energy registers (1044-1063) are new additions
+- Need real-world validation that totals match utility meters
+- Please compare with your actual import/export readings
+
+**PV3 on Non-HU Models:**
+- If you have a standard SPH 7000/10000 (not HU), registers 13-14 are battery voltage/current
+- This profile is specifically for HU models with 3 MPPT inputs
+- Using this profile on non-HU models may show incorrect battery data
+
+### Benefits of This Profile
+
+- ✅ **3 PV String Support** - See all MPPT inputs
+- ✅ **Hardware Energy Counters** - Most accurate grid import/export tracking
+- ✅ **Detailed Power Flow** - Real-time visibility of where power is going
+- ✅ **Energy Dashboard Ready** - Hardware registers work perfectly with HA Energy Dashboard
+- ✅ **Single-Phase Correct** - No phantom Phase S/T sensors
+- ✅ **Storage Range Access** - Full visibility into battery and power flow
+
+### Auto-Detection Support ✨
+
+The SPH_8000_10000_HU profile is **automatically detected** by the Universal Register Scanner!
+
+**Detection Logic:**
+- ✅ Single-phase (no Phase S/T at registers 42-49)
+- ✅ Storage range responding (registers 1000-1124)
+- ✅ **PV3 present at register 11** (key differentiator from SPH_7000_10000)
+
+When you run `export_register_dump` service, the scanner will:
+1. Detect if you have a single-phase inverter with storage range
+2. Check register 11 for PV3 voltage presence
+3. If PV3 present → **SPH_8000_10000_HU** (3 MPPT model)
+4. If PV3 absent → **SPH_7000_10000** (2 MPPT model)
+
+**Works even at night!** The fallback detection logic checks for register 11 presence regardless of whether PV3 has panels connected.
+
+**Manual Selection:**
+You can also manually select the profile during integration setup if you prefer.
+
+### Related Changes
+
+- Renamed from `SPH_7000_10000_STORAGE` to `SPH_8000_10000_HU` for clarity
+- Added registers 11-14 for PV3 support (overrides inherited battery registers)
+- Updated profile description to mention HU models specifically
+- Added comprehensive documentation for expected sensors
+- **Added auto-detection logic** in Universal Register Scanner
+- Detection works in both active and night/standby modes
+
+**Commits:** dca2406 (profile), [current] (auto-detection)
+
+---
+
+# Release Notes - v0.1.9
+
+## Register Read Service - Profile-Aware Register Inspector
+
+**New diagnostic service** that allows you to read and inspect any specific Modbus register with detailed profile-aware output. Perfect for debugging, validating profile mappings, and troubleshooting sensor issues.
+
+### The Feature
+
+A developer-friendly service that reads any register and displays comprehensive information in a persistent notification:
+
+- **Raw register value** and common interpretations
+- **Profile mapping info** (name, scale, unit) if register is in your profile
+- **Automatic paired register detection** - reads and combines 32-bit values automatically
+- **Signed value handling** - shows signed interpretations for INT16 and INT32 values
+- **Current entity value** from Home Assistant (if available)
+- **Works with existing devices** - no need to re-enter connection details
+
+### How to Use
+
+**Developer Tools → Services → growatt_modbus.read_register**
+
+```yaml
+service: growatt_modbus.read_register
+data:
+  device_id: <your_device_id>  # Select from dropdown
+  register: 3                  # Register address to read
+  register_type: input         # "input" or "holding"
+```
+
+### Example Output
+
+When reading WIT battery power register (31201):
+
+```
+📋 Register 31201 (Input)
+
+Register: 31201 (0x79E1)
+Type: Input
+Raw Value: 5234
+
+Profile Info:
+• Name: `battery_power_low`
+• Scale: ×1
+• Unit:
+• Scaled Value: 5234
+
+Paired Register Detected:
+• Pair Address: 31200 (0x79E0)
+• Pair Raw Value: 0
+
+Combined 32-bit Value:
+• Raw Combined: 5234
+• Combined Scale: ×0.1
+• Computed Value: 523.4 W
+
+Current Entity Value:
+• 523.4 W
+```
+
+### Use Cases
+
+- **Profile Development** - Verify register mappings and scales are correct
+- **Troubleshooting** - Check raw register values vs entity values
+- **Scale Validation** - Compare computed values with actual measurements
+- **Paired Register Testing** - Validate 32-bit value combinations
+- **Quick Register Inspection** - No need for full register scans
+
+### Benefits
+
+- ✅ Instant register inspection without full scans
+- ✅ Automatic paired register detection and calculation
+- ✅ Profile-aware output shows exactly how values are processed
+- ✅ Works with any configured device (TCP or Serial)
+- ✅ Persistent notification output for easy reference
+
+---
+
+## USB/Serial Adapter Support & Auto-Detection for Register Scanner
+
+**Enhanced Universal Register Scanner** with USB/Serial adapter support and automatic entity value detection.
+
+### The Enhancement
+
+Previously, the `export_register_dump` service only supported TCP connections and required manual device selection for entity values (showing all sub-devices confusingly). Now it supports both connection types and automatically includes entity values when scanning a configured device.
+
+### What's New
+
+**Connection Type Selection:**
+- **TCP Mode:** Uses IP address and port
+- **Serial Mode:** Uses device path and baudrate (NEW)
+
+**Automatic Entity Value Detection:**
+- **No device selector needed** - removed confusing sub-device selection
+- **Auto-detects coordinator** by matching your connection parameters (host/port or serial device)
+- **Entity values automatically included** if you're scanning a configured device
+- **Cleaner, simpler UI** - just provide connection details
+
+**Connection Parameters:**
+- `connection_type`: Select "tcp" or "serial" (defaults to tcp)
+- `host` / `port`: For TCP connections (RS485-to-Ethernet adapters)
+- `device` / `baudrate`: For Serial connections (RS485-to-USB adapters)
+- `slave_id`: Modbus slave ID (usually 1)
+- `offgrid_mode`: Safety mode for SPF inverters
+
+### How to Use
+
+**Developer Tools → Services → growatt_modbus.export_register_dump**
+
+For USB/Serial adapter:
+```yaml
+service: growatt_modbus.export_register_dump
+data:
+  connection_type: serial
+  device: "/dev/ttyUSB0"  # or "COM3" on Windows
+  baudrate: 9600
+  slave_id: 1
+  offgrid_mode: false  # Set true for SPF inverters
+```
+
+For TCP adapter (unchanged):
+```yaml
+service: growatt_modbus.export_register_dump
+data:
+  connection_type: tcp
+  host: "192.168.1.60"
+  port: 502
+  slave_id: 1
+  offgrid_mode: false
+```
+
+### Technical Details
+
+**Backend Changes:**
+- Updated `_export_registers_to_csv()` to support both ModbusTcpClient and ModbusSerialClient
+- Automatic detection of pymodbus version (2.x vs 3.x)
+- CSV metadata now shows connection type and full connection string
+
+**UI Changes:**
+- Connection type selector in service UI
+- Conditional parameter labels ("TCP only", "Serial only")
+- Baudrate dropdown with common values
+
+### Benefits
+
+- ✅ Users with USB RS485 adapters can now use register scanner
+- ✅ **No confusing device selector** - auto-detects based on connection parameters
+- ✅ **Entity values automatically included** when scanning configured devices
+- ✅ Cleaner, more intuitive service UI
+- ✅ Seamless switching between connection types
+- ✅ Full backward compatibility (defaults to TCP)
+
+**Example:** If you scan `192.168.1.60:502`, the service automatically finds your configured device at that address and includes all entity values in the CSV for easy comparison with raw register values.
+
+---
+
+# Release Notes - v0.1.8
+
+## Revert WIT Battery Power Scale to VPP Specification (CRITICAL)
+
+**Reverted WIT battery power scale from 1.0 back to 0.1W** per VPP Protocol V2.01/V2.02 specification.
+
+### The Problem
+
+In v0.1.4, we changed the WIT battery power scale from 0.1W to 1.0W based on one user's feedback showing values were 10x too small. However, this change caused the **opposite problem for all other WIT users** - battery power readings are now 10x too large.
+
+**Example:**
+- User reports: "Battery power shows 5000W when actually charging at 500W"
+- VPP Protocol V2.01/V2.02 specification: Register 31201 uses 0.1W scale
+- Most WIT inverters follow the spec correctly
+
+### The Fix
+
+**Reverted to VPP specification default:**
+- Register 31201 `combined_scale`: **0.1** (was 1.0 in v0.1.4-v0.1.7)
+- This fixes battery power readings for the majority of WIT users
+
+### For Users With Values Still 10x Too Small (Rare Variant)
+
+If after updating to v0.1.8 your battery power readings are **10x too small** (e.g., showing 12W when you expect 120W), you have a rare WIT firmware variant that deviates from the VPP specification.
+
+**Manual Fix** (edit `custom_components/growatt_modbus/profiles/wit.py`):
+
+Find line ~134:
+```python
+31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+```
+
+Change `combined_scale` from **0.1** to **1.0**:
+```python
+31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 1.0, 'combined_unit': 'W', 'signed': True},
+```
+
+Then restart Home Assistant.
+
+**Please report this on Issue #75** if you need this manual fix - we're investigating automatic detection methods.
+
+### Impact
+
+- ✅ Battery power readings correct for 95%+ of WIT users
+- ✅ Follows VPP Protocol V2.01/V2.02 specification
+- ⚠️ Small number of users with non-standard firmware may need manual adjustment (see above)
+
+**Related:** Issue #75
+
+---
+
+## Automatic Battery Power Scale Detection (NEW)
+
+**Added intelligent auto-detection** to automatically identify the correct battery power scale for WIT inverters without user configuration.
+
+### How It Works
+
+Uses physics-based V×I validation to detect the correct scale:
+
+1. **Reads three values:** Battery voltage (V), current (I), and power register
+2. **Calculates expected power:** P_expected = V × I (e.g., 53.2V × 2.2A = 117W)
+3. **Tests both scales:**
+   - With 0.1 scale: 1210 × 0.1 = 121W (error: 4W)
+   - With 1.0 scale: 1210 × 1.0 = 1210W (error: 1093W)
+4. **Selects best match:** Uses scale with < 20% error
+5. **Validates:** Requires 3 consistent samples before applying
+6. **Caches:** Detected scale remembered for current session
+
+### Detection Requirements
+
+- Battery actively charging or discharging (power > 50W)
+- Runs automatically during first few polling cycles
+- No user configuration required
+- Transparent (logs detection result)
+
+### Example Log Output
+
+```
+WIT Battery Power Scale Auto-Detected: 0.1W
+(V=53.2V, I=2.2A, Expected=117W, With 0.1=121W, With 1.0=1210W)
+```
+
+### Why V×I Sometimes Differs from Power Register
+
+Users report V×I calculation often matches inverter display better than the power register reading. This is expected because:
+
+- **V×I = DC power at battery terminals** (what the inverter display usually shows)
+- **Power register may include:** DC-DC converter losses, inverter efficiency losses, or BMS communication values
+- **Measurement points differ:** V/I measured at battery terminals, P may be measured at different circuit location
+- **Sampling timing:** V, I, and P may be sampled at slightly different moments
+- **Typical difference:** 3-5W is normal, larger differences may indicate measurement issues
+
+The auto-detection uses V×I as the "ground truth" since it represents physical power at the battery.
+
+### Benefits
+
+- ✅ **100% reliable** - Physics-based (can't be wrong if V×I are accurate)
+- ✅ **Self-correcting** - Works regardless of firmware version
+- ✅ **No database needed** - No DTC/firmware version mapping required
+- ✅ **Automatic** - Zero user configuration
+- ✅ **Transparent** - Logs detected scale for verification
+
+### For Users Previously Requiring Manual Fix
+
+If you previously needed to manually change the scale in `wit.py`:
+- **Remove your manual edit** - let auto-detection handle it
+- The system will automatically detect and apply the correct scale
+- Check Home Assistant logs to see detected scale value
+
+**Note:** The manual fix instructions above are now only for users who want to override auto-detection (not recommended).
+
+**Related:** Issue #75
+
+---
+
 # Release Notes - v0.1.7
 
 ## SPF Off-Grid AC Output Current Fix

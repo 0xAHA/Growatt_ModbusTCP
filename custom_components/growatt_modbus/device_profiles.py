@@ -50,6 +50,14 @@ BATTERY_SENSORS: Set[str] = {
     "battery_charge_total", "battery_discharge_total",
 }
 
+BMS_SENSORS: Set[str] = {
+    "bms_status", "bms_error", "bms_warn_info",
+    "bms_max_current", "bms_cycle_count", "bms_soh",
+    "bms_constant_volt", "bms_max_cell_volt", "bms_min_cell_volt",
+    "bms_module_num", "bms_battery_count",
+    "bms_max_soc", "bms_min_soc",
+}
+
 TEMPERATURE_SENSORS: Set[str] = {
     "inverter_temp", "ipm_temp", "boost_temp",
 }
@@ -431,6 +439,30 @@ INVERTER_PROFILES = {
             ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
+    "sph_8000_10000_hu": {
+        "name": "SPH/SPM 8000-10000TL-HU",
+        "description": "Single-phase hybrid inverter with battery and 3 MPPT inputs (8-10kW)",
+        "register_map": "SPH_8000_10000_HU",
+        "phases": 1,
+        "has_pv3": True,
+        "has_battery": True,
+        "max_power_kw": 10.0,
+        "sensors": (
+            BASIC_PV_SENSORS |
+            PV3_SENSORS |
+            BASIC_AC_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
+            ENERGY_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
+            BATTERY_SENSORS |
+            BMS_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
         ),
