@@ -87,24 +87,5 @@
         }
       }
     }
-  },
-  "selector": {
-    "inverter_series": {
-      "options": {
-        "MIC (0.6-3.3kW)": "MIC (0.6-3.3kW) - Micro inverter, 1 PV string",
-        "MIN (3-6kW)": "MIN (3-6kW) - Grid-tied, 2 PV strings",
-        "MIN (7-10kW)": "MIN (7-10kW) - Grid-tied, 3 PV strings",
-        "MIN TL-XH (3-10kW)": "MIN TL-XH (3-10kW) - MIN hybrid with battery, DTC 5100",
-        "MID (15-25kW)": "MID (15-25kW) - Three-phase grid-tied",
-        "MOD Grid-Tied (6-15kW)": "MOD Grid-Tied (6-15kW) - Three-phase grid-tied (no battery)",
-        "MOD Hybrid (6-15kW)": "MOD Hybrid (6-15kW) - Three-phase hybrid with battery",
-        "SPH-TL3 (3-10kW)": "SPH-TL3 (3-10kW) - Three-phase hybrid with battery",
-        "SPH (3-6kW)": "SPH (3-6kW) - Hybrid with battery, 2 PV strings",
-        "SPH (7-10kW)": "SPH (7-10kW) - Hybrid with battery, 3 PV strings",
-        "SPH/SPM HU (8-10kW)": "SPH/SPM HU (8-10kW) - Hybrid with BMS monitoring, 3 PV strings",
-        "SPF (3-6kW)": "SPF (3-6kW) - Off-grid with battery",
-        "WIT (4-15kW)": "WIT (4-15kW) - Three-phase hybrid with BMS"
-      }
-    }
   }
 }
