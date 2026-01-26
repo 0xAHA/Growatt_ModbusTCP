@@ -586,7 +586,9 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                 display_name = user_input.get(CONF_INVERTER_SERIES, "MIN (7-10kW)")
 
                 # Determine V2.01 support based on auto-detection results
-                supports_v201 = not self._discovered_data.get("auto_detection_failed", False)
+                # Default to legacy (False) unless v2.01 was explicitly detected
+                # This prevents incorrectly selecting v2.01 profiles when DTC register isn't readable
+                supports_v201 = self._discovered_data.get("auto_detected", False) and not self._discovered_data.get("auto_detection_failed", False)
 
                 # Resolve friendly name to actual profile ID
                 series = resolve_profile_selection(display_name, supports_v201=supports_v201)
@@ -778,10 +780,9 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                 current_series = new_data.get(CONF_INVERTER_SERIES, "min_7000_10000_tl_x")
 
                 # Detect V2.01 support from current profile
-                supports_v201 = '_v201' in current_series or current_series in [
-                    "min_tl_xh_3000_10000_v201", "sph_8000_10000_hu", "wit_4000_15000tl3",
-                    "spf_3000_6000_es_plus", "mod_6000_15000tl3_x"
-                ]
+                # If currently using a v201 profile, hardware supports it
+                # Otherwise, default to legacy for safety
+                supports_v201 = '_v201' in current_series.lower()
 
                 # Resolve to actual profile ID
                 new_series = resolve_profile_selection(selected_display_name, supports_v201=supports_v201)
