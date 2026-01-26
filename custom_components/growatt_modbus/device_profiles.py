@@ -81,6 +81,8 @@ SYSTEM_OUTPUT_SENSORS: Set[str] = {
 SPF_OFFGRID_SENSORS: Set[str] = {
     # Load monitoring
     "load_percentage",
+    # AC apparent power (VA)
+    "ac_apparent_power",
     # AC charge/discharge energy (from grid/generator)
     "ac_charge_energy_today", "ac_discharge_energy_today",
     # Fan speeds
@@ -427,11 +429,12 @@ INVERTER_PROFILES = {
         "description": "Single-phase hybrid inverter with battery storage (7-10kW)",
         "register_map": "SPH_7000_10000",
         "phases": 1,
-        "has_pv3": False,
+        "has_pv3": True,  # 7-10kW models have 3 PV strings (registers 11-14)
         "has_battery": True,
         "max_power_kw": 10.0,
         "sensors": (
             BASIC_PV_SENSORS |
+            PV3_SENSORS |  # 7-10kW models have 3 PV strings
             BASIC_AC_SENSORS |
             GRID_SENSORS |
             POWER_FLOW_SENSORS |
@@ -497,12 +500,13 @@ INVERTER_PROFILES = {
         "description": "Single-phase hybrid inverter with battery (7-10kW) and VPP Protocol V2.01",
         "register_map": "SPH_7000_10000_V201",
         "phases": 1,
-        "has_pv3": False,
+        "has_pv3": True,  # 7-10kW models have 3 PV strings (registers 11-14)
         "has_battery": True,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
         "sensors": (
             BASIC_PV_SENSORS |
+            PV3_SENSORS |  # 7-10kW models have 3 PV strings
             BASIC_AC_SENSORS |
             GRID_SENSORS |
             POWER_FLOW_SENSORS |
@@ -694,24 +698,172 @@ INVERTER_PROFILES = {
 # HELPER FUNCTIONS
 # ============================================================================
 
+# User-friendly profile names (hides protocol versions and technical details)
+PROFILE_DISPLAY_NAMES = {
+    # Single-Phase Grid-Tied
+    "MIC (0.6-3.3kW)": {
+        "base": "mic_600_3300tl_x",
+        "v201": "mic_600_3300tl_x_v201",
+        "description": "Micro inverter, 1 PV string",
+    },
+    "MIN (3-6kW)": {
+        "base": "min_3000_6000_tl_x",
+        "v201": "min_3000_6000_tl_x_v201",
+        "description": "Grid-tied, 2 PV strings",
+    },
+    "MIN (7-10kW)": {
+        "base": "min_7000_10000_tl_x",
+        "v201": "min_7000_10000_tl_x_v201",
+        "description": "Grid-tied, 3 PV strings",
+    },
+
+    # Single-Phase Hybrid
+    "SPH (3-6kW)": {
+        "base": "sph_3000_6000",
+        "v201": "sph_3000_6000_v201",
+        "description": "Hybrid with battery, 2 PV strings",
+    },
+    "SPH (7-10kW)": {
+        "base": "sph_7000_10000",
+        "v201": "sph_7000_10000_v201",
+        "description": "Hybrid with battery, 3 PV strings",
+    },
+    "SPH/SPM HU (8-10kW)": {
+        "base": "sph_8000_10000_hu",
+        "v201": "sph_8000_10000_hu",  # HU only has one profile
+        "description": "Hybrid with BMS monitoring, 3 PV strings",
+    },
+    "MIN TL-XH (3-10kW)": {
+        "base": "min_tl_xh_3000_10000_v201",  # Only V2.01 available
+        "v201": "min_tl_xh_3000_10000_v201",
+        "description": "MIN hybrid with battery, DTC 5100",
+    },
+
+    # Three-Phase Grid-Tied
+    "MID (15-25kW)": {
+        "base": "mid_15000_25000tl3_x",
+        "v201": "mid_15000_25000tl3_x_v201",
+        "description": "Three-phase grid-tied",
+    },
+
+    # Three-Phase Hybrid
+    "MOD Grid-Tied (6-15kW)": {
+        "base": "mod_6000_15000tl3_x",
+        "v201": "mod_6000_15000tl3_x",  # Only one variant
+        "description": "Three-phase grid-tied (no battery)",
+    },
+    "MOD Hybrid (6-15kW)": {
+        "base": "mod_6000_15000tl3_xh",
+        "v201": "mod_6000_15000tl3_xh_v201",
+        "description": "Three-phase hybrid with battery",
+    },
+    "SPH-TL3 (3-10kW)": {
+        "base": "sph_tl3_3000_10000",
+        "v201": "sph_tl3_3000_10000_v201",
+        "description": "Three-phase hybrid with battery",
+    },
+    "WIT (4-15kW)": {
+        "base": "wit_4000_15000tl3",
+        "v201": "wit_4000_15000tl3",  # Only one variant
+        "description": "Three-phase hybrid with advanced storage",
+    },
+
+    # Off-Grid
+    "SPF (3-6kW)": {
+        "base": "spf_3000_6000_es_plus",
+        "v201": "spf_3000_6000_es_plus",  # Only one variant
+        "description": "Off-grid with battery",
+    },
+}
+
+
 def get_profile(series: str):
     """Get inverter profile by series name."""
     return INVERTER_PROFILES.get(series, INVERTER_PROFILES["min_7000_10000_tl_x"])
 
 
-def get_available_profiles(legacy_only: bool = False) -> Dict[str, str]:
+def get_available_profiles(legacy_only: bool = False, friendly_names: bool = True) -> Dict[str, str]:
     """Get dict of available profiles for UI selection.
 
     Args:
         legacy_only: If True, exclude V2.01 profiles (for manual selection after failed auto-detection)
+        friendly_names: If True, return user-friendly names. If False, return technical profile IDs.
+
+    Returns:
+        Dict mapping display name to profile ID (if friendly_names=True)
+        or profile ID to display name (if friendly_names=False)
     """
-    profiles = {}
-    for series, profile in INVERTER_PROFILES.items():
-        # Filter out V2.01 profiles if legacy_only is True
-        if legacy_only and '_v201' in series:
-            continue
-        profiles[series] = profile["name"]
-    return profiles
+    if friendly_names:
+        # Return user-friendly names in alphabetical order
+        profiles = {}
+        for display_name in sorted(PROFILE_DISPLAY_NAMES.keys()):
+            profile_info = PROFILE_DISPLAY_NAMES[display_name]
+            # Use base profile for legacy-only, otherwise use v201 as default
+            if legacy_only:
+                profile_id = profile_info["base"]
+            else:
+                # Prefer v201 if available and different from base
+                profile_id = profile_info["v201"]
+
+            profiles[display_name] = profile_id
+
+        return profiles
+    else:
+        # Return old format (technical profile IDs)
+        profiles = {}
+        for series, profile in INVERTER_PROFILES.items():
+            # Filter out V2.01 profiles if legacy_only is True
+            if legacy_only and '_v201' in series:
+                continue
+            profiles[series] = profile["name"]
+        return profiles
+
+
+def resolve_profile_selection(display_name: str, supports_v201: bool = True) -> str:
+    """Resolve user-friendly profile selection to actual profile ID.
+
+    Args:
+        display_name: User-friendly profile name
+        supports_v201: Whether inverter supports VPP V2.01 protocol
+
+    Returns:
+        Actual profile ID to use
+    """
+    if display_name in PROFILE_DISPLAY_NAMES:
+        profile_info = PROFILE_DISPLAY_NAMES[display_name]
+        if supports_v201:
+            return profile_info["v201"]
+        else:
+            return profile_info["base"]
+
+    # Fallback: if it's already a profile ID, return as-is
+    if display_name in INVERTER_PROFILES:
+        return display_name
+
+    # Default fallback
+    return "min_7000_10000_tl_x"
+
+
+def get_display_name_for_profile(profile_id: str) -> str:
+    """Get user-friendly display name for a profile ID.
+
+    Args:
+        profile_id: Technical profile ID
+
+    Returns:
+        User-friendly display name
+    """
+    # Search for this profile_id in the display names
+    for display_name, profile_info in PROFILE_DISPLAY_NAMES.items():
+        if profile_id in (profile_info["base"], profile_info["v201"]):
+            return display_name
+
+    # Fallback: return the technical name from profile
+    profile = INVERTER_PROFILES.get(profile_id)
+    if profile:
+        return profile["name"]
+
+    return profile_id
 
 
 def get_sensors_for_profile(series: str) -> Set[str]:

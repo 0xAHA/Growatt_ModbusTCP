@@ -25,7 +25,12 @@ from .const import (
     DEFAULT_BAUDRATE,
     DOMAIN,
 )
-from .device_profiles import get_available_profiles, get_profile
+from .device_profiles import (
+    get_available_profiles,
+    get_profile,
+    resolve_profile_selection,
+    get_display_name_for_profile,
+)
 from .growatt_modbus import GrowattModbus
 from .auto_detection import async_determine_inverter_type
 
@@ -577,7 +582,19 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
 
         if user_input is not None:
             try:
-                series = user_input.get(CONF_INVERTER_SERIES, "min_7000_10000_tl_x")
+                # User selected a friendly name - resolve to actual profile ID
+                display_name = user_input.get(CONF_INVERTER_SERIES, "MIN (7-10kW)")
+
+                # Determine V2.01 support based on auto-detection results
+                # Default to legacy (False) unless v2.01 was explicitly detected
+                # This prevents incorrectly selecting v2.01 profiles when DTC register isn't readable
+                supports_v201 = self._discovered_data.get("auto_detected", False) and not self._discovered_data.get("auto_detection_failed", False)
+
+                # Resolve friendly name to actual profile ID
+                series = resolve_profile_selection(display_name, supports_v201=supports_v201)
+
+                _LOGGER.info(f"User selected '{display_name}', resolved to profile '{series}' (V2.01: {supports_v201})")
+
                 profile = get_profile(series)
 
                 if not profile:
@@ -693,15 +710,14 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                 _LOGGER.exception("Unexpected error during manual selection")
                 errors["base"] = "unknown"
         
-        # Build manual selection schema
-        # Only show legacy profiles (V2.01 profiles excluded)
-        # If auto-detection failed, the inverter doesn't support register 30000+ (V2.01)
-        available_profiles = get_available_profiles(legacy_only=True)
+        # Build manual selection schema with user-friendly names
+        # friendly_names=True returns display names that hide protocol versions
+        available_profiles = get_available_profiles(legacy_only=False, friendly_names=True)
 
         schema = vol.Schema({
             vol.Required(
                 CONF_INVERTER_SERIES,
-                default="min_7000_10000_tl_x"
+                default="MIN (7-10kW)"
             ): vol.In(available_profiles),
         })
 
@@ -711,12 +727,15 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
             info_text = (
                 f"⚠️ Auto-Detection Results:\n"
                 f"• DTC Code (register 30000): {dtc_result}\n"
-                f"• Conclusion: V2.01 protocol not supported\n\n"
-                f"Please manually select your inverter series below.\n"
+                f"• Result: V2.01 protocol not supported\n\n"
+                f"Please select your inverter model below.\n"
                 f"Legacy protocol will be used automatically."
             )
         else:
-            info_text = "Please select your inverter series. Legacy protocol will be used."
+            info_text = (
+                "Please select your inverter model below.\n"
+                "Protocol version will be detected automatically."
+            )
 
         return self.async_show_form(
             step_id="manual",
@@ -756,10 +775,24 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                 changed = True
             
             if CONF_INVERTER_SERIES in user_input:
-                profile = get_profile(user_input[CONF_INVERTER_SERIES])
+                # Resolve friendly display name to actual profile ID
+                selected_display_name = user_input[CONF_INVERTER_SERIES]
+                current_series = new_data.get(CONF_INVERTER_SERIES, "min_7000_10000_tl_x")
+
+                # Detect V2.01 support from current profile
+                # If currently using a v201 profile, hardware supports it
+                # Otherwise, default to legacy for safety
+                supports_v201 = '_v201' in current_series.lower()
+
+                # Resolve to actual profile ID
+                new_series = resolve_profile_selection(selected_display_name, supports_v201=supports_v201)
+
+                _LOGGER.info(f"Options: selected '{selected_display_name}', resolved to '{new_series}' (current: '{current_series}')")
+
+                profile = get_profile(new_series)
                 if profile:
-                    new_data[CONF_INVERTER_SERIES] = user_input[CONF_INVERTER_SERIES]
-                    new_data[CONF_REGISTER_MAP] = user_input[CONF_INVERTER_SERIES]
+                    new_data[CONF_INVERTER_SERIES] = new_series
+                    new_data[CONF_REGISTER_MAP] = new_series
                     new_data["register_map"] = profile["register_map"]
                     changed = True
                     _LOGGER.info(f"Profile changed to: {profile['name']}")
@@ -791,7 +824,11 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
         current_timeout = self.config_entry.options.get("timeout", 10)
         current_invert = self.config_entry.options.get("invert_grid_power", False)
 
-        available_profiles = get_available_profiles()
+        # Get user-friendly profiles
+        available_profiles = get_available_profiles(legacy_only=False, friendly_names=True)
+
+        # Convert current profile ID to display name for default
+        current_display_name = get_display_name_for_profile(current_series)
 
         options_schema = vol.Schema({
             vol.Required(
@@ -800,7 +837,7 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             ): str,
             vol.Required(
                 CONF_INVERTER_SERIES,
-                default=current_series
+                default=current_display_name
             ): vol.In(available_profiles),
             vol.Required(
                 "scan_interval",

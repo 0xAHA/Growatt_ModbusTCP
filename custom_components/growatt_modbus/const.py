@@ -241,18 +241,143 @@ WRITABLE_REGISTERS = {
     'bat_low_to_uti': {
         'register': 37,
         'scale': 0.1,
-        'valid_range': (5, 640),  # Full range: Lithium 0.5-10.0%, Non-Lithium 20.0-64.0V
+        'valid_range': (0, 1000),  # Full range: Lithium 0-100%, Non-Lithium 20.0-64.0V
         'unit': 'V/%',  # Unit depends on battery_type
-        'desc': 'Battery low voltage/SOC switch to utility',
+        'desc': 'Battery to Grid: SOC level to switch from battery to utility',
         'battery_dependent': True
     },
     'ac_to_bat_volt': {
         'register': 95,
         'scale': 0.1,
-        'valid_range': (5, 640),  # Full range: Lithium 0.5-10.0%, Non-Lithium 20.0-64.0V
+        'valid_range': (0, 1000),  # Full range: Lithium 0-100%, Non-Lithium 20.0-64.0V
         'unit': 'V/%',  # Unit depends on battery_type
-        'desc': 'AC to battery voltage/SOC switch point',
+        'desc': 'Grid to Battery: SOC level to switch back from utility to battery mode',
         'battery_dependent': True
+    },
+
+    # SPH Hybrid Inverter Battery Management Controls (1000+ range)
+    'priority_mode': {
+        'register': 1044,
+        'scale': 1,
+        'valid_range': (0, 2),
+        'options': {
+            0: 'Load First',
+            1: 'Battery First',
+            2: 'Grid First'
+        },
+        'desc': 'Battery priority mode'
+    },
+    'discharge_power_rate': {
+        'register': 1070,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'Battery discharge power rate limit (0-100%)'
+    },
+    'discharge_stopped_soc': {
+        'register': 1071,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'SOC level to stop battery discharge'
+    },
+    'charge_power_rate': {
+        'register': 1090,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'Battery charge power rate limit (0-100%)'
+    },
+    'charge_stopped_soc': {
+        'register': 1091,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'SOC level to stop battery charge'
+    },
+    'ac_charge_enable': {
+        'register': 1092,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'Enable charging from AC (grid/backup)'
+    },
+
+    # Time Period Controls (HHMM format: 530 = 05:30, 2300 = 23:00)
+    'time_period_1_start': {
+        'register': 1100,
+        'scale': 1,
+        'valid_range': (0, 2359),
+        'unit': '',
+        'desc': 'Period 1 start time (HHMM format: e.g., 530 = 05:30)'
+    },
+    'time_period_1_end': {
+        'register': 1101,
+        'scale': 1,
+        'valid_range': (0, 2359),
+        'unit': '',
+        'desc': 'Period 1 end time (HHMM format: e.g., 2300 = 23:00)'
+    },
+    'time_period_1_enable': {
+        'register': 1102,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'Enable time period 1'
+    },
+    'time_period_2_start': {
+        'register': 1103,
+        'scale': 1,
+        'valid_range': (0, 2359),
+        'unit': '',
+        'desc': 'Period 2 start time (HHMM format)'
+    },
+    'time_period_2_end': {
+        'register': 1104,
+        'scale': 1,
+        'valid_range': (0, 2359),
+        'unit': '',
+        'desc': 'Period 2 end time (HHMM format)'
+    },
+    'time_period_2_enable': {
+        'register': 1105,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'Enable time period 2'
+    },
+    'time_period_3_start': {
+        'register': 1106,
+        'scale': 1,
+        'valid_range': (0, 2359),
+        'unit': '',
+        'desc': 'Period 3 start time (HHMM format)'
+    },
+    'time_period_3_end': {
+        'register': 1107,
+        'scale': 1,
+        'valid_range': (0, 2359),
+        'unit': '',
+        'desc': 'Period 3 end time (HHMM format)'
+    },
+    'time_period_3_enable': {
+        'register': 1108,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'Enable time period 3'
     },
 }
 
@@ -388,7 +513,9 @@ def get_device_type_for_control(control_name: str) -> str:
         'battery', 'bms', 'soc', 'charge_power', 'discharge_power',
         'ac_charge_power_rate', 'eod_voltage',
         # SPF off-grid battery controls
-        'charge_config', 'charge_current', 'bat_low', 'ac_to_bat'
+        'charge_config', 'charge_current', 'bat_low', 'ac_to_bat',
+        # SPH hybrid battery controls
+        'priority_mode', 'time_period', 'ac_charge_enable'
     ]):
         return DEVICE_TYPE_BATTERY
 
@@ -452,10 +579,24 @@ def get_entity_category(sensor_key: str) -> str | None:
 # ============================================================================
 
 STATUS_CODES = {
+    # Grid-tied inverter status codes (MIN, MIC, SPH, MOD series)
     0: {'name': 'Waiting', 'desc': 'Waiting for sufficient PV power or grid conditions'},
     1: {'name': 'Normal', 'desc': 'Operating normally'},
     3: {'name': 'Fault', 'desc': 'Fault condition detected'},
     5: {'name': 'Standby', 'desc': 'Inverter in standby mode'},
+
+    # SPF off-grid inverter status codes (additional codes 2, 4, 6-12)
+    # Note: SPF uses different meanings for codes 0, 1, 3, 5
+    # 0 = Standby (off-grid), 1 = No Use, 5 = PV Charge (off-grid)
+    2: {'name': 'Discharge', 'desc': 'Battery discharging to load'},
+    4: {'name': 'Flash', 'desc': 'Firmware update mode'},
+    6: {'name': 'AC Charge', 'desc': 'Charging battery from AC input (grid/generator)'},
+    7: {'name': 'Combine Charge', 'desc': 'Charging from both PV and AC'},
+    8: {'name': 'Combine Charge+Bypass', 'desc': 'Charging from PV+AC with AC bypass to load'},
+    9: {'name': 'PV Charge+Bypass', 'desc': 'Charging from PV with AC bypass to load'},
+    10: {'name': 'AC Charge+Bypass', 'desc': 'Charging from AC with AC bypass to load'},
+    11: {'name': 'Bypass', 'desc': 'AC input bypassed directly to load'},
+    12: {'name': 'PV Charge+Discharge', 'desc': 'Charging battery from PV while discharging to load'},
 }
 
 
