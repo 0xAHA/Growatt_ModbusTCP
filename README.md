@@ -327,6 +327,90 @@ Test your connection and auto-detect your model **before** or **after** installa
 - Exports full register dump with entity values (if configured)
 - No terminal/SSH needed!
 
+### Manual Register Operations
+
+For advanced troubleshooting and testing, you can read or write individual registers:
+
+#### Read Register
+
+Read a single input or holding register to inspect its value:
+
+**Example: Read battery SOC (SPH models)**
+```yaml
+service: growatt_modbus.read_register
+data:
+  register_type: input
+  register_address: 1086
+  count: 1
+target:
+  device_id: YOUR_DEVICE_ID
+```
+
+**Example: Read priority mode (SPH holding register)**
+```yaml
+service: growatt_modbus.read_register
+data:
+  register_type: holding
+  register_address: 1044
+  count: 1
+target:
+  device_id: YOUR_DEVICE_ID
+```
+
+**Example: Read 32-bit register pair (battery power)**
+```yaml
+service: growatt_modbus.read_register
+data:
+  register_type: input
+  register_address: 1009  # LOW word address
+  count: 2                # Read both HIGH and LOW
+target:
+  device_id: YOUR_DEVICE_ID
+```
+
+**Returns:** Notification with register value(s) and interpretation
+
+#### Write Register
+
+Write a value to a holding register (control entities):
+
+**Example: Set charge power rate to 50% (SPH models)**
+```yaml
+service: growatt_modbus.write_register
+data:
+  register_address: 1090
+  value: 50
+target:
+  device_id: YOUR_DEVICE_ID
+```
+
+**Example: Enable AC charge (SPH models)**
+```yaml
+service: growatt_modbus.write_register
+data:
+  register_address: 1092
+  value: 1  # 0=Disabled, 1=Enabled
+target:
+  device_id: YOUR_DEVICE_ID
+```
+
+**Example: Set time period (HHMM format)**
+```yaml
+service: growatt_modbus.write_register
+data:
+  register_address: 1100  # Period 1 start time
+  value: 530              # 05:30 in HHMM format
+target:
+  device_id: YOUR_DEVICE_ID
+```
+
+**⚠️ Important Notes:**
+- Only write to **holding registers** (writable controls)
+- Check profile documentation for valid ranges
+- Invalid values may be rejected by inverter
+- Changes take effect immediately
+- Use control entities (Number/Select) instead when available
+
 ---
 
 ## 📈 Energy Dashboard
