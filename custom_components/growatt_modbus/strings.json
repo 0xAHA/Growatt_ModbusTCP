@@ -75,7 +75,8 @@
           "scan_interval": "Scan Interval",
           "timeout": "Connection Timeout",
           "offline_scan_interval": "Offline Scan Interval",
-          "invert_grid_power": "Invert Grid Power"
+          "invert_grid_power": "Invert Grid Power",
+          "invert_battery_power": "Invert Battery Power"
         },
         "data_description": {
           "device_name": "Friendly name for the device (appears before all sensor names)",
@@ -83,7 +84,8 @@
           "scan_interval": "How often to poll the inverter for new data (5-300 seconds)",
           "timeout": "How long to wait for responses from the inverter (1-60 seconds)",
           "offline_scan_interval": "How often to poll when inverter is offline/at night (60-3600 seconds, default 300)",
-          "invert_grid_power": "Enable if CT clamp installed backwards (import/export swapped)"
+          "invert_grid_power": "Enable if CT clamp installed backwards (swaps import/export on AC side)",
+          "invert_battery_power": "Enable if battery power shows opposite direction (inverts charge/discharge sign)"
         }
       }
     }

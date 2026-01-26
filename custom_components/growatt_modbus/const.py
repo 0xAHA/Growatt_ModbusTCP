@@ -45,7 +45,8 @@ CONF_DEVICE_PATH = "device_path"
 CONF_BAUDRATE = "baudrate"
 CONF_REGISTER_MAP = "register_map"
 CONF_INVERTER_SERIES = "inverter_series"
-CONF_INVERT_GRID_POWER = "invert_grid_power"  # For reversed CT clamps
+CONF_INVERT_GRID_POWER = "invert_grid_power"  # For reversed CT clamps (AC side)
+CONF_INVERT_BATTERY_POWER = "invert_battery_power"  # For inverters with opposite battery power sign
 CONF_DEVICE_STRUCTURE_VERSION = "device_structure_version"
 
 # Default Values
