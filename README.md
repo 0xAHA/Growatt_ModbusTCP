@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.2.1-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.2.2-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -425,13 +425,13 @@ logger:
 
 ## 🆕 What's New
 
-See **[RELEASENOTES.md](RELEASENOTES.md)** for v0.2.1 details.
+See **[RELEASENOTES.md](RELEASENOTES.md)** for v0.2.2 details.
 
 **Recent highlights:**
-- SPH 8000-10000 HU profile with full BMS monitoring
-- Improved battery sensor accuracy (BMS registers)
-- USB/Serial register scanner support
-- Enhanced auto-detection for legacy inverters
+- SPH battery control entities for time-based charging automation
+- SPF battery SOC controls expanded to 0-100% for Lithium batteries
+- SPF off-grid status codes (fixes "Unknown" status display)
+- SPF AC Apparent Power sensor now visible
 
 📖 **[Full changelog →](https://github.com/0xAHA/Growatt_ModbusTCP/releases)**
 

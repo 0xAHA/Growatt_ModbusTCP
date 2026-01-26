@@ -23,6 +23,200 @@
 
 ---
 
+# Release Notes - v0.2.2
+
+## 🔋 SPH Battery Control Entities Added (Addresses #120) ⚡
+
+**SPH 3-6kW and 7-10kW models now have full battery management controls!**
+
+This enables dynamic battery charging automation for UK time-of-use tariffs (Octopus Intelligent Go, Agile, etc.) and other battery scheduling use cases.
+
+### New Battery Control Entities
+
+**Battery Management:**
+- **Priority Mode** (register 1044) - Select: Load First / Battery First / Grid First
+- **Discharge Power Rate** (register 1070) - Number: 0-100%
+- **Discharge Stopped SOC** (register 1071) - Number: 0-100%
+- **Charge Power Rate** (register 1090) - Number: 0-100%
+- **Charge Stopped SOC** (register 1091) - Number: 0-100%
+- **AC Charge Enable** (register 1092) - Switch: Disabled / Enabled
+
+**Time Period Controls** (for scheduled charging/discharging):
+- **Period 1 Start/End/Enable** (registers 1100-1102) - HHMM format
+- **Period 2 Start/End/Enable** (registers 1103-1105) - HHMM format
+- **Period 3 Start/End/Enable** (registers 1106-1108) - HHMM format
+
+**Time Format:** HHMM without colon (e.g., `530` = 05:30, `2300` = 23:00)
+
+All controls appear under the **Battery device** in Home Assistant.
+
+### ⚠️ IMPORTANT: Register Conflict Note
+
+**SPH 8-10kW HU models** use registers 1090-1092 for **BMS sensor data** (read-only).
+**Standard SPH 3-6/7-10kW models** use registers 1090-1092 for **battery controls** (writable).
+
+The integration handles this correctly - HU models read BMS sensors, standard models expose control entities.
+
+### 🧪 Testing Required - SPH Users
+
+If you have an **SPH 3000, 4000, 5000, 6000, 7000, 8000, 9000, or 10000** (non-HU model), please test:
+
+1. **Verify entities appear:**
+   - Check Battery device for new number/select/switch entities
+   - All battery control entities should be visible
+
+2. **Test writing values:**
+   - Adjust Charge Power Rate to 50%
+   - Set Discharge Stopped SOC to 20%
+   - Enable AC Charge
+   - Verify values write successfully and persist
+
+3. **Test time period controls:**
+   - Set Period 1: Start=530 (05:30), End=730 (07:30), Enable=ON
+   - Verify inverter accepts HHMM format
+   - Check if time periods activate as expected
+
+4. **Report issues:**
+   - If any entity missing → [Open issue](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
+   - If writes fail → Provide error logs
+   - If inverter rejects values → Share register scan results
+
+---
+
+## 🔌 SPF Off-Grid Profile Improvements ✅
+
+### 1. Battery SOC Controls Now 0-100% (Lithium)
+
+**FIXED:** SPF Lithium battery SOC controls were limited to 0.5-10.0% instead of full 0-100% range
+
+**Affected Entities:**
+- **Battery to Grid** (register 37) - When battery drops to this SOC, switch to utility
+- **Grid to Battery** (register 95) - When battery charges to this SOC, switch back to battery mode
+
+**Changes:**
+- Valid range changed from `(5, 640)` → `(0, 1000)` raw values
+- UI range for Lithium: `0.5-10.0%` → `0-100%`
+- Non-Lithium batteries unchanged: `20.0-64.0V`
+
+**User Verified (SPF 6000 ES Plus with Lithium battery):**
+- Register 37: Raw 300 = 30% ✅
+- Register 95: Raw 400 = 40% ✅
+- Battery type correctly detected as Lithium (type=3) ✅
+
+### 2. AC Apparent Power Sensor Now Visible
+
+**FIXED:** `ac_apparent_power` sensor was defined in profile but not exposed
+
+**Details:**
+- Registers 11-12 (32-bit VA measurement)
+- Sensor now added to `SPF_OFFGRID_SENSORS` group
+- Shows AC output apparent power to loads
+
+### 3. SPF Status Codes Added
+
+**FIXED:** SPF off-grid inverters showing "Unknown (8)" status
+
+**Added SPF-specific status codes:**
+- **2:** Discharge - Battery discharging to load
+- **4:** Flash - Firmware update mode
+- **6:** AC Charge - Charging from grid/generator
+- **7:** Combine Charge - Charging from both PV and AC
+- **8:** Combine Charge+Bypass - Charging from PV+AC with AC bypass ← Was "Unknown (8)"
+- **9:** PV Charge+Bypass - Charging from PV with AC bypass
+- **10:** AC Charge+Bypass - Charging from AC with AC bypass
+- **11:** Bypass - AC input bypassed directly to load
+- **12:** PV Charge+Discharge - Charging from PV while discharging to load
+
+Status entity should now show proper mode names instead of "Unknown".
+
+### 🧪 Testing Required - SPF Users
+
+If you have an **SPF 3000, 4000, 5000, or 6000 ES Plus**, please test:
+
+1. **Battery SOC controls (Lithium users):**
+   - Check Battery to Grid and Grid to Battery entities
+   - Verify sliders show **0-100%** range (not 0.5-10.0%)
+   - Try setting 30% and 40% values
+   - Confirm values write successfully
+
+2. **Battery SOC controls (Non-Lithium users):**
+   - Verify sliders show **20.0-64.0V** range
+   - Confirm voltage-based control still works
+
+3. **AC Apparent Power sensor:**
+   - Check if `ac_apparent_power` sensor now appears
+   - Verify it shows VA measurement for AC output
+
+4. **Status display:**
+   - Watch Status entity during different modes
+   - Verify you see descriptive names (not "Unknown (X)")
+   - Note which status codes you observe
+
+5. **Report findings:**
+   - Confirm battery SOC range fix works
+   - Note if Apparent Power sensor visible
+   - Share which status codes appear during operation
+
+---
+
+## 🏡 Other Profile Updates
+
+### SPH 7-10kW PV3 String Fix
+
+**FIXED:** SPH 7000-10000 models incorrectly had `has_pv3=False`
+
+**Details:**
+- 7-10kW models physically have 3 PV inputs (higher power requires more input capacity)
+- Profile metadata corrected to `has_pv3=True`
+- PV3 sensors (registers 11-14) now properly included
+- Enables auto-detection between 3-6kW vs 7-10kW models by probing PV3 register
+
+### Fake TL-XH Profiles Removed
+
+**CLEANED UP:** Standalone "TL-XH" and "TL-XH US" profiles removed from user selection
+
+**Reason:** Official Growatt v1.24 spec confirms ALL TL-XH variants are MIN Type products:
+> "TL-X/TL-XH/TL-XH US (MIN Type): 03 register range: 0~124,3000~3124"
+
+**Changes:**
+- Removed "TL-XH (3-10kW)" from profile selection
+- Removed "TL-XH US (3-10kW)" from profile selection
+- Kept "MIN TL-XH (3-10kW)" - the correct product
+- Old profiles remain in code for backward compatibility
+
+**Impact:** Reduces user-facing options from 16 → 14, aligning with actual Growatt product lineup
+
+---
+
+## 📋 Files Changed
+
+**Profiles:**
+- `profiles/spf.py` - Battery SOC register ranges, AC Apparent Power
+- `profiles/sph.py` - Battery control holding registers added
+- `device_profiles.py` - AC Apparent Power sensor, PV3 fix, profile cleanup
+
+**Control Logic:**
+- `const.py` - WRITABLE_REGISTERS entries, status codes, battery SOC ranges
+- `number.py` - Lithium battery UI range (0-100%)
+
+**Documentation:**
+- `README.md` - Version bump, updated highlights
+- `RELEASENOTES.md` - This release
+- `manifest.json` - Version 0.2.2
+
+---
+
+## 🙏 Thank You
+
+Special thanks to our testing community:
+- SPF users who confirmed battery SOC values and status codes
+- SPH #120 reporter who identified missing battery controls and enabled UK automation use cases
+- All users providing register scans and feedback
+
+Your real-world testing makes this integration better for everyone! 🎉
+
+---
+
 # Release Notes - v0.2.1
 
 ## CRITICAL FIXES for SPH_8000_10000_HU Profile 🔧
