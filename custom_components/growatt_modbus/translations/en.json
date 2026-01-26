@@ -68,9 +68,10 @@
     "step": {
       "init": {
         "title": "Growatt Modbus Options",
-        "description": "Configure device name, polling settings, and grid power options",
+        "description": "Configure device name, inverter profile, polling settings, and grid power options",
         "data": {
           "device_name": "Device Name",
+          "inverter_series": "Inverter Series",
           "scan_interval": "Scan Interval",
           "offline_scan_interval": "Offline Scan Interval",
           "timeout": "Connection Timeout",
@@ -78,6 +79,7 @@
         },
         "data_description": {
           "device_name": "Friendly name for the device (appears before all sensor names)",
+          "inverter_series": "Select your inverter model/series (auto-selects protocol version)",
           "scan_interval": "How often to poll the inverter when online (5-300 seconds)",
           "offline_scan_interval": "How often to poll when inverter is offline/at night (60-3600 seconds, default 300)",
           "timeout": "How long to wait for responses from the inverter (1-60 seconds)",
@@ -89,18 +91,19 @@
   "selector": {
     "inverter_series": {
       "options": {
-        "mid_15000_25000_tl3_x": "MID 15-25K (3Ph)",
-        "min_3000_6000_tl_x": "MIN 3-6K (1Ph, 2PV)",
-        "min_7000_10000_tl_x": "MIN 7-10K (1Ph, 3PV)",
-        "mod_6000_15000_tl3_xh": "MOD 6-15K (3Ph Hybrid)",
-        "sph_3000_6000": "SPH 3-6K (1Ph Hybrid)",
-        "sph_7000_10000": "SPH 7-10K (1Ph Hybrid)",
-        "sph_8000_10000_hu": "SPH/SPM 8-10K HU (1Ph, 3MPPT)",
-        "sph_tl3_3000_10000": "SPH-TL3 3-10K (3Ph Hybrid)",
-        "spf_3000_6000_es_plus": "SPF 3-6K (Off-grid)",
-        "tl_xh_3000_10000": "MIN 3-10K TL-XH (1Ph Hybrid)",
-        "tl_xh_us_3000_10000": "MIN 3-10K TL-XH US (1Ph Hybrid)",
-        "wit_4000_15000tl3": "WIT 4-15K (3Ph Hybrid)"
+        "MIC (0.6-3.3kW)": "MIC (0.6-3.3kW) - Micro inverter, 1 PV string",
+        "MIN (3-6kW)": "MIN (3-6kW) - Grid-tied, 2 PV strings",
+        "MIN (7-10kW)": "MIN (7-10kW) - Grid-tied, 3 PV strings",
+        "MIN TL-XH (3-10kW)": "MIN TL-XH (3-10kW) - MIN hybrid with battery, DTC 5100",
+        "MID (15-25kW)": "MID (15-25kW) - Three-phase grid-tied",
+        "MOD Grid-Tied (6-15kW)": "MOD Grid-Tied (6-15kW) - Three-phase grid-tied (no battery)",
+        "MOD Hybrid (6-15kW)": "MOD Hybrid (6-15kW) - Three-phase hybrid with battery",
+        "SPH-TL3 (3-10kW)": "SPH-TL3 (3-10kW) - Three-phase hybrid with battery",
+        "SPH (3-6kW)": "SPH (3-6kW) - Hybrid with battery, 2 PV strings",
+        "SPH (7-10kW)": "SPH (7-10kW) - Hybrid with battery, 3 PV strings",
+        "SPH/SPM HU (8-10kW)": "SPH/SPM HU (8-10kW) - Hybrid with BMS monitoring, 3 PV strings",
+        "SPF (3-6kW)": "SPF (3-6kW) - Off-grid with battery",
+        "WIT (4-15kW)": "WIT (4-15kW) - Three-phase hybrid with BMS"
       }
     }
   }
