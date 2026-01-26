@@ -155,12 +155,12 @@ class GrowattData:
 class GrowattModbus:
     """Growatt MIN series Modbus client"""
     
-    def __init__(self, connection_type='tcp', host='192.168.1.100', port=502,
-             device='/dev/ttyUSB0', baudrate=9600, slave_id=1,
-             register_map='MIN_7000_10000TL_X', timeout=10, invert_battery_power=False):
+    def __init__(self, connection_type='tcp', host='192.168.1.100', port=502, 
+             device='/dev/ttyUSB0', baudrate=9600, slave_id=1, 
+             register_map='MIN_7000_10000TL_X', timeout=10):
         """
         Initialize Modbus connection
-
+        
         Args:
             connection_type: 'tcp' for RS485-to-TCP converter, 'serial' for RS485-to-USB
             host: IP address for TCP connection
@@ -170,7 +170,6 @@ class GrowattModbus:
             slave_id: Modbus slave ID (usually 1)
             register_map: Which register mapping to use (see const.py)
             timeout: Connection timeout in seconds (default: 10)
-            invert_battery_power: Invert battery power sign (for backwards CT clamp, default: False)
         """
         self.connection_type = connection_type
         self.slave_id = slave_id
@@ -178,7 +177,6 @@ class GrowattModbus:
         self.last_read_time = 0
         self.min_read_interval = 1.0  # 1 second minimum between reads
         self._timeout = timeout
-        self._invert_battery_power = invert_battery_power
 
         # Store connection details for logging
         self.host = host
@@ -1053,11 +1051,6 @@ class GrowattModbus:
 
                 battery_power = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery power (signed): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {battery_power}W")
-
-                # Apply inversion if configured (CT clamp backwards)
-                if self._invert_battery_power:
-                    battery_power = -battery_power
-                    logger.debug(f"  → Inverted battery power: {battery_power}W (invert_battery_power=True)")
 
                 # Split into charge/discharge based on sign
                 if battery_power > 0:
