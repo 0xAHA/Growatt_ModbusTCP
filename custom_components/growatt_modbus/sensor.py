@@ -567,7 +567,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "charge_energy_today",
-        "condition": lambda data: hasattr(data, 'charge_energy_today') and data.charge_energy_today > 0,
+        "condition": lambda data: hasattr(data, 'charge_energy_today'),
     },
     "battery_discharge_today": {
         "name": "Battery Discharge Today",
@@ -576,7 +576,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "discharge_energy_today",
-        "condition": lambda data: hasattr(data, 'discharge_energy_today') and data.discharge_energy_today > 0,
+        "condition": lambda data: hasattr(data, 'discharge_energy_today'),
     },
     "battery_charge_total": {
         "name": "Battery Charge Total",
@@ -585,7 +585,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "charge_energy_total",
-        "condition": lambda data: hasattr(data, 'charge_energy_total') and data.charge_energy_total > 0,
+        "condition": lambda data: hasattr(data, 'charge_energy_total'),
     },
     "battery_discharge_total": {
         "name": "Battery Discharge Total",
@@ -594,7 +594,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "discharge_energy_total",
-        "condition": lambda data: hasattr(data, 'discharge_energy_total') and data.discharge_energy_total > 0,
+        "condition": lambda data: hasattr(data, 'discharge_energy_total'),
     },
 
     # BMS Sensors (Battery Management System diagnostic data)
