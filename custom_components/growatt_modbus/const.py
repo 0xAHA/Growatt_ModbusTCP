@@ -227,16 +227,16 @@ WRITABLE_REGISTERS = {
     'ac_charge_current': {
         'register': 38,
         'scale': 1,
-        'valid_range': (0, 600),
+        'valid_range': (0, 800),
         'unit': 'A',
-        'desc': 'AC charging current limit (0-60A)'
+        'desc': 'AC charging current limit (0-80A)'
     },
     'gen_charge_current': {
         'register': 83,
         'scale': 1,
-        'valid_range': (0, 600),
+        'valid_range': (0, 800),
         'unit': 'A',
-        'desc': 'Generator charging current limit (0-60A)'
+        'desc': 'Generator charging current limit (0-80A)'
     },
     # Battery-type-dependent registers (special handling required)
     'bat_low_to_uti': {
