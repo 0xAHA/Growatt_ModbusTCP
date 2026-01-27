@@ -114,6 +114,13 @@ class GrowattData:
     inverter_temp: float = 0.0        # °C
     ipm_temp: float = 0.0             # °C
     boost_temp: float = 0.0           # °C
+    dcdc_temp: float = 0.0            # °C (SPF off-grid)
+    buck1_temp: float = 0.0           # °C (SPF off-grid MPPT1)
+    buck2_temp: float = 0.0           # °C (SPF off-grid MPPT2)
+
+    # Fan Speeds (SPF off-grid)
+    mppt_fan_speed: float = 0.0       # %
+    inverter_fan_speed: float = 0.0   # %
 
     # Battery (storage/hybrid models)
     battery_voltage: float = 0.0      # V
@@ -847,7 +854,28 @@ class GrowattModbus:
                 data.ipm_temp = self._get_register_value(ipm_temp_addr) or 0.0
             if boost_temp_addr:
                 data.boost_temp = self._get_register_value(boost_temp_addr) or 0.0
-            
+
+            # SPF Off-Grid additional temperatures
+            dcdc_temp_addr = self._find_register_by_name('dcdc_temp')
+            buck1_temp_addr = self._find_register_by_name('buck1_temp')
+            buck2_temp_addr = self._find_register_by_name('buck2_temp')
+
+            if dcdc_temp_addr:
+                data.dcdc_temp = self._get_register_value(dcdc_temp_addr) or 0.0
+            if buck1_temp_addr:
+                data.buck1_temp = self._get_register_value(buck1_temp_addr) or 0.0
+            if buck2_temp_addr:
+                data.buck2_temp = self._get_register_value(buck2_temp_addr) or 0.0
+
+            # SPF Off-Grid fan speeds
+            mppt_fan_speed_addr = self._find_register_by_name('mppt_fan_speed')
+            inverter_fan_speed_addr = self._find_register_by_name('inverter_fan_speed')
+
+            if mppt_fan_speed_addr:
+                data.mppt_fan_speed = self._get_register_value(mppt_fan_speed_addr) or 0.0
+            if inverter_fan_speed_addr:
+                data.inverter_fan_speed = self._get_register_value(inverter_fan_speed_addr) or 0.0
+
             # Diagnostics
             derating_addr = self._find_register_by_name('derating_mode')
             fault_addr = self._find_register_by_name('fault_code')
