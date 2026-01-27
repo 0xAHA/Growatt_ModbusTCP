@@ -55,7 +55,8 @@ Based on **Growatt VPP Protocol V2.01 - Table 3-1**:
 
 | Model Series | DTC Code | Protocol | Battery | Legacy Registers | Notes |
 |--------------|----------|----------|---------|------------------|-------|
-| **SPH 3000-6000TL BL** | 3502 | V2.01 | Yes | 0-124, 1000-1124 | Single-phase hybrid |
+| **SPH 3000-6000TL BL (legacy)** | 3501 | Legacy | Yes | 0-124, 1000-1124 | Pre-UP model, reg 30099 = 0 |
+| **SPH 3000-6000TL BL -UP** | 3502 | V2.01 | Yes | 0-124, 1000-1124, 30000+, 31000+ | Upgraded model, reg 30099 = 201 |
 | **SPF 3000-6000 ES PLUS** | 3400-3403 | V2.01 | Yes | 0-124, 31200+ | Off-grid with battery |
 | **SPA 3000-6000TL BL** | 3735 | V2.01 | Yes | 0-124 | SPA variant of SPH |
 | **SPH 4000-10000TL3 BH-UP** | 3601 | V2.01 | Yes | 0-124, 1000-1124 | Three-phase hybrid |
@@ -103,7 +104,24 @@ Based on **Growatt VPP Protocol V2.01 - Table 3-1**:
 6. Confidence: Medium (register probing)
 ```
 
-### Example 4: Manual Selection Required (Rare)
+### Example 4: SPH Legacy Model (DTC with Protocol Check)
+```
+1. Read register 30000 → DTC = 3501
+2. DTC 3501 maps to SPH 3000-6000TL BL
+3. Check register 30099 (Protocol Version) → Returns 0
+4. Protocol version 0 = Legacy protocol only
+5. Convert profile: sph_3000_6000_v201 → sph_3000_6000 (legacy)
+6. Result: SPH Series 3-6kW (Legacy) ✅
+7. Battery controls use legacy registers (0-124 range)
+```
+
+**Why Protocol Check Matters:**
+- DTC 3501 = Pre-UP model (legacy firmware)
+- DTC 3502 = -UP model (V2.01 firmware)
+- Both use register 30000, but only -UP supports V2.01 protocol
+- Register 30099 confirms actual protocol support
+
+### Example 5: Manual Selection Required (Rare)
 ```
 1. Read register 30000 → Not readable (No DTC)
 2. Try model name detection → Not readable
