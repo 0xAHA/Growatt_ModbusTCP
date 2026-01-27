@@ -167,9 +167,15 @@ TL_XH_3000_10000_V201 = {
         # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
         31201: {'name': 'battery_power', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        # Note: 31202-31203 might be charge energy per VPP spec, but keeping as charge power for now (needs validation)
-        31202: {'name': 'battery_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31203},
-        31203: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # VPP V2.01 Battery Energy and Power registers (validated from real-world register scans)
+        31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery charge energy today HIGH'},
+        31203: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy today'},
+        31204: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 31205, 'desc': 'Battery charge power HIGH'},
+        31205: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Battery charge power (unsigned, positive=charging)'},
+        31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery discharge energy today HIGH'},
+        31207: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery discharge energy today'},
+        31208: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31209, 'desc': 'Battery discharge power HIGH'},
+        31209: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Battery discharge power (unsigned, positive=discharging)'},
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
         31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
@@ -322,9 +328,15 @@ MIN_TL_XH_3000_10000_V201 = {
         # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
         31201: {'name': 'battery_power', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        # Note: 31202-31203 might be charge energy per VPP spec, but keeping as charge power for now (needs validation)
-        31202: {'name': 'battery_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31203},
-        31203: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # VPP V2.01 Battery Energy and Power registers (validated from real-world register scans)
+        31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery charge energy today HIGH'},
+        31203: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy today'},
+        31204: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 31205, 'desc': 'Battery charge power HIGH'},
+        31205: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Battery charge power (unsigned, positive=charging)'},
+        31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery discharge energy today HIGH'},
+        31207: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery discharge energy today'},
+        31208: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31209, 'desc': 'Battery discharge power HIGH'},
+        31209: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Battery discharge power (unsigned, positive=discharging)'},
         31214: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'signed': True},
         31215: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
         31217: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
