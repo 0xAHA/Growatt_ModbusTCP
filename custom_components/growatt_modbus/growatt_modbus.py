@@ -730,6 +730,9 @@ class GrowattModbus:
             ac_voltage_addr = self._find_register_by_name('ac_voltage')
             ac_current_addr = self._find_register_by_name('ac_current')
             ac_power_addr = self._find_register_by_name('ac_power_low')
+            if not ac_power_addr:
+                # SPF off-grid models use 'load_power_low' instead
+                ac_power_addr = self._find_register_by_name('load_power_low')
             ac_freq_addr = self._find_register_by_name('ac_frequency')
 
             if ac_voltage_addr:
@@ -738,6 +741,7 @@ class GrowattModbus:
                 data.ac_current = self._get_register_value(ac_current_addr) or 0.0
             if ac_power_addr:
                 data.ac_power = self._get_register_value(ac_power_addr) or 0.0
+                logger.debug(f"AC Power from reg {ac_power_addr}: {data.ac_power}W")
             if ac_freq_addr:
                 data.ac_frequency = self._get_register_value(ac_freq_addr) or 0.0
 
