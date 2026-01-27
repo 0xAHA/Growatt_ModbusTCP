@@ -1118,13 +1118,22 @@ class GrowattModbus:
                     data.discharge_power = 0.0
             else:
                 # Fallback: Try old separate charge/discharge registers (SPH series)
+                # These registers are absolute values, but may be swapped for opposite convention inverters
                 addr = self._find_register_by_name('charge_power_low')
                 if addr:
                     raw_low = self._register_cache.get(addr, 0)
                     pair_addr = self._find_register_by_name('charge_power_high')
                     raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                    data.charge_power = self._get_register_value(addr) or 0.0
-                    logger.debug(f"Charge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_power}W")
+                    raw_charge_power = self._get_register_value(addr) or 0.0
+                    logger.debug(f"Charge power (raw): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {raw_charge_power}W")
+
+                    # Apply swapping if battery power is inverted (opposite convention)
+                    if self._invert_battery_power:
+                        # Opposite convention: "charge" register contains discharge, "discharge" contains charge
+                        data.discharge_power = raw_charge_power
+                        logger.debug(f"  → Swapped charge→discharge: {data.discharge_power}W (invert_battery_power=True)")
+                    else:
+                        data.charge_power = raw_charge_power
                 elif data.battery_voltage > 0 and data.battery_current < 0:
                     # Fallback: Calculate from V×I when charging (negative current)
                     data.charge_power = data.battery_voltage * abs(data.battery_current)
@@ -1135,8 +1144,16 @@ class GrowattModbus:
                     raw_low = self._register_cache.get(addr, 0)
                     pair_addr = self._find_register_by_name('discharge_power_high')
                     raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                    data.discharge_power = self._get_register_value(addr) or 0.0
-                    logger.debug(f"Discharge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_power}W")
+                    raw_discharge_power = self._get_register_value(addr) or 0.0
+                    logger.debug(f"Discharge power (raw): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {raw_discharge_power}W")
+
+                    # Apply swapping if battery power is inverted (opposite convention)
+                    if self._invert_battery_power:
+                        # Opposite convention: "discharge" register contains charge, "charge" contains discharge
+                        data.charge_power = raw_discharge_power
+                        logger.debug(f"  → Swapped discharge→charge: {data.charge_power}W (invert_battery_power=True)")
+                    else:
+                        data.discharge_power = raw_discharge_power
                 elif data.battery_voltage > 0 and data.battery_current > 0:
                     # Fallback: Calculate from V×I when discharging (positive current)
                     data.discharge_power = data.battery_voltage * data.battery_current
