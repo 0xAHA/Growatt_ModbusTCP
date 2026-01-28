@@ -104,6 +104,25 @@ With 5-second polling, automation now reacts within 5-7 seconds (vs. 10-15 secon
 - Safe for serial at 9600 baud (tested with SPF 6000 ES Plus)
 - Conservative enough to avoid timeout errors
 
+### Adaptive Polling with Automatic Backoff
+
+**NEW:** Built-in safety mechanism automatically adjusts polling speed based on connection quality.
+
+**How it works:**
+- Tracks consecutive read failures across all register reads
+- After 5 consecutive failures, automatically backs off from 250ms → 1s
+- Restores fast polling (250ms) when communication recovers
+- Prevents aggressive polling from breaking integrations with slow devices
+
+**What this means:**
+- If your device struggles with fast polling, integration automatically slows down
+- No manual intervention needed - self-adjusts to your device's capabilities
+- Warning logged when backoff occurs: *"X consecutive read failures detected - backing off to safe polling interval"*
+- Info logged when restored: *"Communication restored - resuming fast polling"*
+
+**Why this matters:**
+Users with older serial converters, low baud rates, or slow devices get automatic protection while users with fast TCP connections enjoy improved performance without risk.
+
 ### Recommendations
 
 **For time-sensitive automations:**
