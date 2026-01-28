@@ -12,5 +12,5 @@
     "pymodbus>=3.0.0",
     "pyserial>=3.4"
   ],
-  "version": "0.2.6"
+  "version": "0.2.7"
 }

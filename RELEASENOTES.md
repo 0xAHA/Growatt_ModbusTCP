@@ -23,6 +23,73 @@
 
 ---
 
+# Release Notes - v0.2.7
+
+## 🔌 SPF Charge Current Scale Fixed (Still Showing 800A) ⚡
+
+**FIXED:** SPF AC Charge Current and Generator Charge Current entities still showing max 800A instead of 80A, despite fix in v0.2.4.
+
+### Root Cause
+
+**v0.2.4 fixed the wrong file!**
+
+While `spf.py` profile was updated with correct scale (0.1), the number entities are actually created from `WRITABLE_REGISTERS` in `const.py`, which still had scale: 1.
+
+**How entity creation works:**
+```python
+# number.py line 40: Creates entities from WRITABLE_REGISTERS (const.py)
+for control_name, control_config in WRITABLE_REGISTERS.items():
+    # line 137-138: Sets slider max
+    self._attr_native_max_value = float(valid_range[1]) * scale
+    # With scale=1: 800 × 1 = 800A ❌
+    # With scale=0.1: 800 × 0.1 = 80A ✓
+```
+
+The profile definitions in `spf.py` are used for reading data from Modbus registers, but NOT for creating control entities!
+
+### What's Fixed
+
+Updated `const.py` WRITABLE_REGISTERS:
+```python
+# Before (v0.2.4-v0.2.6)
+'ac_charge_current': {
+    'scale': 1,           ❌ Wrong!
+    'valid_range': (0, 800),
+}
+
+# After (v0.2.7)
+'ac_charge_current': {
+    'scale': 0.1,         ✅ Correct!
+    'valid_range': (0, 800),  # Raw register range
+}
+```
+
+**Result:**
+- Slider max: 800 × 0.1 = **80A** ✅
+- Display value: raw 800 → **80A** ✅
+- Write 80A: 80 / 0.1 = 800 (raw register value) ✅
+
+### 🧪 Testing - SPF Users
+
+If you have an **SPF 3000-6000 ES Plus**:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Check control entities:**
+   - `number.growatt_ac_charge_current` - Should now show max **80A** (not 800A)
+   - `number.growatt_generator_charge_current` - Should now show max **80A** (not 800A)
+
+3. **Verify existing values:**
+   - If you previously set 80A (which wrote 80 raw), it will now display as 8A (80 × 0.1)
+   - You may need to adjust your settings to correct values after reload
+
+**Affected registers:**
+- Register 38: AC Charge Current (0-800 raw = 0-80A display)
+- Register 83: Generator Charge Current (0-800 raw = 0-80A display)
+
+---
+
 # Release Notes - v0.2.6
 
 ## 🚨 CRITICAL: SPH 10000TL-HU Auto-Detection Fixed (Battery Controls Not Working) ⚡
@@ -181,71 +248,6 @@ All have DTC 3502 (same as regular SPH), so storage range check is critical.
 **Fix:** Changed to forward slash: `MOD-XH/MID-XH: 5400` (matches pattern used elsewhere in file)
 
 **Impact:** Eliminates SyntaxWarning during setup, no functional change.
-
----
-
-## 🔌 SPF Charge Current Scale Fixed (Still Showing 800A) ⚡
-
-**FIXED:** SPF AC Charge Current and Generator Charge Current entities still showing max 800A instead of 80A, despite fix in v0.2.4.
-
-### Root Cause
-
-**v0.2.4 fixed the wrong file!**
-
-While `spf.py` profile was updated with correct scale (0.1), the number entities are actually created from `WRITABLE_REGISTERS` in `const.py`, which still had scale: 1.
-
-**How entity creation works:**
-```python
-# number.py line 40: Creates entities from WRITABLE_REGISTERS (const.py)
-for control_name, control_config in WRITABLE_REGISTERS.items():
-    # line 137-138: Sets slider max
-    self._attr_native_max_value = float(valid_range[1]) * scale
-    # With scale=1: 800 × 1 = 800A ❌
-    # With scale=0.1: 800 × 0.1 = 80A ✓
-```
-
-The profile definitions in `spf.py` are used for reading data from Modbus registers, but NOT for creating control entities!
-
-### What's Fixed
-
-Updated `const.py` WRITABLE_REGISTERS:
-```python
-# Before (v0.2.4)
-'ac_charge_current': {
-    'scale': 1,           ❌ Wrong!
-    'valid_range': (0, 800),
-}
-
-# After (v0.2.6)
-'ac_charge_current': {
-    'scale': 0.1,         ✅ Correct!
-    'valid_range': (0, 800),  # Raw register range
-}
-```
-
-**Result:**
-- Slider max: 800 × 0.1 = **80A** ✅
-- Display value: raw 800 → **80A** ✅
-- Write 80A: 80 / 0.1 = 800 (raw register value) ✅
-
-### 🧪 Testing - SPF Users
-
-If you have an **SPF 3000-6000 ES Plus**:
-
-1. **Reload integration:**
-   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
-
-2. **Check control entities:**
-   - `number.growatt_ac_charge_current` - Should now show max **80A** (not 800A)
-   - `number.growatt_generator_charge_current` - Should now show max **80A** (not 800A)
-
-3. **Verify existing values:**
-   - If you previously set 80A (which wrote 80 raw), it will now display as 8A (80 × 0.1)
-   - You may need to adjust your settings to correct values after reload
-
-**Affected registers:**
-- Register 38: AC Charge Current (0-800 raw = 0-80A display)
-- Register 83: Generator Charge Current (0-800 raw = 0-80A display)
 
 ---
 
@@ -491,7 +493,7 @@ If you have an **SPF 3000, 4000, 5000, or 6000 ES Plus**:
    - `number.growatt_generator_charge_current` - Shows max 80A
    - These control the maximum charging current from grid/generator
 
-**Note:** v0.2.4 attempted to fix charge current scale issue (800A → 80A) but the fix was incomplete. Only `spf.py` profile was updated, but entities are created from `const.py` which still had incorrect scale. **Properly fixed in v0.2.6** - see v0.2.6 release notes for details.
+**Note:** v0.2.4 attempted to fix charge current scale issue (800A → 80A) but the fix was incomplete. Only `spf.py` profile was updated, but entities are created from `const.py` which still had incorrect scale. **Properly fixed in v0.2.7** - see v0.2.7 release notes for details.
 
 ---
 
