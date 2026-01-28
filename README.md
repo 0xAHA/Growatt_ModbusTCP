@@ -10,6 +10,7 @@
 A native Home Assistant integration for Growatt solar inverters using direct Modbus RTU/TCP communication. Get real-time data straight from your inverter without relying on cloud services! 🚀
 
 **Smart Protocol Support:**
+
 - **Auto-detection** - VPP Protocol V2.01 inverters detected automatically via Device Type Code (DTC)
 - **Legacy support** - Automatic fallback to V1.39/V3.05 protocols with register probing
 - **High success rate** - ~100% detection for V2.01 inverters, ~90% for legacy models
@@ -21,6 +22,7 @@ A native Home Assistant integration for Growatt solar inverters using direct Mod
 > **This integration is actively evolving with your help!**
 >
 > **How You Can Help:**
+>
 > - ✅ **Test and report** - Try the integration with your inverter model
 > - 📊 **Share register scans** - Use the built-in Universal Scanner to help verify profiles
 > - 🐛 **Report issues** - Found incorrect values? [Open an issue](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
@@ -56,11 +58,13 @@ A native Home Assistant integration for Growatt solar inverters using direct Mod
 **Residential and small commercial** Growatt inverters (0.6-25kW):
 
 **Single-Phase:**
+
 - **Grid-Tied:** MIC 0.6-3.3kW, MIN 3-6kW, MIN 7-10kW ✅
 - **Hybrid:** SPH 3-6kW, SPH 7-10kW, SPH/SPM 8-10kW HU, TL-XH 3-10kW, MIN TL-XH 3-10kW
 - **Off-Grid:** SPF 3-6kW ES PLUS
 
 **Three-Phase:**
+
 - **Grid-Tied:** MID 15-25kW
 - **Hybrid:** MOD 6-15kW, SPH-TL3 3-10kW, WIT 4-15kW
 
@@ -75,6 +79,7 @@ A native Home Assistant integration for Growatt solar inverters using direct Mod
 ## 📊 Sensor Overview
 
 **All Models:**
+
 - PV strings (voltage, current, power per string)
 - AC output (single or three-phase)
 - Energy totals (today, lifetime)
@@ -82,12 +87,14 @@ A native Home Assistant integration for Growatt solar inverters using direct Mod
 - System diagnostics (temps, status, faults)
 
 **Hybrid Models Add:**
+
 - Battery (voltage, current, power, SOC, temperature)
 - BMS monitoring (SOH, cycle count, cell voltages) - *HU models*
 - Power flow (to grid, to load, to user)
 - Battery energy tracking (charge/discharge today/total)
 
 **Model-Specific:**
+
 - **1 PV string:** MIC
 - **2 PV strings:** MIN 3-6kW, SPH 3-6kW/7-10kW, SPH-TL3, MID
 - **3 PV strings:** MIN 7-10kW, SPH/SPM 8-10kW HU, TL-XH, MOD
@@ -102,12 +109,13 @@ A native Home Assistant integration for Growatt solar inverters using direct Mod
 
 **Option 1: TCP/WiFi Adapter (Recommended)**
 
-| Adapter | Wiring | Settings |
-|---------|--------|----------|
-| **EW11** | RS485 A/B → D+/D- | TCP Server, 9600 baud, port 502 |
-| **USR-W630** | RS485 A/B → A/B | Modbus TCP Gateway mode |
-| **USR-TCP232-410s** | RS485 A/B → A/B | TCP Server, 9600 baud, port 502 |
-| **Waveshare RS485-to-ETH** | RS485 A/B → A/B | Modbus TCP mode, 9600 baud |
+
+| Adapter                    | Wiring             | Settings                        |
+| ---------------------------- | -------------------- | --------------------------------- |
+| **EW11**                   | RS485 A/B → D+/D- | TCP Server, 9600 baud, port 502 |
+| **USR-W630**               | RS485 A/B → A/B   | Modbus TCP Gateway mode         |
+| **USR-TCP232-410s**        | RS485 A/B → A/B   | TCP Server, 9600 baud, port 502 |
+| **Waveshare RS485-to-ETH** | RS485 A/B → A/B   | Modbus TCP mode, 9600 baud      |
 
 **Option 2: USB/Serial Adapter**
 
@@ -115,11 +123,12 @@ Direct USB connection via RS485-to-USB adapter (e.g., `/dev/ttyUSB0` or `COM3`)
 
 ### Inverter Wiring
 
-| Connector | Pins | → | Adapter |
-|-----------|------|---|---------|
+
+| Connector          | Pins                 | → | Adapter            |
+| -------------------- | ---------------------- | ---- | -------------------- |
 | **16-pin DRM/COM** | Pin 3 (A), Pin 4 (B) | → | RS485-A/B or D+/D- |
-| **4-pin COM** | Pin 1 (A), Pin 2 (B) | → | RS485-A/B or D+/D- |
-| **RJ45 (485-3)** | Pin 5 (A), Pin 1 (B) | → | RS485-A/B or D+/D- |
+| **4-pin COM**      | Pin 1 (A), Pin 2 (B) | → | RS485-A/B or D+/D- |
+| **RJ45 (485-3)**   | Pin 5 (A), Pin 1 (B) | → | RS485-A/B or D+/D- |
 
 > ⚠️ **Tip:** If data looks garbled, try swapping A and B connections. Adapter labeling varies.
 
@@ -182,6 +191,7 @@ Direct USB connection via RS485-to-USB adapter (e.g., `/dev/ttyUSB0` or `COM3`)
 **Step 3: Verify Installation**
 
 Check that these files exist:
+
 ```
 config/
 └── custom_components/
@@ -212,11 +222,13 @@ After installation, verify the integration appears:
 ### Updating
 
 **HACS:**
+
 - HACS will notify you of updates
 - Click **Update** in HACS when available
 - Restart Home Assistant after update
 
 **Manual:**
+
 - Download new release
 - Replace files in `custom_components/growatt_modbus/`
 - Restart Home Assistant
@@ -240,11 +252,13 @@ After installation, verify the integration appears:
 If auto-detection fails or you have a legacy inverter:
 
 **Single-Phase Grid-Tied:**
+
 - MIC 600-3300TL-X (1 PV string)
 - MIN 3000-6000TL-X (2 PV strings)
 - MIN 7000-10000TL-X (3 PV strings)
 
 **Single-Phase Hybrid:**
+
 - SPH 3000-6000 (2 PV, battery)
 - SPH 7000-10000 (2 PV, battery)
 - SPH/SPM 8000-10000 HU (3 PV, battery, BMS)
@@ -252,6 +266,7 @@ If auto-detection fails or you have a legacy inverter:
 - MIN TL-XH 3000-10000 (2-3 PV, battery)
 
 **Three-Phase:**
+
 - MID 15000-25000TL3-X (grid-tied)
 - MOD 6000-15000TL3-XH (hybrid)
 - SPH-TL3 3000-10000 (hybrid)
@@ -261,12 +276,13 @@ If auto-detection fails or you have a legacy inverter:
 
 Access via **Configure** button:
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| **Device Name** | "Growatt" | Prefix for all sensor names |
-| **Scan Interval** | 30s | Polling frequency (5-300s) |
-| **Connection Timeout** | 10s | Response timeout (1-60s) |
-| **Invert Grid Power** | Auto | Fix backwards CT clamp (auto-detected) |
+
+| Option                 | Default   | Description                            |
+| ------------------------ | ----------- | ---------------------------------------- |
+| **Device Name**        | "Growatt" | Prefix for all sensor names            |
+| **Scan Interval**      | 30s       | Polling frequency (5-300s)             |
+| **Connection Timeout** | 10s       | Response timeout (1-60s)               |
+| **Invert Grid Power**  | Auto      | Fix backwards CT clamp (auto-detected) |
 
 ---
 
@@ -277,12 +293,14 @@ Access via **Configure** button:
 The integration **automatically detects** grid power orientation during setup:
 
 ✅ **What happens:**
+
 - Runs during initial setup when solar is producing
 - Analyzes power flow direction
 - Applies correct setting automatically
 - Logs detection result
 
 ⚠️ **If setup happens at night:**
+
 - Auto-detection skips (no solar)
 - Uses default (usually correct)
 - Run manual detection service after sunrise:
@@ -296,6 +314,7 @@ service: growatt_modbus.detect_grid_orientation
 Growatt inverters use **IEC 61850 standard** (export = positive), while Home Assistant's Power Flow card expects export = negative. The integration handles this conversion automatically.
 
 **Symptoms of wrong setting:**
+
 - Power Flow graph shows backwards arrows
 - Export/import values swapped
 - House consumption incorrect
@@ -336,6 +355,7 @@ For advanced troubleshooting and testing, you can read or write individual regis
 Read a single input or holding register to inspect its value:
 
 **Example: Read battery SOC (SPH models)**
+
 ```yaml
 service: growatt_modbus.read_register
 data:
@@ -347,6 +367,7 @@ target:
 ```
 
 **Example: Read priority mode (SPH holding register)**
+
 ```yaml
 service: growatt_modbus.read_register
 data:
@@ -358,6 +379,7 @@ target:
 ```
 
 **Example: Read 32-bit register pair (battery power)**
+
 ```yaml
 service: growatt_modbus.read_register
 data:
@@ -375,6 +397,7 @@ target:
 Write a value to a holding register (control entities):
 
 **Example: Set charge power rate to 50% (SPH models)**
+
 ```yaml
 service: growatt_modbus.write_register
 data:
@@ -385,6 +408,7 @@ target:
 ```
 
 **Example: Enable AC charge (SPH models)**
+
 ```yaml
 service: growatt_modbus.write_register
 data:
@@ -395,6 +419,7 @@ target:
 ```
 
 **Example: Set time period (HHMM format)**
+
 ```yaml
 service: growatt_modbus.write_register
 data:
@@ -405,6 +430,7 @@ target:
 ```
 
 **⚠️ Important Notes:**
+
 - Only write to **holding registers** (writable controls)
 - Check profile documentation for valid ranges
 - Invalid values may be rejected by inverter
@@ -418,22 +444,26 @@ target:
 Sensors are pre-configured for the Energy Dashboard:
 
 **Solar Production:**
+
 ```
 sensor.{name}_solar_total_power
 ```
 
 **Grid Export/Import:**
+
 ```
 sensor.{name}_grid_export_power
 sensor.{name}_grid_import_power
 ```
 
 **Home Consumption:**
+
 ```
 sensor.{name}_house_consumption
 ```
 
 **Battery (Hybrid models):**
+
 ```
 sensor.{name}_battery_power
 ```
@@ -461,6 +491,7 @@ This prevents sensor unavailability cascades in automations!
 ### Connection Issues
 
 **TCP connection fails:**
+
 ```bash
 # Test network connectivity
 ping 192.168.1.100
@@ -470,6 +501,7 @@ telnet 192.168.1.100 502
 ```
 
 **Common fixes:**
+
 - ✅ Check wiring (swap A/B if needed)
 - ✅ Verify IP address and port 502
 - ✅ Confirm slave ID (usually 1)
@@ -512,6 +544,7 @@ logger:
 See **[RELEASENOTES.md](RELEASENOTES.md)** for v0.2.2 details.
 
 **Recent highlights:**
+
 - SPH battery control entities for time-based charging automation
 - SPF battery SOC controls expanded to 0-100% for Lithium batteries
 - SPF off-grid status codes (fixes "Unknown" status display)
@@ -524,12 +557,14 @@ See **[RELEASENOTES.md](RELEASENOTES.md)** for v0.2.2 details.
 ## 🤝 Contributing
 
 **Testing with Hardware:**
+
 - Test with your inverter model
 - Run Universal Scanner
 - Report results via [GitHub Issues](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 - Include model name, scanner output, and sensor screenshots
 
 **Code Contributions:**
+
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
 3. Test with real hardware
@@ -537,6 +572,7 @@ See **[RELEASENOTES.md](RELEASENOTES.md)** for v0.2.2 details.
 5. Push and open Pull Request
 
 **Most Needed:**
+
 - Validation of untested profiles (SPH, TL-XH, MID, MOD)
 - Register scans from different inverter models
 - Bug reports with debug logs
