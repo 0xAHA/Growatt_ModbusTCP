@@ -90,6 +90,109 @@ If you have an **SPF 3000-6000 ES Plus**:
 
 ---
 
+## 🔋 MOD Battery Power Sensors Fixed (Showing 0W) ⚡
+
+**FIXED:** MOD 10000TL3-XH battery charge power, discharge power, and combined power sensors showing 0W despite registers 3178-3181 containing valid data (Issue #125 followup).
+
+### Symptoms
+
+After v0.2.4 fix for MOD battery voltage/SOC/current, users still reported:
+- ❌ Battery Charge Power sensor: 0W (should show watts)
+- ❌ Battery Discharge Power sensor: 0W (should show watts)
+- ❌ Battery Power sensor: 0W (should show ±watts)
+- ✅ Battery Voltage/Current/SOC working (fixed in v0.2.4)
+
+User confirmed registers 3178-3181 had valid power data, but sensors showed 0W.
+
+### Root Cause
+
+**Same issue as v0.2.4 battery state fix - VPP registers defined but not responding!**
+
+Coordinator logic for battery power:
+```
+1. First tries to find 'battery_power_low'
+   → Found at register 31201 (VPP range) ✓
+
+2. If found, uses that as signed power
+   → Register 31201 returns 0 (VPP 31200+ doesn't respond on MOD XH) ❌
+
+3. ELSE fallback to separate charge_power_low/discharge_power_low
+   → Registers 3179/3181 (working!) → NEVER REACHED! ❌
+```
+
+**Problem:** The working registers (3178-3181) were never used because `battery_power_low` existed in the profile (even though it returned 0).
+
+v0.2.4 fixed this for voltage/current/SOC by renaming VPP registers with `_vpp` suffix, but missed the power registers!
+
+### What's Fixed
+
+Renamed VPP battery power registers with `_vpp` suffix (completing v0.2.4 pattern):
+
+**Before (v0.2.4-v0.2.6):**
+```python
+# VPP range (doesn't respond on MOD XH but blocks fallback!)
+31200: {'name': 'battery_power_high', ...}        ❌ Blocks fallback
+31201: {'name': 'battery_power_low', ...}         ❌ Returns 0
+
+# 3000 range (responds but never reached!)
+3178: {'name': 'discharge_power_high', ...}
+3179: {'name': 'discharge_power_low', ...}        ✅ Has data but not used
+3180: {'name': 'charge_power_high', ...}
+3181: {'name': 'charge_power_low', ...}           ✅ Has data but not used
+```
+
+**After (v0.2.7):**
+```python
+# VPP range (renamed - won't block fallback)
+31200: {'name': 'battery_power_vpp_high', ...}    ✅ Renamed
+31201: {'name': 'battery_power_vpp_low', ...}     ✅ Renamed
+
+# 3000 range (now used as primary!)
+3178: {'name': 'discharge_power_high', ...}
+3179: {'name': 'discharge_power_low', ...}        ✅ NOW FOUND!
+3180: {'name': 'charge_power_high', ...}
+3181: {'name': 'charge_power_low', ...}           ✅ NOW FOUND!
+```
+
+**Result:**
+- Coordinator doesn't find `battery_power_low` → Falls back to separate charge/discharge
+- charge_power_low (3179) and discharge_power_low (3181) found → Returns actual power! ✅
+
+### 🧪 Testing - MOD XH Users
+
+If you have **MOD 6000-15000TL3-XH** with ARK battery:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Check Battery device sensors:**
+   - `sensor.growatt_battery_charge_power` - Should show charging watts (not 0W)
+   - `sensor.growatt_battery_discharge_power` - Should show discharge watts (not 0W)
+   - `sensor.growatt_battery_power` - Should show ±watts (positive=charging, negative=discharging)
+
+3. **Verify with register scanner (optional):**
+   ```
+   Debug → Universal Scanner → MIN/MOD Range 3000-3124
+
+   Expected values (example from user):
+   3178-3179: Discharge power = 933.0W (9330 × 0.1)
+   3180-3181: Charge power = 0W (not charging)
+   ```
+
+4. **Expected behavior:**
+   - **While charging:** charge_power > 0, discharge_power = 0, battery_power > 0
+   - **While discharging:** discharge_power > 0, charge_power = 0, battery_power < 0
+   - **Idle:** Both = 0
+
+**Affected models:**
+- MOD 6000-15000TL3-XH (all XH variants where VPP 31200+ range doesn't respond)
+
+**Registers used:**
+- 3178-3179: Battery Discharge Power (0.1W scale, unsigned)
+- 3180-3181: Battery Charge Power (0.1W scale, unsigned)
+
+---
+
 # Release Notes - v0.2.6
 
 ## 🚨 CRITICAL: SPH 10000TL-HU Auto-Detection Fixed (Battery Controls Not Working) ⚡
