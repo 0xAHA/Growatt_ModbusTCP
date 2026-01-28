@@ -227,6 +227,13 @@ class GrowattModbus:
         # Cache for raw register data
         self._register_cache = {}
 
+        # Adaptive polling: automatic backoff on errors
+        self._consecutive_read_failures = 0
+        self._read_failure_threshold = 5  # Back off after 5 consecutive failures
+        self._default_min_read_interval = 0.25  # Fast polling default
+        self._fallback_min_read_interval = 1.0  # Safe fallback on errors
+        self._backed_off = False  # Track if we've backed off
+
         # Battery power scale auto-detection (WIT profile specific)
         self._battery_power_scale_override = None  # None = use profile default, 0.1 or 1.0 = detected scale
         self._battery_power_scale_samples = []  # Store validation samples
@@ -298,6 +305,36 @@ class GrowattModbus:
             self.client.close()
             logger.info(f"[{self.register_map['name']}@{self.connection_id}] Disconnected")
     
+    def _track_read_success(self):
+        """Track successful read and restore fast polling if we had backed off"""
+        if self._consecutive_read_failures > 0:
+            self._consecutive_read_failures = 0
+            if self._backed_off:
+                logger.info(
+                    "[%s@%s] Communication restored - resuming fast polling (%.0fms intervals)",
+                    self.register_map['name'],
+                    self.connection_id,
+                    self._default_min_read_interval * 1000
+                )
+                self.min_read_interval = self._default_min_read_interval
+                self._backed_off = False
+
+    def _track_read_failure(self):
+        """Track read failure and back off to safe polling if threshold exceeded"""
+        self._consecutive_read_failures += 1
+
+        if not self._backed_off and self._consecutive_read_failures >= self._read_failure_threshold:
+            logger.warning(
+                "[%s@%s] %d consecutive read failures detected - backing off to safe polling interval (%.0fs) to prevent communication errors. "
+                "This may indicate serial connection issues, low baudrate, or device processing limitations.",
+                self.register_map['name'],
+                self.connection_id,
+                self._consecutive_read_failures,
+                self._fallback_min_read_interval
+            )
+            self.min_read_interval = self._fallback_min_read_interval
+            self._backed_off = True
+
     def _enforce_read_interval(self):
         """Ensure minimum time between reads per Growatt spec"""
         current_time = time.time()
@@ -348,21 +385,26 @@ class GrowattModbus:
             if hasattr(response, 'isError'):
                 if response.isError():
                     logger.warning(f"Modbus error reading input registers {start_address}-{start_address+count-1}: {response}")
+                    self._track_read_failure()
                     return None
             elif hasattr(response, 'is_error') and callable(response.is_error):
                 if response.is_error():
                     logger.warning(f"Modbus error reading input registers {start_address}-{start_address+count-1}: {response}")
+                    self._track_read_failure()
                     return None
 
             if hasattr(response, 'registers'):
                 logger.debug(f"Successfully read {len(response.registers)} registers from {start_address}")
+                self._track_read_success()
                 return response.registers
 
             logger.warning(f"Unknown response type: {type(response)}, response: {response}")
+            self._track_read_failure()
             return None
-            
+
         except Exception as e:
             logger.debug(f"Exception reading input registers: {e}")
+            self._track_read_failure()
             return None
     
     def read_holding_registers(self, start_address: int, count: int) -> Optional[list]:
@@ -372,13 +414,17 @@ class GrowattModbus:
             response = self.client.read_holding_registers(address=start_address, count=count)
             if hasattr(response, "isError") and callable(response.isError) and response.isError():
                 logger.debug("Modbus error reading holding registers %d-%d: %r", start_address, start_address + count - 1, response)
+                self._track_read_failure()
                 return None
             if hasattr(response, "registers"):
+                self._track_read_success()
                 return response.registers
             logger.debug("Unexpected response type from read_holding_registers(%d, %d): %r", start_address, count, response)
+            self._track_read_failure()
             return None
         except Exception as e:
             logger.debug("Exception reading holding registers %d-%d: %s", start_address, start_address + count - 1, e)
+            self._track_read_failure()
             return None
 
     def _detect_battery_power_scale(self, voltage: float, current: float, power_register_value: int) -> Optional[float]:
