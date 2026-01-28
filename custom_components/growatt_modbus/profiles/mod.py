@@ -108,23 +108,31 @@ MOD_6000_15000TL3_XH = {
         # Battery Diagnostics
         3086: {'name': 'battery_derating_mode', 'scale': 1, 'unit': ''},
         
-        # Battery - Discharge/Charge Energy (3000 range - legacy/alternative location)
-        # Note: Renamed with _legacy suffix to avoid conflict with official 31200 range
-        3125: {'name': 'discharge_energy_today_legacy_high', 'scale': 1, 'unit': '', 'pair': 3126},
-        3126: {'name': 'discharge_energy_today_legacy_low', 'scale': 1, 'unit': '', 'pair': 3125, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3127: {'name': 'discharge_energy_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 3128},
-        3128: {'name': 'discharge_energy_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 3127, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3129: {'name': 'charge_energy_today_legacy_high', 'scale': 1, 'unit': '', 'pair': 3130},
-        3130: {'name': 'charge_energy_today_legacy_low', 'scale': 1, 'unit': '', 'pair': 3129, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3131: {'name': 'charge_energy_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 3132},
-        3132: {'name': 'charge_energy_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 3131, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # Battery - Discharge/Charge Energy (3000 range - PRIMARY for MOD XH)
+        # Note: Order is discharge first, then charge (different from VPP which is charge first)
+        3125: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3126, 'desc': 'Battery discharge energy today (primary source for MOD XH)'},
+        3126: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3125, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3127: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3128, 'desc': 'Battery discharge energy total (primary source for MOD XH)'},
+        3128: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3127, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3129: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3130, 'desc': 'Battery charge energy today (primary source for MOD XH)'},
+        3130: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3129, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3131: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3132, 'desc': 'Battery charge energy total (primary source for MOD XH)'},
+        3132: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3131, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         
-        # Battery State (3000 range - legacy/alternative location)
+        # Battery State (3000 range - PRIMARY for MOD XH with ARK battery)
+        # Note: VPP 31200+ range doesn't respond on MOD 10000TL3-XH, so 3000+ is primary
         3144: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'desc': '0=Load, 1=Battery, 2=Grid'},
-        3169: {'name': 'battery_voltage_legacy', 'scale': 0.01, 'unit': 'V'},
-        3170: {'name': 'battery_current_legacy', 'scale': 0.1, 'unit': 'A', 'signed': True},
-        3171: {'name': 'battery_soc_legacy', 'scale': 1, 'unit': '%'},
-        3176: {'name': 'battery_temp_legacy', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        3169: {'name': 'battery_voltage', 'scale': 0.01, 'unit': 'V', 'desc': 'Battery voltage (primary source for MOD XH)'},
+        3170: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True, 'desc': 'Battery current (primary source for MOD XH)'},
+        3171: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (primary source for MOD XH)'},
+        3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature (primary source for MOD XH)'},
+
+        # Battery Power (3000 range - separate charge/discharge registers)
+        # These follow the MIN TL-XH pattern for ARK battery systems
+        3178: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 3179, 'desc': 'Battery discharge power HIGH (unsigned)'},
+        3179: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 3178, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Battery discharge power (unsigned, positive=discharging)'},
+        3180: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 3181, 'desc': 'Battery charge power HIGH (unsigned)'},
+        3181: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 3180, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Battery charge power (unsigned, positive=charging)'},
 
         # === BATTERY INFORMATION 1 (31200-31299) - Official VPP Protocol V2.01 ===
         # This is the official battery data range for MOD series per Growatt VPP Protocol
@@ -134,15 +142,17 @@ MOD_6000_15000TL3_XH = {
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
         31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
-        # Battery Energy - Daily (Note: protocol lists charge first, then discharge)
-        31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203},
-        31203: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31204: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31205},
-        31205: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207},
-        31207: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31208: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31209},
-        31209: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # Battery Energy (VPP range - NOT responding on MOD 10000TL3-XH, kept for other MOD variants)
+        # Renamed with _vpp suffix to avoid conflict with 3000+ range (primary source)
+        # Note: VPP protocol lists charge first, then discharge (opposite of 3000+ range)
+        31202: {'name': 'charge_energy_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31203},
+        31203: {'name': 'charge_energy_today_vpp_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31204: {'name': 'charge_energy_total_vpp_high', 'scale': 1, 'unit': '', 'pair': 31205},
+        31205: {'name': 'charge_energy_total_vpp_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31206: {'name': 'discharge_energy_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31207},
+        31207: {'name': 'discharge_energy_today_vpp_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31208: {'name': 'discharge_energy_total_vpp_high', 'scale': 1, 'unit': '', 'pair': 31209},
+        31209: {'name': 'discharge_energy_total_vpp_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Battery Power Limits
         31210: {'name': 'battery_max_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31211},
@@ -150,19 +160,20 @@ MOD_6000_15000TL3_XH = {
         31212: {'name': 'battery_max_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31213},
         31213: {'name': 'battery_max_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31212, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
-        # Battery State
-        31214: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'signed': True},
-        31215: {'name': 'battery_current_high', 'scale': 1, 'unit': '', 'pair': 31216},
-        31216: {'name': 'battery_current_low', 'scale': 1, 'unit': '', 'pair': 31215, 'combined_scale': 0.1, 'combined_unit': 'A', 'signed': True},
-        31217: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
+        # Battery State (VPP range - NOT responding on MOD 10000TL3-XH, kept for other MOD variants)
+        # Renamed with _vpp suffix to avoid conflict with 3000+ range (primary source)
+        31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'signed': True, 'desc': 'Battery voltage (VPP range, may not respond on XH variants)'},
+        31215: {'name': 'battery_current_vpp_high', 'scale': 1, 'unit': '', 'pair': 31216},
+        31216: {'name': 'battery_current_vpp_low', 'scale': 1, 'unit': '', 'pair': 31215, 'combined_scale': 0.1, 'combined_unit': 'A', 'signed': True},
+        31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (VPP range, may not respond on XH variants)'},
         31218: {'name': 'battery_soh', 'scale': 1, 'unit': '%'},
 
         # Battery Capacity
         31219: {'name': 'battery_fcc_high', 'scale': 1, 'unit': '', 'pair': 31220},
         31220: {'name': 'battery_fcc_low', 'scale': 1, 'unit': '', 'pair': 31219, 'combined_scale': 1, 'combined_unit': 'Ah'},
 
-        # Battery Temperature
-        31223: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        # Battery Temperature (VPP range)
+        31223: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temp (VPP range, may not respond on XH variants)'},
 
         # Battery System Info
         31225: {'name': 'battery_cluster_sum', 'scale': 1, 'unit': ''},
