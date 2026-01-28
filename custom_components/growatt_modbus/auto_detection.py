@@ -405,7 +405,7 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
     - MIN 2500-6000TL-XH/XH(P): 5100
     - MIC/MIN 2500-6000TL-X/X2: 5200
     - MIN 7000-10000TL-X/X2: 5201
-    - MOD-XH\MID-XH: 5400
+    - MOD-XH/MID-XH: 5400
     - WIT 4-15kW: 5603
     - WIT 100KTL3-H: 5601
     - WIS 215KTL3: 5800
