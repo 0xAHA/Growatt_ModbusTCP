@@ -851,18 +851,14 @@ def get_display_name_for_profile(profile_id: str) -> str:
         profile_id: Technical profile ID
 
     Returns:
-        User-friendly display name
+        User-friendly display name from profile's 'name' field
     """
-    # Search for this profile_id in the display names
-    for display_name, profile_info in PROFILE_DISPLAY_NAMES.items():
-        if profile_id in (profile_info["base"], profile_info["v201"]):
-            return display_name
-
-    # Fallback: return the technical name from profile
+    # Use the profile's 'name' field directly (e.g., "SPH/SPM 8000-10000TL-HU")
     profile = INVERTER_PROFILES.get(profile_id)
     if profile:
         return profile["name"]
 
+    # Fallback: return the profile_id as-is if not found
     return profile_id
 
 
