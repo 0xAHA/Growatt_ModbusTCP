@@ -273,13 +273,29 @@ SENSOR_DEFINITIONS = {
     },
     "grid_import_power": {
         "name": "Grid Import Power",
-        "icon": "mdi:transmission-tower-import", 
+        "icon": "mdi:transmission-tower-import",
         "device_class": SensorDeviceClass.POWER,
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfPower.WATT,
         "attr": "calculated",
     },
-    
+    "grid_voltage": {
+        "name": "Grid Voltage",
+        "icon": "mdi:transmission-tower",
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricPotential.VOLT,
+        "attr": "grid_voltage",
+    },
+    "grid_frequency": {
+        "name": "Grid Frequency",
+        "icon": "mdi:sine-wave",
+        "device_class": SensorDeviceClass.FREQUENCY,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfFrequency.HERTZ,
+        "attr": "grid_frequency",
+    },
+
     # Power Flow Sensors (from registers - storage/hybrid models)
     "power_to_grid": {
         "name": "Power to Grid",
