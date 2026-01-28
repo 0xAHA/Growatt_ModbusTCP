@@ -23,6 +23,167 @@
 
 ---
 
+# Release Notes - v0.2.6
+
+## 🚨 CRITICAL: SPH 10000TL-HU Auto-Detection Fixed (Battery Controls Not Working) ⚡
+
+**FIXED:** SPH/SPM 8000-10000TL-HU models were being **misdetected as SPH 7-10kW**, causing battery control entities to malfunction and battery to stop charging/discharging.
+
+### Symptoms
+
+After upgrading to v0.2.4, SPH 10000TL-HU users experienced:
+- ❌ Battery control entities (priority mode, charge/discharge rates, time periods) showing 0 or reverting to initial values
+- ❌ Changes to control entities had no effect on inverter
+- ❌ Battery stopped charging/discharging despite settings
+- ❌ Missing storage range sensors (1000-1124) and BMS sensors (1082+)
+- ❌ Profile detected as `SPH_7000_10000` instead of `SPH_8000_10000_HU`
+
+### Root Cause
+
+**Auto-detection logic bug in DTC 3502 (SPH models) handling:**
+
+The detection code only checked for **PV3 string presence** to differentiate SPH models:
+- ✅ PV3 voltage > 0 → SPH 7-10kW
+- ❌ PV3 voltage = 0 → SPH 3-6kW
+
+But it **never checked for storage range (1000-1124)** which uniquely identifies HU variants!
+
+**Problem:** If PV3 string is not connected (showing 0V), HU models were incorrectly detected as SPH 7-10kW.
+
+**Impact:** SPH_7000_10000 profile only has 0-124 register range, so:
+- Missing storage range 1000-1124 (power flow, energy breakdown)
+- Missing BMS registers 1082-1120 (battery SOC, voltage, current, health)
+- Missing extended battery controls
+- Control register reads fail or return wrong data
+
+**Why battery stopped working:**
+- Register 1008 (`system_enable`) exists on HU models but NOT in SPH_7000_10000 profile
+- Never read/written → may be stuck at 0 (Disabled) or corrupted
+- Battery control system disabled → won't charge/discharge
+- User's register scan showed charge_power_rate = 0% and corrupted discharge values
+
+### What's Fixed
+
+**Added storage range detection as PRIMARY identifier for HU models:**
+
+**1. DTC 3502 refinement logic (auto_detection.py:658):**
+```
+Priority: Storage Range > PV3 > No PV3
+
+1. Check register 1086 (BMS SOC) - HU-specific storage range
+   → If responds: SPH_8000_10000_HU ✅
+2. Check register 31018 or 11 (PV3 voltage)
+   → If > 0: SPH 7-10kW
+   → If = 0: SPH 3-6kW
+```
+
+**2. Legacy detection path (auto_detection.py:586):**
+- Added same storage range check for inverters without DTC
+- Properly differentiates HU from regular SPH when DTC unavailable
+
+**3. Profile register conflict (sph.py:387):**
+- Fixed SPH_8000_10000_HU overriding register 1044 definition
+- Changed from incorrect `priority` → inherits correct `priority_mode` from base profile
+- Added proper `system_enable` register description
+
+### SPH_8000_10000_HU Unique Identifiers
+
+**Storage range 1000-1124:**
+- 1000: system_work_mode
+- 1008: **system_enable** (critical for battery control!)
+- 1009-1012: battery charge/discharge power
+- 1015-1030: power flow (grid import/export)
+- 1044-1063: energy breakdown (grid, battery, load)
+- 1082-1120: **BMS registers** (SOC, voltage, current, temp, health, cycles)
+
+**Detection strategy:**
+- ✅ Storage range (1086 BMS SOC) is **always present** on HU models
+- ❌ PV3 string (register 11/14) may be **0V if not connected**
+- Therefore: Check storage range FIRST
+
+### 🧪 Action Required - SPH HU Users
+
+If you have **SPH 8000-10000TL-HU** or **SPM 8000-10000TL-HU** and experienced control issues:
+
+**1. Delete and reconfigure integration:**
+   - Settings → Devices & Services → Growatt Modbus
+   - Click ⋮ (three dots) → Delete
+   - Restart Home Assistant
+   - Re-add integration → Auto-detection will now select correct profile
+
+**2. Verify correct profile:**
+   - Configuration → Devices → Growatt Inverter → Info
+   - Model: Should show "SPH/SPM 8000-10000TL-HU"
+   - NOT "SPH Series 7-10kW"
+
+**3. Check system_enable (IMPORTANT!):**
+   - Controls tab → Look for "System Enable" entity
+   - If showing 0 (Disabled) or unavailable → **Set to 1 (Enabled)**
+   - This is critical for battery control to work!
+
+**4. Reset battery control settings:**
+   - Charge Power Rate: Set to 100% (was likely 0% = won't charge)
+   - Discharge Power Rate: Set to 100% (may have been corrupted)
+   - Charge Stopped SOC: Set to 100%
+   - Discharge Stopped SOC: Set to 10-20%
+   - AC Charge Enable: Set as needed
+
+**5. Confirm storage range sensors present:**
+   - Battery device should have ~40+ sensors
+   - Look for: Power to Grid, Power to Load, Self Consumption Power
+   - BMS sensors: Battery SOC (from BMS), Battery Health, Cycle Count
+
+**6. Test battery operation:**
+   - Battery should now charge/discharge according to settings
+   - Check battery current sensor (should show amps when active)
+   - Verify Time of Use settings take effect
+
+### Technical Details
+
+**Register scan evidence (user report):**
+```
+Storage Range 1000-1124:        ✅ Responding
+Register 1008 (system_enable):  17734 (0x3F0) - needs reset!
+Register 1086 (BMS SOC):        60% ✅
+Register 1087 (Voltage):        53.0V ✅
+Register 1088 (Current):        120.0A ✅
+Register 1089 (Temp):           21.0°C ✅
+Register 1090 (charge_power_rate): 0 🚨 Won't charge!
+Register 1070 (discharge_power_rate): 65535 🚨 Corrupted!
+PV3 Voltage (register 11):      0V (not connected)
+
+Previously detected as: SPH_7000_10000 ❌
+Now detects as: SPH_8000_10000_HU ✅
+```
+
+**Why PV3 check failed:**
+- SPH 10000TL-HU has 3 MPPT inputs (supports 3 PV strings)
+- But if user only connects 2 strings, PV3 reads 0V
+- Old logic: 0V = no PV3 = SPH 3-6kW ❌
+- New logic: Storage range = HU model (regardless of PV3) ✅
+
+**Affected models:**
+- SPH 8000TL-HU
+- SPH 10000TL-HU
+- SPM 8000TL-HU
+- SPM 10000TL-HU
+
+All have DTC 3502 (same as regular SPH), so storage range check is critical.
+
+---
+
+## 🐛 Python 3.12+ Syntax Warning Fixed
+
+**FIXED:** Invalid escape sequence warning in `auto_detection.py` line 408 during integration setup.
+
+**Issue:** Backslash in docstring `MOD-XH\MID-XH: 5400` interpreted as escape sequence by Python 3.12+
+
+**Fix:** Changed to forward slash: `MOD-XH/MID-XH: 5400` (matches pattern used elsewhere in file)
+
+**Impact:** Eliminates SyntaxWarning during setup, no functional change.
+
+---
+
 # Release Notes - v0.2.4
 
 ## 🔋 TL-XH Battery Power Registers Fixed (MIN-4600TL-XH with ARK Storage) ⚡
@@ -266,139 +427,6 @@ If you have an **SPF 3000, 4000, 5000, or 6000 ES Plus**:
    - These control the maximum charging current from grid/generator
 
 **Note:** Initial v0.2.4 release had incorrect scale on charge current registers (showed 800A instead of 80A). This was fixed immediately after release.
-
----
-
-## 🚨 CRITICAL: SPH 10000TL-HU Auto-Detection Fixed (Battery Controls Not Working) ⚡
-
-**FIXED:** SPH/SPM 8000-10000TL-HU models were being **misdetected as SPH 7-10kW**, causing battery control entities to malfunction and battery to stop charging/discharging.
-
-### Symptoms
-
-After upgrading to v0.2.4, SPH 10000TL-HU users experienced:
-- ❌ Battery control entities (priority mode, charge/discharge rates, time periods) showing 0 or reverting to initial values
-- ❌ Changes to control entities had no effect on inverter
-- ❌ Battery stopped charging/discharging despite settings
-- ❌ Missing storage range sensors (1000-1124) and BMS sensors (1082+)
-- ❌ Profile detected as `SPH_7000_10000` instead of `SPH_8000_10000_HU`
-
-### Root Cause
-
-**Auto-detection logic bug in DTC 3502 (SPH models) handling:**
-
-The detection code only checked for **PV3 string presence** to differentiate SPH models:
-- ✅ PV3 voltage > 0 → SPH 7-10kW
-- ❌ PV3 voltage = 0 → SPH 3-6kW
-
-But it **never checked for storage range (1000-1124)** which uniquely identifies HU variants!
-
-**Problem:** If PV3 string is not connected (showing 0V), HU models were incorrectly detected as SPH 7-10kW.
-
-**Impact:** SPH_7000_10000 profile only has 0-124 register range, so:
-- Missing storage range 1000-1124 (power flow, energy breakdown)
-- Missing BMS registers 1082-1120 (battery SOC, voltage, current, health)
-- Missing extended battery controls
-- Control register reads fail or return wrong data
-
-### What's Fixed
-
-**Added storage range detection as PRIMARY identifier for HU models:**
-
-**1. DTC 3502 refinement logic (auto_detection.py:658):**
-```
-Priority: Storage Range > PV3 > No PV3
-
-1. Check register 1086 (BMS SOC) - HU-specific storage range
-   → If responds: SPH_8000_10000_HU ✅
-2. Check register 31018 or 11 (PV3 voltage)
-   → If > 0: SPH 7-10kW
-   → If = 0: SPH 3-6kW
-```
-
-**2. Legacy detection path (auto_detection.py:586):**
-- Added same storage range check for inverters without DTC
-- Properly differentiates HU from regular SPH when DTC unavailable
-
-**3. Profile register conflict (sph.py:387):**
-- Fixed SPH_8000_10000_HU overriding register 1044 definition
-- Changed from incorrect `priority` → inherits correct `priority_mode` from base profile
-- Added proper `system_enable` register description
-
-### SPH_8000_10000_HU Unique Identifiers
-
-**Storage range 1000-1124:**
-- 1000: system_work_mode
-- 1009-1012: battery charge/discharge power
-- 1015-1030: power flow (grid import/export)
-- 1044-1063: energy breakdown (grid, battery, load)
-- 1082-1120: **BMS registers** (SOC, voltage, current, temp, health, cycles)
-
-**Detection strategy:**
-- ✅ Storage range (1086 BMS SOC) is **always present** on HU models
-- ❌ PV3 string (register 11/14) may be **0V if not connected**
-- Therefore: Check storage range FIRST
-
-### 🧪 Action Required - SPH HU Users
-
-If you have **SPH 8000-10000TL-HU** or **SPM 8000-10000TL-HU** and experienced control issues in v0.2.4:
-
-**1. Delete and reconfigure integration:**
-   - Settings → Devices & Services → Growatt Modbus
-   - Click ⋮ (three dots) → Delete
-   - Restart Home Assistant
-   - Re-add integration → Auto-detection will now select correct profile
-
-**2. Verify correct profile:**
-   - Configuration → Devices → Growatt Inverter → Info
-   - Model: Should show "SPH/SPM 8000-10000TL-HU"
-   - NOT "SPH Series 7-10kW"
-
-**3. Confirm storage range sensors present:**
-   - Battery device should have ~40+ sensors
-   - Look for: Power to Grid, Power to Load, Self Consumption Power
-   - BMS sensors: Battery SOC (from BMS), Battery Health, Cycle Count
-
-**4. Test battery controls:**
-   - Controls tab → Change Priority Mode or Charge Power Rate
-   - Values should persist and affect inverter behavior
-   - Battery should respond to settings
-
-**5. Check logs (optional):**
-   ```yaml
-   logger:
-     logs:
-       custom_components.growatt_modbus.auto_detection: debug
-   ```
-   Look for: `"Detected storage range 1000+ with BMS registers - SPH/SPM 8000-10000TL-HU"`
-
-### Technical Details
-
-**Register scan evidence (user report):**
-```
-Storage Range 1000-1124:        ✅ Responding
-BMS Register 1086 (SOC):        60% ✅
-BMS Register 1087 (Voltage):    53.0V ✅
-BMS Register 1088 (Current):    120.0A ✅
-BMS Register 1089 (Temp):       21.0°C ✅
-PV3 Voltage (register 11):      0V (not connected)
-
-Previously detected as: SPH_7000_10000 ❌
-Now detects as: SPH_8000_10000_HU ✅
-```
-
-**Why PV3 check failed:**
-- SPH 10000TL-HU has 3 MPPT inputs (supports 3 PV strings)
-- But if user only connects 2 strings, PV3 reads 0V
-- Old logic: 0V = no PV3 = SPH 3-6kW ❌
-- New logic: Storage range = HU model (regardless of PV3) ✅
-
-**Affected models:**
-- SPH 8000TL-HU
-- SPH 10000TL-HU
-- SPM 8000TL-HU
-- SPM 10000TL-HU
-
-All have DTC 3502 (same as regular SPH), so storage range check is critical.
 
 ---
 
