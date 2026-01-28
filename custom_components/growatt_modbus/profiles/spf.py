@@ -201,9 +201,9 @@ SPF_3000_6000_ES_PLUS = {
              'battery_dependent': True},
 
         # AC Charge Current
-        38: {'name': 'ac_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
-             'valid_range': (0, 80),
-             'desc': 'AC charging current limit (SPF 6000 hardware max: 80A)'},
+        38: {'name': 'ac_charge_current', 'scale': 0.1, 'unit': 'A', 'access': 'RW',
+             'valid_range': (0, 800),
+             'desc': 'AC charging current limit (SPF 6000 hardware max: 80A, register stores value × 10)'},
 
         # Battery Type
         39: {'name': 'battery_type', 'scale': 1, 'unit': '', 'access': 'RW',
@@ -221,9 +221,9 @@ SPF_3000_6000_ES_PLUS = {
         # Holding register 43 may contain DTC as fallback on some firmware versions
 
         # Generator Charge Current
-        83: {'name': 'gen_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
-             'valid_range': (0, 80),
-             'desc': 'Generator charging current limit (SPF 6000 hardware max: 80A)'},
+        83: {'name': 'gen_charge_current', 'scale': 0.1, 'unit': 'A', 'access': 'RW',
+             'valid_range': (0, 800),
+             'desc': 'Generator charging current limit (SPF 6000 hardware max: 80A, register stores value × 10)'},
 
         # AC to Battery Voltage/SOC Switch Point (Grid to Battery)
         # BATTERY TYPE DEPENDENT (see register 39)

@@ -260,6 +260,13 @@ If you have an **SPF 3000, 4000, 5000, or 6000 ES Plus**:
    Register 11-12: ac_apparent_power (AC Apparent Power in VA)
    ```
 
+5. **Check charge current limits (Fixed after v0.2.4 release):**
+   - `number.growatt_ac_charge_current` - Should show max 80A (was showing 800A)
+   - `number.growatt_generator_charge_current` - Should show max 80A (was showing 800A)
+   - These control the maximum charging current from grid/generator
+
+**Note:** Initial v0.2.4 release had incorrect scale on charge current registers (showed 800A instead of 80A). This was fixed immediately after release.
+
 ---
 
 ## 🔍 SPH Legacy Auto-Detection (DTC 3501) + Protocol Version Verification ✅

@@ -6,46 +6,55 @@ This document provides detailed information about supported Growatt inverter mod
 
 ## 🔌 Supported Inverter Models
 
-The integration supports **residential and small commercial** Growatt inverters (3-25kW range) using VPP Protocol V2.01 with automatic fallback to legacy protocols for older units.
+The integration supports **residential and small commercial** Growatt inverters (3-25kW range) with automatic model detection for VPP-capable inverters and manual selection for older models.
 
 ### Single-Phase Grid-Tied Inverters
 
-| Inverter Series | Model Range | PV Strings | Battery | Protocol Support | Tested | Notes |
-|-----------------|-------------|------------|---------|------------------|--------|-------|
-| **MIC 600-3300TL-X** | 600-3300TL-X | 1 | No | V3.05 (Legacy) | ⚠️ Untested | Micro inverter, 0.6-3.3kW |
-| **MIN 3000-6000TL-X** | 3000-6000TL-X | 2 | No | V2.01 + Legacy | ⚠️ Untested | Grid-tied, 3-6kW |
-| **MIN 7000-10000TL-X** | 7000-10000TL-X | 3 | No | V2.01 + Legacy | ✅ **Tested** | Grid-tied, 7-10kW |
+| Inverter Series | Model Range | PV Strings | Battery | VPP Support | Tested | Notes |
+|-----------------|-------------|------------|---------|-------------|--------|-------|
+| **MIC 600-3300TL-X** | 600-3300TL-X | 1 | No | ❌ Legacy | ⚠️ Untested | Micro inverter, 0.6-3.3kW |
+| **MIN 3000-6000TL-X** | 3000-6000TL-X | 2 | No | ✅ VPP + Legacy | ⚠️ Untested | Grid-tied, 3-6kW |
+| **MIN 7000-10000TL-X** | 7000-10000TL-X | 3 | No | ✅ VPP + Legacy | ✅ **Tested** | Grid-tied, 7-10kW |
 
 ### Single-Phase Hybrid Inverters (with Battery)
 
-| Inverter Series | Model Range | PV Strings | Battery | Protocol Support | Tested | Notes |
-|-----------------|-------------|------------|---------|------------------|--------|-------|
-| **TL-XH 3000-10000** | TL-XH 3000-10000 | 3 | Yes | V2.01 + Legacy | ⚠️ Untested | Hybrid with battery, 3-10kW |
-| **TL-XH US 3000-10000** | TL-XH US 3000-10000 | 3 | Yes | V2.01 + Legacy | ⚠️ Untested | US version hybrid, 3-10kW |
-| **MIN TL-XH 3000-10000** | MIN 6000/10000 TL-XH | 2-3 | Yes | V2.01 | ⚠️ Untested | MIN hybrid with battery, DTC 5100, 3-6kW: 2 strings, 7-10kW: 3 strings |
-| **SPH 3000-6000** | SPH 3000-6000 | 2 | Yes | V2.01 + Legacy | ⚠️ Untested | Storage hybrid, 3-6kW |
-| **SPH 7000-10000** | SPH 7000-10000 | 2 | Yes | V2.01 + Legacy | ⚠️ Untested | Storage hybrid, 7-10kW |
+| Inverter Series | Model Range | PV Strings | Battery | VPP Support | Tested | Notes |
+|-----------------|-------------|------------|---------|-------------|--------|-------|
+| **TL-XH 3000-10000** | TL-XH 3000-10000 | 3 | Yes | ✅ VPP + Legacy | ⚠️ Untested | Hybrid with battery, 3-10kW |
+| **TL-XH US 3000-10000** | TL-XH US 3000-10000 | 3 | Yes | ✅ VPP + Legacy | ⚠️ Untested | US version hybrid, 3-10kW |
+| **MIN TL-XH 3000-10000** | MIN 6000/10000 TL-XH | 2-3 | Yes | ✅ VPP | ✅ **Tested** | MIN hybrid with battery, DTC 5100, 3-6kW: 2 strings, 7-10kW: 3 strings, **Fixed v0.2.4** |
+| **SPH 3000-6000** | SPH 3000-6000 | 2 | Yes | ✅ VPP + Legacy | ⚠️ Untested | Storage hybrid, 3-6kW |
+| **SPH 7000-10000** | SPH 7000-10000 | 2 | Yes | ✅ VPP + Legacy | ⚠️ Untested | Storage hybrid, 7-10kW |
 
 ### Single-Phase Off-Grid Inverters
 
-| Inverter Series | Model Range | PV Strings | Battery | Protocol Support | Tested | Notes |
-|-----------------|-------------|------------|---------|------------------|--------|-------|
-| **SPF 3000-6000 ES PLUS** | SPF 3000-6000 ES PLUS | 2 | Yes | V2.01 (DTC 3400-3403) | ⚠️ Untested | Off-grid with battery, 3-6kW |
+| Inverter Series | Model Range | PV Strings | Battery | VPP Support | Tested | Notes |
+|-----------------|-------------|------------|---------|-------------|--------|-------|
+| **SPF 3000-6000 ES PLUS** | SPF 3000-6000 ES PLUS | 2 | Yes | ❌ Off-Grid Protocol | ✅ **Tested** | Off-grid with battery, 3-6kW, **Fixed v0.2.4** |
 
 ### Three-Phase Inverters
 
-| Inverter Series | Model Range | PV Strings | Battery | Protocol Support | Tested | Notes |
-|-----------------|-------------|------------|---------|------------------|--------|-------|
-| **MID 15000-25000TL3-X** | 15000-25000TL3-X | 2 | No | V2.01 + Legacy | ⚠️ Untested | Grid-tied, 15-25kW |
-| **MOD 6000-15000TL3-XH** | MOD 6000-15000TL3-XH | 3 | Yes | V2.01 + Legacy | ⚠️ Untested | Hybrid with battery, 6-15kW |
-| **SPH-TL3 3000-10000** | SPH-TL3 3000-10000 | 2 | Yes | V2.01 + Legacy | ⚠️ Untested | Three-phase hybrid, 3-10kW |
-| **WIT 4000-15000TL3** | WIT 4000-15000TL3 | 2 | Yes | V2.02 (DTC 5603) | ⚠️ Untested | Three-phase hybrid with advanced storage, 4-15kW |
+| Inverter Series | Model Range | PV Strings | Battery | VPP Support | Tested | Notes |
+|-----------------|-------------|------------|---------|-------------|--------|-------|
+| **MID 15000-25000TL3-X** | 15000-25000TL3-X | 2 | No | ✅ VPP + Legacy | ⚠️ Untested | Grid-tied, 15-25kW |
+| **MOD 6000-15000TL3-XH** | MOD 6000-15000TL3-XH | 3 | Yes | ✅ VPP + Legacy | ✅ **Tested** | Hybrid with battery, 6-15kW, **Fixed v0.2.4** |
+| **SPH-TL3 3000-10000** | SPH-TL3 3000-10000 | 2 | Yes | ✅ VPP + Legacy | ⚠️ Untested | Three-phase hybrid, 3-10kW |
+| **WIT 4000-15000TL3** | WIT 4000-15000TL3 | 2 | Yes | ✅ VPP v2.02 | ⚠️ Untested | Three-phase hybrid with advanced storage, 4-15kW, DTC 5603 |
 
 **Legend:**
 - ✅ **Tested** - Confirmed working with real hardware
 - ⚠️ **Untested** - Profile created from official documentation, needs validation
-- **V2.01** - Supports Growatt VPP Protocol V2.01 (DTC auto-detection available)
-- **Legacy** - Uses V1.39/V3.05 register maps (manual selection required)
+- **✅ VPP** - Supports Growatt VPP Protocol (auto-detection via DTC available)
+- **✅ VPP + Legacy** - Supports both VPP and legacy protocols (automatic fallback)
+- **❌ Legacy** - Uses V1.39/V3.05 register maps only (manual selection required)
+- **❌ Off-Grid Protocol** - Uses off-grid protocol (register range 0-124, no VPP support)
+
+**About VPP Protocol:**
+- **VPP** = Virtual Power Plant Protocol - Growatt's modern communication protocol for grid-interactive inverters
+- Uses extended register ranges (30000+, 31000+) for enhanced monitoring and control
+- Supports automatic model detection via Device Type Code (DTC)
+- Protocol versions include V2.01 (201), V2.02 (202), and future versions
+- Models with "VPP + Legacy" support both register ranges for maximum compatibility
 
 > 💡 **Help us test!** If you have a model marked as untested and can confirm it works, please open an issue or PR!
 
@@ -67,7 +76,8 @@ Different inverter models create different sensors based on their hardware capab
 | **AC Output (Single-Phase)** | | | | | | | | | | | | |
 | AC Voltage | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | AC Current | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| AC Power | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| AC Power (Active Power) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| AC Apparent Power | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | AC Frequency | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **AC Output (Three-Phase)** | | | | | | | | | | | | |
 | AC Phase R/S/T Voltage | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
@@ -154,7 +164,7 @@ All models support the **Invert Grid Power** configuration option to correct bac
 
 ### During Setup (Auto-Detection)
 
-For **VPP V2.01-capable** inverters, auto-detection reads the Device Type Code (DTC) from register 30000:
+For **VPP-capable** inverters, auto-detection reads the Device Type Code (DTC) from register 30000:
 - Automatically identifies your model
 - Shows confirmation screen with detected model
 - Option to accept or manually override
@@ -163,7 +173,7 @@ See [AUTODETECTION.md](AUTODETECTION.md) for details on how auto-detection works
 
 ### Manual Selection Required
 
-For **legacy protocol** inverters (no V2.01 support):
+For **legacy protocol** inverters (no VPP support):
 - Auto-detection fails (DTC register not readable)
 - Manual model selection required
 - Choose based on:
@@ -201,17 +211,17 @@ For **legacy protocol** inverters (no V2.01 support):
 
 The integration automatically reads and displays device information (when available):
 
-| Field | Example | Register Source | Protocol |
-|-------|---------|----------------|----------|
-| **Model Name** | MIN-10000TL-X | 125-132 (parsed) | V2.01 + Legacy |
-| **Serial Number** | AB12345678 | 23-27 or 3000-3015 | V2.01 + Legacy |
-| **Firmware Version** | 2.01 | 9-11 | V2.01 + Legacy |
-| **Protocol Version** | Protocol 2.01 | 30099 (VPP version) | V2.01 only |
+| Field | Example | Register Source | Availability |
+|-------|---------|----------------|--------------|
+| **Model Name** | MIN-10000TL-X | 125-132 (parsed) | VPP + Legacy |
+| **Serial Number** | AB12345678 | 23-27 or 3000-3015 | VPP + Legacy |
+| **Firmware Version** | 2.01 | 9-11 | VPP + Legacy |
+| **Hardware Version** | VPP Protocol V2.01 | 30099 (protocol version) | VPP only |
 
-**Protocol Version Display:**
-- **"Protocol 2.01"** - V2.01 register range supported (register 30099 = 201)
-- **"Protocol 2.02"** - Future protocol version (register 30099 = 202)
-- **"Protocol Legacy"** - V1.39/V3.05 only (register 30099 not readable)
+**Hardware Version Display:**
+- **"VPP Protocol V2.01"** - Supports VPP register ranges (register 30099 = 201)
+- **"VPP Protocol V2.02"** - Supports VPP v2.02 (register 30099 = 202)
+- **"Legacy Protocol"** - Legacy register ranges only (register 30099 not readable or = 0)
 
 View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click your inverter device
 
@@ -219,13 +229,21 @@ View in **Settings** → **Devices & Services** → **Growatt Modbus** → Click
 
 ## 🧪 Testing Status
 
+### Tested Models (Confirmed Working)
+
+The following models have been validated with real hardware:
+- ✅ **MIN 7000-10000TL-X** - Grid-tied, 3 PV strings
+- ✅ **MIN TL-XH (MIN-4600TL-XH)** - Hybrid with ARK battery (v0.2.4)
+- ✅ **MOD 10000TL3-XH** - Three-phase hybrid with ARK battery (v0.2.4)
+- ✅ **SPF 6000 ES PLUS** - Off-grid with battery (v0.2.4)
+
 ### Community Testing Needed
 
-Only **MIN 7000-10000TL-X** has been validated with real hardware. We need community members to test other models!
+Many models still need validation with real hardware. We need community members to test!
 
 **If you successfully test a model**, please report via GitHub Issues with:
 - Model name from inverter display
-- Universal Scanner detection results (if V2.01-capable)
+- Universal Scanner detection results (if VPP-capable)
 - Screenshot of working sensors
 - Any issues or missing sensors
 
