@@ -386,8 +386,14 @@ SPH_8000_10000_HU = {
     },
     'holding_registers': {
         **SPH_7000_10000['holding_registers'],
-        1008: {'name': 'system_enable', 'scale': 1, 'unit': '', 'access': 'RW'},
-        1044: {'name': 'priority', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Load, 1=Battery, 2=Grid'},
+        1008: {'name': 'system_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'System enable control',
+               'values': {
+                   0: 'Disabled',
+                   1: 'Enabled'
+               }},
+        # Note: Register 1044 priority_mode is inherited from SPH_7000_10000 base profile
+        # No need to redefine - keep base definition with valid_range and values
     }
 }
 

@@ -584,8 +584,28 @@ async def async_detect_inverter_series(
                     return 'mod_6000_15000tl3_xh'
             else:
                 _LOGGER.debug("Detected single-phase hybrid - SPH or TL-XH series")
-                await hass.async_add_executor_job(client.disconnect)
-                return 'sph_7000_10000'  # Default to SPH 7-10k
+
+                # Check for storage range 1000+ (SPH HU models)
+                storage_test = await hass.async_add_executor_job(
+                    client.read_input_registers, 1086, 1  # BMS SOC at 1086
+                )
+                if storage_test is not None:
+                    _LOGGER.debug("Detected storage range with BMS - SPH/SPM 8000-10000TL-HU")
+                    await hass.async_add_executor_job(client.disconnect)
+                    return 'sph_8000_10000_hu'
+
+                # Check for PV3 (7-10kW has 3 strings, 3-6kW has 2 strings)
+                pv3_test = await hass.async_add_executor_job(
+                    client.read_input_registers, 11, 1  # PV3 voltage
+                )
+                if pv3_test is not None and len(pv3_test) > 0 and pv3_test[0] > 0:
+                    _LOGGER.debug("Detected PV3 string - SPH 7-10kW")
+                    await hass.async_add_executor_job(client.disconnect)
+                    return 'sph_7000_10000'
+                else:
+                    _LOGGER.debug("No PV3 string - SPH 3-6kW")
+                    await hass.async_add_executor_job(client.disconnect)
+                    return 'sph_3000_6000'
         
         # Test for 3-phase at register 38 (MID/MAX/MOD-X grid-tied)
         result = await hass.async_add_executor_job(
@@ -654,9 +674,19 @@ async def async_refine_dtc_detection(
         Refined profile key
     """
     try:
-        # DTC 3502: SPH 3-6kW vs 7-10kW - Check for PV3 (3PV = 7-10kW, 2PV = 3-6kW)
+        # DTC 3502: SPH 3-6kW vs 7-10kW vs 8-10kW HU
+        # Priority: Storage Range (HU) > PV3 (7-10kW) > No PV3 (3-6kW)
         if dtc_code == 3502:
-            # Check V2.01 PV3 voltage register first (31018)
+            # Check for storage range 1000-1124 (SPH/SPM 8000-10000TL-HU exclusive)
+            # HU models have extended storage range with BMS registers at 1082+
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 1086, 1  # BMS SOC register (HU-specific)
+            )
+            if result is not None:
+                _LOGGER.info("Detected storage range 1000+ with BMS registers - SPH/SPM 8000-10000TL-HU")
+                return 'sph_8000_10000_hu'
+
+            # Check V2.01 PV3 voltage register (31018)
             result = await hass.async_add_executor_job(
                 client.read_input_registers, 31018, 1  # V2.01 PV3 voltage
             )
@@ -664,7 +694,7 @@ async def async_refine_dtc_detection(
                 _LOGGER.info("Detected PV3 in V2.01 range (3PV) - SPH 7-10kW")
                 return 'sph_7000_10000_v201'
 
-            # Fallback to legacy register 11 (base range)
+            # Fallback to legacy register 11 (base range PV3 voltage)
             result = await hass.async_add_executor_job(
                 client.read_input_registers, 11, 1  # Legacy PV3 voltage
             )
