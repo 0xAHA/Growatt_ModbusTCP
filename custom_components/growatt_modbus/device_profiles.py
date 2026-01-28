@@ -120,7 +120,7 @@ INVERTER_PROFILES = {
 
     # MIC V2.01 VPP Protocol
     "mic_600_3300tl_x_v201": {
-        "name": "MIC 600-3300TL-X (V2.01)",
+        "name": "MIC 600-3300TL-X",
         "description": "Micro inverter (0.6-3.3kW) with VPP Protocol V2.01",
         "register_map": "MIC_600_3300TL_X_V201",
         "phases": 1,
@@ -189,7 +189,7 @@ INVERTER_PROFILES = {
 
     # MIN Series VPP Protocol V2.01 (adds 30000 range for DTC)
     "min_3000_6000_tl_x_v201": {
-        "name": "MIN Series 3-6kW (V2.01)",
+        "name": "MIN Series 3-6kW",
         "description": "2 PV string inverter with VPP Protocol V2.01",
         "register_map": "MIN_3000_6000TL_X_V201",
         "phases": 1,
@@ -211,7 +211,7 @@ INVERTER_PROFILES = {
     },
 
     "min_7000_10000_tl_x_v201": {
-        "name": "MIN Series 7-10kW (V2.01)",
+        "name": "MIN Series 7-10kW",
         "description": "3 PV string inverter with VPP Protocol V2.01",
         "register_map": "MIN_7000_10000TL_X_V201",
         "phases": 1,
@@ -286,7 +286,7 @@ INVERTER_PROFILES = {
 
     # TL-XH V2.01 VPP Protocol
     "tl_xh_3000_10000_v201": {
-        "name": "TL-XH 3000-10000 (V2.01)",
+        "name": "TL-XH 3000-10000",
         "description": "Hybrid single-phase inverter with battery (3-10kW) and VPP Protocol V2.01",
         "register_map": "TL_XH_3000_10000_V201",
         "phases": 1,
@@ -310,7 +310,7 @@ INVERTER_PROFILES = {
     },
 
     "tl_xh_us_3000_10000_v201": {
-        "name": "TL-XH US 3000-10000 (V2.01)",
+        "name": "TL-XH US 3000-10000",
         "description": "US hybrid single-phase inverter with battery (3-10kW) and VPP Protocol V2.01",
         "register_map": "TL_XH_US_3000_10000_V201",
         "phases": 1,
@@ -335,7 +335,7 @@ INVERTER_PROFILES = {
 
     # MIN TL-XH Hybrid - Uses MIN 3000+ range with VPP battery
     "min_tl_xh_3000_10000_v201": {
-        "name": "MIN TL-XH 3000-10000 (V2.01)",
+        "name": "MIN TL-XH 3000-10000",
         "description": "MIN series TL-XH hybrid with battery (3-10kW) using 3000+ and 31000+ ranges",
         "register_map": "MIN_TL_XH_3000_10000_V201",
         "phases": 1,
@@ -381,7 +381,7 @@ INVERTER_PROFILES = {
 
     # MID V2.01 VPP Protocol
     "mid_15000_25000tl3_x_v201": {
-        "name": "MID Series 15-25kW (V2.01)",
+        "name": "MID Series 15-25kW",
         "description": "Three-phase commercial inverter (15-25kW) with VPP Protocol V2.01",
         "register_map": "MID_15000_25000TL3_X_V201",
         "phases": 3,
@@ -473,7 +473,7 @@ INVERTER_PROFILES = {
 
     # SPH V2.01 VPP Protocol
     "sph_3000_6000_v201": {
-        "name": "SPH Series 3-6kW (V2.01)",
+        "name": "SPH Series 3-6kW",
         "description": "Single-phase hybrid inverter with battery (3-6kW) and VPP Protocol V2.01",
         "register_map": "SPH_3000_6000_V201",
         "phases": 1,
@@ -496,7 +496,7 @@ INVERTER_PROFILES = {
     },
 
     "sph_7000_10000_v201": {
-        "name": "SPH Series 7-10kW (V2.01)",
+        "name": "SPH Series 7-10kW",
         "description": "Single-phase hybrid inverter with battery (7-10kW) and VPP Protocol V2.01",
         "register_map": "SPH_7000_10000_V201",
         "phases": 1,
@@ -547,7 +547,7 @@ INVERTER_PROFILES = {
 
     # SPH-TL3 V2.01 VPP Protocol
     "sph_tl3_3000_10000_v201": {
-        "name": "SPH-TL3 Series 3-10kW (V2.01)",
+        "name": "SPH-TL3 Series 3-10kW",
         "description": "Hybrid 3-phase inverter with battery (3-10kW) and VPP Protocol V2.01",
         "register_map": "SPH_TL3_3000_10000_V201",
         "phases": 3,
@@ -639,7 +639,7 @@ INVERTER_PROFILES = {
     },
 
     "mod_6000_15000tl3_xh_v201": {
-        "name": "MOD 6000-15000TL3-XH (V2.01)",
+        "name": "MOD 6000-15000TL3-XH",
         "description": "Modular three-phase hybrid with VPP Protocol V2.01 (6-15kW)",
         "register_map": "MOD_6000_15000TL3_XH",  # Same map, already includes V2.01 registers
         "protocol_version": "v2.01",

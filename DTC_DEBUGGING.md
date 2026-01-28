@@ -38,14 +38,15 @@ INFO - DTC and model name detection failed, trying register-based detection...
 
 ## Valid DTC Codes
 
-| DTC Code | Model Series | Profile |
-|----------|-------------|---------|
-| 3502 | SPH 3000-6000TL BL | sph_3000_6000 |
-| 3601 | SPH 4000-10000TL3 BH-UP | sph_tl3_3000_10000 |
-| 5100 | MIN 2500-6000TL-XH | min_3000_6000_tl_x |
-| 5200 | MIC/MIN 2500-6000TL-X | min_3000_6000_tl_x |
-| 5201 | MIN 7000-10000TL-X | min_7000_10000_tl_x |
-| 5400 | MOD-XH/MID-XH | mod_6000_15000tl3_xh |
+| DTC Code | Model Series | Profile | Notes |
+|----------|-------------|---------|-------|
+| 3501 | SPH 3000-6000TL BL (legacy) | sph_3000_6000 | Pre-UP model, uses legacy profile |
+| 3502 | SPH 3000-6000TL BL -UP | sph_3000_6000_v201 | Upgraded model with V2.01 |
+| 3601 | SPH 4000-10000TL3 BH-UP | sph_tl3_3000_10000 | Three-phase hybrid |
+| 5100 | MIN 2500-6000TL-XH | min_3000_6000_tl_x | Single-phase hybrid |
+| 5200 | MIC/MIN 2500-6000TL-X | min_3000_6000_tl_x | Shared code |
+| 5201 | MIN 7000-10000TL-X | min_7000_10000_tl_x | Three PV strings |
+| 5400 | MOD-XH/MID-XH | mod_6000_15000tl3_xh | Three-phase, shared code |
 
 ## How to View Logs in Home Assistant
 

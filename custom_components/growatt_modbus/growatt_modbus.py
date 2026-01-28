@@ -114,6 +114,13 @@ class GrowattData:
     inverter_temp: float = 0.0        # °C
     ipm_temp: float = 0.0             # °C
     boost_temp: float = 0.0           # °C
+    dcdc_temp: float = 0.0            # °C (SPF off-grid)
+    buck1_temp: float = 0.0           # °C (SPF off-grid MPPT1)
+    buck2_temp: float = 0.0           # °C (SPF off-grid MPPT2)
+
+    # Fan Speeds (SPF off-grid)
+    mppt_fan_speed: float = 0.0       # %
+    inverter_fan_speed: float = 0.0   # %
 
     # Battery (storage/hybrid models)
     battery_voltage: float = 0.0      # V
@@ -138,13 +145,30 @@ class GrowattData:
     export_limit_power: int = 0       # 0-1000 (0-100.0%)
     active_power_rate: int = 100      # 0-100 (max output power %)
 
+    # SPH/SPM Battery Control registers (1000+ range)
+    priority_mode: int = 0            # 0=Load First, 1=Battery First, 2=Grid First
+    discharge_power_rate: int = 0     # 0-100 (battery discharge power %)
+    discharge_stopped_soc: int = 0    # 0-100 (stop discharge at SOC %)
+    charge_power_rate: int = 0        # 0-100 (battery charge power %)
+    charge_stopped_soc: int = 0       # 0-100 (stop charge at SOC %)
+    ac_charge_enable: int = 0         # 0=Disabled, 1=Enabled
+    time_period_1_enable: int = 0     # 0=Disabled, 1=Enabled
+    time_period_1_start: int = 0      # HHMM format (e.g., 530 = 05:30)
+    time_period_1_end: int = 0        # HHMM format
+    time_period_2_enable: int = 0     # 0=Disabled, 1=Enabled
+    time_period_2_start: int = 0      # HHMM format
+    time_period_2_end: int = 0        # HHMM format
+    time_period_3_enable: int = 0     # 0=Disabled, 1=Enabled
+    time_period_3_start: int = 0      # HHMM format
+    time_period_3_end: int = 0        # HHMM format
+
     # SPF Off-Grid Control registers
     output_config: int = 0            # 0=SBU, 1=SOL, 2=UTI, 3=SUB
     charge_config: int = 0            # 0=CSO, 1=SNU, 2=OSO
     ac_input_mode: int = 0            # 0=APL, 1=UPS, 2=GEN
     battery_type: int = 0             # 0=AGM, 1=FLD, 2=USE, 3=Lithium, 4=USE2
-    ac_charge_current: int = 0        # 0-400 A
-    gen_charge_current: int = 0       # 0-400 A
+    ac_charge_current: int = 0        # 0-800 (0-80A with scale 0.1)
+    gen_charge_current: int = 0       # 0-800 (0-80A with scale 0.1)
     bat_low_to_uti: int = 0           # Battery-dependent: Non-Lithium 200-640 (20-64V), Lithium 5-100 (0.5-10%)
     ac_to_bat_volt: int = 0           # Battery-dependent: Non-Lithium 200-640 (20-64V), Lithium 5-100 (0.5-10%)
 
@@ -730,6 +754,9 @@ class GrowattModbus:
             ac_voltage_addr = self._find_register_by_name('ac_voltage')
             ac_current_addr = self._find_register_by_name('ac_current')
             ac_power_addr = self._find_register_by_name('ac_power_low')
+            if not ac_power_addr:
+                # SPF off-grid models use 'load_power_low' instead
+                ac_power_addr = self._find_register_by_name('load_power_low')
             ac_freq_addr = self._find_register_by_name('ac_frequency')
 
             if ac_voltage_addr:
@@ -738,6 +765,7 @@ class GrowattModbus:
                 data.ac_current = self._get_register_value(ac_current_addr) or 0.0
             if ac_power_addr:
                 data.ac_power = self._get_register_value(ac_power_addr) or 0.0
+                logger.debug(f"AC Power from reg {ac_power_addr}: {data.ac_power}W")
             if ac_freq_addr:
                 data.ac_frequency = self._get_register_value(ac_freq_addr) or 0.0
 
@@ -843,7 +871,28 @@ class GrowattModbus:
                 data.ipm_temp = self._get_register_value(ipm_temp_addr) or 0.0
             if boost_temp_addr:
                 data.boost_temp = self._get_register_value(boost_temp_addr) or 0.0
-            
+
+            # SPF Off-Grid additional temperatures
+            dcdc_temp_addr = self._find_register_by_name('dcdc_temp')
+            buck1_temp_addr = self._find_register_by_name('buck1_temp')
+            buck2_temp_addr = self._find_register_by_name('buck2_temp')
+
+            if dcdc_temp_addr:
+                data.dcdc_temp = self._get_register_value(dcdc_temp_addr) or 0.0
+            if buck1_temp_addr:
+                data.buck1_temp = self._get_register_value(buck1_temp_addr) or 0.0
+            if buck2_temp_addr:
+                data.buck2_temp = self._get_register_value(buck2_temp_addr) or 0.0
+
+            # SPF Off-Grid fan speeds
+            mppt_fan_speed_addr = self._find_register_by_name('mppt_fan_speed')
+            inverter_fan_speed_addr = self._find_register_by_name('inverter_fan_speed')
+
+            if mppt_fan_speed_addr:
+                data.mppt_fan_speed = self._get_register_value(mppt_fan_speed_addr) or 0.0
+            if inverter_fan_speed_addr:
+                data.inverter_fan_speed = self._get_register_value(inverter_fan_speed_addr) or 0.0
+
             # Diagnostics
             derating_addr = self._find_register_by_name('derating_mode')
             fault_addr = self._find_register_by_name('fault_code')
@@ -1086,13 +1135,22 @@ class GrowattModbus:
                     data.discharge_power = 0.0
             else:
                 # Fallback: Try old separate charge/discharge registers (SPH series)
+                # These registers are absolute values, but may be swapped for opposite convention inverters
                 addr = self._find_register_by_name('charge_power_low')
                 if addr:
                     raw_low = self._register_cache.get(addr, 0)
                     pair_addr = self._find_register_by_name('charge_power_high')
                     raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                    data.charge_power = self._get_register_value(addr) or 0.0
-                    logger.debug(f"Charge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_power}W")
+                    raw_charge_power = self._get_register_value(addr) or 0.0
+                    logger.debug(f"Charge power (raw): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {raw_charge_power}W")
+
+                    # Apply swapping if battery power is inverted (opposite convention)
+                    if self._invert_battery_power:
+                        # Opposite convention: "charge" register contains discharge, "discharge" contains charge
+                        data.discharge_power = raw_charge_power
+                        logger.debug(f"  → Swapped charge→discharge: {data.discharge_power}W (invert_battery_power=True)")
+                    else:
+                        data.charge_power = raw_charge_power
                 elif data.battery_voltage > 0 and data.battery_current < 0:
                     # Fallback: Calculate from V×I when charging (negative current)
                     data.charge_power = data.battery_voltage * abs(data.battery_current)
@@ -1103,45 +1161,73 @@ class GrowattModbus:
                     raw_low = self._register_cache.get(addr, 0)
                     pair_addr = self._find_register_by_name('discharge_power_high')
                     raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                    data.discharge_power = self._get_register_value(addr) or 0.0
-                    logger.debug(f"Discharge power: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_power}W")
+                    raw_discharge_power = self._get_register_value(addr) or 0.0
+                    logger.debug(f"Discharge power (raw): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {raw_discharge_power}W")
+
+                    # Apply swapping if battery power is inverted (opposite convention)
+                    if self._invert_battery_power:
+                        # Opposite convention: "discharge" register contains charge, "charge" contains discharge
+                        data.charge_power = raw_discharge_power
+                        logger.debug(f"  → Swapped discharge→charge: {data.charge_power}W (invert_battery_power=True)")
+                    else:
+                        data.discharge_power = raw_discharge_power
                 elif data.battery_voltage > 0 and data.battery_current > 0:
                     # Fallback: Calculate from V×I when discharging (positive current)
                     data.discharge_power = data.battery_voltage * data.battery_current
                     logger.debug(f"Discharge power (calculated): {data.battery_voltage}V × {data.battery_current}A = {data.discharge_power}W")
             
             # Charge energy today
+            # Try both naming conventions: "charge_energy_today" and "battery_charge_today"
             addr = self._find_register_by_name('charge_energy_today_low')
+            if not addr:
+                addr = self._find_register_by_name('battery_charge_today_low')
             if addr:
                 raw_low = self._register_cache.get(addr, 0)
                 pair_addr = self._find_register_by_name('charge_energy_today_high')
+                if not pair_addr:
+                    pair_addr = self._find_register_by_name('battery_charge_today_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.charge_energy_today = self._get_register_value(addr) or 0.0
                 logger.debug(f"Charge energy today: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_energy_today} kWh")
-            
+
             # Discharge energy today
+            # Try both naming conventions: "discharge_energy_today" and "battery_discharge_today"
             addr = self._find_register_by_name('discharge_energy_today_low')
+            if not addr:
+                addr = self._find_register_by_name('battery_discharge_today_low')
             if addr:
                 raw_low = self._register_cache.get(addr, 0)
                 pair_addr = self._find_register_by_name('discharge_energy_today_high')
+                if not pair_addr:
+                    pair_addr = self._find_register_by_name('battery_discharge_today_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.discharge_energy_today = self._get_register_value(addr) or 0.0
                 logger.debug(f"Discharge energy today: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_energy_today} kWh")
-            
+
             # Charge energy total
+            # Try both naming conventions: "charge_energy_total" and "battery_charge_total"
             addr = self._find_register_by_name('charge_energy_total_low')
+            if not addr:
+                addr = self._find_register_by_name('battery_charge_total_low')
             if addr:
                 raw_low = self._register_cache.get(addr, 0)
                 pair_addr = self._find_register_by_name('charge_energy_total_high')
+                if not pair_addr:
+                    pair_addr = self._find_register_by_name('battery_charge_total_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.charge_energy_total = self._get_register_value(addr) or 0.0
                 logger.debug(f"Charge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_energy_total} kWh")
-            
+
             # Discharge energy total
+            # Try both naming conventions: "discharge_energy_total" and "battery_discharge_total"
             addr = self._find_register_by_name('discharge_energy_total_low')
+            if not addr:
+                addr = self._find_register_by_name('battery_discharge_total_low')
             if addr:
                 raw_low = self._register_cache.get(addr, 0)
                 pair_addr = self._find_register_by_name('discharge_energy_total_high')
+                if not pair_addr:
+                    pair_addr = self._find_register_by_name('battery_discharge_total_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.discharge_energy_total = self._get_register_value(addr) or 0.0
                 logger.debug(f"Discharge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_energy_total} kWh")
@@ -1312,6 +1398,77 @@ class GrowattModbus:
                     logger.debug("[SPF CTRL] ac_to_bat_volt=%s", data.ac_to_bat_volt)
             except Exception as e:
                 logger.debug(f"Could not read ac_to_bat_volt register: {e}")
+
+        # --- SPH/SPM Battery Control registers (1000+ range) ---
+        # Priority Mode (1044)
+        if 1044 in holding_map:
+            try:
+                priority_regs = self.read_holding_registers(1044, 1)
+                if priority_regs is not None and len(priority_regs) >= 1:
+                    data.priority_mode = int(priority_regs[0])
+                    logger.debug("[SPH CTRL] priority_mode=%s", data.priority_mode)
+            except Exception as e:
+                logger.debug(f"Could not read priority_mode register: {e}")
+
+        # Discharge Control (1070-1071)
+        if any(reg in holding_map for reg in [1070, 1071]):
+            try:
+                discharge_regs = self.read_holding_registers(1070, 2)
+                if discharge_regs is not None and len(discharge_regs) >= 2:
+                    if 1070 in holding_map:
+                        data.discharge_power_rate = int(discharge_regs[0])
+                    if 1071 in holding_map:
+                        data.discharge_stopped_soc = int(discharge_regs[1])
+                    logger.debug("[SPH CTRL] discharge_power_rate=%s%%, discharge_stopped_soc=%s%%",
+                               data.discharge_power_rate, data.discharge_stopped_soc)
+            except Exception as e:
+                logger.debug(f"Could not read discharge control registers: {e}")
+
+        # Charge Control (1090-1092)
+        if any(reg in holding_map for reg in [1090, 1091, 1092]):
+            try:
+                charge_regs = self.read_holding_registers(1090, 3)
+                if charge_regs is not None and len(charge_regs) >= 3:
+                    if 1090 in holding_map:
+                        data.charge_power_rate = int(charge_regs[0])
+                    if 1091 in holding_map:
+                        data.charge_stopped_soc = int(charge_regs[1])
+                    if 1092 in holding_map:
+                        data.ac_charge_enable = int(charge_regs[2])
+                    logger.debug("[SPH CTRL] charge_power_rate=%s%%, charge_stopped_soc=%s%%, ac_charge_enable=%s",
+                               data.charge_power_rate, data.charge_stopped_soc, data.ac_charge_enable)
+            except Exception as e:
+                logger.debug(f"Could not read charge control registers: {e}")
+
+        # Time Period Controls (1100-1108)
+        if any(reg in holding_map for reg in range(1100, 1109)):
+            try:
+                time_period_regs = self.read_holding_registers(1100, 9)
+                if time_period_regs is not None and len(time_period_regs) >= 9:
+                    if 1100 in holding_map:
+                        data.time_period_1_start = int(time_period_regs[0])
+                    if 1101 in holding_map:
+                        data.time_period_1_end = int(time_period_regs[1])
+                    if 1102 in holding_map:
+                        data.time_period_1_enable = int(time_period_regs[2])
+                    if 1103 in holding_map:
+                        data.time_period_2_start = int(time_period_regs[3])
+                    if 1104 in holding_map:
+                        data.time_period_2_end = int(time_period_regs[4])
+                    if 1105 in holding_map:
+                        data.time_period_2_enable = int(time_period_regs[5])
+                    if 1106 in holding_map:
+                        data.time_period_3_start = int(time_period_regs[6])
+                    if 1107 in holding_map:
+                        data.time_period_3_end = int(time_period_regs[7])
+                    if 1108 in holding_map:
+                        data.time_period_3_enable = int(time_period_regs[8])
+                    logger.debug("[SPH CTRL] time_period_1: %s-%s (enabled=%s), time_period_2: %s-%s (enabled=%s), time_period_3: %s-%s (enabled=%s)",
+                               data.time_period_1_start, data.time_period_1_end, data.time_period_1_enable,
+                               data.time_period_2_start, data.time_period_2_end, data.time_period_2_enable,
+                               data.time_period_3_start, data.time_period_3_end, data.time_period_3_enable)
+            except Exception as e:
+                logger.debug(f"Could not read time period control registers: {e}")
 
     def get_status_text(self, status_code: int) -> str:
         """Convert status code to human readable text"""

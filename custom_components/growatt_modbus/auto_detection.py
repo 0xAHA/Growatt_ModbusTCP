@@ -333,6 +333,56 @@ async def async_read_dtc_code(
         return None
 
 
+async def async_read_protocol_version(
+    hass: HomeAssistant,
+    client: GrowattModbus,
+    device_id: int = 1
+) -> Optional[int]:
+    """
+    Read VPP Protocol Version from holding register 30099.
+
+    Returns:
+        - 200: V2.00
+        - 201: V2.01
+        - 202: V2.02
+        - 0 or None: Legacy protocol (V1.39/V3.05) - no V2.01 support
+
+    Args:
+        hass: HomeAssistant instance
+        client: GrowattModbus client
+        device_id: Modbus device ID (default 1)
+
+    Returns:
+        Protocol version code (int) or None if not readable
+    """
+    try:
+        # Read protocol version from holding register 30099
+        result = await hass.async_add_executor_job(
+            lambda: client.client.read_holding_registers(address=30099, count=1)
+        )
+
+        if result.isError():
+            _LOGGER.debug(f"Protocol version register 30099 not readable (legacy inverter)")
+            return None
+
+        protocol_version = result.registers[0]
+
+        if protocol_version == 0:
+            _LOGGER.info(f"✓ Protocol version check - Register 30099 = 0 (Legacy protocol, no V2.01 support)")
+            return 0
+        elif protocol_version in (200, 201, 202):
+            version_str = f"V{protocol_version // 100}.{protocol_version % 100:02d}"
+            _LOGGER.info(f"✓ Protocol version check - Register 30099 = {protocol_version} (Protocol {version_str})")
+            return protocol_version
+        else:
+            _LOGGER.warning(f"Unexpected protocol version value: {protocol_version}")
+            return protocol_version
+
+    except Exception as e:
+        _LOGGER.debug(f"Exception reading protocol version from register 30099: {str(e)}")
+        return None
+
+
 def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
     """
     Match DTC (Device Type Code) to a profile.
@@ -367,9 +417,11 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
         Profile key or None if no match
     """
     # Only official DTC codes from Growatt VPP 2.01 Protocol documentation Table 3-1
+    # Note: Some legacy models use DTC register but don't support full V2.01 protocol
     dtc_map = {
         # SPH series - Official Growatt DTCs
-        3502: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL
+        3501: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL (legacy/pre-UP, may need protocol check)
+        3502: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL -UP (upgraded model)
         3735: 'sph_3000_6000_v201',       # SPA 3000-6000TL BL (similar to SPH)
         3601: 'sph_tl3_3000_10000_v201',  # SPH 4000-10000TL3 BH-UP
         3725: 'sph_tl3_3000_10000_v201',  # SPA 4000-10000TL3 BH-UP
@@ -402,6 +454,40 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
 
     _LOGGER.warning(f"✗ DTC Detection - Unknown DTC code: {dtc_code} (not in supported models)")
     return None
+
+
+def convert_to_legacy_profile(profile_key: str) -> str:
+    """
+    Convert V2.01 profile key to legacy equivalent when inverter doesn't support V2.01.
+
+    This is needed for inverters that have DTC codes in register 30000 but return
+    protocol version 0 from register 30099, indicating legacy protocol support only.
+
+    Args:
+        profile_key: V2.01 profile key (e.g., 'sph_3000_6000_v201')
+
+    Returns:
+        Legacy profile key (e.g., 'sph_3000_6000') or original if no conversion needed
+    """
+    # Mapping from V2.01 profiles to legacy equivalents
+    v201_to_legacy = {
+        'sph_3000_6000_v201': 'sph_3000_6000',
+        'sph_7000_10000_v201': 'sph_7000_10000',
+        'sph_tl3_3000_10000_v201': 'sph_tl3_3000_10000',
+        'min_3000_6000_tl_x_v201': 'min_3000_6000_tl_x',
+        'min_7000_10000_tl_x_v201': 'min_7000_10000_tl_x',
+        'tl_xh_3000_10000_v201': 'tl_xh_3000_10000',
+        'mic_600_3300tl_x_v201': 'mic_600_3300tl_x',
+        'mod_6000_15000tl3_xh_v201': 'mod_6000_15000tl3_xh',
+        'mid_15000_25000tl3_x_v201': 'mid_15000_25000tl3_x',
+    }
+
+    legacy_key = v201_to_legacy.get(profile_key, profile_key)
+
+    if legacy_key != profile_key:
+        _LOGGER.info(f"Converting V2.01 profile '{profile_key}' to legacy '{legacy_key}' (protocol version 0)")
+
+    return legacy_key
 
 
 async def async_detect_inverter_series(
@@ -684,12 +770,18 @@ async def async_determine_inverter_type(
     1. Try OffGrid DTC (register 34/43) FIRST - prevents SPF power resets
     2. Try VPP DTC (register 30000) if OffGrid fails - standard method
     3. For ambiguous DTCs (shared codes), refine with additional register checks
-    4. Read model name from holding registers and match
-    5. If no match, detect series by probing registers
-    6. Return the appropriate profile
+    4. Verify protocol version (register 30099) - convert to legacy if version is 0
+    5. Read model name from holding registers and match
+    6. If no match, detect series by probing registers
+    7. Return the appropriate profile
 
     CRITICAL: OffGrid inverters (SPF) will RESET if VPP registers (30000+, 31000+)
     are accessed! We detect OffGrid models first to prevent this.
+
+    Protocol Version Check:
+    - Register 30099 = 201: Full V2.01 support, use V2.01 profiles
+    - Register 30099 = 0 or not readable: Legacy protocol only, use legacy profiles
+    - This handles inverters with DTC codes but legacy firmware (e.g., SPH 3-6kW pre-UP)
 
     Args:
         hass: HomeAssistant instance
@@ -736,6 +828,17 @@ async def async_determine_inverter_type(
         if profile_key:
             # Step 2.5: Refine DTC detection for ambiguous codes
             profile_key = await async_refine_dtc_detection(hass, client, dtc_code, profile_key, device_id)
+
+            # Step 2.6: Verify protocol version support
+            # Some inverters have DTC codes but don't support full V2.01 protocol
+            # Check register 30099: 201 = V2.01, 0 = Legacy protocol
+            protocol_version = await async_read_protocol_version(hass, client, device_id)
+
+            if protocol_version == 0 or protocol_version is None:
+                # Protocol version 0 or not readable = Legacy protocol only
+                # Convert V2.01 profile to legacy equivalent
+                profile_key = convert_to_legacy_profile(profile_key)
+                _LOGGER.info(f"✓ Using legacy profile due to protocol version 0 or not readable")
 
             profile = get_profile(profile_key)
             if profile:

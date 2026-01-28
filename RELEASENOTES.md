@@ -23,6 +23,422 @@
 
 ---
 
+# Release Notes - v0.2.4
+
+## 🔋 TL-XH Battery Power Registers Fixed (MIN-4600TL-XH with ARK Storage) ⚡
+
+**FIXED:** MIN-4600TL-XH and similar TL-XH V2.01 models with battery storage showing 0W for charge/discharge power despite battery actively charging.
+
+### What Was Wrong
+
+The TL-XH V2.01 profiles had **incorrect VPP Protocol V2.01 register mapping** for battery power:
+
+**Incorrect mapping:**
+- Registers 31202-31203: Mapped as `battery_charge_power` (W) ❌
+- Registers 31204-31209: **Not defined in profile** ❌
+
+**Analysis from real-world register scan:**
+```
+Register    Raw Values      Decoded Value    What it actually contains
+31200-31201 65535, 64856    -0.1W           Signed battery power (unreliable)
+31202-31203 0, 3            0.3 kWh         Charge energy today (NOT power!) ⚠️
+31204-31205 0, 15430        1543W           ACTUAL charge power (missing!)
+31206-31207 0, 6            0.6 kWh         Discharge energy today (missing!)
+31208-31209 0, 16213        1621.3W         ACTUAL discharge power (missing!)
+31214       1563            156.3V          Battery voltage ✓
+31217       14              14%             Battery SOC ✓
+```
+
+The profile was reading energy registers (kWh) as power registers (W), so values were near-zero.
+
+### What's Fixed
+
+Updated **VPP Protocol V2.01 battery cluster registers** to match specification:
+
+**Corrected mapping:**
+- Registers 31202-31203: `charge_energy_today` (kWh) ✅
+- Registers 31204-31205: `charge_power` (W) ✅
+- Registers 31206-31207: `discharge_energy_today` (kWh) ✅
+- Registers 31208-31209: `discharge_power` (W) ✅
+
+**Affected profiles:**
+- `TL_XH_3000_10000_V201` (standard TL-XH with V2.01 protocol)
+- `TL_XH_US_3000_10000_V201` (US version)
+- `MIN_TL_XH_3000_10000_V201` (MIN series TL-XH, **auto-detected via DTC 5100**)
+
+### 🧪 Testing Required - TL-XH Users with Battery
+
+If you have a **MIN-4600TL-XH, MIN-6000TL-XH, MIN-10000TL-XH** or similar with **ARK/connected battery storage**:
+
+1. **Reload the integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Check new sensors under Battery device:**
+   - `sensor.growatt_battery_charge_power` - Should show charging power (W)
+   - `sensor.growatt_battery_discharge_power` - Should show discharge power (W)
+   - `sensor.growatt_battery_charge_energy_today` - Daily charge energy (kWh)
+   - `sensor.growatt_battery_discharge_energy_today` - Daily discharge energy (kWh)
+
+3. **Verify values during battery operation:**
+   - **While charging:** charge_power should show positive watts (e.g., 1500W)
+   - **While discharging:** discharge_power should show positive watts
+   - **Energy counters** should increment throughout the day
+
+4. **Check registers if needed (Debug → Universal Scanner):**
+   ```
+   VPP Battery 1 Range: 31200-31217
+
+   Expected during charging:
+   31204-31205: Shows charge power in 0.1W units (15430 = 1543W)
+   31208-31209: Shows 0W (not discharging)
+
+   Expected during discharge:
+   31204-31205: Shows 0W (not charging)
+   31208-31209: Shows discharge power in 0.1W units
+   ```
+
+5. **Report issues:**
+   - If sensors still show 0W → Share register scan and inverter model
+   - If values look wrong → Compare with inverter display readings
+
+**Note:** This fix is **isolated to TL-XH V2.01 profiles only** and doesn't affect other models.
+
+---
+
+## 🔌 SPF AC Power Fixed (Off-Grid Models) ⚡
+
+**FIXED:** SPF 6000 ES Plus users reporting AC Power sensor showing 0W (while AC Apparent Power works correctly).
+
+### What Was Wrong
+
+SPF off-grid inverters use **different register naming** than grid-tied models:
+- Grid-tied models: `ac_power_low` (registers vary by model)
+- Off-grid (SPF) models: `load_power_low` (registers 9-10)
+
+The coordinator only looked for `ac_power_low`, so SPF users got 0W readings.
+
+### What's Fixed
+
+Added fallback register lookup:
+1. Try `ac_power_low` first (grid-tied naming)
+2. If not found, try `load_power_low` (off-grid naming)
+
+SPF users now get **two AC power sensors**:
+- **AC Power** - Active power in W (registers 9-10)
+- **AC Apparent Power** - Apparent power in VA (registers 11-12)
+
+### Difference Between AC Power Sensors
+
+- **AC Power (W):** Real power doing actual work (runs your devices)
+- **AC Apparent Power (VA):** Total power including reactive component (important for sizing/efficiency)
+
+For resistive loads (heaters, lights): W ≈ VA
+For inductive loads (motors, transformers): VA > W
+
+### 🧪 Testing Required - SPF Users
+
+If you have an **SPF 3000, 4000, 5000, or 6000 ES Plus**:
+
+1. **Reload the integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Check sensors under Solar device:**
+   - `sensor.growatt_ac_power` - Should show load power in W (was 0W before)
+   - `sensor.growatt_ac_apparent_power` - Should show apparent power in VA
+
+3. **Verify with load:**
+   - Turn on AC loads (lights, appliances)
+   - Both sensors should increase
+   - AC Power should match what devices are consuming
+
+4. **Check registers if needed:**
+   ```
+   Register 9-10:  load_power (AC Power in W)
+   Register 11-12: ac_apparent_power (AC Apparent Power in VA)
+   ```
+
+---
+
+## 🔍 SPH Legacy Auto-Detection (DTC 3501) + Protocol Version Verification ✅
+
+**NEW:** SPH 3000-6000TL BL (legacy protocol) now auto-detects correctly via DTC 3501 with automatic protocol version checking.
+
+### What Was Wrong
+
+SPH 3000-6000TL BL legacy users reported:
+- Auto-detection suggested wrong profile (MOD 6000-15000TL3-X)
+- Manual selection only showed `sph_3000_6000_v201` (V2.01 protocol)
+- Battery controls didn't work (inverter uses legacy registers, not V2.01)
+
+**Root cause:** DTC 3501 wasn't mapped, and no protocol version verification happened.
+
+### What's Fixed
+
+**1. Added DTC 3501 mapping:**
+```
+DTC 3501 → SPH_3000_6000_V201 (with protocol check)
+```
+
+**2. Protocol version verification:**
+Added `async_read_protocol_version()` function that reads register 30099:
+- Returns `201` → V2.01 protocol, use V2.01 profile ✅
+- Returns `0` or error → Legacy protocol, convert to legacy profile ✅
+
+**3. Automatic profile conversion:**
+New `convert_to_legacy_profile()` function:
+```python
+'sph_3000_6000_v201' → 'sph_3000_6000' (when protocol version = 0)
+'tl_xh_3000_10000_v201' → 'tl_xh_3000_10000'
+# etc...
+```
+
+### Detection Flow
+
+```
+1. Read DTC from register 30000 → Returns 3501
+2. Look up DTC → Suggests sph_3000_6000_v201
+3. Check protocol version (register 30099) → Returns 0
+4. Convert profile → Use sph_3000_6000 (legacy registers 0-124, 1000+)
+5. Battery controls work! ✅
+```
+
+### Affected Models
+
+**Legacy SPH with DTC 3501:**
+- SPH 3000TL BL
+- SPH 4000TL BL
+- SPH 5000TL BL
+- SPH 6000TL BL
+
+These use **legacy protocol** (0-124 register range) even though newer SPH models use V2.01.
+
+### 🧪 Testing Required - SPH Legacy Users
+
+If you have an **SPH 3000-6000TL BL** with legacy protocol:
+
+1. **Delete and re-add integration** (to trigger auto-detection):
+   - Settings → Devices & Services → Growatt Modbus → Delete
+   - Add integration again → Run auto-detection
+
+2. **Verify detection results:**
+   - **Detected Profile** should show: `SPH Series 3-6kW` (NOT "V2.01")
+   - **DTC Code** should show: `3501`
+   - **Protocol Version** under Device Info: Should show `0` or `Legacy`
+
+3. **Check battery controls work:**
+   - Settings → Devices & Services → [Your Inverter] → Controls tab
+   - Should see sliders for battery charge/discharge settings
+   - Try adjusting a setting → Verify it takes effect on inverter
+
+4. **Enable debug logging to see protocol check:**
+   ```yaml
+   logger:
+     default: info
+     logs:
+       custom_components.growatt_modbus.auto_detection: debug
+   ```
+
+   Look for logs:
+   ```
+   ✓ DTC 3501 detected - Suggested profile: sph_3000_6000_v201
+   ✓ Protocol version check - Register 30099 = 0 (Legacy protocol)
+   ✓ Converting to legacy profile: sph_3000_6000
+   ```
+
+5. **Check register access:**
+   - Run Universal Scanner
+   - Legacy registers (0-124, 1000-1108) should respond ✅
+   - V2.01 registers (30000+, 31000+) should timeout ❌
+
+---
+
+## 🧹 Profile Name Cleanup (Device Info Display)
+
+**IMPROVED:** Removed protocol version suffixes from profile display names for cleaner device info.
+
+### What Changed
+
+**Before:**
+- Device Info → Model: "SPH Series 3-6kW **(V2.01)**"
+- Device Info → Model: "MIN TL-XH 3-10kW **(V2.01)**"
+
+**After:**
+- Device Info → Model: "SPH Series 3-6kW"
+- Device Info → Model: "MIN TL-XH 3-10kW"
+
+**Protocol version still shown in "Hardware Version" field:**
+- Hardware Version: "VPP Protocol V2.01" (or "Legacy Protocol")
+
+### Why This Change
+
+- Cleaner device info display
+- Protocol version is technical detail, not part of model name
+- Still accessible in Hardware Version field for debugging
+
+**Affected profiles:** All V2.01 profiles (SPH, MIN, TL-XH, MOD, MIC, MID, SPH-TL3, WIT).
+
+No action required - automatic on integration reload.
+
+---
+
+## 🔋 Battery Charge/Discharge Sensor Swapping When Battery Power Inverted 🔄
+
+**FIXED:** When "Invert Battery Power" option enabled, separate charge/discharge sensors weren't being swapped (only combined battery_power was inverted).
+
+### What Was Wrong
+
+Some profiles (SPH, SPM) have **separate unsigned registers** for charge/discharge power:
+- `charge_power_low` (register 1094-1095) - Always positive when charging
+- `discharge_power_low` (register 1090-1091) - Always positive when discharging
+
+When "Invert Battery Power" enabled:
+- ✅ Combined `battery_power` was inverted correctly
+- ❌ Separate `charge_power` and `discharge_power` were NOT swapped
+- Result: charge showed as discharge, discharge showed as charge
+
+### What's Fixed
+
+Similar to grid power inversion logic, when `invert_battery_power=True`:
+```python
+# Read separate charge/discharge registers
+raw_charge_power = read('charge_power_low')
+raw_discharge_power = read('discharge_power_low')
+
+# Swap assignments when inverted
+if invert_battery_power:
+    data.discharge_power = raw_charge_power   # Swap!
+    data.charge_power = raw_discharge_power   # Swap!
+else:
+    data.charge_power = raw_charge_power      # Normal
+    data.discharge_power = raw_discharge_power # Normal
+```
+
+### Who Needs This
+
+Users with WIT or other models that have:
+- Opposite battery sign convention (enabled "Invert Battery Power")
+- AND separate charge/discharge power registers
+
+Most users won't need this fix, but it ensures complete inversion coverage.
+
+---
+
+## 🔋 SPH HU Battery Energy Sensors & Control Register Reading 📊
+
+**FIXED:** SPH/SPM 8-10kW HU users had battery charge/discharge energy sensors showing "unavailable" and control sliders showing 0.
+
+### Multiple Issues Fixed
+
+**1. Register naming mismatch:**
+- Coordinator looked for: `charge_energy_today_low`
+- SPH HU profile defined: `battery_charge_today_low`
+- Solution: Added fallback search for alternate naming
+
+**2. Overly strict sensor conditions:**
+- Before: `condition: lambda data: hasattr(data, 'charge_energy_today') and data.charge_energy_today > 0`
+- Problem: Sensor not created when value is 0 (normal at start of day)
+- After: `condition: lambda data: hasattr(data, 'charge_energy_today')`
+
+**3. Missing GrowattData attributes:**
+- SPH control registers (1044, 1070-1108) were read but attributes didn't exist
+- Added 15+ control attributes: priority_mode, charge_power_rate, time_period settings, etc.
+
+**4. Control registers not being read:**
+- Profile defined registers but coordinator didn't read them
+- Added register reading code for all SPH control ranges
+
+### What Now Works
+
+**Battery Energy Sensors:**
+- Battery Charge Energy Today (kWh)
+- Battery Charge Energy Total (kWh)
+- Battery Discharge Energy Today (kWh)
+- Battery Discharge Energy Total (kWh)
+
+**Control Sliders (with actual values):**
+- Battery Priority Mode
+- Battery Charge Power Rate (%)
+- Battery Discharge Power Rate (%)
+- Charge/Discharge Stop SOC (%)
+- AC Charge Enable
+- Time Period Settings (3 time periods with start/end times)
+
+### 🧪 Testing Required - SPH HU Users
+
+If you have an **SPH 8000/10000 HU** or **SPM 8000/10000 HU**:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Check Battery device sensors:**
+   - Battery Charge Energy Today - Should show kWh (not "unavailable")
+   - Battery Discharge Energy Today - Should show kWh
+   - Should increment throughout the day
+
+3. **Check Controls tab:**
+   - All sliders should show current inverter settings (not 0)
+   - Try changing a setting → Verify it takes effect
+
+4. **Debug logging:**
+   ```yaml
+   logger:
+     logs:
+       custom_components.growatt_modbus: debug
+   ```
+   Look for: `"Reading SPH control registers: 1090-1092"`
+
+---
+
+## 🌡️ SPF Sensor Improvements (Temperature & Fan Speed)
+
+**ADDED:** Missing temperature and fan speed sensors for SPF off-grid inverters.
+
+### New Sensors
+
+**Temperatures:**
+- MPPT Fan Temperature (Buck1 temp) - PV1 MPPT converter
+- MPPT Fan Temperature 2 (Buck2 temp) - PV2 MPPT converter
+
+**Fan Speeds:**
+- MPPT Fan Speed (%) - MPPT cooling fan RPM
+- Inverter Fan Speed (%) - Inverter cooling fan RPM
+
+**AC/Generator Charge Limits:**
+- AC Charge Current (A) - Max current from grid (0-80A)
+- Generator Charge Current (A) - Max current from generator (0-80A)
+
+All sensors appear under the **Solar device**.
+
+### 🧪 Testing - SPF Users
+
+Verify new sensors show reasonable values:
+- Temperatures: 20-60°C typical
+- Fan speeds: 0-100%
+- Charge current: Matches your configuration
+
+---
+
+## 📝 Summary of Changes
+
+**Major Fixes:**
+- ✅ TL-XH battery power registers corrected (MIN-4600TL-XH with ARK storage)
+- ✅ SPF AC Power now works (off-grid models)
+- ✅ SPH legacy auto-detection with protocol verification (DTC 3501)
+- ✅ SPH HU battery energy sensors and controls fixed
+- ✅ Battery charge/discharge swapping when inverted
+
+**Improvements:**
+- ✅ Profile names cleaned up (removed V2.01 suffixes)
+- ✅ SPF temperature and fan speed sensors added
+
+**Affected Models:**
+- MIN-4600/6000/10000TL-XH with battery storage
+- SPF 3000-6000 ES Plus (off-grid)
+- SPH 3000-6000TL BL (legacy protocol)
+- SPH/SPM 8000/10000 HU
+
+---
+
 # Release Notes - v0.2.3
 
 ## 🔋 Separate Battery Power Inversion Option (Fixes #121) ⚡
