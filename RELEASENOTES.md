@@ -25,9 +25,9 @@
 
 # Release Notes - v0.2.7
 
-## ⚡ Faster Polling Performance (10x Speed Improvement)
+## ⚡ Faster Polling Performance (2-3x Speed Improvement)
 
-**IMPROVED:** Reduced register reading delays from 1 second to 0.1 second between reads, enabling true fast polling for time-sensitive automations.
+**IMPROVED:** Reduced register reading delays from 1 second to 0.25 seconds between reads, enabling faster polling for time-sensitive automations while maintaining reliability.
 
 ### Problem
 
@@ -48,13 +48,18 @@ With 5-second scan_interval configured, actual polling took 10s, making the sett
 
 ### What's Fixed
 
-Reduced `min_read_interval` from 1.0s → 0.1s (100ms between reads)
+Reduced `min_read_interval` from 1.0s → 0.25s (250ms between reads)
+
+**Why 250ms?** Balanced for reliability:
+- Serial at 9600 baud: Frame transmission (10-50ms) + device processing (50-200ms) = needs 250ms minimum
+- TCP: Network (1-10ms) + device processing (50-200ms) = 250ms is safe
+- 100ms was too aggressive for serial connections
 
 **Time breakdown (after):**
 ```
-6 reads × 0.1s enforced delay = 0.6 seconds  ✅
+6 reads × 0.25s enforced delay = 1.5 seconds  ✅
 2-3 seconds communication
-Total: 2.6-3.6 seconds per poll ✅
+Total: 3.5-4.5 seconds per poll ✅
 ```
 
 ### Impact
@@ -64,8 +69,8 @@ Total: 2.6-3.6 seconds per poll ✅
 - scan_interval = 10s → actual update time = ~10s ✅ (but slow)
 
 **After v0.2.7:**
-- scan_interval = 5s → actual update time = ~3-4s ✅ **3x faster!**
-- scan_interval = 10s → actual update time = ~3-4s ✅ **Faster updates**
+- scan_interval = 5s → actual update time = ~4-5s ✅ **2x faster!**
+- scan_interval = 10s → actual update time = ~4-5s ✅ **Faster updates**
 
 ### Use Cases
 
@@ -89,14 +94,15 @@ automation:
           entity_id: switch.water_heater
 ```
 
-With 5-second polling, automation now reacts within 5-6 seconds (vs. 10-15 seconds before).
+With 5-second polling, automation now reacts within 5-7 seconds (vs. 10-15 seconds before).
 
-### Safety
+### Safety & Reliability
 
-- 100ms delay is still conservative for Modbus reliability
-- Prevents bus flooding while allowing fast polling
-- Works with all connection types (TCP, Serial, RTU)
-- Tested with SPF 6000 ES Plus via serial at 9600 baud
+- 250ms delay provides safe margin for device processing
+- Prevents bus flooding while allowing faster polling
+- Works reliably with all connection types (TCP, Serial, RTU)
+- Safe for serial at 9600 baud (tested with SPF 6000 ES Plus)
+- Conservative enough to avoid timeout errors
 
 ### Recommendations
 
