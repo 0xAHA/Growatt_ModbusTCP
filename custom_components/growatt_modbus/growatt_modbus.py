@@ -200,7 +200,7 @@ class GrowattModbus:
         self.slave_id = slave_id
         self.client: Optional[Union['ModbusTcpClient', 'ModbusSerialClient']] = None
         self.last_read_time = 0
-        self.min_read_interval = 0.1  # 100ms minimum between reads (reduced from 1s for faster polling)
+        self.min_read_interval = 0.25  # 250ms minimum between reads (reduced from 1s, safe for serial and TCP)
         self._timeout = timeout
         self._invert_battery_power = invert_battery_power
 
