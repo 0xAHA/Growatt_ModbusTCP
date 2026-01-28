@@ -105,6 +105,109 @@ If you have a **MIN-4600TL-XH, MIN-6000TL-XH, MIN-10000TL-XH** or similar with *
 
 ---
 
+## 🔋 MOD Battery Sensors Fixed (MOD 10000TL3-XH with ARK Battery) ⚡
+
+**FIXED:** MOD 10000TL3-XH with ARK battery showing all battery sensors at 0W/0V/0% (Issue #125).
+
+### What Was Wrong
+
+The MOD profile had battery registers defined in **two locations**:
+1. **VPP 31200+ range** - Defined as primary with standard names ❌ **NOT responding on MOD XH**
+2. **3000+ range** - Defined as fallback with `_legacy` suffix ✅ **Responding but wrong names**
+
+**Problem:** The coordinator looks for `battery_voltage`, `battery_soc`, `battery_power` (standard names), but:
+- ❌ VPP range (31200+): Not responding on MOD 10000TL3-XH
+- ✅ 3000+ range: Responding but had `_legacy` suffix so coordinator couldn't find them
+
+**Analysis from register scan:**
+```
+VPP Battery Range (31200-31299):      ❌ No response
+VPP Battery 2 Range (31300-31399):    ❌ No response
+MIN/MOD Range 3000-3124:              ✅ 66 registers responding
+MOD Extended 3125-3249:               ✅ 51 registers responding
+
+Battery data found at (3000+ range):
+3169: 5150 raw → 51.50V (battery_voltage) ✅
+3170: Battery current ✅
+3171: 99-100 → 99-100% (battery_soc) ✅
+3176: Battery temperature ✅
+3125-3132: Battery charge/discharge energy ✅
+3178-3181: Battery charge/discharge power (added from MIN TL-XH pattern) ✅
+```
+
+### What's Fixed
+
+**Made 3000+ range PRIMARY for MOD XH models:**
+
+1. **Removed `_legacy` suffix from battery state registers:**
+   - `3169`: `battery_voltage_legacy` → `battery_voltage` (scale 0.01)
+   - `3170`: `battery_current_legacy` → `battery_current` (scale 0.1, signed)
+   - `3171`: `battery_soc_legacy` → `battery_soc` (scale 1)
+   - `3176`: `battery_temp_legacy` → `battery_temp` (scale 0.1, signed)
+
+2. **Removed `_legacy` suffix from battery energy registers:**
+   - `3125-3126`: `discharge_energy_today_legacy` → `discharge_energy_today` (kWh)
+   - `3127-3128`: `discharge_energy_total_legacy` → `discharge_energy_total` (kWh)
+   - `3129-3130`: `charge_energy_today_legacy` → `charge_energy_today` (kWh)
+   - `3131-3132`: `charge_energy_total_legacy` → `charge_energy_total` (kWh)
+
+3. **Added battery power registers (NEW):**
+   - `3178-3179`: `discharge_power` (unsigned, W)
+   - `3180-3181`: `charge_power` (unsigned, W)
+   - Follows MIN TL-XH pattern for ARK battery systems
+
+4. **Renamed VPP registers with `_vpp` suffix to avoid conflicts:**
+   - All VPP battery registers (31200+) renamed with `_vpp` suffix
+   - Kept for other MOD variants that may support VPP protocol
+   - Won't interfere with 3000+ range (primary source)
+
+**Affected profile:**
+- `MOD_6000_15000TL3_XH` (MOD 6-15kW hybrid with battery)
+
+### 🧪 Testing Required - MOD XH Users with Battery
+
+If you have a **MOD 6000/8000/10000/12000/15000 TL3-XH** with **ARK or other battery storage**:
+
+1. **Reload the integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Check Battery device sensors:**
+   - `sensor.growatt_battery_voltage` - Should show ~51.5V (or your battery voltage)
+   - `sensor.growatt_battery_soc` - Should show 0-100%
+   - `sensor.growatt_battery_temperature` - Should show °C
+   - `sensor.growatt_battery_charge_power` - Shows charging power (W)
+   - `sensor.growatt_battery_discharge_power` - Shows discharge power (W)
+   - `sensor.growatt_battery_charge_energy_today` - Daily charge energy (kWh)
+   - `sensor.growatt_battery_discharge_energy_today` - Daily discharge energy (kWh)
+
+3. **Verify values during battery operation:**
+   - **While charging:** charge_power shows watts, discharge_power = 0W
+   - **While discharging:** discharge_power shows watts, charge_power = 0W
+   - **Idle:** Both power sensors = 0W
+   - **SOC and voltage** should match inverter display
+
+4. **Check registers if needed (Debug → Universal Scanner):**
+   ```
+   MIN/MOD Range: 3000-3124
+   MOD Extended: 3125-3249
+
+   Expected registers:
+   3169: Battery voltage (scale 0.01, e.g., 5150 = 51.50V)
+   3171: Battery SOC (scale 1, e.g., 99 = 99%)
+   3178-3179: Discharge power (scale 0.1, e.g., 15430 = 1543W)
+   3180-3181: Charge power (scale 0.1, e.g., 15430 = 1543W)
+   3125-3132: Battery energy counters (scale 0.1)
+   ```
+
+5. **Report issues:**
+   - If sensors still show 0 → Share register scan and inverter model
+   - If VPP range (31200+) responds on your model → Let us know so we can adjust
+   - If values look wrong → Compare with inverter display
+
+**Note:** This fix assumes MOD XH variants use 3000+ range for battery data. If you have a MOD model that uses VPP 31200+ range, please report it so we can add detection logic.
+
+---
+
 ## 🔌 SPF AC Power Fixed (Off-Grid Models) ⚡
 
 **FIXED:** SPF 6000 ES Plus users reporting AC Power sensor showing 0W (while AC Apparent Power works correctly).
@@ -422,6 +525,7 @@ Verify new sensors show reasonable values:
 
 **Major Fixes:**
 - ✅ TL-XH battery power registers corrected (MIN-4600TL-XH with ARK storage)
+- ✅ MOD battery sensors fixed (MOD 10000TL3-XH with ARK battery) - **NEW**
 - ✅ SPF AC Power now works (off-grid models)
 - ✅ SPH legacy auto-detection with protocol verification (DTC 3501)
 - ✅ SPH HU battery energy sensors and controls fixed
@@ -432,7 +536,8 @@ Verify new sensors show reasonable values:
 - ✅ SPF temperature and fan speed sensors added
 
 **Affected Models:**
-- MIN-4600/6000/10000TL-XH with battery storage
+- MIN-4600/6000/10000TL-XH with battery storage (TL-XH fix)
+- MOD 6000/8000/10000/12000/15000TL3-XH with battery storage (MOD fix) - **NEW**
 - SPF 3000-6000 ES Plus (off-grid)
 - SPH 3000-6000TL BL (legacy protocol)
 - SPH/SPM 8000/10000 HU
