@@ -840,7 +840,7 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             vol.Required(
                 CONF_INVERTER_SERIES,
                 default=current_display_name
-            ): vol.In(available_profiles),
+            ): vol.In(list(available_profiles.keys())),
             vol.Required(
                 "scan_interval",
                 default=current_scan_interval
