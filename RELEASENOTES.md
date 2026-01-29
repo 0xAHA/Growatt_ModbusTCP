@@ -1,5 +1,106 @@
 # Release Notes
 
+# Release Notes - v0.2.8
+
+## 🔍 MIC Micro Inverter Auto-Detection Fixed
+
+**FIXED:** MIC 1000TL-X and other MIC micro inverters (600W-3.3kW) being incorrectly detected as MIN 3000-6000TL-X during auto-detection.
+
+### Problem
+
+Auto-detection was checking **MIN series (3000+ range) before MIC series (0-179 range)**, causing misdetection:
+
+```
+Detection order (incorrect):
+1. Check MIN at register 3003 (3000+ range)
+2. Check SPH at register 3169 (battery)
+3. Check 3-phase at register 38/42
+4. Default to MIN 3000-6000TL-X
+→ MIC never checked! ❌
+```
+
+**Result:**
+- MIC 1000TL-X detected as MIN 3000-6000TL-X
+- Wrong sensors created (Grid, PV1/PV2, consumption)
+- Communication errors with wrong register ranges
+- Slow connection due to repeated failed reads
+
+### Root Cause
+
+MIC micro inverters use **legacy V3.05 protocol (0-179 register range)**, completely different from MIN series **V1.39 protocol (3000+ range)**.
+
+The register probing logic in `async_detect_inverter_series()` never checked the 0-179 range, always falling back to MIN profile.
+
+### What's Fixed
+
+Added MIC detection BEFORE MIN detection:
+
+```python
+# NEW: Check MIC series FIRST (0-179 range)
+mic_test = read register 3 (pv1_voltage in MIC range)
+if register 3 responds AND register 3003 does NOT:
+    → MIC series (uses 0-179, not 3000+) ✅
+
+# Then check MIN series (3000+ range)
+min_test = read register 3003
+if register 3003 responds:
+    → MIN series ✅
+```
+
+**Logic:**
+- MIC: Has 0-179 range, does NOT have 3000 range
+- MIN: Has 3000+ range, may also have 0-179 range
+- Check MIC first to prevent MIN false positive
+
+### Model Name Detection
+
+MIC 1000TL-X is also detected by model name if available:
+- Pattern: `MIC1000` → Profile: `mic_600_3300tl_x`
+- Covers: MIC 600, 750, 1000, 1500, 2000, 2500, 3000, 3300
+
+### 🧪 Testing - MIC Users
+
+If you have **MIC 600-3300TL-X**:
+
+1. **Delete and re-add integration:**
+   - Settings → Devices & Services → Growatt Modbus → Delete
+   - Add integration again with auto-detection
+
+2. **Verify correct profile:**
+   - Device info should show: "MIC 600-3300TL-X"
+   - Should have ~15-20 sensors (not 40+ like MIN)
+
+3. **Check sensors:**
+   - PV1 voltage/current/power ✅
+   - AC voltage/current/power/frequency ✅
+   - Energy today/total ✅
+   - Temperatures ✅
+   - NO Grid sensors (MIC doesn't have grid monitoring)
+   - NO PV2/PV3 sensors (MIC is single string only)
+
+### Converter Configuration Notes
+
+**For serial/RTU connections via USR-DR164 or similar:**
+
+If experiencing communication issues with MIC profile:
+
+1. **Stop Bit:** Must be "1" (not "CTSRTS" or "2")
+2. **Pack Interval:** 50-100ms minimum (20ms too short for Modbus RTU at 9600 baud)
+3. **Baud Rate:** 9600 (standard for Growatt)
+4. **Parity:** None (standard)
+
+Frame timing at 9600 baud:
+- Frame transmission: ~10ms
+- Inverter processing: 50-100ms
+- Minimum safe interval: 50-100ms between requests
+
+**Why this matters:**
+- MIC uses legacy protocol (2013) which may be more timing-sensitive
+- 20ms pack interval doesn't allow enough time for inverter processing
+- CTSRTS (hardware flow control) not supported by inverter → framing errors
+
+---
+
 ## 🌱 Early Adopter Notice - Help Us Grow!
 
 > **This integration is actively evolving with your help!**
