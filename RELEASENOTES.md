@@ -2,6 +2,129 @@
 
 # Release Notes - v0.2.8
 
+## 🚨 CRITICAL: Battery Power Showing Simultaneous Charge AND Discharge Fixed ⚡
+
+**FIXED:** TL-XH, MIN TL-XH, SPH, and SPH TL3 models showing impossible simultaneous battery charge AND discharge with similar values (e.g., 1545W charging + 1625W discharging).
+
+### Problem
+
+Users reported impossible battery behavior:
+- **Battery showing charge AND discharge at same time** (1545W + 1625W)
+- Battery power stuck at low values (22.8W) with actual power in wrong sensor
+- Snow on PV panels (no production) but battery showing activity
+- Values don't match actual battery state
+
+**Example from user:**
+> "The entities show a charge of 1545 watts and a discharge of 1625 watts at the same time. There is snow on the PV modules, so they are producing almost no output."
+
+### Root Cause
+
+**Critical naming bug** in 6 hybrid inverter profiles broke the coordinator's battery power detection:
+
+**Coordinator searches for:** `'battery_power_low'` (register 31201)
+**Profiles had:** `'battery_power'` (NO `_low` suffix!)
+
+**Cascade failure:**
+```
+1. Coordinator searches for battery_power_low → NOT FOUND ❌
+2. Falls back to separate unsigned registers:
+   - charge_power_low (31205) = 1545W
+   - discharge_power_low (31209) = 1625W
+3. Coordinator reads BOTH registers → Sets BOTH sensor values
+4. User sees IMPOSSIBLE simultaneous charge + discharge! ❌
+```
+
+**Why fallback registers have values:**
+- VPP Protocol V2.01 provides BOTH signed (31200-31201) and unsigned (31204-31209) power registers
+- Unsigned registers always show absolute values whether battery is charging or discharging
+- **Only signed register (31201) knows the actual direction** (positive=charge, negative=discharge)
+- When coordinator can't find signed register, it reads both unsigned registers and displays both!
+
+### What's Fixed
+
+**Fixed register naming in 6 profiles:**
+
+1. **TL_XH_3000_10000_V201** - Standard TL-XH with V2.01 protocol
+2. **TL_XH_US_3000_10000_V201** - US version of TL-XH
+3. **MIN_TL_XH_3000_10000_V201** - MIN series TL-XH hybrid (DTC 5100)
+4. **SPH_3000_6000_V201** - Single-phase SPH 3-6kW
+5. **SPH_7000_10000_V201** - Single-phase SPH 7-10kW
+6. **SPH_TL3_3000_10000_V201** - Three-phase SPH TL3
+
+**Change:**
+```python
+# BEFORE (broken):
+31201: {'name': 'battery_power', ...}  # Coordinator can't find it
+
+# AFTER (fixed):
+31201: {'name': 'battery_power_low', ...}  # Coordinator finds it! ✅
+```
+
+**Additional fix for MIN_TL_XH:**
+Also renamed 3000-range fallback registers to match coordinator expectations:
+```python
+# BEFORE:
+3179: {'name': 'battery_discharge_power', ...}  # Wrong name
+3181: {'name': 'battery_charge_power', ...}      # Wrong name
+
+# AFTER:
+3179: {'name': 'discharge_power_low', ...}  # Coordinator finds it! ✅
+3181: {'name': 'charge_power_low', ...}      # Coordinator finds it! ✅
+```
+
+### Result
+
+**Before v0.2.8:**
+- ❌ Battery charge power: 1545W
+- ❌ Battery discharge power: 1625W (simultaneous!)
+- ❌ Battery power: 0W or stuck value
+- ❌ Doesn't match actual battery behavior
+
+**After v0.2.8:**
+- ✅ Coordinator finds signed battery_power_low register (31201)
+- ✅ Uses correct signed value (positive=charging, negative=discharging)
+- ✅ Shows ONLY charge power when charging
+- ✅ Shows ONLY discharge power when discharging
+- ✅ Never shows both at same time
+- ✅ Matches actual battery behavior
+
+### 🧪 Testing - Affected Users
+
+If you have **TL-XH, MIN TL-XH, SPH, or SPH TL3** with battery:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Verify battery sensors:**
+   - Check Battery device sensors
+   - Should show EITHER charge power OR discharge power (never both!)
+   - Values should match actual battery state
+   - If charging: charge_power > 0, discharge_power = 0
+   - If discharging: discharge_power > 0, charge_power = 0
+   - If idle: both = 0
+
+3. **Check logs (optional):**
+   - Look for: `Battery power (signed): HIGH=xxx, LOW=xxx → XXXXwW`
+   - Should see signed value being used (not falling back to unsigned)
+
+### Technical Notes
+
+**Why this bug was hard to catch:**
+- The unsigned fallback registers (31205, 31209) DO contain valid values
+- They just show absolute magnitudes, not direction
+- Integration appeared to work, just showed impossible values
+- Users saw "reasonable" numbers (1545W, 1625W) not obviously wrong
+
+**Naming convention requirement:**
+The coordinator uses `_find_register_by_name()` to search for registers in priority order:
+1. Search for `battery_power_low` (signed, VPP 31201)
+2. If not found, search for `charge_power_low` + `discharge_power_low` (unsigned fallback)
+3. If not found, calculate from V×I
+
+Register names MUST match coordinator's search strings exactly!
+
+---
+
 ## 🔍 MIC Micro Inverter Auto-Detection Fixed
 
 **FIXED:** MIC 1000TL-X and other MIC micro inverters (600W-3.3kW) being incorrectly detected as MIN 3000-6000TL-X during auto-detection.
