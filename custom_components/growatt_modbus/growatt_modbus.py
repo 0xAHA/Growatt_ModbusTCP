@@ -227,6 +227,10 @@ class GrowattModbus:
         # Cache for raw register data
         self._register_cache = {}
 
+        # Track failed optional register ranges to avoid repeated warnings
+        # Format: set of (start_addr, count) tuples
+        self._failed_optional_ranges = set()
+
         # Adaptive polling: automatic backoff on errors
         self._consecutive_read_failures = 0
         self._read_failure_threshold = 5  # Back off after 5 consecutive failures
@@ -737,10 +741,19 @@ class GrowattModbus:
                 min_addr_block = min(block)
                 max_addr_block = max(block)
                 count_block = (max_addr_block - min_addr_block) + 1
+
+                # Check if this range already failed - skip silently if so
+                range_key = (min_addr_block, count_block)
+                if range_key in self._failed_optional_ranges:
+                    logger.debug(f"Skipping known-failed optional VPP range ({min_addr_block}-{max_addr_block})")
+                    continue
+
                 logger.debug(f"Reading 31000 sub-range ({min_addr_block}-{max_addr_block}, {count_block} registers)")
                 registers = self.read_input_registers(min_addr_block, count_block)
                 if registers is None:
-                    logger.warning(f"Failed to read extended battery register block ({min_addr_block}-{max_addr_block})")
+                    # Mark as failed and use DEBUG log - these are optional VPP duplicates
+                    self._failed_optional_ranges.add(range_key)
+                    logger.debug(f"Optional VPP range not supported ({min_addr_block}-{max_addr_block}) - will use 3000-range data instead")
                     # Don't return None - continue with what we have
                 else:
                     # Populate cache
