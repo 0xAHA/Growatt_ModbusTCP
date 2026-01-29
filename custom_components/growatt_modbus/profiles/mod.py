@@ -138,9 +138,11 @@ MOD_6000_15000TL3_XH = {
         # This is the official battery data range for MOD series per Growatt VPP Protocol
         # Ref: GROWATT VPP COMMUNICATION PROTOCOL OF INVERTER V2.01 (2024.9.20)
 
-        # Battery Power (signed: positive=charging, negative=discharging)
-        31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        # Battery Power (VPP range - NOT responding on MOD 10000TL3-XH, kept for other MOD variants)
+        # Renamed with _vpp suffix to avoid conflict with 3000+ range (primary source)
+        # Signed: positive=charging, negative=discharging
+        31200: {'name': 'battery_power_vpp_high', 'scale': 1, 'unit': '', 'pair': 31201, 'desc': 'Battery power HIGH (VPP range, may not respond on XH variants)'},
+        31201: {'name': 'battery_power_vpp_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery power (VPP range, may not respond on XH variants)'},
 
         # Battery Energy (VPP range - NOT responding on MOD 10000TL3-XH, kept for other MOD variants)
         # Renamed with _vpp suffix to avoid conflict with 3000+ range (primary source)

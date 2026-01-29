@@ -226,17 +226,17 @@ WRITABLE_REGISTERS = {
     },
     'ac_charge_current': {
         'register': 38,
-        'scale': 1,
+        'scale': 0.1,
         'valid_range': (0, 800),
         'unit': 'A',
-        'desc': 'AC charging current limit (0-80A)'
+        'desc': 'AC charging current limit (0-80A, register stores value × 10)'
     },
     'gen_charge_current': {
         'register': 83,
-        'scale': 1,
+        'scale': 0.1,
         'valid_range': (0, 800),
         'unit': 'A',
-        'desc': 'Generator charging current limit (0-80A)'
+        'desc': 'Generator charging current limit (0-80A, register stores value × 10)'
     },
     # Battery-type-dependent registers (special handling required)
     'bat_low_to_uti': {
@@ -419,8 +419,8 @@ SENSOR_DEVICE_MAP = {
         'status', 'last_update', 'fault_code', 'warning_code', 'derating_mode',
         'inverter_temp', 'ipm_temp', 'boost_temp', 'dcdc_temp',
         'battery_derating_mode',  # Battery-related status on inverter
-        # SPF Off-Grid fan speeds and DC voltage input
-        'inverter_fan_speed', 'output_dc_voltage',
+        # SPF Off-Grid fan speeds
+        'inverter_fan_speed',
     },
 
     # Solar device - PV production and AC output
@@ -430,8 +430,8 @@ SENSOR_DEVICE_MAP = {
         'pv2_voltage', 'pv2_current', 'pv2_power',
         'pv3_voltage', 'pv3_current', 'pv3_power',
         'pv_total_power',
-        # AC output (single phase)
-        'ac_voltage', 'ac_current', 'ac_power', 'ac_apparent_power', 'ac_frequency',
+        # AC output (single phase) - current and power
+        'ac_current', 'ac_power', 'ac_apparent_power', 'ac_frequency',
         'inverter_current',  # SPF: separate inverter current measurement
         # AC output (three phase)
         'ac_voltage_r', 'ac_voltage_s', 'ac_voltage_t',
@@ -454,6 +454,8 @@ SENSOR_DEVICE_MAP = {
         'grid_import_energy_today', 'grid_import_energy_total',
         'energy_to_grid_today', 'energy_to_grid_total',
         'power_to_grid',
+        # SPF Off-Grid: AC input from grid/generator
+        'grid_voltage', 'grid_frequency',
     },
 
     # Load device - consumption
@@ -462,8 +464,8 @@ SENSOR_DEVICE_MAP = {
         'load_energy_today', 'load_energy_total',
         'energy_to_user_today', 'energy_to_user_total',
         'self_consumption',
-        # SPF Off-Grid load percentage
-        'load_percentage',
+        # SPF Off-Grid: AC output to loads and DC bus voltage
+        'ac_voltage', 'output_dc_voltage', 'load_percentage',
     },
 
     # Battery device - storage

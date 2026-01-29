@@ -23,6 +23,287 @@
 
 ---
 
+# Release Notes - v0.2.7
+
+## ⚡ Faster Polling Performance (2-3x Speed Improvement)
+
+**IMPROVED:** Reduced register reading delays from 1 second to 0.25 seconds between reads, enabling faster polling for time-sensitive automations while maintaining reliability.
+
+### Problem
+
+Users setting 5-second scan interval experienced ~10 second actual update time, making automations based on power sensors (like discharge power) too slow to be useful.
+
+**Root cause:** Each Modbus register read enforced a 1-second minimum delay. SPF models make 6 separate reads per poll:
+- 1 input register read (base range 0-124)
+- 5 holding register reads (control registers)
+
+**Time breakdown (before):**
+```
+6 reads × 1s enforced delay = 6 seconds
+~158 total registers at 9600 baud = 2-3 seconds communication
+Total: 8-10 seconds per poll ❌
+```
+
+With 5-second scan_interval configured, actual polling took 10s, making the setting ineffective.
+
+### What's Fixed
+
+Reduced `min_read_interval` from 1.0s → 0.25s (250ms between reads)
+
+**Why 250ms?** Balanced for reliability:
+- Serial at 9600 baud: Frame transmission (10-50ms) + device processing (50-200ms) = needs 250ms minimum
+- TCP: Network (1-10ms) + device processing (50-200ms) = 250ms is safe
+- 100ms was too aggressive for serial connections
+
+**Time breakdown (after):**
+```
+6 reads × 0.25s enforced delay = 1.5 seconds  ✅
+2-3 seconds communication
+Total: 3.5-4.5 seconds per poll ✅
+```
+
+### Impact
+
+**Before v0.2.7:**
+- scan_interval = 5s → actual update time = ~10s ❌
+- scan_interval = 10s → actual update time = ~10s ✅ (but slow)
+
+**After v0.2.7:**
+- scan_interval = 5s → actual update time = ~4-5s ✅ **2x faster!**
+- scan_interval = 10s → actual update time = ~4-5s ✅ **Faster updates**
+
+### Use Cases
+
+**Fast automations now possible:**
+- Turn on/off loads based on discharge power
+- React quickly to battery charge/discharge changes
+- Trigger actions based on grid import/export
+- More responsive energy management
+
+**Example automation:**
+```yaml
+automation:
+  - alias: "Turn off heater when discharging battery"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.growatt_battery_discharge_power
+        above: 500  # Discharging > 500W
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.water_heater
+```
+
+With 5-second polling, automation now reacts within 5-7 seconds (vs. 10-15 seconds before).
+
+### Safety & Reliability
+
+- 250ms delay provides safe margin for device processing
+- Prevents bus flooding while allowing faster polling
+- Works reliably with all connection types (TCP, Serial, RTU)
+- Safe for serial at 9600 baud (tested with SPF 6000 ES Plus)
+- Conservative enough to avoid timeout errors
+
+### Adaptive Polling with Automatic Backoff
+
+**NEW:** Built-in safety mechanism automatically adjusts polling speed based on connection quality.
+
+**How it works:**
+- Tracks consecutive read failures across all register reads
+- After 5 consecutive failures, automatically backs off from 250ms → 1s
+- Restores fast polling (250ms) when communication recovers
+- Prevents aggressive polling from breaking integrations with slow devices
+
+**What this means:**
+- If your device struggles with fast polling, integration automatically slows down
+- No manual intervention needed - self-adjusts to your device's capabilities
+- Warning logged when backoff occurs: *"X consecutive read failures detected - backing off to safe polling interval"*
+- Info logged when restored: *"Communication restored - resuming fast polling"*
+
+**Why this matters:**
+Users with older serial converters, low baud rates, or slow devices get automatic protection while users with fast TCP connections enjoy improved performance without risk.
+
+### Recommendations
+
+**For time-sensitive automations:**
+- Set scan_interval to 5 seconds (minimum)
+- Monitor for timeout errors in logs
+- If timeouts occur, increase timeout setting or scan_interval slightly
+
+**For standard monitoring:**
+- Default 60 seconds is still fine
+- Reduces inverter load and network traffic
+
+---
+
+## 🔌 SPF Charge Current Scale Fixed (Still Showing 800A) ⚡
+
+**FIXED:** SPF AC Charge Current and Generator Charge Current entities still showing max 800A instead of 80A, despite fix in v0.2.4.
+
+### Root Cause
+
+**v0.2.4 fixed the wrong file!**
+
+While `spf.py` profile was updated with correct scale (0.1), the number entities are actually created from `WRITABLE_REGISTERS` in `const.py`, which still had scale: 1.
+
+**How entity creation works:**
+```python
+# number.py line 40: Creates entities from WRITABLE_REGISTERS (const.py)
+for control_name, control_config in WRITABLE_REGISTERS.items():
+    # line 137-138: Sets slider max
+    self._attr_native_max_value = float(valid_range[1]) * scale
+    # With scale=1: 800 × 1 = 800A ❌
+    # With scale=0.1: 800 × 0.1 = 80A ✓
+```
+
+The profile definitions in `spf.py` are used for reading data from Modbus registers, but NOT for creating control entities!
+
+### What's Fixed
+
+Updated `const.py` WRITABLE_REGISTERS:
+```python
+# Before (v0.2.4-v0.2.6)
+'ac_charge_current': {
+    'scale': 1,           ❌ Wrong!
+    'valid_range': (0, 800),
+}
+
+# After (v0.2.7)
+'ac_charge_current': {
+    'scale': 0.1,         ✅ Correct!
+    'valid_range': (0, 800),  # Raw register range
+}
+```
+
+**Result:**
+- Slider max: 800 × 0.1 = **80A** ✅
+- Display value: raw 800 → **80A** ✅
+- Write 80A: 80 / 0.1 = 800 (raw register value) ✅
+
+### 🧪 Testing - SPF Users
+
+If you have an **SPF 3000-6000 ES Plus**:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Check control entities:**
+   - `number.growatt_ac_charge_current` - Should now show max **80A** (not 800A)
+   - `number.growatt_generator_charge_current` - Should now show max **80A** (not 800A)
+
+3. **Verify existing values:**
+   - If you previously set 80A (which wrote 80 raw), it will now display as 8A (80 × 0.1)
+   - You may need to adjust your settings to correct values after reload
+
+**Affected registers:**
+- Register 38: AC Charge Current (0-800 raw = 0-80A display)
+- Register 83: Generator Charge Current (0-800 raw = 0-80A display)
+
+---
+
+## 🔋 MOD Battery Power Sensors Fixed (Showing 0W) ⚡
+
+**FIXED:** MOD 10000TL3-XH battery charge power, discharge power, and combined power sensors showing 0W despite registers 3178-3181 containing valid data (Issue #125 followup).
+
+### Symptoms
+
+After v0.2.4 fix for MOD battery voltage/SOC/current, users still reported:
+- ❌ Battery Charge Power sensor: 0W (should show watts)
+- ❌ Battery Discharge Power sensor: 0W (should show watts)
+- ❌ Battery Power sensor: 0W (should show ±watts)
+- ✅ Battery Voltage/Current/SOC working (fixed in v0.2.4)
+
+User confirmed registers 3178-3181 had valid power data, but sensors showed 0W.
+
+### Root Cause
+
+**Same issue as v0.2.4 battery state fix - VPP registers defined but not responding!**
+
+Coordinator logic for battery power:
+```
+1. First tries to find 'battery_power_low'
+   → Found at register 31201 (VPP range) ✓
+
+2. If found, uses that as signed power
+   → Register 31201 returns 0 (VPP 31200+ doesn't respond on MOD XH) ❌
+
+3. ELSE fallback to separate charge_power_low/discharge_power_low
+   → Registers 3179/3181 (working!) → NEVER REACHED! ❌
+```
+
+**Problem:** The working registers (3178-3181) were never used because `battery_power_low` existed in the profile (even though it returned 0).
+
+v0.2.4 fixed this for voltage/current/SOC by renaming VPP registers with `_vpp` suffix, but missed the power registers!
+
+### What's Fixed
+
+Renamed VPP battery power registers with `_vpp` suffix (completing v0.2.4 pattern):
+
+**Before (v0.2.4-v0.2.6):**
+```python
+# VPP range (doesn't respond on MOD XH but blocks fallback!)
+31200: {'name': 'battery_power_high', ...}        ❌ Blocks fallback
+31201: {'name': 'battery_power_low', ...}         ❌ Returns 0
+
+# 3000 range (responds but never reached!)
+3178: {'name': 'discharge_power_high', ...}
+3179: {'name': 'discharge_power_low', ...}        ✅ Has data but not used
+3180: {'name': 'charge_power_high', ...}
+3181: {'name': 'charge_power_low', ...}           ✅ Has data but not used
+```
+
+**After (v0.2.7):**
+```python
+# VPP range (renamed - won't block fallback)
+31200: {'name': 'battery_power_vpp_high', ...}    ✅ Renamed
+31201: {'name': 'battery_power_vpp_low', ...}     ✅ Renamed
+
+# 3000 range (now used as primary!)
+3178: {'name': 'discharge_power_high', ...}
+3179: {'name': 'discharge_power_low', ...}        ✅ NOW FOUND!
+3180: {'name': 'charge_power_high', ...}
+3181: {'name': 'charge_power_low', ...}           ✅ NOW FOUND!
+```
+
+**Result:**
+- Coordinator doesn't find `battery_power_low` → Falls back to separate charge/discharge
+- charge_power_low (3179) and discharge_power_low (3181) found → Returns actual power! ✅
+
+### 🧪 Testing - MOD XH Users
+
+If you have **MOD 6000-15000TL3-XH** with ARK battery:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Check Battery device sensors:**
+   - `sensor.growatt_battery_charge_power` - Should show charging watts (not 0W)
+   - `sensor.growatt_battery_discharge_power` - Should show discharge watts (not 0W)
+   - `sensor.growatt_battery_power` - Should show ±watts (positive=charging, negative=discharging)
+
+3. **Verify with register scanner (optional):**
+   ```
+   Debug → Universal Scanner → MIN/MOD Range 3000-3124
+
+   Expected values (example from user):
+   3178-3179: Discharge power = 933.0W (9330 × 0.1)
+   3180-3181: Charge power = 0W (not charging)
+   ```
+
+4. **Expected behavior:**
+   - **While charging:** charge_power > 0, discharge_power = 0, battery_power > 0
+   - **While discharging:** discharge_power > 0, charge_power = 0, battery_power < 0
+   - **Idle:** Both = 0
+
+**Affected models:**
+- MOD 6000-15000TL3-XH (all XH variants where VPP 31200+ range doesn't respond)
+
+**Registers used:**
+- 3178-3179: Battery Discharge Power (0.1W scale, unsigned)
+- 3180-3181: Battery Charge Power (0.1W scale, unsigned)
+
+---
+
 # Release Notes - v0.2.6
 
 ## 🚨 CRITICAL: SPH 10000TL-HU Auto-Detection Fixed (Battery Controls Not Working) ⚡
@@ -421,12 +702,12 @@ If you have an **SPF 3000, 4000, 5000, or 6000 ES Plus**:
    Register 11-12: ac_apparent_power (AC Apparent Power in VA)
    ```
 
-5. **Check charge current limits (Fixed after v0.2.4 release):**
-   - `number.growatt_ac_charge_current` - Should show max 80A (was showing 800A)
-   - `number.growatt_generator_charge_current` - Should show max 80A (was showing 800A)
+5. **Check charge current limits:**
+   - `number.growatt_ac_charge_current` - Shows max 80A
+   - `number.growatt_generator_charge_current` - Shows max 80A
    - These control the maximum charging current from grid/generator
 
-**Note:** Initial v0.2.4 release had incorrect scale on charge current registers (showed 800A instead of 80A). This was fixed immediately after release.
+**Note:** v0.2.4 attempted to fix charge current scale issue (800A → 80A) but the fix was incomplete. Only `spf.py` profile was updated, but entities are created from `const.py` which still had incorrect scale. **Properly fixed in v0.2.7** - see v0.2.7 release notes for details.
 
 ---
 

@@ -853,7 +853,7 @@ def get_display_name_for_profile(profile_id: str) -> str:
     Returns:
         User-friendly display name
     """
-    # Search for this profile_id in the display names
+    # Search for this profile_id in the display names mapping
     for display_name, profile_info in PROFILE_DISPLAY_NAMES.items():
         if profile_id in (profile_info["base"], profile_info["v201"]):
             return display_name
