@@ -719,7 +719,7 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
             vol.Required(
                 CONF_INVERTER_SERIES,
                 default="MIN (7-10kW)"
-            ): vol.In(available_profiles),
+            ): vol.In(list(available_profiles.keys())),
         })
 
         # Prepare description based on whether auto-detection was attempted
