@@ -137,13 +137,17 @@ class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
             self._attr_native_min_value = float(valid_range[0]) * scale
             self._attr_native_max_value = float(valid_range[1]) * scale
 
-            # Determine step based on scale
-            if scale >= 1:
-                self._attr_native_step = 1.0
-            elif scale == 0.1:
-                self._attr_native_step = 0.1
+            # Check for explicit step override first
+            if 'step' in self._control_config:
+                self._attr_native_step = float(self._control_config['step'])
             else:
-                self._attr_native_step = scale
+                # Determine step based on scale
+                if scale >= 1:
+                    self._attr_native_step = 1.0
+                elif scale == 0.1:
+                    self._attr_native_step = 0.1
+                else:
+                    self._attr_native_step = scale
 
             self._attr_native_unit_of_measurement = unit
 

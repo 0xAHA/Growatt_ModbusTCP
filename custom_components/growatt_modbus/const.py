@@ -227,6 +227,7 @@ WRITABLE_REGISTERS = {
     'ac_charge_current': {
         'register': 38,
         'scale': 0.1,
+        'step': 1.0,  # Force integer amperes for better UX
         'valid_range': (0, 800),
         'unit': 'A',
         'desc': 'AC charging current limit (0-80A, register stores value × 10)'
@@ -234,6 +235,7 @@ WRITABLE_REGISTERS = {
     'gen_charge_current': {
         'register': 83,
         'scale': 0.1,
+        'step': 1.0,  # Force integer amperes for better UX
         'valid_range': (0, 800),
         'unit': 'A',
         'desc': 'Generator charging current limit (0-80A, register stores value × 10)'
