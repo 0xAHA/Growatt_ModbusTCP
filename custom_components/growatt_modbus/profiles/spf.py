@@ -23,6 +23,11 @@ SPF uses INVERTED sign convention compared to VPP 2.01 standard:
 - VPP 2.01:     Positive = Charge,    Negative = Discharge
 This profile uses negative scale (-0.1) on registers 77-78 to convert SPF's
 inverted convention to the standard convention used by Home Assistant and other models.
+
+Battery Sensor Limitations:
+- Battery Temperature: NOT AVAILABLE (SPF hardware does not provide battery temp sensor)
+- Battery Current: Only measured during AC charging (shows 0 during PV charging or discharging)
+- Battery Charge Energy: Only tracks AC charging (from grid/gen), NOT PV charging to battery
 """
 
 # SPF 3000-6000 ES PLUS (Off-grid inverter with battery)
@@ -111,11 +116,13 @@ SPF_3000_6000_ES_PLUS = {
         50: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'pair': 51, 'desc': 'Solar energy total (HIGH word)'},
         51: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'pair': 50, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Solar energy total (LOW word)'},
 
-        # AC Charge Energy (from grid/generator)
-        56: {'name': 'ac_charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 57, 'desc': 'AC charge energy today (HIGH word)'},
-        57: {'name': 'ac_charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 56, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'AC charge energy today (LOW word)'},
-        58: {'name': 'ac_charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 59, 'desc': 'AC charge energy total (HIGH word)'},
-        59: {'name': 'ac_charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 58, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'AC charge energy total (LOW word)'},
+        # Battery Charge Energy (from grid/generator via AC charging)
+        # Note: SPF only measures AC charging energy (from grid/gen), not PV charging to battery
+        # Named charge_energy_* (not ac_charge_energy_*) for battery_charge sensor compatibility
+        56: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 57, 'desc': 'Battery charge energy today (HIGH word) - AC charge only on SPF'},
+        57: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 56, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy today (LOW word) - AC charge only on SPF'},
+        58: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 59, 'desc': 'Battery charge energy total (HIGH word) - AC charge only on SPF'},
+        59: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 58, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy total (LOW word) - AC charge only on SPF'},
 
         # Battery Discharge Energy
         60: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 61, 'desc': 'Battery discharge energy today (HIGH word)'},
@@ -129,8 +136,10 @@ SPF_3000_6000_ES_PLUS = {
         66: {'name': 'ac_discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 67, 'desc': 'AC discharge energy total (HIGH word)'},
         67: {'name': 'ac_discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 66, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'AC discharge energy total (LOW word)'},
 
-        # AC Charge Current & AC Discharge Power
-        68: {'name': 'ac_charge_battery_current', 'scale': 0.1, 'unit': 'A', 'desc': 'AC charging battery current'},
+        # Battery Current (only measured during AC charging on SPF)
+        # Note: SPF hardware limitation - no general battery current sensor
+        # Named battery_current (not ac_charge_battery_current) for battery_current sensor compatibility
+        68: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Battery current (SPF: only shows current during AC charging, 0 otherwise)'},
         69: {'name': 'ac_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 70, 'desc': 'AC discharge power (HIGH word)'},
         70: {'name': 'ac_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 69, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'AC discharge power (LOW word)'},
 
