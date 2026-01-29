@@ -2,6 +2,84 @@
 
 # Release Notes - v0.2.8
 
+## 🔌 SPF Charge Current Scale Fixed (v0.2.7 Regression) ⚡
+
+**FIXED:** v0.2.7 introduced a 10x scaling bug in SPF AC/Generator charge current causing incorrect readings and writes.
+
+### Problem
+
+After v0.2.7 update, SPF users reported:
+- Inverter shows **30A** → Integration reads **3.0A** (10x too small)
+- User sets **1A** in integration → Inverter receives **10A** (10x too large)
+- All charge current values were 10x wrong in both directions
+
+### Root Cause
+
+**v0.2.7 made wrong assumption about SPF register storage format.**
+
+**v0.2.6 and earlier:**
+- Scale: 1, valid_range: (0, 800)
+- Problem: Slider showed 0-800A ❌
+
+**v0.2.7 "fix" (WRONG):**
+- Scale: 0.1, valid_range: (0, 800)
+- Assumption: "Register stores value × 10" (like some other profiles)
+- Reality: SPF stores values DIRECTLY (30 = 30A, not 300 = 30A)
+- Result: Everything 10x wrong! ❌
+
+### What's Fixed
+
+**v0.2.8 correction:**
+- Scale: **1** (reverted - SPF stores directly!)
+- valid_range: **(0, 80)** (THIS was the real issue!)
+
+**The original scale=1 was correct.** The problem was just the valid_range being too large.
+
+**Files changed:**
+- `profiles/spf.py` - Registers 38 & 83: scale 0.1 → 1, valid_range (0,800) → (0,80)
+- `const.py` - WRITABLE_REGISTERS: scale 0.1 → 1, valid_range (0,800) → (0,80)
+
+### Result
+
+**Before v0.2.8:**
+- Read: Inverter 30A → Integration 3.0A ❌
+- Write: Integration 1A → Inverter 10A ❌
+
+**After v0.2.8:**
+- Read: Inverter 30A → Integration 30A ✅
+- Write: Integration 1A → Inverter 1A ✅
+- Slider max: 80A (not 800A) ✅
+
+### 🧪 Testing - SPF Users
+
+If you have **SPF 3000-6000 ES Plus**:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Verify charge current controls:**
+   - Check `number.growatt_ac_charge_current` - Should show actual value (e.g., 30A not 3.0A)
+   - Check `number.growatt_generator_charge_current` - Should show actual value
+   - Slider max should be 80A (not 800A)
+   - Set a value (e.g., 25A) and verify on inverter menu it matches
+
+3. **IMPORTANT:** If you set values in v0.2.7, they may be 10x wrong:
+   - Example: Set "30A" in v0.2.7 → Actually wrote 300A (off-scale/invalid)
+   - Check your inverter settings and adjust if needed
+
+### Technical Notes
+
+**Why the confusion:**
+- Many Growatt profiles (WIT, TL-XH, MOD) DO store current as value×10 with scale 0.1
+- SPF is an exception - it stores current values directly
+- The v0.2.7 fix assumed all profiles worked the same way
+
+**SPF register storage confirmed:**
+- Register 38/83 contains: 30 (for 30A), 50 (for 50A), 80 (for 80A)
+- NOT: 300 (for 30A), 500 (for 50A), 800 (for 80A)
+
+---
+
 ## 🚨 CRITICAL: Battery Power Showing Simultaneous Charge AND Discharge Fixed ⚡
 
 **FIXED:** TL-XH, MIN TL-XH, SPH, and SPH TL3 models showing impossible simultaneous battery charge AND discharge with similar values (e.g., 1545W charging + 1625W discharging).
