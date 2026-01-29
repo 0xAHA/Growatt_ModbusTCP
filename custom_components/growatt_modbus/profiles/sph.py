@@ -385,15 +385,21 @@ SPH_8000_10000_HU = {
         1120: {'name': 'bms_min_soc', 'scale': 1, 'unit': '%', 'desc': 'Parallel minimum SOC'},
     },
     'holding_registers': {
-        **SPH_7000_10000['holding_registers'],
+        # SPH HU uses different register architecture - only basic control registers work
+        # 1000+ range contains INPUT registers (BMS data), NOT holding registers
+        # DO NOT inherit from SPH_7000_10000 - registers 1044, 1070-1071, 1090-1092, 1100-1108 don't exist on HU
+
+        # Basic Control (0-10 range)
+        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
+        3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW'},
+
+        # HU-specific controls (1000+ range)
         1008: {'name': 'system_enable', 'scale': 1, 'unit': '', 'access': 'RW',
                'desc': 'System enable control',
                'values': {
                    0: 'Disabled',
                    1: 'Enabled'
                }},
-        # Note: Register 1044 priority_mode is inherited from SPH_7000_10000 base profile
-        # No need to redefine - keep base definition with valid_range and values
     }
 }
 

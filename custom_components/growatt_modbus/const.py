@@ -306,6 +306,16 @@ WRITABLE_REGISTERS = {
         },
         'desc': 'Enable charging from AC (grid/backup)'
     },
+    'system_enable': {
+        'register': 1008,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'System enable control (SPH HU models)'
+    },
 
     # Time Period Controls (HHMM format: 530 = 05:30, 2300 = 23:00)
     'time_period_1_start': {
