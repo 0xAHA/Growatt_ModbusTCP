@@ -85,6 +85,7 @@ SENSOR_TYPES = {
         'battery_charge_today', 'battery_discharge_today',
         # SPF Off-Grid daily battery sensors
         'ac_charge_energy_today', 'ac_discharge_energy_today',
+        'op_discharge_energy_today',
     ],
 
     # Lifetime total sensors - always retain last value
@@ -93,6 +94,8 @@ SENSOR_TYPES = {
         'load_energy_total', 'energy_to_user_total', 'grid_energy_total',
         # Battery lifetime sensors
         'battery_charge_total', 'battery_discharge_total',
+        # SPF Off-Grid lifetime battery sensors
+        'op_discharge_energy_total',
     ],
 
     # Diagnostic sensors - go unavailable when offline
@@ -488,6 +491,8 @@ SENSOR_DEVICE_MAP = {
         'priority_mode',  # Battery priority mode
         # SPF Off-Grid AC charge/discharge energy
         'ac_charge_energy_today', 'ac_discharge_energy_today',
+        # SPF Off-Grid operational discharge energy
+        'op_discharge_energy_today', 'op_discharge_energy_total',
         # BMS sensors (SPH HU and other models with battery management)
         'bms_status', 'bms_status_old', 'bms_error', 'bms_error_old',
         'bms_warn_info', 'bms_warn_info_old', 'bms_max_current',

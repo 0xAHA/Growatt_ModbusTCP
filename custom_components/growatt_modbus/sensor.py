@@ -730,6 +730,24 @@ SENSOR_DEFINITIONS = {
         "attr": "ac_discharge_energy_today",
         "condition": lambda data: hasattr(data, 'ac_discharge_energy_today') and data.ac_discharge_energy_today > 0,
     },
+    "op_discharge_energy_today": {
+        "name": "Operational Discharge Energy Today",
+        "icon": "mdi:transmission-tower-export",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "op_discharge_energy_today",
+        "condition": lambda data: hasattr(data, 'op_discharge_energy_today') and data.op_discharge_energy_today > 0,
+    },
+    "op_discharge_energy_total": {
+        "name": "Operational Discharge Energy Total",
+        "icon": "mdi:transmission-tower-export",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "op_discharge_energy_total",
+        "condition": lambda data: hasattr(data, 'op_discharge_energy_total') and data.op_discharge_energy_total > 0,
+    },
 
     # System Sensors
     "status": {

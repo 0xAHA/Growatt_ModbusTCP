@@ -146,6 +146,12 @@ SPF_3000_6000_ES_PLUS = {
         # Fan Speeds
         81: {'name': 'mppt_fan_speed', 'scale': 1, 'unit': '%', 'desc': 'MPPT fan speed percentage'},
         82: {'name': 'inverter_fan_speed', 'scale': 1, 'unit': '%', 'desc': 'Inverter fan speed percentage'},
+
+        # Operational Discharge Energy (Equipment Operation Discharge)
+        85: {'name': 'op_discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 86, 'desc': 'Operational discharge energy today (HIGH word)'},
+        86: {'name': 'op_discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 85, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Operational discharge energy today (LOW word)'},
+        87: {'name': 'op_discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 88, 'desc': 'Operational discharge energy total (HIGH word)'},
+        88: {'name': 'op_discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 87, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Operational discharge energy total (LOW word)'},
     },
     'holding_registers': {
         # System Control
