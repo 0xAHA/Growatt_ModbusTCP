@@ -385,11 +385,16 @@ SPH_8000_10000_HU = {
         1120: {'name': 'bms_min_soc', 'scale': 1, 'unit': '%', 'desc': 'Parallel minimum SOC'},
     },
     'holding_registers': {
-        # SPH HU has full 1000-1124 holding register range for battery controls
-        # Inherits all battery management registers from SPH_7000_10000
-        **SPH_7000_10000['holding_registers'],
+        # SPH HU uses different register architecture than SPH 7-10kW
+        # Battery management registers (1044, 1070-1071, 1090-1092, 1100-1108) return Modbus exceptions
+        # These settings must be configured via Growatt ShinePhone app or inverter LCD
+        # 1000+ range has INPUT registers (BMS data) but NOT corresponding HOLDING registers
 
-        # HU-specific control (in addition to inherited registers)
+        # Basic Control (0-10 range)
+        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
+        3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW'},
+
+        # HU-specific control (1000+ range)
         1008: {'name': 'system_enable', 'scale': 1, 'unit': '', 'access': 'RW',
                'desc': 'System enable control',
                'values': {
