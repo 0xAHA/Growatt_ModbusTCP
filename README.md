@@ -149,7 +149,6 @@ Direct USB connection via RS485-to-USB adapter (e.g., `/dev/ttyUSB0` or `COM3`)
 https://my.home-assistant.io/redirect/hacs_repository/?owner=0xAHA&repository=Growatt_ModbusTCP&category=integration
 )
 
-
 **Step 1: Add Custom Repository**
 
 1. Open **HACS** in Home Assistant
