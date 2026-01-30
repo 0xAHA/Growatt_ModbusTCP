@@ -483,6 +483,88 @@ CHILD_PROFILE = {
 }
 ```
 
+### Issue 7: MIC Micro Inverter Detection Failures
+
+**Symptoms:** MIC 1000TL-X or other micro inverters (600W-3.3kW) detected as MIN 3000-6000TL-X or communication failures
+
+**Common causes:**
+1. **Wrong detection order** - Auto-detection checked MIN (3000+ range) before MIC (0-179 range)
+2. **Serial/RTU converter misconfiguration** - Wrong timing or framing settings
+3. **Model name not recognized** - Model string doesn't match patterns
+
+**Solution 1: Verify correct profile selected**
+- MIC uses 0-179 register range (legacy V3.05 protocol, 2013)
+- MIN uses 3000+ register range (V1.39 protocol)
+- These are completely different protocols - MIN profile won't work on MIC!
+
+**Solution 2: Check serial/RTU converter settings (USR-DR164, etc.)**
+
+For Modbus RTU over serial at 9600 baud:
+
+```yaml
+Required Settings:
+- Baud Rate: 9600
+- Data Bits: 8
+- Parity: None
+- Stop Bits: 1  ← NOT "CTSRTS" or "2"!
+- Pack Interval: 50-100ms  ← NOT 20ms!
+
+Common Mistakes:
+❌ Stop Bit = "CTSRTS" → Hardware flow control not supported
+❌ Pack Interval = 20ms → Too short for inverter processing
+✅ Stop Bit = "1" → Standard Modbus framing
+✅ Pack Interval = 50-100ms → Safe timing for 9600 baud
+```
+
+**Why timing matters for MIC:**
+- Frame transmission at 9600 baud: ~10ms (8-10 bytes)
+- MIC inverter processing time: 50-100ms (legacy protocol may be slower)
+- Total round-trip: 100-150ms minimum
+- Pack interval too short (20ms) cuts off inverter responses
+
+**Frame timing calculation:**
+```
+At 9600 baud with 8N1:
+- 1 bit time: 104 μs
+- 1 byte (8+1+1): 1.04 ms
+- Modbus read 1 register: ~8-10 bytes → 10ms transmission
+- Inverter processing: 50-100ms
+- Safe interval: 50-100ms between requests
+```
+
+**Solution 3: Manual profile selection**
+If auto-detection fails, manually select correct profile:
+- Navigate to: Settings → Devices & Services → Growatt Modbus → Configure
+- Select: "MIC (0.6-3.3kW)" from dropdown
+- Verify sensors: ~15-20 sensors (not 40+ like MIN)
+
+**Expected MIC sensors:**
+- PV1 voltage/current/power (single string only)
+- AC voltage/current/power/frequency
+- Energy today/total
+- Inverter/IPM temperature
+- Status/fault codes
+- NO Grid sensors (MIC doesn't have grid monitoring)
+- NO PV2/PV3 sensors (MIC is single string only)
+
+**MIC model patterns recognized:**
+```python
+'MIC600', 'MIC750', 'MIC1000', 'MIC1500',
+'MIC2000', 'MIC2500', 'MIC3000', 'MIC3300'
+→ All map to: mic_600_3300tl_x
+```
+
+**Detection order (fixed in v0.2.7):**
+```
+1. Check OffGrid DTC (SPF prevention)
+2. Check VPP DTC (register 30000)
+3. Check model name
+4. Check MIC range (0-179) ← NOW BEFORE MIN
+5. Check MIN range (3000+)
+6. Check SPH range (battery)
+7. Check 3-phase (MOD/MID)
+```
+
 ---
 
 ## Version Bumping Checklist

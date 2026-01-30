@@ -166,7 +166,7 @@ TL_XH_3000_10000_V201 = {
         # Battery Cluster 1 State
         # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_power', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         # VPP V2.01 Battery Energy and Power registers (validated from real-world register scans)
         31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery charge energy today HIGH'},
         31203: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy today'},
@@ -311,11 +311,11 @@ MIN_TL_XH_3000_10000_V201 = {
 
         # === LEGACY BATTERY POWER REGISTERS (3178-3181) ===
         # Some TL-XH models provide unsigned battery power in addition to VPP 31200+ signed power
-        # These are legacy/alternative registers - users can disable if not needed
-        3178: {'name': 'battery_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 3179, 'desc': 'Battery discharge power HIGH (unsigned)'},
-        3179: {'name': 'battery_discharge_power', 'scale': 1, 'unit': '', 'pair': 3178, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Battery discharge power (unsigned, positive=discharge)'},
-        3180: {'name': 'battery_charge_power_high', 'scale': 1, 'unit': '', 'pair': 3181, 'desc': 'Battery charge power HIGH (unsigned)'},
-        3181: {'name': 'battery_charge_power', 'scale': 1, 'unit': '', 'pair': 3180, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Battery charge power (unsigned, positive=charge)'},
+        # These are fallback registers when VPP 31200+ is not available
+        3178: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 3179, 'desc': 'Battery discharge power HIGH (unsigned)'},
+        3179: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 3178, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Battery discharge power (unsigned, positive=discharge)'},
+        3180: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 3181, 'desc': 'Battery charge power HIGH (unsigned)'},
+        3181: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 3180, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Battery charge power (unsigned, positive=charge)'},
 
         # === VPP V2.01 BATTERY RANGE (31200+) ===
         # Status
@@ -327,7 +327,7 @@ MIN_TL_XH_3000_10000_V201 = {
         # Battery Cluster 1 State
         # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_power', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         # VPP V2.01 Battery Energy and Power registers (validated from real-world register scans)
         31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery charge energy today HIGH'},
         31203: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy today'},

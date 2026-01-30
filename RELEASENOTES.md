@@ -1,5 +1,481 @@
 # Release Notes
 
+# Release Notes - v0.2.8
+
+## 🔌 SPF Charge Current Scale Fixed (v0.2.7 Regression) ⚡
+
+**FIXED:** v0.2.7 introduced a 10x scaling bug in SPF AC/Generator charge current causing incorrect readings and writes.
+
+### Problem
+
+After v0.2.7 update, SPF users reported:
+- Inverter shows **30A** → Integration reads **3.0A** (10x too small)
+- User sets **1A** in integration → Inverter receives **10A** (10x too large)
+- All charge current values were 10x wrong in both directions
+
+### Root Cause
+
+**v0.2.7 made wrong assumption about SPF register storage format.**
+
+**v0.2.6 and earlier:**
+- Scale: 1, valid_range: (0, 800)
+- Problem: Slider showed 0-800A ❌
+
+**v0.2.7 "fix" (WRONG):**
+- Scale: 0.1, valid_range: (0, 800)
+- Assumption: "Register stores value × 10" (like some other profiles)
+- Reality: SPF stores values DIRECTLY (30 = 30A, not 300 = 30A)
+- Result: Everything 10x wrong! ❌
+
+### What's Fixed
+
+**v0.2.8 correction:**
+- Scale: **1** (reverted - SPF stores directly!)
+- valid_range: **(0, 80)** (THIS was the real issue!)
+
+**The original scale=1 was correct.** The problem was just the valid_range being too large.
+
+**Files changed:**
+- `profiles/spf.py` - Registers 38 & 83: scale 0.1 → 1, valid_range (0,800) → (0,80)
+- `const.py` - WRITABLE_REGISTERS: scale 0.1 → 1, valid_range (0,800) → (0,80)
+
+### Result
+
+**Before v0.2.8:**
+- Read: Inverter 30A → Integration 3.0A ❌
+- Write: Integration 1A → Inverter 10A ❌
+
+**After v0.2.8:**
+- Read: Inverter 30A → Integration 30A ✅
+- Write: Integration 1A → Inverter 1A ✅
+- Slider max: 80A (not 800A) ✅
+
+### 🧪 Testing - SPF Users
+
+If you have **SPF 3000-6000 ES Plus**:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Verify charge current controls:**
+   - Check `number.growatt_ac_charge_current` - Should show actual value (e.g., 30A not 3.0A)
+   - Check `number.growatt_generator_charge_current` - Should show actual value
+   - Slider max should be 80A (not 800A)
+   - Set a value (e.g., 25A) and verify on inverter menu it matches
+
+3. **IMPORTANT:** If you set values in v0.2.7, they may be 10x wrong:
+   - Example: Set "30A" in v0.2.7 → Actually wrote 300A (off-scale/invalid)
+   - Check your inverter settings and adjust if needed
+
+### Technical Notes
+
+**Why the confusion:**
+- Many Growatt profiles (WIT, TL-XH, MOD) DO store current as value×10 with scale 0.1
+- SPF is an exception - it stores current values directly
+- The v0.2.7 fix assumed all profiles worked the same way
+
+**SPF register storage confirmed:**
+- Register 38/83 contains: 30 (for 30A), 50 (for 50A), 80 (for 80A)
+- NOT: 300 (for 30A), 500 (for 50A), 800 (for 80A)
+
+---
+
+## 🚨 CRITICAL: Battery Power Showing Simultaneous Charge AND Discharge Fixed ⚡
+
+**FIXED:** TL-XH, MIN TL-XH, SPH, and SPH TL3 models showing impossible simultaneous battery charge AND discharge with similar values (e.g., 1545W charging + 1625W discharging).
+
+### Problem
+
+Users reported impossible battery behavior:
+- **Battery showing charge AND discharge at same time** (1545W + 1625W)
+- Battery power stuck at low values (22.8W) with actual power in wrong sensor
+- Snow on PV panels (no production) but battery showing activity
+- Values don't match actual battery state
+
+**Example from user:**
+> "The entities show a charge of 1545 watts and a discharge of 1625 watts at the same time. There is snow on the PV modules, so they are producing almost no output."
+
+### Root Cause
+
+**Critical naming bug** in 6 hybrid inverter profiles broke the coordinator's battery power detection:
+
+**Coordinator searches for:** `'battery_power_low'` (register 31201)
+**Profiles had:** `'battery_power'` (NO `_low` suffix!)
+
+**Cascade failure:**
+```
+1. Coordinator searches for battery_power_low → NOT FOUND ❌
+2. Falls back to separate unsigned registers:
+   - charge_power_low (31205) = 1545W
+   - discharge_power_low (31209) = 1625W
+3. Coordinator reads BOTH registers → Sets BOTH sensor values
+4. User sees IMPOSSIBLE simultaneous charge + discharge! ❌
+```
+
+**Why fallback registers have values:**
+- VPP Protocol V2.01 provides BOTH signed (31200-31201) and unsigned (31204-31209) power registers
+- Unsigned registers always show absolute values whether battery is charging or discharging
+- **Only signed register (31201) knows the actual direction** (positive=charge, negative=discharge)
+- When coordinator can't find signed register, it reads both unsigned registers and displays both!
+
+### What's Fixed
+
+**Fixed register naming in 6 profiles:**
+
+1. **TL_XH_3000_10000_V201** - Standard TL-XH with V2.01 protocol
+2. **TL_XH_US_3000_10000_V201** - US version of TL-XH
+3. **MIN_TL_XH_3000_10000_V201** - MIN series TL-XH hybrid (DTC 5100)
+4. **SPH_3000_6000_V201** - Single-phase SPH 3-6kW
+5. **SPH_7000_10000_V201** - Single-phase SPH 7-10kW
+6. **SPH_TL3_3000_10000_V201** - Three-phase SPH TL3
+
+**Change:**
+```python
+# BEFORE (broken):
+31201: {'name': 'battery_power', ...}  # Coordinator can't find it
+
+# AFTER (fixed):
+31201: {'name': 'battery_power_low', ...}  # Coordinator finds it! ✅
+```
+
+**Additional fix for MIN_TL_XH:**
+Also renamed 3000-range fallback registers to match coordinator expectations:
+```python
+# BEFORE:
+3179: {'name': 'battery_discharge_power', ...}  # Wrong name
+3181: {'name': 'battery_charge_power', ...}      # Wrong name
+
+# AFTER:
+3179: {'name': 'discharge_power_low', ...}  # Coordinator finds it! ✅
+3181: {'name': 'charge_power_low', ...}      # Coordinator finds it! ✅
+```
+
+### Result
+
+**Before v0.2.8:**
+- ❌ Battery charge power: 1545W
+- ❌ Battery discharge power: 1625W (simultaneous!)
+- ❌ Battery power: 0W or stuck value
+- ❌ Doesn't match actual battery behavior
+
+**After v0.2.8:**
+- ✅ Coordinator finds signed battery_power_low register (31201)
+- ✅ Uses correct signed value (positive=charging, negative=discharging)
+- ✅ Shows ONLY charge power when charging
+- ✅ Shows ONLY discharge power when discharging
+- ✅ Never shows both at same time
+- ✅ Matches actual battery behavior
+
+### 🧪 Testing - Affected Users
+
+If you have **TL-XH, MIN TL-XH, SPH, or SPH TL3** with battery:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Verify battery sensors:**
+   - Check Battery device sensors
+   - Should show EITHER charge power OR discharge power (never both!)
+   - Values should match actual battery state
+   - If charging: charge_power > 0, discharge_power = 0
+   - If discharging: discharge_power > 0, charge_power = 0
+   - If idle: both = 0
+
+3. **Check logs (optional):**
+   - Look for: `Battery power (signed): HIGH=xxx, LOW=xxx → XXXXwW`
+   - Should see signed value being used (not falling back to unsigned)
+
+### Technical Notes
+
+**Why this bug was hard to catch:**
+- The unsigned fallback registers (31205, 31209) DO contain valid values
+- They just show absolute magnitudes, not direction
+- Integration appeared to work, just showed impossible values
+- Users saw "reasonable" numbers (1545W, 1625W) not obviously wrong
+
+**Naming convention requirement:**
+The coordinator uses `_find_register_by_name()` to search for registers in priority order:
+1. Search for `battery_power_low` (signed, VPP 31201)
+2. If not found, search for `charge_power_low` + `discharge_power_low` (unsigned fallback)
+3. If not found, calculate from V×I
+
+Register names MUST match coordinator's search strings exactly!
+
+---
+
+## 🔍 MIC Micro Inverter Auto-Detection Fixed
+
+**FIXED:** MIC 1000TL-X and other MIC micro inverters (600W-3.3kW) being incorrectly detected as MIN 3000-6000TL-X during auto-detection.
+
+### Problem
+
+Auto-detection was checking **MIN series (3000+ range) before MIC series (0-179 range)**, causing misdetection:
+
+```
+Detection order (incorrect):
+1. Check MIN at register 3003 (3000+ range)
+2. Check SPH at register 3169 (battery)
+3. Check 3-phase at register 38/42
+4. Default to MIN 3000-6000TL-X
+→ MIC never checked! ❌
+```
+
+**Result:**
+- MIC 1000TL-X detected as MIN 3000-6000TL-X
+- Wrong sensors created (Grid, PV1/PV2, consumption)
+- Communication errors with wrong register ranges
+- Slow connection due to repeated failed reads
+
+### Root Cause
+
+MIC micro inverters use **legacy V3.05 protocol (0-179 register range)**, completely different from MIN series **V1.39 protocol (3000+ range)**.
+
+The register probing logic in `async_detect_inverter_series()` never checked the 0-179 range, always falling back to MIN profile.
+
+### What's Fixed
+
+Added MIC detection BEFORE MIN detection:
+
+```python
+# NEW: Check MIC series FIRST (0-179 range)
+mic_test = read register 3 (pv1_voltage in MIC range)
+if register 3 responds AND register 3003 does NOT:
+    → MIC series (uses 0-179, not 3000+) ✅
+
+# Then check MIN series (3000+ range)
+min_test = read register 3003
+if register 3003 responds:
+    → MIN series ✅
+```
+
+**Logic:**
+- MIC: Has 0-179 range, does NOT have 3000 range
+- MIN: Has 3000+ range, may also have 0-179 range
+- Check MIC first to prevent MIN false positive
+
+### Model Name Detection
+
+MIC 1000TL-X is also detected by model name if available:
+- Pattern: `MIC1000` → Profile: `mic_600_3300tl_x`
+- Covers: MIC 600, 750, 1000, 1500, 2000, 2500, 3000, 3300
+
+### 🧪 Testing - MIC Users
+
+If you have **MIC 600-3300TL-X**:
+
+1. **Delete and re-add integration:**
+   - Settings → Devices & Services → Growatt Modbus → Delete
+   - Add integration again with auto-detection
+
+2. **Verify correct profile:**
+   - Device info should show: "MIC 600-3300TL-X"
+   - Should have ~15-20 sensors (not 40+ like MIN)
+
+3. **Check sensors:**
+   - PV1 voltage/current/power ✅
+   - AC voltage/current/power/frequency ✅
+   - Energy today/total ✅
+   - Temperatures ✅
+   - NO Grid sensors (MIC doesn't have grid monitoring)
+   - NO PV2/PV3 sensors (MIC is single string only)
+
+### Converter Configuration Notes
+
+**For serial/RTU connections via USR-DR164 or similar:**
+
+If experiencing communication issues with MIC profile:
+
+1. **Stop Bit:** Must be "1" (not "CTSRTS" or "2")
+2. **Pack Interval:** 50-100ms minimum (20ms too short for Modbus RTU at 9600 baud)
+3. **Baud Rate:** 9600 (standard for Growatt)
+4. **Parity:** None (standard)
+
+Frame timing at 9600 baud:
+- Frame transmission: ~10ms
+- Inverter processing: 50-100ms
+- Minimum safe interval: 50-100ms between requests
+
+**Why this matters:**
+- MIC uses legacy protocol (2013) which may be more timing-sensitive
+- 20ms pack interval doesn't allow enough time for inverter processing
+- CTSRTS (hardware flow control) not supported by inverter → framing errors
+
+---
+
+## ⚡ SPH 10000TL-HU Battery Controls Restored + BMS Sensors Visible
+
+**FIXED:** SPH/SPM 8000-10000TL-HU battery control registers restored and BMS sensors now visible even when reporting 0 values.
+
+### Problem
+
+SPH HU users experienced two issues:
+
+1. **Missing battery controls** after earlier fix incorrectly removed holding registers
+2. **BMS sensors hidden** (cycle count, state of health) when battery reported 0 values
+
+### Root Cause
+
+**Issue 1: Register Range Misunderstanding**
+- Initial report suggested HU only responds to 1000-1024 holding register range
+- Previous commit removed battery control registers 1044, 1070-1071, 1090-1092, 1100-1108
+- **Actually:** HU responds to FULL 1000-1124 range (not just 1000-1024)
+- Result: All battery management controls disappeared ❌
+
+**Issue 2: Overly Strict Sensor Conditions**
+- `bms_cycle_count` and `bms_soh` sensors had `> 0` conditions
+- When BMS reported 0 (new battery, or limited firmware support), sensors didn't appear
+- 0 is a valid value for these sensors
+
+### What's Fixed
+
+**1. Restored All SPH HU Battery Control Registers:**
+
+| Register | Control | Function |
+|----------|---------|----------|
+| 1044 | Priority Mode | Load First / Battery First / Grid First |
+| 1070 | Discharge Power Rate | 0-100% discharge power limit |
+| 1071 | Discharge Stopped SOC | Stop discharging at X% SOC |
+| 1090 | Charge Power Rate | 0-100% charge power limit |
+| 1091 | Charge Stopped SOC | Stop charging at X% SOC |
+| 1092 | AC Charge Enable | Enable/disable grid charging |
+| 1100-1108 | Time Period Controls | Schedule charging/discharging times |
+| 1008 | System Enable | HU-specific system control |
+
+**2. Fixed BMS Sensor Conditions:**
+- Removed `> 0` requirement from `bms_cycle_count` and `bms_soh`
+- Sensors now appear if BMS provides data, even if value is 0
+
+**3. Added system_enable to Writable Registers:**
+- Register 1008 now available as control entity in Home Assistant
+- Critical for SPH HU battery operation
+
+### Result
+
+**Before v0.2.8:**
+- ❌ Only 3 basic controls (on/off, power rate, system enable)
+- ❌ Battery management controls missing
+- ❌ BMS cycle count/health sensors hidden
+- ❌ Can't configure grid charging properly
+
+**After v0.2.8:**
+- ✅ All 8 battery control registers available
+- ✅ Full control over charge/discharge rates and SOC limits
+- ✅ Time-based scheduling controls
+- ✅ BMS sensors visible even when 0
+- ✅ System enable control accessible
+
+### 🧪 Testing - SPH HU Users
+
+**To configure grid charging (current issue for many users):**
+
+Write these holding register values:
+
+| Register | Control | Recommended Value |
+|----------|---------|-------------------|
+| 1092 | AC Charge Enable | **1** (Enabled) |
+| 1090 | Charge Power Rate | **100** (100% power) |
+| 1091 | Charge Stopped SOC | **100** (charge to 100%) |
+| 1070 | Discharge Power Rate | **100** (100% power) |
+| 1071 | Discharge Stopped SOC | **10** (discharge to 10%) |
+
+**Why battery wasn't charging from grid:**
+- Register 1092 was likely 0 (AC charging disabled)
+- Register 1090 was likely 0 (charge power limited to 0%)
+- These values prevented any grid charging
+
+After updating to v0.2.8, use the control entities in Home Assistant to set these values.
+
+---
+
+## 🔋 SPF Battery Sensors Fixed (Charge Energy & Current Stuck at Zero)
+
+**FIXED:** SPF 6000 ES Plus battery sensors (charge today/total, current) were stuck at zero due to register naming mismatch.
+
+### Problem
+
+SPF users reported these battery sensors stuck at 0:
+- Battery Charge Today
+- Battery Charge Total
+- Battery Current
+- Battery Temperature (not available - hardware limitation)
+
+### Root Cause
+
+**Register naming mismatch between profile and sensor definitions:**
+
+Sensor definitions look for:
+- `charge_energy_today` attribute
+- `charge_energy_total` attribute
+- `battery_current` attribute
+
+SPF profile had:
+- `ac_charge_energy_today` (registers 56-57) ❌
+- `ac_charge_energy_total` (registers 58-59) ❌
+- `ac_charge_battery_current` (register 68) ❌
+
+**Result:** Sensors created but showed 0 because coordinator couldn't find matching attributes.
+
+### What's Fixed
+
+**Renamed SPF registers to match sensor expectations:**
+
+| Registers | Old Name | New Name | Sensor |
+|-----------|----------|----------|--------|
+| 56-57 | ac_charge_energy_today | **charge_energy_today** | Battery Charge Today ✅ |
+| 58-59 | ac_charge_energy_total | **charge_energy_total** | Battery Charge Total ✅ |
+| 68 | ac_charge_battery_current | **battery_current** | Battery Current ✅ |
+
+### Important SPF Limitations
+
+**These are SPF HARDWARE limitations, not bugs:**
+
+1. **Battery Temperature:** NOT AVAILABLE
+   - SPF hardware does not provide battery temperature sensor
+   - This sensor will never appear for SPF models
+
+2. **Battery Current:** Only measured during AC charging
+   - Shows current when charging from grid/generator
+   - Shows 0 when charging from PV or when discharging
+   - This is an SPF hardware limitation
+
+3. **Battery Charge Energy:** Only tracks AC charging
+   - Measures energy from grid/generator to battery
+   - Does NOT include PV-to-battery charging energy
+   - SPF doesn't provide separate PV charge counters
+
+### Result
+
+**Before v0.2.8:**
+- ❌ Battery Charge Today: 0 kWh (should show AC charge)
+- ❌ Battery Charge Total: 0 kWh (should show AC charge)
+- ❌ Battery Current: 0 A (should show current during AC charging)
+- ❌ Battery Temperature: 0°C (not available - hardware limitation)
+
+**After v0.2.8:**
+- ✅ Battery Charge Today: Shows AC charge energy from grid/gen
+- ✅ Battery Charge Total: Shows total AC charge energy
+- ✅ Battery Current: Shows current during AC charging (0 otherwise)
+- ⚠️ Battery Temperature: Still unavailable (SPF hardware doesn't have it)
+
+### 🧪 Testing - SPF Users
+
+If you have **SPF 3000-6000 ES Plus**:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Verify battery sensors:**
+   - Battery Charge Today should show values > 0 when charging from AC
+   - Battery Current should show current when grid/gen is charging battery
+   - Battery Temperature will not appear (hardware limitation)
+
+3. **Understanding the readings:**
+   - Charge energy only increments when charging from grid/generator (not PV)
+   - Battery current only shows during AC charging phase
+   - These limitations are due to SPF hardware design
+
+---
+
 ## 🌱 Early Adopter Notice - Help Us Grow!
 
 > **This integration is actively evolving with your help!**

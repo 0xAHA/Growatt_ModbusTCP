@@ -385,15 +385,17 @@ SPH_8000_10000_HU = {
         1120: {'name': 'bms_min_soc', 'scale': 1, 'unit': '%', 'desc': 'Parallel minimum SOC'},
     },
     'holding_registers': {
+        # SPH HU has full 1000-1124 holding register range for battery controls
+        # Inherits all battery management registers from SPH_7000_10000
         **SPH_7000_10000['holding_registers'],
+
+        # HU-specific control (in addition to inherited registers)
         1008: {'name': 'system_enable', 'scale': 1, 'unit': '', 'access': 'RW',
                'desc': 'System enable control',
                'values': {
                    0: 'Disabled',
                    1: 'Enabled'
                }},
-        # Note: Register 1044 priority_mode is inherited from SPH_7000_10000 base profile
-        # No need to redefine - keep base definition with valid_range and values
     }
 }
 
@@ -460,7 +462,7 @@ SPH_3000_6000_V201 = {
         # Battery Cluster 1 State (31200-31223)
         # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_power', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         # Note: 31202-31203 might be charge energy per VPP spec, but keeping as charge power for now (needs validation)
         31202: {'name': 'battery_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31203},
         31203: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W'},
@@ -571,7 +573,7 @@ SPH_7000_10000_V201 = {
         # Battery Cluster 1 State
         # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_power', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         # Note: 31202-31203 might be charge energy per VPP spec, but keeping as charge power for now (needs validation)
         31202: {'name': 'battery_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31203},
         31203: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W'},

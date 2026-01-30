@@ -226,17 +226,17 @@ WRITABLE_REGISTERS = {
     },
     'ac_charge_current': {
         'register': 38,
-        'scale': 0.1,
-        'valid_range': (0, 800),
+        'scale': 1,
+        'valid_range': (0, 80),
         'unit': 'A',
-        'desc': 'AC charging current limit (0-80A, register stores value × 10)'
+        'desc': 'AC charging current limit (0-80A, stored directly)'
     },
     'gen_charge_current': {
         'register': 83,
-        'scale': 0.1,
-        'valid_range': (0, 800),
+        'scale': 1,
+        'valid_range': (0, 80),
         'unit': 'A',
-        'desc': 'Generator charging current limit (0-80A, register stores value × 10)'
+        'desc': 'Generator charging current limit (0-80A, stored directly)'
     },
     # Battery-type-dependent registers (special handling required)
     'bat_low_to_uti': {
@@ -305,6 +305,16 @@ WRITABLE_REGISTERS = {
             1: 'Enabled'
         },
         'desc': 'Enable charging from AC (grid/backup)'
+    },
+    'system_enable': {
+        'register': 1008,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'System enable control (SPH HU models)'
     },
 
     # Time Period Controls (HHMM format: 530 = 05:30, 2300 = 23:00)

@@ -646,7 +646,7 @@ SENSOR_DEFINITIONS = {
         "icon": "mdi:counter",
         "state_class": SensorStateClass.TOTAL,
         "attr": "bms_cycle_count",
-        "condition": lambda data: hasattr(data, 'bms_cycle_count') and data.bms_cycle_count > 0,
+        "condition": lambda data: hasattr(data, 'bms_cycle_count'),
     },
     "bms_soh": {
         "name": "Battery State of Health",
@@ -654,7 +654,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": "%",
         "attr": "bms_soh",
-        "condition": lambda data: hasattr(data, 'bms_soh') and data.bms_soh > 0,
+        "condition": lambda data: hasattr(data, 'bms_soh'),
     },
     "bms_constant_volt": {
         "name": "BMS Constant Voltage",

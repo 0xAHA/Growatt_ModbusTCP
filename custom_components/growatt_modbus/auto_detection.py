@@ -511,8 +511,26 @@ async def async_detect_inverter_series(
         if not await hass.async_add_executor_job(client.connect):
             _LOGGER.error("Failed to connect to inverter for detection")
             return None
-        
-        # CHECK MIN SERIES FIRST (uses 3000 range)
+
+        # CHECK MIC SERIES FIRST (uses 0-179 range, legacy V3.05 protocol)
+        # MIC micro inverters use compact register range and should be detected before MIN
+        # Test for PV1 voltage at register 3 (0-179 range indicator)
+        mic_test = await hass.async_add_executor_job(
+            client.read_input_registers, 3, 1
+        )
+        if mic_test is not None and len(mic_test) > 0:
+            # Verify this is MIC not MIN by checking that 3000 range is NOT available
+            # MIN uses 3000+, MIC uses 0-179
+            min_range_test = await hass.async_add_executor_job(
+                client.read_input_registers, 3003, 1
+            )
+            if min_range_test is None:
+                # Has 0-179 range but NOT 3000 range = MIC series
+                _LOGGER.debug("Detected 0-179 range without 3000 range - MIC micro inverter")
+                await hass.async_add_executor_job(client.disconnect)
+                return 'mic_600_3300tl_x'
+
+        # CHECK MIN SERIES (uses 3000 range)
         # Test for PV1 at register 3003 to confirm MIN series
         min_test = await hass.async_add_executor_job(
             client.read_input_registers, 3003, 1
