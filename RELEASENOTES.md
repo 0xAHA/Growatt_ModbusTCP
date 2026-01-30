@@ -302,6 +302,180 @@ Frame timing at 9600 baud:
 
 ---
 
+## ⚡ SPH 10000TL-HU Battery Controls Restored + BMS Sensors Visible
+
+**FIXED:** SPH/SPM 8000-10000TL-HU battery control registers restored and BMS sensors now visible even when reporting 0 values.
+
+### Problem
+
+SPH HU users experienced two issues:
+
+1. **Missing battery controls** after earlier fix incorrectly removed holding registers
+2. **BMS sensors hidden** (cycle count, state of health) when battery reported 0 values
+
+### Root Cause
+
+**Issue 1: Register Range Misunderstanding**
+- Initial report suggested HU only responds to 1000-1024 holding register range
+- Previous commit removed battery control registers 1044, 1070-1071, 1090-1092, 1100-1108
+- **Actually:** HU responds to FULL 1000-1124 range (not just 1000-1024)
+- Result: All battery management controls disappeared ❌
+
+**Issue 2: Overly Strict Sensor Conditions**
+- `bms_cycle_count` and `bms_soh` sensors had `> 0` conditions
+- When BMS reported 0 (new battery, or limited firmware support), sensors didn't appear
+- 0 is a valid value for these sensors
+
+### What's Fixed
+
+**1. Restored All SPH HU Battery Control Registers:**
+
+| Register | Control | Function |
+|----------|---------|----------|
+| 1044 | Priority Mode | Load First / Battery First / Grid First |
+| 1070 | Discharge Power Rate | 0-100% discharge power limit |
+| 1071 | Discharge Stopped SOC | Stop discharging at X% SOC |
+| 1090 | Charge Power Rate | 0-100% charge power limit |
+| 1091 | Charge Stopped SOC | Stop charging at X% SOC |
+| 1092 | AC Charge Enable | Enable/disable grid charging |
+| 1100-1108 | Time Period Controls | Schedule charging/discharging times |
+| 1008 | System Enable | HU-specific system control |
+
+**2. Fixed BMS Sensor Conditions:**
+- Removed `> 0` requirement from `bms_cycle_count` and `bms_soh`
+- Sensors now appear if BMS provides data, even if value is 0
+
+**3. Added system_enable to Writable Registers:**
+- Register 1008 now available as control entity in Home Assistant
+- Critical for SPH HU battery operation
+
+### Result
+
+**Before v0.2.8:**
+- ❌ Only 3 basic controls (on/off, power rate, system enable)
+- ❌ Battery management controls missing
+- ❌ BMS cycle count/health sensors hidden
+- ❌ Can't configure grid charging properly
+
+**After v0.2.8:**
+- ✅ All 8 battery control registers available
+- ✅ Full control over charge/discharge rates and SOC limits
+- ✅ Time-based scheduling controls
+- ✅ BMS sensors visible even when 0
+- ✅ System enable control accessible
+
+### 🧪 Testing - SPH HU Users
+
+**To configure grid charging (current issue for many users):**
+
+Write these holding register values:
+
+| Register | Control | Recommended Value |
+|----------|---------|-------------------|
+| 1092 | AC Charge Enable | **1** (Enabled) |
+| 1090 | Charge Power Rate | **100** (100% power) |
+| 1091 | Charge Stopped SOC | **100** (charge to 100%) |
+| 1070 | Discharge Power Rate | **100** (100% power) |
+| 1071 | Discharge Stopped SOC | **10** (discharge to 10%) |
+
+**Why battery wasn't charging from grid:**
+- Register 1092 was likely 0 (AC charging disabled)
+- Register 1090 was likely 0 (charge power limited to 0%)
+- These values prevented any grid charging
+
+After updating to v0.2.8, use the control entities in Home Assistant to set these values.
+
+---
+
+## 🔋 SPF Battery Sensors Fixed (Charge Energy & Current Stuck at Zero)
+
+**FIXED:** SPF 6000 ES Plus battery sensors (charge today/total, current) were stuck at zero due to register naming mismatch.
+
+### Problem
+
+SPF users reported these battery sensors stuck at 0:
+- Battery Charge Today
+- Battery Charge Total
+- Battery Current
+- Battery Temperature (not available - hardware limitation)
+
+### Root Cause
+
+**Register naming mismatch between profile and sensor definitions:**
+
+Sensor definitions look for:
+- `charge_energy_today` attribute
+- `charge_energy_total` attribute
+- `battery_current` attribute
+
+SPF profile had:
+- `ac_charge_energy_today` (registers 56-57) ❌
+- `ac_charge_energy_total` (registers 58-59) ❌
+- `ac_charge_battery_current` (register 68) ❌
+
+**Result:** Sensors created but showed 0 because coordinator couldn't find matching attributes.
+
+### What's Fixed
+
+**Renamed SPF registers to match sensor expectations:**
+
+| Registers | Old Name | New Name | Sensor |
+|-----------|----------|----------|--------|
+| 56-57 | ac_charge_energy_today | **charge_energy_today** | Battery Charge Today ✅ |
+| 58-59 | ac_charge_energy_total | **charge_energy_total** | Battery Charge Total ✅ |
+| 68 | ac_charge_battery_current | **battery_current** | Battery Current ✅ |
+
+### Important SPF Limitations
+
+**These are SPF HARDWARE limitations, not bugs:**
+
+1. **Battery Temperature:** NOT AVAILABLE
+   - SPF hardware does not provide battery temperature sensor
+   - This sensor will never appear for SPF models
+
+2. **Battery Current:** Only measured during AC charging
+   - Shows current when charging from grid/generator
+   - Shows 0 when charging from PV or when discharging
+   - This is an SPF hardware limitation
+
+3. **Battery Charge Energy:** Only tracks AC charging
+   - Measures energy from grid/generator to battery
+   - Does NOT include PV-to-battery charging energy
+   - SPF doesn't provide separate PV charge counters
+
+### Result
+
+**Before v0.2.8:**
+- ❌ Battery Charge Today: 0 kWh (should show AC charge)
+- ❌ Battery Charge Total: 0 kWh (should show AC charge)
+- ❌ Battery Current: 0 A (should show current during AC charging)
+- ❌ Battery Temperature: 0°C (not available - hardware limitation)
+
+**After v0.2.8:**
+- ✅ Battery Charge Today: Shows AC charge energy from grid/gen
+- ✅ Battery Charge Total: Shows total AC charge energy
+- ✅ Battery Current: Shows current during AC charging (0 otherwise)
+- ⚠️ Battery Temperature: Still unavailable (SPF hardware doesn't have it)
+
+### 🧪 Testing - SPF Users
+
+If you have **SPF 3000-6000 ES Plus**:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Verify battery sensors:**
+   - Battery Charge Today should show values > 0 when charging from AC
+   - Battery Current should show current when grid/gen is charging battery
+   - Battery Temperature will not appear (hardware limitation)
+
+3. **Understanding the readings:**
+   - Charge energy only increments when charging from grid/generator (not PV)
+   - Battery current only shows during AC charging phase
+   - These limitations are due to SPF hardware design
+
+---
+
 ## 🌱 Early Adopter Notice - Help Us Grow!
 
 > **This integration is actively evolving with your help!**
