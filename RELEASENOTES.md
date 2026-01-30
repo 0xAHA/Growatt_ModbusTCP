@@ -302,24 +302,49 @@ Frame timing at 9600 baud:
 
 ---
 
-## ⚡ SPH 10000TL-HU Battery Controls Restored + BMS Sensors Visible
+## ⚡ SPH 10000TL-HU Profile Fixed + BMS Sensors Visible
 
-**FIXED:** SPH/SPM 8000-10000TL-HU battery control registers restored and BMS sensors now visible even when reporting 0 values.
+**FIXED:** SPH/SPM 8000-10000TL-HU Modbus exceptions eliminated and BMS sensors now visible when reporting 0 values.
 
 ### Problem
 
-SPH HU users experienced two issues:
+SPH HU users experienced:
 
-1. **Missing battery controls** after earlier fix incorrectly removed holding registers
-2. **BMS sensors hidden** (cycle count, state of health) when battery reported 0 values
+1. **Modbus exception errors** flooding logs for registers 1044, 1070-1071, 1090-1092, 1100-1108
+2. **Slow connection/polling** due to repeated failed register reads
+3. **BMS sensors hidden** (cycle count, state of health) when battery reported 0 values
+4. **Confusion about battery controls** - settings visible in Growatt app but not in Home Assistant
 
 ### Root Cause
 
-**Issue 1: Register Range Misunderstanding**
-- Initial report suggested HU only responds to 1000-1024 holding register range
-- Previous commit removed battery control registers 1044, 1070-1071, 1090-1092, 1100-1108
-- **Actually:** HU responds to FULL 1000-1124 range (not just 1000-1024)
-- Result: All battery management controls disappeared ❌
+**Issue 1: Register Architecture Mismatch**
+
+SPH HU uses **different register architecture** than SPH 7-10kW models:
+
+**INPUT Registers (1000-1124):** Read-only BMS sensor data ✅
+- 1090: `bms_max_current` (BMS sensor)
+- 1091: `bms_gauge_rm` (BMS sensor)
+- 1092: `bms_gauge_fcc` (BMS sensor)
+- 1093-1120: Other BMS data
+
+**HOLDING Registers (battery controls):** Return Modbus exceptions ❌
+- 1044: `priority_mode` - **DOESN'T EXIST**
+- 1070-1071: Discharge controls - **DON'T EXIST**
+- 1090-1092: Charge controls - **DON'T EXIST** (collision with INPUT registers!)
+- 1100-1108: Time period controls - **DON'T EXIST**
+
+**From user logs:**
+```
+Modbus error reading holding registers 1044-1044: ExceptionResponse
+Modbus error reading holding registers 1070-1071: ExceptionResponse
+Modbus error reading holding registers 1090-1092: ExceptionResponse
+Modbus error reading holding registers 1100-1108: ExceptionResponse
+```
+
+**Register collision example:**
+- INPUT register 1090 exists (BMS max current, reads 0.0A)
+- HOLDING register 1090 doesn't exist (charge power rate, Modbus exception!)
+- Integration tried to read HOLDING 1090 → error
 
 **Issue 2: Overly Strict Sensor Conditions**
 - `bms_cycle_count` and `bms_soh` sensors had `> 0` conditions
@@ -328,18 +353,18 @@ SPH HU users experienced two issues:
 
 ### What's Fixed
 
-**1. Restored All SPH HU Battery Control Registers:**
+**1. Removed Non-Existent Holding Registers from SPH HU Profile:**
 
-| Register | Control | Function |
-|----------|---------|----------|
-| 1044 | Priority Mode | Load First / Battery First / Grid First |
-| 1070 | Discharge Power Rate | 0-100% discharge power limit |
-| 1071 | Discharge Stopped SOC | Stop discharging at X% SOC |
-| 1090 | Charge Power Rate | 0-100% charge power limit |
-| 1091 | Charge Stopped SOC | Stop charging at X% SOC |
-| 1092 | AC Charge Enable | Enable/disable grid charging |
-| 1100-1108 | Time Period Controls | Schedule charging/discharging times |
-| 1008 | System Enable | HU-specific system control |
+These registers **do NOT exist** as writable holding registers on SPH HU:
+- ❌ Register 1044 (priority_mode)
+- ❌ Registers 1070-1071 (discharge controls)
+- ❌ Registers 1090-1092 (charge controls)
+- ❌ Registers 1100-1108 (time period controls)
+
+Profile now only includes registers that **actually work on HU hardware**:
+- ✅ Register 0 (on_off)
+- ✅ Register 3 (active_power_rate)
+- ✅ Register 1008 (system_enable)
 
 **2. Fixed BMS Sensor Conditions:**
 - Removed `> 0` requirement from `bms_cycle_count` and `bms_soh`
@@ -347,43 +372,56 @@ SPH HU users experienced two issues:
 
 **3. Added system_enable to Writable Registers:**
 - Register 1008 now available as control entity in Home Assistant
-- Critical for SPH HU battery operation
+- HU-specific system enable/disable control
 
 ### Result
 
 **Before v0.2.8:**
-- ❌ Only 3 basic controls (on/off, power rate, system enable)
-- ❌ Battery management controls missing
-- ❌ BMS cycle count/health sensors hidden
-- ❌ Can't configure grid charging properly
+- ❌ Modbus exception errors every polling cycle
+- ❌ Slow connection due to failed reads
+- ❌ BMS cycle count/health sensors hidden when 0
+- ❌ Battery controls showing "Unknown" state
+- ❌ Users confused why app shows settings but HA doesn't
 
 **After v0.2.8:**
-- ✅ All 8 battery control registers available
-- ✅ Full control over charge/discharge rates and SOC limits
-- ✅ Time-based scheduling controls
+- ✅ No Modbus exceptions (only reads registers that exist)
+- ✅ Fast, clean polling
 - ✅ BMS sensors visible even when 0
-- ✅ System enable control accessible
+- ✅ Only working controls appear (on/off, power rate, system enable)
+- ✅ Clear documentation about battery management via app
 
-### 🧪 Testing - SPH HU Users
+### 🧪 Configuration - SPH HU Users
 
-**To configure grid charging (current issue for many users):**
+**Battery Management on SPH HU Models:**
 
-Write these holding register values:
+The SPH HU does **NOT expose battery management via Modbus**. You must configure these settings via:
 
-| Register | Control | Recommended Value |
-|----------|---------|-------------------|
-| 1092 | AC Charge Enable | **1** (Enabled) |
-| 1090 | Charge Power Rate | **100** (100% power) |
-| 1091 | Charge Stopped SOC | **100** (charge to 100%) |
-| 1070 | Discharge Power Rate | **100** (100% power) |
-| 1071 | Discharge Stopped SOC | **10** (discharge to 10%) |
+1. **Growatt ShinePhone App** (recommended)
+2. **Inverter LCD menu**
 
-**Why battery wasn't charging from grid:**
-- Register 1092 was likely 0 (AC charging disabled)
-- Register 1090 was likely 0 (charge power limited to 0%)
-- These values prevented any grid charging
+**Settings available in app/LCD (not in Modbus/HA):**
+- Grid Charge Enable/Disable
+- Grid Charge Rate (1-200A)
+- Generator Charge Enable/Disable
+- Generator Charge Rate
+- Grid Recharge Voltage
+- Recharge Capacity (SOC %)
+- Priority Mode (Load/Battery/Grid First)
+- Discharge limits and scheduling
 
-After updating to v0.2.8, use the control entities in Home Assistant to set these values.
+**What IS available in Home Assistant:**
+
+| Control | Register | Function |
+|---------|----------|----------|
+| On/Off | 0 | Turn inverter on/off |
+| Max Output Power Rate | 3 | Limit max output (0-100%) |
+| System Enable | 1008 | Enable/disable system |
+
+**All BMS sensors work normally** (battery voltage, current, SOC, temp, health, cycles, etc.)
+
+### Why This Design?
+
+The SPH HU is a **newer high-power model** with different firmware architecture than standard SPH 7-10kW. Growatt chose to expose battery management only through their app/LCD interface, not via Modbus. This is a hardware/firmware limitation, not an integration bug
 
 ---
 
