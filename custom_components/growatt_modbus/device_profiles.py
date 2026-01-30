@@ -87,6 +87,8 @@ SPF_OFFGRID_SENSORS: Set[str] = {
     "grid_voltage", "grid_frequency",
     # AC charge/discharge energy (from grid/generator)
     "ac_charge_energy_today", "ac_discharge_energy_today",
+    # Operational discharge energy
+    "op_discharge_energy_today", "op_discharge_energy_total",
     # Fan speeds
     "mppt_fan_speed", "inverter_fan_speed",
     # Temperatures

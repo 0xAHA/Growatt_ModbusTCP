@@ -514,6 +514,64 @@ If you have **SPF 3000-6000 ES Plus**:
 
 ---
 
+## ➕ SPF Operational Discharge Energy Sensors Added
+
+**ADDED:** New operational discharge energy sensors for SPF 3000-6000 ES Plus based on user request.
+
+### What's New
+
+Added two new energy tracking sensors:
+
+| Sensor | Register | Description |
+|--------|----------|-------------|
+| Operational Discharge Energy Today | 85-86 | Daily operational discharge energy (resets at midnight) |
+| Operational Discharge Energy Total | 87-88 | Lifetime operational discharge energy (persistent) |
+
+### Details
+
+**Register Implementation:**
+- Registers 85/86: op_discharge_energy_today (32-bit pair, 0.1 kWh scale)
+- Registers 87/88: op_discharge_energy_total (32-bit pair, 0.1 kWh scale)
+
+**Sensor Properties:**
+- Device: Battery device
+- Device Class: Energy
+- State Class: Total Increasing
+- Unit: kWh
+- Icon: transmission-tower-export
+- Visibility: Shows when value > 0
+
+**Retention Behavior:**
+- Today sensor: Resets at midnight (daily total)
+- Total sensor: Persists across restarts (lifetime total)
+
+### What This Tracks
+
+Operational discharge energy complements the existing battery energy sensors:
+- **Battery Discharge Energy** (60-63): Total battery discharge
+- **AC Discharge Energy** (64-67): Energy from battery to loads via inverter
+- **Operational Discharge Energy** (85-88): Operational discharge tracking (new!)
+
+This provides additional granularity for SPF users to monitor their battery/load energy flows.
+
+### 🧪 Testing - SPF Users
+
+If you have **SPF 3000-6000 ES Plus**:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Check Battery device:**
+   - Look for "Operational Discharge Energy Today" sensor
+   - Look for "Operational Discharge Energy Total" sensor
+
+3. **Monitor values:**
+   - Sensors appear when value > 0
+   - Today sensor resets at midnight
+   - Total sensor accumulates over time
+
+---
+
 ## 🌱 Early Adopter Notice - Help Us Grow!
 
 > **This integration is actively evolving with your help!**
