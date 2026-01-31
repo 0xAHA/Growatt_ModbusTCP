@@ -34,7 +34,7 @@ Battery Sensor Limitations:
 SPF_3000_6000_ES_PLUS = {
     'name': 'SPF 3000-6000 ES PLUS',
     'description': 'Off-grid solar inverter with battery storage and AC charging (3-6kW)',
-    'notes': 'Uses 0-82 register range. Off-grid system with AC input, battery, and load output. No grid export.',
+    'notes': 'Uses 0-88 register range. Off-grid system with AC input, battery, and load output. No grid export.',
     'offgrid_protocol': True,
     'input_registers': {
         # System Status
@@ -115,12 +115,6 @@ SPF_3000_6000_ES_PLUS = {
         49: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'pair': 48, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Solar energy today (LOW word)'},
         50: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'pair': 51, 'desc': 'Solar energy total (HIGH word)'},
         51: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'pair': 50, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Solar energy total (LOW word)'},
-
-        # Load Energy (AC output to loads)
-        52: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 53, 'desc': 'Load energy today (HIGH word)'},
-        53: {'name': 'load_energy_today_low', 'scale': 1, 'unit': '', 'pair': 52, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Load energy today (LOW word)'},
-        54: {'name': 'load_energy_total_high', 'scale': 1, 'unit': '', 'pair': 55, 'desc': 'Load energy total (HIGH word)'},
-        55: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 54, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Load energy total (LOW word)'},
 
         # Battery Charge Energy (from grid/generator via AC charging)
         # Note: SPF only measures AC charging energy (from grid/gen), not PV charging to battery
