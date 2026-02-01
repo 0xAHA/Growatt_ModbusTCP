@@ -1,5 +1,83 @@
 # Release Notes
 
+# Release Notes - v0.2.9
+
+## 🔧 SPF Off-Grid Sensor Fixes - Issues #133 and #134
+
+**FIXED:** Two critical SPF sensor issues causing missing data and "unknown" values.
+
+### Issue #133: Operational Discharge Energy Not Working
+
+**Problem:**
+- SPF users reported: `[SPF 3000-6000 ES PLUS] op_discharge_energy_today_low register not found`
+- Operational Discharge Energy Today and Total sensors showing "unavailable"
+- Manual register reads (85-88) showed valid data
+- Sensors were defined and assigned but not populating
+
+**Root Cause:**
+While registers 85-88 were correctly added to the SPF profile in v0.2.8, the coordinator was missing the code to actually read and populate these data attributes.
+
+**What's Fixed:**
+- Added coordinator code to read `op_discharge_energy_today` from register 86
+- Added coordinator code to read `op_discharge_energy_total` from register 88
+- Sensors now show actual energy values instead of "unavailable"
+
+**Files changed:**
+- `growatt_modbus.py:1116-1126` - Added op_discharge_energy data population
+
+---
+
+### Issue #134: Grid Voltage/Frequency Showing Unknown
+
+**Problem:**
+- SPF grid voltage and frequency sensors showing "unknown"
+- Manual register reads (20-21) showed correct data
+- No related error logs
+- Sensors were defined but values never appeared
+
+**Root Cause:**
+Similar to Issue #133 - registers 20-21 were defined in the SPF profile, but the coordinator had no code to populate `data.grid_voltage` and `data.grid_frequency` attributes.
+
+**What's Fixed:**
+- Added coordinator code to read `grid_voltage` from register 20
+- Added coordinator code to read `grid_frequency` from register 21
+- Grid voltage and frequency now display actual values
+
+**Files changed:**
+- `growatt_modbus.py:844-852` - Added grid voltage/frequency data population
+
+---
+
+### Additional Corrections
+
+**Removed incorrect load_energy registers (52-55) from SPF profile:**
+- These were added by mistake in commit `80f5dff` when misunderstanding Issue #133
+- `op_discharge_energy` (85-88) and `load_energy` (52-55) are different registers
+- Only `op_discharge_energy` was requested and is correct for SPF models
+
+**Updated SPF register range:**
+- Profile notes updated from "0-82 register range" to "0-88 register range"
+- Reflects the actual hardware capability of SPF 3000-6000 ES Plus
+
+---
+
+### 🧪 Testing - SPF Users
+
+If you have **SPF 3000-6000 ES Plus**:
+
+1. **Reload integration:**
+   - Settings → Devices & Services → Growatt Modbus → ⋮ → Reload
+
+2. **Verify operational discharge energy sensors:**
+   - `sensor.growatt_operational_discharge_energy_today` - Should show daily kWh
+   - `sensor.growatt_operational_discharge_energy_total` - Should show lifetime kWh
+
+3. **Verify grid sensors:**
+   - `sensor.growatt_grid_voltage` - Should show voltage (e.g., 230V) even when 0V
+   - `sensor.growatt_grid_frequency` - Should show frequency (e.g., 50Hz or 60Hz)
+
+---
+
 # Release Notes - v0.2.8
 
 ## 🔌 SPF Charge Current Scale Fixed (v0.2.7 Regression) ⚡
