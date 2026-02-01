@@ -840,6 +840,16 @@ class GrowattModbus:
                 data.load_percentage = self._get_register_value(load_percentage_addr) or 0.0
                 logger.debug(f"Load Percentage from reg {load_percentage_addr}: {data.load_percentage}%")
 
+            # Grid/AC Input (SPF Off-Grid, other models)
+            grid_voltage_addr = self._find_register_by_name('grid_voltage')
+            grid_frequency_addr = self._find_register_by_name('grid_frequency')
+            if grid_voltage_addr:
+                data.grid_voltage = self._get_register_value(grid_voltage_addr) or 0.0
+                logger.debug(f"Grid voltage from reg {grid_voltage_addr}: {data.grid_voltage} V")
+            if grid_frequency_addr:
+                data.grid_frequency = self._get_register_value(grid_frequency_addr) or 0.0
+                logger.debug(f"Grid frequency from reg {grid_frequency_addr}: {data.grid_frequency} Hz")
+
             # Three-Phase AC Output (individual phases)
             # Phase R
             ac_voltage_r_addr = self._find_register_by_name('ac_voltage_r')
@@ -1111,7 +1121,18 @@ class GrowattModbus:
             if addr:
                 data.load_energy_total = self._get_register_value(addr) or 0.0
                 logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Load energy total from reg {addr}: {data.load_energy_total} kWh (cache: {self._register_cache.get(addr)})")
-                
+
+            # Operational discharge energy (SPF off-grid models)
+            addr = self._find_register_by_name('op_discharge_energy_today_low')
+            if addr:
+                data.op_discharge_energy_today = self._get_register_value(addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Operational discharge energy today from reg {addr}: {data.op_discharge_energy_today} kWh (cache: {self._register_cache.get(addr)})")
+
+            addr = self._find_register_by_name('op_discharge_energy_total_low')
+            if addr:
+                data.op_discharge_energy_total = self._get_register_value(addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Operational discharge energy total from reg {addr}: {data.op_discharge_energy_total} kWh (cache: {self._register_cache.get(addr)})")
+
         except Exception as e:
             logger.debug(f"Energy breakdown not available: {e}")
     
