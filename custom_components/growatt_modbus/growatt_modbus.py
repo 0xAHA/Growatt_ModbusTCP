@@ -1419,6 +1419,7 @@ class GrowattModbus:
 
                 if power_rate_regs is not None and len(power_rate_regs) >= 1:
                     data.active_power_rate = int(power_rate_regs[0])
+                    data.max_output_power_rate = data.active_power_rate  # Alias for number entity
                     logger.debug("[POWER CTRL] Read active_power_rate: %s%%", data.active_power_rate)
             except Exception as e:
                 logger.debug(f"Could not read active_power_rate register: {e}")
