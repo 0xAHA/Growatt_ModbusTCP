@@ -84,7 +84,7 @@ SPF_OFFGRID_SENSORS: Set[str] = {
     # AC apparent power (VA)
     "ac_apparent_power",
     # AC input from grid/generator
-    "grid_voltage", "grid_frequency",
+    "grid_voltage", "grid_frequency", "ac_input_power",
     # AC charge/discharge energy (from grid/generator)
     "ac_charge_energy_today", "ac_discharge_energy_today",
     # Operational discharge energy
