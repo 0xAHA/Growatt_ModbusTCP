@@ -295,6 +295,14 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfFrequency.HERTZ,
         "attr": "grid_frequency",
     },
+    "ac_input_power": {
+        "name": "AC Input Power",
+        "icon": "mdi:transmission-tower-import",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.WATT,
+        "attr": "ac_input_power",
+    },
 
     # Power Flow Sensors (from registers - storage/hybrid models)
     "power_to_grid": {

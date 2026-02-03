@@ -468,7 +468,7 @@ SENSOR_DEVICE_MAP = {
         'energy_to_grid_today', 'energy_to_grid_total',
         'power_to_grid',
         # SPF Off-Grid: AC input from grid/generator
-        'grid_voltage', 'grid_frequency',
+        'grid_voltage', 'grid_frequency', 'ac_input_power',
     },
 
     # Load device - consumption

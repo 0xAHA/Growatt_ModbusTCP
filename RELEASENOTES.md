@@ -1,5 +1,98 @@
 # Release Notes
 
+# Release Notes - v0.3.0
+
+## 🔧 Missing Sensor and Number Entity Fixes
+
+**FIXED:** Two issues where registers were defined but sensors/controls showed "unknown" or were missing.
+
+---
+
+### Fix #1: SPF AC Input Power Sensor Missing
+
+**Problem:**
+- SPF user reported AC Input Power sensor not appearing even when grid is off
+- Registers 36-37 (`ac_input_power_high/low`) were defined in SPF profile
+- Sensor was completely missing from Home Assistant
+
+**Root Cause:**
+Same pattern as Issues #133 and #134 - registers defined but incomplete sensor implementation:
+- ❌ No sensor definition in `sensor.py`
+- ❌ Not assigned to device in `const.py`
+- ❌ Not added to `SPF_OFFGRID_SENSORS` set
+- ❌ No coordinator code to populate data attribute
+
+**What's Fixed:**
+Complete 5-step sensor implementation following `claude.md`:
+1. ✅ Registers 36-37 already in `profiles/spf.py`
+2. ✅ Added sensor definition to `sensor.py`
+3. ✅ Assigned to `DEVICE_TYPE_GRID` in `const.py`
+4. ✅ Added to `SPF_OFFGRID_SENSORS` in `device_profiles.py`
+5. ✅ Added coordinator code to read and populate `ac_input_power`
+
+**Files changed:**
+- `sensor.py` - Added AC Input Power sensor definition
+- `const.py` - Added 'ac_input_power' to DEVICE_TYPE_GRID
+- `device_profiles.py` - Added "ac_input_power" to SPF_OFFGRID_SENSORS
+- `growatt_modbus.py` - Added coordinator code to populate ac_input_power
+
+**Result:**
+- ✅ AC Input Power sensor now appears in Home Assistant
+- ✅ Shows actual power when grid/generator is present (e.g., 1500W)
+- ✅ Shows 0W when grid is off (always visible, as user requested)
+
+---
+
+### Fix #2: Max Output Power Rate Showing Unknown
+
+**Problem:**
+- MIN 10000 TLX (and other models) showing "unknown" for Max Output Power Rate number entity
+- Slider writes worked correctly, but current value never displayed
+- Issue affected MIN, SPH, and MOD series using holding register 3
+
+**Root Cause:**
+Attribute name mismatch between coordinator and number entity:
+- `WRITABLE_REGISTERS` defines control as `'max_output_power_rate'` (register 3)
+- Coordinator reads register 3 and stores as `data.active_power_rate`
+- Number entity looks for `data.max_output_power_rate` → doesn't exist → "unknown"
+
+This explained the symptoms:
+- ✅ **Writes worked** - entity writes directly to register 3
+- ❌ **Reads failed** - coordinator stored value with wrong attribute name
+
+**What's Fixed:**
+Added alias in coordinator when reading register 3:
+```python
+data.active_power_rate = int(power_rate_regs[0])
+data.max_output_power_rate = data.active_power_rate  # Alias for number entity
+```
+
+**Files changed:**
+- `growatt_modbus.py:1422` - Added max_output_power_rate alias
+
+**Result:**
+- ✅ Max Output Power Rate shows current value from inverter (not "unknown")
+- ✅ Slider still works for adjusting value
+- ✅ Display updates after write operations
+
+**Affected models:** MIN, SPH, MOD series inverters using holding register 3 for active power rate control
+
+---
+
+### 🧪 Testing
+
+**SPF Users:**
+1. Reload integration
+2. Check `sensor.growatt_ac_input_power` appears
+3. Verify it shows 0W when grid off, actual power when grid present
+
+**MIN/SPH/MOD Users:**
+1. Reload integration
+2. Check `number.growatt_max_output_power_rate` shows current percentage (not "unknown")
+3. Verify slider still adjusts value correctly
+
+---
+
 # Release Notes - v0.2.9
 
 ## 🔧 SPF Off-Grid Sensor Fixes - Issues #133 and #134

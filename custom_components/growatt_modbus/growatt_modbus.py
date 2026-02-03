@@ -843,12 +843,16 @@ class GrowattModbus:
             # Grid/AC Input (SPF Off-Grid, other models)
             grid_voltage_addr = self._find_register_by_name('grid_voltage')
             grid_frequency_addr = self._find_register_by_name('grid_frequency')
+            ac_input_power_low_addr = self._find_register_by_name('ac_input_power_low')
             if grid_voltage_addr:
                 data.grid_voltage = self._get_register_value(grid_voltage_addr) or 0.0
                 logger.debug(f"Grid voltage from reg {grid_voltage_addr}: {data.grid_voltage} V")
             if grid_frequency_addr:
                 data.grid_frequency = self._get_register_value(grid_frequency_addr) or 0.0
                 logger.debug(f"Grid frequency from reg {grid_frequency_addr}: {data.grid_frequency} Hz")
+            if ac_input_power_low_addr:
+                data.ac_input_power = self._get_register_value(ac_input_power_low_addr) or 0.0
+                logger.debug(f"AC input power from reg {ac_input_power_low_addr}: {data.ac_input_power} W")
 
             # Three-Phase AC Output (individual phases)
             # Phase R
@@ -1415,6 +1419,7 @@ class GrowattModbus:
 
                 if power_rate_regs is not None and len(power_rate_regs) >= 1:
                     data.active_power_rate = int(power_rate_regs[0])
+                    data.max_output_power_rate = data.active_power_rate  # Alias for number entity
                     logger.debug("[POWER CTRL] Read active_power_rate: %s%%", data.active_power_rate)
             except Exception as e:
                 logger.debug(f"Could not read active_power_rate register: {e}")
