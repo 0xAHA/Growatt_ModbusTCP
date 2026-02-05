@@ -1,4 +1,5 @@
 """Number platform for Growatt Modbus Integration."""
+import asyncio
 import logging
 from typing import Any
 
@@ -33,18 +34,38 @@ async def async_setup_entry(
     from .const import REGISTER_MAPS
     register_map = REGISTER_MAPS.get(register_map_name, {})
     holding_registers = register_map.get('holding_registers', {})
-    
+
     entities = []
+
+    # ---------------------------------------------------------------------
+    # WIT-specific controls (VPP remote) - use dedicated entities with
+    # work mode re-assertion logic
+    # ---------------------------------------------------------------------
+    is_wit = str(register_map_name).upper() == "WIT_4000_15000TL3"
+
+    if is_wit:
+        # Only create controls if the registers exist in this map
+        if 203 in holding_registers:
+            entities.append(GrowattWitExportLimitWNumber(coordinator, config_entry))
+        if 201 in holding_registers:
+            entities.append(GrowattWitActivePowerRateNumber(coordinator, config_entry))
+
+        # NOTE: work_mode is a Select entity (in select.py)
+        if entities:
+            entry_name = config_entry.data.get("name", config_entry.title)
+            _LOGGER.info("Created %d WIT number entities for %s", len(entities), entry_name)
+            async_add_entities(entities)
+        return
+
+    # ---------------------------------------------------------------------
+    # Non-WIT: auto-generate number entities for all writable registers
+    # without 'options'
+    # ---------------------------------------------------------------------
 
     # Auto-generate number entities for all writable registers without 'options'
     for control_name, control_config in WRITABLE_REGISTERS.items():
         if 'options' in control_config:
             continue  # Skip select controls
-
-        # WIT-specific: avoid exposing legacy output limiter controls as 'Active Power' sliders
-        # Only expose VPP remote controls (201/202/203) for WIT.
-        if register_map_name and register_map_name.startswith('WIT_') and control_name in {'max_output_power_rate'}:
-            continue
 
         register_num = control_config['register']
         if register_num not in holding_registers:
@@ -340,3 +361,144 @@ class GrowattActivePowerRateNumber(CoordinatorEntity, NumberEntity):
             await self.coordinator.async_request_refresh()
         else:
             _LOGGER.error("Failed to write active_power_rate")
+
+
+class GrowattWitExportLimitWNumber(CoordinatorEntity, NumberEntity):
+    """WIT VPP: Export limit in watts (holding register 203)."""
+
+    _attr_mode = NumberMode.SLIDER
+    _attr_native_min_value = 0.0
+    _attr_native_max_value = 20000.0
+    _attr_native_step = 1.0
+    _attr_native_unit_of_measurement = "W"
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        coordinator: GrowattModbusCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        entry_name = config_entry.data.get("name", config_entry.title)
+        self._attr_name = f"{entry_name} Export Limit (W)"
+        self._attr_unique_id = f"{config_entry.entry_id}_export_limit_w"
+        self._attr_icon = "mdi:transmission-tower-export"
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        device_type = get_device_type_for_control("export_limit_w")
+        return self.coordinator.get_device_info(device_type)
+
+    @property
+    def native_value(self) -> float | None:
+        data = self.coordinator.data
+        if data is None:
+            return None
+        raw_value = getattr(data, "export_limit_w", None)
+        if raw_value is None:
+            return None
+        return float(raw_value)
+
+    async def async_set_native_value(self, value: float) -> None:
+        raw_value = int(max(0, min(int(value), 20000)))
+        _LOGGER.debug("[WIT] Writing export_limit_w (203) = %d", raw_value)
+        try:
+            success = await self.hass.async_add_executor_job(
+                self.coordinator.modbus_client.write_register,
+                203,
+                raw_value,
+            )
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.exception("[WIT] export_limit_w write failed: %s", err)
+            return
+
+        if success:
+            _LOGGER.info("[WIT] Set export_limit_w to %dW", raw_value)
+            await self.coordinator.async_request_refresh()
+        else:
+            _LOGGER.error("[WIT] Failed to write export_limit_w")
+
+
+class GrowattWitActivePowerRateNumber(CoordinatorEntity, NumberEntity):
+    """WIT VPP: Active power rate percent (holding register 201).
+
+    WIT requires work_mode (202) to be written for charging/discharging.
+    We re-assert work_mode before writing power rate when possible.
+    """
+
+    _attr_mode = NumberMode.SLIDER
+    _attr_native_min_value = 0.0
+    _attr_native_max_value = 100.0
+    _attr_native_step = 1.0
+    _attr_native_unit_of_measurement = "%"
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        coordinator: GrowattModbusCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        entry_name = config_entry.data.get("name", config_entry.title)
+        self._attr_name = f"{entry_name} Active Power Rate (VPP %)"
+        self._attr_unique_id = f"{config_entry.entry_id}_active_power_rate_vpp"
+        self._attr_icon = "mdi:speedometer"
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        device_type = get_device_type_for_control("active_power_rate")
+        return self.coordinator.get_device_info(device_type)
+
+    @property
+    def native_value(self) -> float | None:
+        data = self.coordinator.data
+        if data is None:
+            return None
+        raw_value = getattr(data, "active_power_rate", None)
+        if raw_value is None:
+            return None
+        return float(raw_value)
+
+    async def async_set_native_value(self, value: float) -> None:
+        raw_value = int(max(0, min(int(value), 100)))
+
+        # Re-assert last known work_mode if we have it.
+        last_mode = getattr(self.coordinator, "wit_last_work_mode", None)
+        if last_mode is None:
+            _LOGGER.warning(
+                "[WIT] work_mode not set yet. Set Work Mode (Standby/Charge/Discharge) first; writing power_rate anyway."
+            )
+        else:
+            _LOGGER.debug("[WIT] Re-asserting work_mode (202) = %s", last_mode)
+
+        _LOGGER.debug("[WIT] Writing active_power_rate (201) = %d", raw_value)
+        try:
+            # If we have a non-standby mode, write it first.
+            if isinstance(last_mode, int) and last_mode in (1, 2):
+                ok_mode = await self.hass.async_add_executor_job(
+                    self.coordinator.modbus_client.write_register,
+                    202,
+                    last_mode,
+                )
+                if not ok_mode:
+                    _LOGGER.error("[WIT] Failed to write work_mode before power_rate")
+                # ShineWiLan / WIT often benefits from a short delay between writes.
+                await asyncio.sleep(0.4)
+
+            success = await self.hass.async_add_executor_job(
+                self.coordinator.modbus_client.write_register,
+                201,
+                raw_value,
+            )
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.exception("[WIT] active_power_rate write failed: %s", err)
+            return
+
+        if success:
+            setattr(self.coordinator, "wit_last_power_rate", raw_value)
+            _LOGGER.info("[WIT] Set active_power_rate to %d%%", raw_value)
+            await self.coordinator.async_request_refresh()
+        else:
+            _LOGGER.error("[WIT] Failed to write active_power_rate")
