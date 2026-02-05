@@ -1,5 +1,86 @@
 # Release Notes
 
+# Release Notes - v0.3.1
+
+## ⚠️ CRITICAL FIX: WIT Battery Power and SOC Not Working
+
+**FIXED:** WIT/WIS inverter users experiencing battery power showing 0W and SOC unavailable after upgrading from v0.2.7 to v0.3.0.
+
+---
+
+### Problem:
+
+WIT users reported two issues after upgrading:
+1. **Battery charge/discharge power stuck at 0W** - Was broken since v0.2.7 or earlier
+2. **Battery SOC showing "unavailable"** - NEW issue in v0.3.0 (worked in v0.2.7)
+3. Energy totalizers worked fine, indicating basic communication was OK
+
+### Root Cause:
+
+Commit `2c11ae7` (between v0.2.7 and v0.2.8) added logic to skip "optional VPP registers" that fail to read. This was designed for MIN profiles where 31000+ registers are optional duplicates of 3000-range data.
+
+**However, for WIT/WIS profiles:**
+- Battery power is **ONLY** at registers 31200-31201 (VPP range) - **NO alternative source**
+- Battery SOC is at register 8093 (8000 range) + 31217 (VPP range as backup)
+
+When the 31000 range failed to read on first poll:
+1. Range was marked as "optional failed" in `_failed_optional_ranges` set
+2. On all subsequent polls, the entire 31000 range was **permanently skipped**
+3. Battery power registers (31200-31201) were never read again → stuck at 0W forever
+4. Battery SOC from VPP (31217) also unavailable → may have caused fallback issues
+
+This explains why:
+- ✅ Totalizers still worked (different register ranges)
+- ❌ Battery power stuck at 0W (31200-31201 never read after first failure)
+- ❌ SOC unavailable (31217 skipped, possible fallback issue with 8093)
+
+### What's Fixed:
+
+Added logic to differentiate between truly optional VPP registers (MIN) vs critical VPP registers (WIT):
+
+**For 31000 range (VPP registers):**
+```python
+# Determine if this range is truly optional or critical
+is_wit_critical_range = (
+    'WIT' in self.register_map['name'] and
+    31200 <= min_addr_block <= 31224
+)
+
+if not is_wit_critical_range and range_key in self._failed_optional_ranges:
+    # Skip optional ranges that previously failed
+    logger.debug(f"Skipping known-failed optional VPP range...")
+    continue
+
+# Only mark as permanently failed if it's truly optional
+if registers is None:
+    if not is_wit_critical_range:
+        self._failed_optional_ranges.add(range_key)  # Skip next time
+    else:
+        # Critical WIT battery range - keep trying, log warning
+        logger.warning(f"Failed to read critical WIT battery range - will retry next poll")
+```
+
+**For 8000 range (WIT battery/storage data):**
+- Improved logging to indicate retry behavior
+- Ensures SOC (register 8093) keeps being attempted
+
+**Files changed:**
+- `growatt_modbus.py:740-778` - Added WIT critical range detection
+- `growatt_modbus.py:697-720` - Improved 8000 range logging
+
+### Result:
+
+✅ **WIT battery power (31200-31201) now keeps retrying** if initial read fails
+✅ **WIT battery SOC (8093 + 31217) properly handled** with fallback logic
+✅ **MIN profiles still benefit** from optional range skip (avoids repeated warnings)
+✅ **Clear logging** distinguishes between optional (MIN) and critical (WIT) failures
+
+**Affected models:** WIT 4000-15000TL3 (three-phase hybrid inverters with battery storage)
+
+**Upgrade recommendation:** WIT users on v0.2.8, v0.2.9, or v0.3.0 should upgrade immediately to restore battery power and SOC readings.
+
+---
+
 # Release Notes - v0.3.0
 
 ## 🔧 Missing Sensor and Number Entity Fixes
