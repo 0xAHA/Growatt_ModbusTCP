@@ -1,5 +1,225 @@
 # Release Notes
 
+# Release Notes - v0.4.0
+
+## 🔋 NEW: WIT VPP Remote Battery Control
+
+**FEATURE:** Full VPP (Virtual Power Plant) remote control implementation for WIT 4000-15000TL3 inverters with Home Battery Systems.
+
+---
+
+### What's New:
+
+WIT users can now remotely control their battery charging and discharging through Home Assistant! This implementation is based on **field-tested** code from the community (linksu79 fork) and provides complete bidirectional control coordination.
+
+**New Control Entities:**
+
+1. **Work Mode Select** (register 202)
+   - Options: Standby / Charge / Discharge
+   - Controls the battery operating mode
+   - Entity: `select.{name}_work_mode`
+
+2. **Active Power Rate Number** (register 201)
+   - Range: 0-100%
+   - Sets the charging/discharging power as a percentage of max battery power
+   - Entity: `number.{name}_active_power_rate_vpp_percent`
+   - **Automatically re-asserts work mode before writing** (field-tested requirement)
+
+3. **Export Limit Number** (register 203)
+   - Range: 0-20000W
+   - Zero-export control: Set to 0W for zero grid export
+   - Entity: `number.{name}_export_limit_w`
+
+### Key Implementation Details:
+
+**Bidirectional Control Coordination** (field-tested with real WIT hardware):
+
+- **Number → Select:** When you adjust power rate, the integration automatically re-asserts the last work mode first
+- **Select → Number:** When you change work mode, the integration automatically re-applies the last power rate
+- **0.4s delay** between register writes (required for ShineWiLan compatibility)
+- **Coordinator state tracking:** `wit_last_work_mode` and `wit_last_power_rate` stored
+
+**Example Control Sequence:**
+```
+1. Set Work Mode to "Charge"
+2. Set Active Power Rate to 50%
+   → Integration re-asserts "Charge" mode, waits 0.4s, then writes 50%
+3. Adjust power rate to 75%
+   → Integration re-asserts "Charge" mode, waits 0.4s, then writes 75%
+4. Change Work Mode to "Discharge"
+   → Integration writes "Discharge", waits 0.4s, then re-applies 75%
+```
+
+### Files Changed:
+
+- ✅ `const.py` - VPP register definitions (201, 202, 203) already present
+- ✅ `number.py` - Added `GrowattWitActivePowerRateNumber` and `GrowattWitExportLimitWNumber` classes
+- ✅ `select.py` - `GrowattWitWorkModeSelect` already present with power rate re-application
+- ✅ `growatt_modbus.py` - pymodbus version compatibility already present
+
+### WIT Profile Updates:
+
+**Field-Validated Battery Register Mappings:**
+
+**Changed:**
+- **31222:** `battery_soh_vpp` (%) → `battery_temp_vpp` (°C) with `maps_to: battery_temp`
+  - **Reason:** Real-world WIT testing shows temperature at this register, NOT SOH as VPP spec claims
+- **31223:** `battery_temp` → `battery_temp_alt` (alternative temp register)
+  - **Reason:** Observed as alternative temp source on some WIT scans
+- **31224:** `battery_temp_max` → **REMOVED**
+  - **Reason:** Not observed in field testing
+
+**Why:** The fork maintainer (linksu79) validated these mappings with actual WIT hardware. WIT firmware deviates from the VPP Protocol V2.03 specification document.
+
+### Usage Example:
+
+**Home Assistant Automation - Time-of-Use Charging:**
+```yaml
+automation:
+  - alias: "Charge Battery During Off-Peak"
+    trigger:
+      - platform: time
+        at: "01:00:00"  # Off-peak starts
+    action:
+      - service: select.select_option
+        target:
+          entity_id: select.growatt_work_mode
+        data:
+          option: "Charge"
+      - delay: "00:00:01"
+      - service: number.set_value
+        target:
+          entity_id: number.growatt_active_power_rate_vpp_percent
+        data:
+          value: 80  # Charge at 80% power
+
+  - alias: "Discharge Battery During Peak"
+    trigger:
+      - platform: time
+        at: "17:00:00"  # Peak starts
+    action:
+      - service: select.select_option
+        target:
+          entity_id: select.growatt_work_mode
+        data:
+          option: "Discharge"
+      - delay: "00:00:01"
+      - service: number.set_value
+        target:
+          entity_id: number.growatt_active_power_rate_vpp_percent
+        data:
+          value: 100  # Discharge at 100% power
+```
+
+**Zero-Export Configuration:**
+```yaml
+# Set export limit to 0W for zero grid export
+service: number.set_value
+target:
+  entity_id: number.growatt_export_limit_w
+data:
+  value: 0
+```
+
+### Result:
+
+✅ **Full VPP battery control** for WIT Home Battery Systems
+✅ **Bidirectional coordination** prevents control conflicts
+✅ **Field-tested implementation** from active WIT users
+✅ **Time-of-use optimization** possible through Home Assistant
+✅ **Zero-export capability** for grid-limited installations
+
+**Affected models:** WIT 4000-15000TL3 (three-phase hybrid inverters with battery storage)
+
+**Upgrade recommendation:** WIT users should upgrade to gain full battery control capabilities. Requires Home Assistant 2023.1+ for proper entity support.
+
+### Credits:
+
+This implementation is based on the excellent work by **linksu79** (https://github.com/linksu79/Growatt_ModbusTCP), whose fork provided field-tested WIT VPP control with real hardware validation. Thank you to the community for thorough testing and feedback!
+
+---
+
+# Release Notes - v0.3.1
+
+## ⚠️ CRITICAL FIX: WIT Battery Power and SOC Not Working
+
+**FIXED:** WIT/WIS inverter users experiencing battery power showing 0W and SOC unavailable after upgrading from v0.2.7 to v0.3.0.
+
+---
+
+### Problem:
+
+WIT users reported two issues after upgrading:
+1. **Battery charge/discharge power stuck at 0W** - Was broken since v0.2.7 or earlier
+2. **Battery SOC showing "unavailable"** - NEW issue in v0.3.0 (worked in v0.2.7)
+3. Energy totalizers worked fine, indicating basic communication was OK
+
+### Root Cause:
+
+Commit `2c11ae7` (between v0.2.7 and v0.2.8) added logic to skip "optional VPP registers" that fail to read. This was designed for MIN profiles where 31000+ registers are optional duplicates of 3000-range data.
+
+**However, for WIT/WIS profiles:**
+- Battery power is **ONLY** at registers 31200-31201 (VPP range) - **NO alternative source**
+- Battery SOC is at register 8093 (8000 range) + 31217 (VPP range as backup)
+
+When the 31000 range failed to read on first poll:
+1. Range was marked as "optional failed" in `_failed_optional_ranges` set
+2. On all subsequent polls, the entire 31000 range was **permanently skipped**
+3. Battery power registers (31200-31201) were never read again → stuck at 0W forever
+4. Battery SOC from VPP (31217) also unavailable → may have caused fallback issues
+
+This explains why:
+- ✅ Totalizers still worked (different register ranges)
+- ❌ Battery power stuck at 0W (31200-31201 never read after first failure)
+- ❌ SOC unavailable (31217 skipped, possible fallback issue with 8093)
+
+### What's Fixed:
+
+Added logic to differentiate between truly optional VPP registers (MIN) vs critical VPP registers (WIT):
+
+**For 31000 range (VPP registers):**
+```python
+# Determine if this range is truly optional or critical
+is_wit_critical_range = (
+    'WIT' in self.register_map['name'] and
+    31200 <= min_addr_block <= 31224
+)
+
+if not is_wit_critical_range and range_key in self._failed_optional_ranges:
+    # Skip optional ranges that previously failed
+    logger.debug(f"Skipping known-failed optional VPP range...")
+    continue
+
+# Only mark as permanently failed if it's truly optional
+if registers is None:
+    if not is_wit_critical_range:
+        self._failed_optional_ranges.add(range_key)  # Skip next time
+    else:
+        # Critical WIT battery range - keep trying, log warning
+        logger.warning(f"Failed to read critical WIT battery range - will retry next poll")
+```
+
+**For 8000 range (WIT battery/storage data):**
+- Improved logging to indicate retry behavior
+- Ensures SOC (register 8093) keeps being attempted
+
+**Files changed:**
+- `growatt_modbus.py:740-778` - Added WIT critical range detection
+- `growatt_modbus.py:697-720` - Improved 8000 range logging
+
+### Result:
+
+✅ **WIT battery power (31200-31201) now keeps retrying** if initial read fails
+✅ **WIT battery SOC (8093 + 31217) properly handled** with fallback logic
+✅ **MIN profiles still benefit** from optional range skip (avoids repeated warnings)
+✅ **Clear logging** distinguishes between optional (MIN) and critical (WIT) failures
+
+**Affected models:** WIT 4000-15000TL3 (three-phase hybrid inverters with battery storage)
+
+**Upgrade recommendation:** WIT users on v0.2.8, v0.2.9, or v0.3.0 should upgrade immediately to restore battery power and SOC readings.
+
+---
+
 # Release Notes - v0.3.0
 
 ## 🔧 Missing Sensor and Number Entity Fixes

@@ -94,22 +94,28 @@ def guess_parameter_type(raw_value, scaled_values, reg_index, all_data):
         if scaled_value > 10 and scale_factor == 0.1:
             guesses.append(("Low", f"Energy", f"{scaled_value:.1f}kWh"))
     
-    # Check 32-bit combinations with next register
+    # Check 32-bit combinations with next register ONLY if it looks like a HIGH/LOW pair
+    # Don't automatically assume adjacent registers are paired
     if reg_index < len(all_data) - 1:
         next_value = all_data[reg_index + 1]
-        combined = combine_32bit(raw_value, next_value)
-        
-        # Large power readings (32-bit)
-        if 0 < combined < 150000:
-            combined_scaled = combined / 10.0
-            if 0 < combined_scaled <= 15000:
-                guesses.append(("Medium", f"32-bit Power (with reg+1)", f"{combined_scaled:.0f}W"))
-        
-        # Energy totals (can be very large)
-        if combined > 100 and combined < 10000000:
-            energy_kwh = combined / 10.0
-            if energy_kwh < 100000:
-                guesses.append(("Medium", f"32-bit Energy (with reg+1)", f"{energy_kwh:.1f}kWh"))
+
+        # Only suggest 32-bit combination if current value is suspiciously small
+        # (likely HIGH word of a 32-bit pair) or if both are non-zero
+        # This prevents false pairings like SOC (8093=0) + SOH (8094=100)
+        if raw_value > 0 or (raw_value == 0 and next_value == 0):
+            combined = combine_32bit(raw_value, next_value)
+
+            # Large power readings (32-bit) - only suggest if combined value makes sense
+            if 0 < combined < 150000:
+                combined_scaled = combined / 10.0
+                if 0 < combined_scaled <= 15000:
+                    guesses.append(("Low", f"Possible 32-bit Power (if paired with reg+1)", f"{combined_scaled:.0f}W"))
+
+            # Energy totals (can be very large)
+            if combined > 100 and combined < 10000000:
+                energy_kwh = combined / 10.0
+                if energy_kwh < 100000:
+                    guesses.append(("Low", f"Possible 32-bit Energy (if paired with reg+1)", f"{energy_kwh:.1f}kWh"))
     
     # Raw value patterns
     if raw_value == 0:

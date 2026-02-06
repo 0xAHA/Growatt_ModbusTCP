@@ -701,20 +701,22 @@ class GrowattModbus:
             max_addr_8000 = max(addrs_8000)
             count_8000 = (max_addr_8000 - min_addr_8000) + 1
 
+            is_wit_profile = 'WIT' in self.register_map['name']
             logger.debug(f"Reading 8000 range ({min_addr_8000}-{max_addr_8000}, {count_8000} registers)")
             if count_8000 > 125:
                 for chunk_start in range(min_addr_8000, max_addr_8000 + 1, 125):
                     chunk_count = min(125, max_addr_8000 - chunk_start + 1)
                     registers = self.read_input_registers(chunk_start, chunk_count)
                     if registers is None:
-                        logger.warning(f"Failed to read 8000 block ({chunk_start}-{chunk_start+chunk_count-1})")
+                        log_level = "warning" if is_wit_profile else "debug"
+                        logger.warning(f"Failed to read 8000 block ({chunk_start}-{chunk_start+chunk_count-1}) - will retry next poll")
                     else:
                         for i, value in enumerate(registers):
                             self._register_cache[chunk_start + i] = value
             else:
                 registers = self.read_input_registers(min_addr_8000, count_8000)
                 if registers is None:
-                    logger.warning("Failed to read 8000 register block")
+                    logger.warning(f"Failed to read 8000 register block ({min_addr_8000}-{max_addr_8000}) - will retry next poll")
                 else:
                     for i, value in enumerate(registers):
                         self._register_cache[min_addr_8000 + i] = value
@@ -742,18 +744,30 @@ class GrowattModbus:
                 max_addr_block = max(block)
                 count_block = (max_addr_block - min_addr_block) + 1
 
-                # Check if this range already failed - skip silently if so
+                # Determine if this range is truly optional or critical
+                # WIT profiles: 31200-31223 range contains CRITICAL battery data (no fallback)
+                # MIN profiles: 31000+ ranges are optional VPP duplicates of 3000-range data
+                is_wit_critical_range = (
+                    'WIT' in self.register_map['name'] and
+                    31200 <= min_addr_block <= 31224
+                )
+
+                # Check if this range already failed - skip silently if optional
                 range_key = (min_addr_block, count_block)
-                if range_key in self._failed_optional_ranges:
+                if not is_wit_critical_range and range_key in self._failed_optional_ranges:
                     logger.debug(f"Skipping known-failed optional VPP range ({min_addr_block}-{max_addr_block})")
                     continue
 
                 logger.debug(f"Reading 31000 sub-range ({min_addr_block}-{max_addr_block}, {count_block} registers)")
                 registers = self.read_input_registers(min_addr_block, count_block)
                 if registers is None:
-                    # Mark as failed and use DEBUG log - these are optional VPP duplicates
-                    self._failed_optional_ranges.add(range_key)
-                    logger.debug(f"Optional VPP range not supported ({min_addr_block}-{max_addr_block}) - will use 3000-range data instead")
+                    # Only mark as permanently failed if it's truly optional
+                    if not is_wit_critical_range:
+                        self._failed_optional_ranges.add(range_key)
+                        logger.debug(f"Optional VPP range not supported ({min_addr_block}-{max_addr_block}) - will use 3000-range data instead")
+                    else:
+                        # Critical WIT battery range - keep trying, log warning
+                        logger.warning(f"Failed to read critical WIT battery range ({min_addr_block}-{max_addr_block}) - will retry next poll")
                     # Don't return None - continue with what we have
                 else:
                     # Populate cache
