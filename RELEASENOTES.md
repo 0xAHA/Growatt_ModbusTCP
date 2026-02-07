@@ -1,6 +1,48 @@
 # Release Notes
 
-# Release Notes - v0.4.0 (FINAL)
+# Release Notes - v0.4.1 (HOTFIX)
+
+## 🔥 CRITICAL HOTFIX: Sensor Conditions Fixed
+
+**PROBLEM in v0.4.0:** All new sensor entities were not appearing if their current value was 0!
+
+**What Happened:**
+- Generator OFF → No generator entities created
+- AC charge energy 0 kWh → No AC charge entities created
+- Single inverter (no extra inverter) → No extra inverter entities created
+- Logs showed: `Skipping sensor generator_power - condition not met`
+
+**Root Cause:**
+All new v0.4.0 sensors had overly strict conditions:
+```python
+# WRONG (v0.4.0):
+"condition": lambda data: hasattr(data, 'generator_power') and data.generator_power > 0
+# Sensor only created if value > 0!
+
+# CORRECT (v0.4.1):
+"condition": lambda data: hasattr(data, 'generator_power')
+# Sensor created if attribute exists, shows "0" when appropriate
+```
+
+**Fixed Sensors (13 total):**
+- ✅ All 4 generator sensors (power, voltage, energy today/total)
+- ✅ All 3 extra inverter sensors (power, energy today/total)
+- ✅ Battery SOH and BMS voltage
+- ✅ AC charge/discharge energy (today/total)
+
+**After v0.4.1:**
+- Sensors appear immediately after integration reload
+- Show "0" when OFF/inactive instead of not appearing
+- Generator entities visible even when generator is not running
+
+**User Action Required:**
+1. Update to v0.4.1
+2. Reload integration or restart Home Assistant
+3. All entities will now appear under appropriate devices
+
+---
+
+# Release Notes - v0.4.0
 
 ## ✅ COMPLETE: Missing Sensor Entities + SPF Generator Support
 
