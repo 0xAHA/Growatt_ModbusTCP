@@ -1,6 +1,6 @@
 # Release Notes
 
-# Release Notes - v0.4.1
+# Release Notes - v0.4.0b2
 
 ## 🔧 CRITICAL BUGFIX: Battery Temperature Regression + New Sensors
 
@@ -16,9 +16,9 @@
 - **Some WIT firmware** (e.g., linksu79's unit): Temperature at register 31222
 - **Other WIT firmware** (e.g., YEAa141299/ZDDa-0014): Temperature at register 31223, register 31222 contains other data (likely max power: 6700W)
 
-**v0.4.1 solution:** We reverted to the **VPP Protocol V2.03 specification mapping** (31223=temp) which appears to be the most common layout. Register 31222 is now available as `battery_temp_vpp_alt` for firmware variants that use it.
+**v0.4.0b2 solution:** We reverted to the **VPP Protocol V2.03 specification mapping** (31223=temp) which appears to be the most common layout. Register 31222 is now available as `battery_temp_vpp_alt` for firmware variants that use it.
 
-**If your battery temperature is still incorrect after v0.4.1:**
+**If your battery temperature is still incorrect after v0.4.0b2:**
 1. Run a register scan (Services → Growatt Modbus: Register Scan)
 2. Check registers 31222, 31223, 31224 values
 3. Report your firmware version and register scan in a GitHub issue
@@ -47,7 +47,7 @@ Register scan from firmware YEAa141299/ZDDa-0014:
 31224 = 0 → 0.0°C (unused)
 ```
 
-### What's Fixed (v0.4.1):
+### What's Fixed (v0.4.0b2):
 
 **Reverted to VPP Protocol V2.03 specification mapping** (which is correct for majority of WIT firmware):
 
@@ -101,9 +101,9 @@ Based on user feedback and register scans, added missing WIT sensors:
 
 ### Known Issue:
 
-**Firmware Variant Differences:** WIT inverters with different firmware versions may have different VPP register layouts. The v0.4.1 mapping prioritizes the **VPP Protocol V2.03 specification** which appears to be more common than the variant observed in linksu79's fork.
+**Firmware Variant Differences:** WIT inverters with different firmware versions may have different VPP register layouts. The v0.4.0b2 mapping prioritizes the **VPP Protocol V2.03 specification** which appears to be more common than the variant observed in linksu79's fork.
 
-If your battery temperature is still incorrect after v0.4.1, please report your firmware version and register scan data.
+If your battery temperature is still incorrect after v0.4.0b2, please report your firmware version and register scan data.
 
 ---
 
