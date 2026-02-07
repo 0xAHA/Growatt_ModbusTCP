@@ -3,7 +3,7 @@ import logging
 import csv
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple, Optional
 
 import voluptuous as vol
@@ -1364,7 +1364,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             # Metadata section
             writer.writerow(["SCAN METADATA"])
             writer.writerow(["Integration Version", _get_integration_version()])
-            writer.writerow(["Timestamp", datetime.now().isoformat()])
+            writer.writerow(["Timestamp", datetime.now().astimezone().isoformat()])
             writer.writerow(["Connection", connection_str])
             writer.writerow(["Connection Type", connection_type.upper()])
             writer.writerow(["Slave ID", slave_id])

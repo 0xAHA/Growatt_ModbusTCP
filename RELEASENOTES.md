@@ -8,6 +8,26 @@
 
 ---
 
+## ⚠️ IMPORTANT: WIT Firmware Variant Differences
+
+**This release addresses a critical issue:** Different WIT inverter firmware versions use **different VPP register layouts** for battery data. This is NOT documented in the official VPP Protocol specification.
+
+**What we learned:**
+- **Some WIT firmware** (e.g., linksu79's unit): Temperature at register 31222
+- **Other WIT firmware** (e.g., YEAa141299/ZDDa-0014): Temperature at register 31223, register 31222 contains other data (likely max power: 6700W)
+
+**v0.4.1 solution:** We reverted to the **VPP Protocol V2.03 specification mapping** (31223=temp) which appears to be the most common layout. Register 31222 is now available as `battery_temp_vpp_alt` for firmware variants that use it.
+
+**If your battery temperature is still incorrect after v0.4.1:**
+1. Run a register scan (Services → Growatt Modbus: Register Scan)
+2. Check registers 31222, 31223, 31224 values
+3. Report your firmware version and register scan in a GitHub issue
+4. Include model: WIT 4000-15000TL3 with your specific kW rating
+
+We may implement firmware-based conditional mapping in future releases if more variants are discovered.
+
+---
+
 ### Problem (v0.4.0):
 
 Battery temperature showing **0.0°C** for WIT users with firmware **YEAa141299/ZDDa-0014** and similar variants.
