@@ -48,6 +48,10 @@ BATTERY_SENSORS: Set[str] = {
     "battery_charge_power", "battery_discharge_power",
     "battery_charge_today", "battery_discharge_today",
     "battery_charge_total", "battery_discharge_total",
+    # WIT: Battery SOH and BMS voltage
+    "battery_soh", "battery_voltage_bms",
+    # WIT/SPF: AC charge/discharge energy totals
+    "ac_charge_energy_total", "ac_discharge_energy_total",
 }
 
 BMS_SENSORS: Set[str] = {
@@ -85,6 +89,9 @@ SPF_OFFGRID_SENSORS: Set[str] = {
     "ac_apparent_power",
     # AC input from grid/generator
     "grid_voltage", "grid_frequency", "ac_input_power",
+    # Generator sensors (SPF with generator input)
+    "generator_power", "generator_voltage",
+    "generator_discharge_today", "generator_discharge_total",
     # AC charge/discharge energy (from grid/generator)
     "ac_charge_energy_today", "ac_discharge_energy_today",
     # Operational discharge energy
@@ -93,6 +100,12 @@ SPF_OFFGRID_SENSORS: Set[str] = {
     "mppt_fan_speed", "inverter_fan_speed",
     # Temperatures
     "dcdc_temp", "buck1_temp", "buck2_temp",
+}
+
+WIT_EXTRA_SENSORS: Set[str] = {
+    # Extra/parallel inverter output (multi-inverter systems)
+    "extra_power_to_grid",
+    "extra_energy_today", "extra_energy_total",
 }
 
 
@@ -691,6 +704,7 @@ INVERTER_PROFILES = {
             ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
+            WIT_EXTRA_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
         ),

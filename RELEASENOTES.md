@@ -1,8 +1,67 @@
 # Release Notes
 
-# Release Notes - v0.4.0b2
+# Release Notes - v0.4.0 (FINAL)
 
-## 🔧 CRITICAL BUGFIX: Battery Temperature Regression + New Sensors
+## ✅ COMPLETE: Missing Sensor Entities + SPF Generator Support
+
+**FIXED:** v0.4.0b2 added registers but forgot to create sensor entities - no new entities appeared in Home Assistant!
+
+**NEW:** SPF generator sensors (Issue #145) - Full support for SPF 6000 ES Plus generator input monitoring.
+
+---
+
+## What's Fixed/Added in v0.4.0:
+
+### 🔧 Missing Sensor Entity Creation (v0.4.0b2 → v0.4.0)
+
+**Problem:** v0.4.0b2 added registers to profiles but didn't complete the full 5-step process from `claude.md`:
+- ✅ Step 1: Updated profile files (registers added)
+- ❌ Step 2: Sensor definitions in sensor.py (MISSING!)
+- ❌ Step 3: Device type assignments in const.py (MISSING!)
+- ❌ Step 4: Profile sensor sets (MISSING!)
+
+**Result:** Users reported "no new entities appearing" after installing v0.4.0b2.
+
+**Solution (v0.4.0):** Completed all 5 steps for all 11 missing sensors:
+
+**WIT Sensors (now fully functional):**
+1. ✅ **Battery SOH** (`sensor.{name}_battery_state_of_health`) - Register 8094
+2. ✅ **Battery Voltage BMS** (`sensor.{name}_battery_voltage_bms`) - Register 8095
+3. ✅ **AC Charge Energy Total** (`sensor.{name}_ac_charge_energy_total`) - Registers 8059-8060
+4. ✅ **Extra Power to Grid** (`sensor.{name}_extra_power_to_grid`) - Registers 8102-8103
+5. ✅ **Extra Energy Today** (`sensor.{name}_extra_energy_today`) - Registers 8104-8105
+6. ✅ **Extra Energy Total** (`sensor.{name}_extra_energy_total`) - Registers 8106-8107
+
+**SPF Sensors (Issue #145 - SPF 6000 ES Plus generator input):**
+7. ✅ **Generator Power** (`sensor.{name}_generator_power`) - Register 96
+8. ✅ **Generator Voltage** (`sensor.{name}_generator_voltage`) - Register 97
+9. ✅ **Generator Discharge Today** (`sensor.{name}_generator_discharge_today`) - Registers 92-93
+10. ✅ **Generator Discharge Total** (`sensor.{name}_generator_discharge_total`) - Registers 94-95
+
+---
+
+## 🆕 SPF Generator Support (Issue #145)
+
+**Feature:** Full generator monitoring for SPF 6000 ES Plus and similar models with generator input.
+
+As requested by SPF users, generator data (voltage, power, energy) are now in separate registers and fully supported:
+
+**New Entities:**
+- `sensor.{name}_generator_power` - Current generator output (W)
+- `sensor.{name}_generator_voltage` - AC voltage from generator (V)
+- `sensor.{name}_generator_discharge_today` - Generator energy today (kWh)
+- `sensor.{name}_generator_discharge_total` - Generator lifetime energy (kWh)
+
+**Use Cases:**
+- Monitor backup generator usage during grid outages
+- Track generator fuel consumption correlation
+- Energy dashboard integration for off-grid systems
+
+---
+
+# Previous Release: v0.4.0b2
+
+## 🔧 CRITICAL BUGFIX: Battery Temperature Regression
 
 **FIXED:** v0.4.0 broke battery temperature display (showed 0.0°C) due to firmware variant differences.
 
@@ -88,16 +147,26 @@ Based on user feedback and register scans, added missing WIT sensors:
 
 ---
 
-### Files Changed:
+### Files Changed (v0.4.0):
 
-- `profiles/wit.py` - Reverted temperature mapping (31222/31223/31224), added 8057-8060, 8095, 8102-8107
-- `manifest.json` - version 0.4.0 → 0.4.1
+**Profiles:**
+- `profiles/wit.py` - Registers already added in b2 (31222/31223/31224, 8057-8060, 8095, 8102-8107)
+- `profiles/spf.py` - Added generator registers 92-97 (Issue #145)
+
+**Sensor System:**
+- `sensor.py` - Added 11 sensor definitions (WIT + SPF)
+- `const.py` - Added device type assignments for all new sensors
+- `device_profiles.py` - Added sensors to BATTERY_SENSORS, SPF_OFFGRID_SENSORS, and new WIT_EXTRA_SENSORS set
+
+**Version:**
+- `manifest.json` - version 0.4.0b2 → 0.4.0
 - `README.md` - version badge updated
 
 ### Upgrade Recommendation:
 
-**URGENT for WIT users on v0.4.0** - Battery temperature broken
-**Recommended for all WIT users** - Gain access to new AC charge and BMS voltage sensors
+**URGENT for v0.4.0b2 users** - New entities will now appear in Home Assistant
+**Recommended for SPF users** - Gain generator monitoring (Issue #145)
+**Recommended for WIT users** - Access to battery SOH, BMS voltage, and extra inverter sensors
 
 ### Known Issue:
 

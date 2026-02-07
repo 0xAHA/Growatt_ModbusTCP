@@ -719,6 +719,23 @@ SENSOR_DEFINITIONS = {
         "attr": "bms_min_soc",
         "condition": lambda data: hasattr(data, 'bms_min_soc') and data.bms_min_soc > 0,
     },
+    "battery_soh": {
+        "name": "Battery State of Health",
+        "icon": "mdi:battery-heart",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": PERCENTAGE,
+        "attr": "battery_soh",
+        "condition": lambda data: hasattr(data, 'battery_soh') and data.battery_soh > 0,
+    },
+    "battery_voltage_bms": {
+        "name": "Battery Voltage BMS",
+        "icon": "mdi:battery-charging",
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricPotential.VOLT,
+        "attr": "battery_voltage_bms",
+        "condition": lambda data: hasattr(data, 'battery_voltage_bms') and data.battery_voltage_bms > 0,
+    },
 
     "ac_charge_energy_today": {
         "name": "AC Charge Energy Today",
@@ -729,6 +746,15 @@ SENSOR_DEFINITIONS = {
         "attr": "ac_charge_energy_today",
         "condition": lambda data: hasattr(data, 'ac_charge_energy_today') and data.ac_charge_energy_today > 0,
     },
+    "ac_charge_energy_total": {
+        "name": "AC Charge Energy Total",
+        "icon": "mdi:battery-charging-100",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "ac_charge_energy_total",
+        "condition": lambda data: hasattr(data, 'ac_charge_energy_total') and data.ac_charge_energy_total > 0,
+    },
     "ac_discharge_energy_today": {
         "name": "AC Discharge Energy Today",
         "icon": "mdi:battery-charging-outline",
@@ -737,6 +763,15 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "ac_discharge_energy_today",
         "condition": lambda data: hasattr(data, 'ac_discharge_energy_today') and data.ac_discharge_energy_today > 0,
+    },
+    "ac_discharge_energy_total": {
+        "name": "AC Discharge Energy Total",
+        "icon": "mdi:battery-minus",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "ac_discharge_energy_total",
+        "condition": lambda data: hasattr(data, 'ac_discharge_energy_total') and data.ac_discharge_energy_total > 0,
     },
     "op_discharge_energy_today": {
         "name": "Operational Discharge Energy Today",
@@ -755,6 +790,35 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "op_discharge_energy_total",
         "condition": lambda data: hasattr(data, 'op_discharge_energy_total') and data.op_discharge_energy_total > 0,
+    },
+
+    # Extra/Parallel Inverter Sensors (WIT multi-inverter systems)
+    "extra_power_to_grid": {
+        "name": "Extra Power to Grid",
+        "icon": "mdi:transmission-tower-export",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.WATT,
+        "attr": "extra_power_to_grid",
+        "condition": lambda data: hasattr(data, 'extra_power_to_grid') and data.extra_power_to_grid > 0,
+    },
+    "extra_energy_today": {
+        "name": "Extra Energy Today",
+        "icon": "mdi:solar-panel",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "extra_energy_today",
+        "condition": lambda data: hasattr(data, 'extra_energy_today') and data.extra_energy_today > 0,
+    },
+    "extra_energy_total": {
+        "name": "Extra Energy Total",
+        "icon": "mdi:counter",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "extra_energy_total",
+        "condition": lambda data: hasattr(data, 'extra_energy_total') and data.extra_energy_total > 0,
     },
 
     # System Sensors
@@ -796,6 +860,44 @@ SENSOR_DEFINITIONS = {
         "unit": PERCENTAGE,
         "attr": "load_percentage",
         "condition": lambda data: hasattr(data, 'load_percentage'),
+    },
+
+    # Generator Sensors (SPF with generator input)
+    "generator_power": {
+        "name": "Generator Power",
+        "icon": "mdi:engine",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.WATT,
+        "attr": "generator_power",
+        "condition": lambda data: hasattr(data, 'generator_power') and data.generator_power > 0,
+    },
+    "generator_voltage": {
+        "name": "Generator Voltage",
+        "icon": "mdi:lightning-bolt",
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricPotential.VOLT,
+        "attr": "generator_voltage",
+        "condition": lambda data: hasattr(data, 'generator_voltage') and data.generator_voltage > 0,
+    },
+    "generator_discharge_today": {
+        "name": "Generator Discharge Today",
+        "icon": "mdi:engine-outline",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "generator_discharge_today",
+        "condition": lambda data: hasattr(data, 'generator_discharge_today') and data.generator_discharge_today > 0,
+    },
+    "generator_discharge_total": {
+        "name": "Generator Discharge Total",
+        "icon": "mdi:counter",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "generator_discharge_total",
+        "condition": lambda data: hasattr(data, 'generator_discharge_total') and data.generator_discharge_total > 0,
     },
 
     # Fan Speed Sensors (SPF Off-Grid)

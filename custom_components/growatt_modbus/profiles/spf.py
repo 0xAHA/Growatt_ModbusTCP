@@ -152,6 +152,17 @@ SPF_3000_6000_ES_PLUS = {
         86: {'name': 'op_discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 85, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Operational discharge energy today (LOW word)'},
         87: {'name': 'op_discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 88, 'desc': 'Operational discharge energy total (HIGH word)'},
         88: {'name': 'op_discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 87, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Operational discharge energy total (LOW word)'},
+
+        # Generator Energy (from grid/generator input) - Issue #145
+        # For SPF 6000 ES Plus and similar models with generator input
+        92: {'name': 'generator_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 93, 'desc': 'Generator discharge energy today (HIGH word)'},
+        93: {'name': 'generator_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 92, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Generator discharge energy today (LOW word)'},
+        94: {'name': 'generator_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 95, 'desc': 'Generator discharge energy total (HIGH word)'},
+        95: {'name': 'generator_discharge_total_low', 'scale': 1, 'unit': '', 'pair': 94, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Generator discharge energy total (LOW word)'},
+
+        # Generator Power and Voltage (16-bit single registers)
+        96: {'name': 'generator_power', 'scale': 1, 'unit': 'W', 'desc': 'Current generator power output'},
+        97: {'name': 'generator_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Current generator voltage'},
     },
     'holding_registers': {
         # System Control
