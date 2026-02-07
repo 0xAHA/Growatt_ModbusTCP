@@ -780,7 +780,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "op_discharge_energy_today",
-        "condition": lambda data: hasattr(data, 'op_discharge_energy_today') and data.op_discharge_energy_today > 0,
+        "condition": lambda data: hasattr(data, 'op_discharge_energy_today'),
     },
     "op_discharge_energy_total": {
         "name": "Operational Discharge Energy Total",
@@ -789,7 +789,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "op_discharge_energy_total",
-        "condition": lambda data: hasattr(data, 'op_discharge_energy_total') and data.op_discharge_energy_total > 0,
+        "condition": lambda data: hasattr(data, 'op_discharge_energy_total'),
     },
 
     # Extra/Parallel Inverter Sensors (WIT multi-inverter systems)
