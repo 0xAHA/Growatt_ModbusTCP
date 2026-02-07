@@ -725,7 +725,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": PERCENTAGE,
         "attr": "battery_soh",
-        "condition": lambda data: hasattr(data, 'battery_soh') and data.battery_soh > 0,
+        "condition": lambda data: hasattr(data, 'battery_soh'),
     },
     "battery_voltage_bms": {
         "name": "Battery Voltage BMS",
@@ -734,7 +734,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "battery_voltage_bms",
-        "condition": lambda data: hasattr(data, 'battery_voltage_bms') and data.battery_voltage_bms > 0,
+        "condition": lambda data: hasattr(data, 'battery_voltage_bms'),
     },
 
     "ac_charge_energy_today": {
@@ -744,7 +744,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "ac_charge_energy_today",
-        "condition": lambda data: hasattr(data, 'ac_charge_energy_today') and data.ac_charge_energy_today > 0,
+        "condition": lambda data: hasattr(data, 'ac_charge_energy_today'),
     },
     "ac_charge_energy_total": {
         "name": "AC Charge Energy Total",
@@ -753,7 +753,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "ac_charge_energy_total",
-        "condition": lambda data: hasattr(data, 'ac_charge_energy_total') and data.ac_charge_energy_total > 0,
+        "condition": lambda data: hasattr(data, 'ac_charge_energy_total'),
     },
     "ac_discharge_energy_today": {
         "name": "AC Discharge Energy Today",
@@ -762,7 +762,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "ac_discharge_energy_today",
-        "condition": lambda data: hasattr(data, 'ac_discharge_energy_today') and data.ac_discharge_energy_today > 0,
+        "condition": lambda data: hasattr(data, 'ac_discharge_energy_today'),
     },
     "ac_discharge_energy_total": {
         "name": "AC Discharge Energy Total",
@@ -771,7 +771,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "ac_discharge_energy_total",
-        "condition": lambda data: hasattr(data, 'ac_discharge_energy_total') and data.ac_discharge_energy_total > 0,
+        "condition": lambda data: hasattr(data, 'ac_discharge_energy_total'),
     },
     "op_discharge_energy_today": {
         "name": "Operational Discharge Energy Today",
@@ -800,7 +800,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfPower.WATT,
         "attr": "extra_power_to_grid",
-        "condition": lambda data: hasattr(data, 'extra_power_to_grid') and data.extra_power_to_grid > 0,
+        "condition": lambda data: hasattr(data, 'extra_power_to_grid'),
     },
     "extra_energy_today": {
         "name": "Extra Energy Today",
@@ -809,7 +809,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "extra_energy_today",
-        "condition": lambda data: hasattr(data, 'extra_energy_today') and data.extra_energy_today > 0,
+        "condition": lambda data: hasattr(data, 'extra_energy_today'),
     },
     "extra_energy_total": {
         "name": "Extra Energy Total",
@@ -818,7 +818,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "extra_energy_total",
-        "condition": lambda data: hasattr(data, 'extra_energy_total') and data.extra_energy_total > 0,
+        "condition": lambda data: hasattr(data, 'extra_energy_total'),
     },
 
     # System Sensors
@@ -870,7 +870,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfPower.WATT,
         "attr": "generator_power",
-        "condition": lambda data: hasattr(data, 'generator_power') and data.generator_power > 0,
+        "condition": lambda data: hasattr(data, 'generator_power'),
     },
     "generator_voltage": {
         "name": "Generator Voltage",
@@ -879,7 +879,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "generator_voltage",
-        "condition": lambda data: hasattr(data, 'generator_voltage') and data.generator_voltage > 0,
+        "condition": lambda data: hasattr(data, 'generator_voltage'),
     },
     "generator_discharge_today": {
         "name": "Generator Discharge Today",
@@ -888,7 +888,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "generator_discharge_today",
-        "condition": lambda data: hasattr(data, 'generator_discharge_today') and data.generator_discharge_today > 0,
+        "condition": lambda data: hasattr(data, 'generator_discharge_today'),
     },
     "generator_discharge_total": {
         "name": "Generator Discharge Total",
@@ -897,7 +897,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "generator_discharge_total",
-        "condition": lambda data: hasattr(data, 'generator_discharge_total') and data.generator_discharge_total > 0,
+        "condition": lambda data: hasattr(data, 'generator_discharge_total'),
     },
 
     # Fan Speed Sensors (SPF Off-Grid)
