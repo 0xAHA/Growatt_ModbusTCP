@@ -115,8 +115,25 @@ WIT_4000_15000TL3 = {
         # Battery Range (8000-8124)
         8034: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V'},
         8035: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
+
+        # AC charge energy (from grid to battery) - 32-bit pairs
+        8057: {'name': 'ac_charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 8058},
+        8058: {'name': 'ac_charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 8057, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        8059: {'name': 'ac_charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 8060},
+        8060: {'name': 'ac_charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 8059, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
         8093: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
         8094: {'name': 'battery_soh', 'scale': 1, 'unit': '%'},
+        8095: {'name': 'battery_voltage_bms', 'scale': 0.1, 'unit': 'V', 'desc': 'BMS reported voltage (more accurate than 8034)'},
+
+        # Extra/Parallel inverter output (for multi-inverter systems) - 32-bit pairs
+        # These will be 0 for single inverter installations
+        8102: {'name': 'extra_power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 8103},
+        8103: {'name': 'extra_power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 8102, 'combined_scale': 0.1, 'combined_unit': 'kW'},
+        8104: {'name': 'extra_energy_today_high', 'scale': 1, 'unit': '', 'pair': 8105},
+        8105: {'name': 'extra_energy_today_low', 'scale': 1, 'unit': '', 'pair': 8104, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        8106: {'name': 'extra_energy_total_high', 'scale': 1, 'unit': '', 'pair': 8107},
+        8107: {'name': 'extra_energy_total_low', 'scale': 1, 'unit': '', 'pair': 8106, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # ============================================================================
         # VPP BATTERY RANGE (31200-31323): Battery Cluster Data
@@ -160,11 +177,13 @@ WIT_4000_15000TL3 = {
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
         31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
-        # Field-validated mapping: 31222 is battery temp (not SOH as per VPP spec documentation)
-        # Real-world WIT testing shows temp at 31222, with 31223 as alternative temp register
-        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
-        # Note: 31223 also observed as battery_temp on some WIT scans
-        31223: {'name': 'battery_temp_alt', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Alternative battery temp register'},
+        # Per VPP Protocol V2.03 - firmware variant differences observed:
+        # Some WIT firmware: 31222=temp, 31223=alt_temp (e.g., linksu79's unit)
+        # Other WIT firmware: 31222=max_power(?), 31223=temp (e.g., YEAa141299/ZDDa-0014)
+        # We map 31223 as primary to support majority firmware, 31222 as alternative
+        31222: {'name': 'battery_temp_vpp_alt', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temp (some firmware variants)'},
+        31223: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'maps_to': 'battery_temp', 'desc': 'Battery environmental temperature'},
+        31224: {'name': 'battery_temp_max', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Maximum battery temperature'},
 
         # Power flow / consumption (8045-8086)
         8045: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 8046},

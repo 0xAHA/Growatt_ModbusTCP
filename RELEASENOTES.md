@@ -1,5 +1,92 @@
 # Release Notes
 
+# Release Notes - v0.4.1
+
+## 🔧 CRITICAL BUGFIX: Battery Temperature Regression + New Sensors
+
+**FIXED:** v0.4.0 broke battery temperature display (showed 0.0°C) due to firmware variant differences.
+
+---
+
+### Problem (v0.4.0):
+
+Battery temperature showing **0.0°C** for WIT users with firmware **YEAa141299/ZDDa-0014** and similar variants.
+
+**Root Cause:**
+- v0.4.0 adopted register mapping from linksu79 fork (31222=temp, 31223=alt_temp)
+- That mapping was correct for **their WIT firmware** but NOT universal
+- Different WIT firmware versions use different VPP register layouts:
+  - **Some firmware:** 31222 = battery temp (linksu79's unit)
+  - **Other firmware:** 31222 = max power (6700W), 31223 = battery temp (YEAa141299)
+
+**Evidence from Field Testing:**
+```
+Register scan from firmware YEAa141299/ZDDa-0014:
+31222 = 6700 → 670.0°C (ABSURD - not temperature!)
+31223 = 120 → 12.0°C (CORRECT - actual battery temp)
+31224 = 0 → 0.0°C (unused)
+```
+
+### What's Fixed (v0.4.1):
+
+**Reverted to VPP Protocol V2.03 specification mapping** (which is correct for majority of WIT firmware):
+
+```python
+# New mapping (supports both firmware variants):
+31222: battery_temp_vpp_alt (0.1°C scale) - temp for some firmware, other data for other firmware
+31223: battery_temp (0.1°C scale, PRIMARY) - maps_to battery_temp sensor
+31224: battery_temp_max (0.1°C scale) - restored
+```
+
+**Result:** ✅ Battery temperature now displays correctly for firmware YEAa141299 and similar variants
+
+---
+
+### NEW SENSORS ADDED:
+
+Based on user feedback and register scans, added missing WIT sensors:
+
+**Battery Sensors (8000 Range):**
+1. **8057/8058: AC Charge Energy Today** (32-bit, 0.1 kWh) - Grid-to-battery charge today
+2. **8059/8060: AC Charge Energy Total** (32-bit, 0.1 kWh) - Grid-to-battery lifetime total
+3. **8095: BMS Voltage** (0.1V) - More accurate than 8034 (user reported: 52.0V vs 51.1V)
+   - User validation: Actual battery = 52.02V, BMS reading = 52.0V ✅
+   - Entity: `sensor.{name}_battery_voltage_bms`
+
+**Extra/Parallel Inverter Sensors (8102-8107):**
+4. **8102/8103: Extra Power to Grid** (32-bit, 0.1 kW) - For multi-inverter systems
+5. **8104/8105: Extra Energy Today** (32-bit, 0.1 kWh) - Parallel inverter daily
+6. **8106/8107: Extra Energy Total** (32-bit, 0.1 kWh) - Parallel inverter lifetime
+
+**Note:** Extra inverter sensors will be 0 for single-inverter installations. These are for parallel/multi-inverter setups.
+
+### Already Working (No Changes):
+
+✅ **8093: Battery SOC** - Working correctly (user confirmed 22.2%)
+✅ **8094: Battery SOH** - Already defined, entity should be visible (100%)
+✅ **VPP Control** - Work Mode and Power Rate controls functioning
+
+---
+
+### Files Changed:
+
+- `profiles/wit.py` - Reverted temperature mapping (31222/31223/31224), added 8057-8060, 8095, 8102-8107
+- `manifest.json` - version 0.4.0 → 0.4.1
+- `README.md` - version badge updated
+
+### Upgrade Recommendation:
+
+**URGENT for WIT users on v0.4.0** - Battery temperature broken
+**Recommended for all WIT users** - Gain access to new AC charge and BMS voltage sensors
+
+### Known Issue:
+
+**Firmware Variant Differences:** WIT inverters with different firmware versions may have different VPP register layouts. The v0.4.1 mapping prioritizes the **VPP Protocol V2.03 specification** which appears to be more common than the variant observed in linksu79's fork.
+
+If your battery temperature is still incorrect after v0.4.1, please report your firmware version and register scan data.
+
+---
+
 # Release Notes - v0.4.0
 
 ## 🔋 NEW: WIT VPP Remote Battery Control
