@@ -837,19 +837,16 @@ SENSOR_DEFINITIONS = {
         "name": "Derating Mode",
         "icon": "mdi:speedometer-slow",
         "attr": "derating_mode",
-        "condition": lambda data: data.derating_mode > 0,
     },
     "fault_code": {
         "name": "Fault Code",
         "icon": "mdi:alert-circle",
         "attr": "fault_code",
-        "condition": lambda data: data.fault_code > 0,
     },
     "warning_code": {
         "name": "Warning Code",
         "icon": "mdi:alert",
         "attr": "warning_code",
-        "condition": lambda data: data.warning_code > 0,
     },
 
     # Load Sensors (SPF Off-Grid)
