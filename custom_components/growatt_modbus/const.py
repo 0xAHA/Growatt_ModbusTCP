@@ -454,6 +454,8 @@ SENSOR_DEVICE_MAP = {
         'system_output_power',
         # Solar production energy
         'energy_today', 'energy_total',
+        # WIT: Extra/parallel inverter energy production
+        'extra_energy_today', 'extra_energy_total',
         # Self-consumption percentage (related to solar utilization)
         'self_consumption_percentage',
         # SPF Off-Grid MPPT fan and buck temperatures
@@ -469,6 +471,11 @@ SENSOR_DEVICE_MAP = {
         'power_to_grid',
         # SPF Off-Grid: AC input from grid/generator
         'grid_voltage', 'grid_frequency', 'ac_input_power',
+        # SPF Off-Grid: Generator sensors
+        'generator_power', 'generator_voltage',
+        'generator_discharge_today', 'generator_discharge_total',
+        # WIT: Extra/parallel inverter power to grid
+        'extra_power_to_grid',
     },
 
     # Load device - consumption
@@ -489,8 +496,11 @@ SENSOR_DEVICE_MAP = {
         'battery_charge_today', 'battery_discharge_today',
         'battery_charge_total', 'battery_discharge_total',
         'priority_mode',  # Battery priority mode
+        # WIT: Battery SOH and BMS voltage
+        'battery_soh', 'battery_voltage_bms',
         # SPF Off-Grid AC charge/discharge energy
-        'ac_charge_energy_today', 'ac_discharge_energy_today',
+        'ac_charge_energy_today', 'ac_charge_energy_total',
+        'ac_discharge_energy_today', 'ac_discharge_energy_total',
         # SPF Off-Grid operational discharge energy
         'op_discharge_energy_today', 'op_discharge_energy_total',
         # BMS sensors (SPH HU and other models with battery management)
