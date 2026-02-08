@@ -1526,15 +1526,17 @@ class GrowattModbus:
                 logger.debug(f"Could not read ac_to_bat_volt register: {e}")
 
         # --- SPH/SPM Battery Control registers (1000+ range) ---
-        # Priority Mode (1044)
-        if 1044 in holding_map:
+        # Priority Mode (1044 for SPH/SPH-TL3, 30476 for WIT)
+        priority_addr = 1044 if 1044 in holding_map else (30476 if 30476 in holding_map else None)
+        if priority_addr:
             try:
-                priority_regs = self.read_holding_registers(1044, 1)
+                priority_regs = self.read_holding_registers(priority_addr, 1)
                 if priority_regs is not None and len(priority_regs) >= 1:
                     data.priority_mode = int(priority_regs[0])
-                    logger.debug("[SPH CTRL] priority_mode=%s", data.priority_mode)
+                    profile_name = "WIT" if priority_addr == 30476 else "SPH"
+                    logger.debug("[%s CTRL] priority_mode=%s", profile_name, data.priority_mode)
             except Exception as e:
-                logger.debug(f"Could not read priority_mode register: {e}")
+                logger.debug(f"Could not read priority_mode register {priority_addr}: {e}")
 
         # Discharge Control (1070-1071)
         if any(reg in holding_map for reg in [1070, 1071]):

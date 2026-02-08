@@ -384,6 +384,20 @@ WIT_4000_15000TL3 = {
         # Anti-backflow
         953: {'name': 'single_phase_antibackflow', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Disable, 1=Enable'},
 
+        # ============================================================================
+        # TOU/OPERATING MODE CONTROL (30000+ range)
+        # ============================================================================
+
+        # Operating Mode Selection (default mode when no TOU period is active)
+        30476: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'access': 'RW',
+                'desc': 'System operating mode (TOU default / outside configured periods)',
+                'valid_range': (0, 2),
+                'values': {
+                    0: 'Load First',
+                    1: 'Battery First',
+                    2: 'Grid First'
+                }},
+
         # Time-of-Use Programming (6 time slots)
         954: {'name': 'time1_enable', 'scale': 1, 'unit': '', 'access': 'RW',
               'desc': 'Bit13-14: 0=Load first, 1=Battery first, 2=Grid first; Bit15: 0=Disable, 1=Enable'},

@@ -151,11 +151,17 @@ class GrowattGenericSelect(CoordinatorEntity, SelectEntity):
             _LOGGER.error("Invalid option selected: %s", option)
             return
 
+        # Look up register address from profile (supports multiple profiles with same control name)
+        register_addr = self.coordinator.modbus_client._find_register_by_name(self._control_name)
+        if not register_addr:
+            # Fallback to hardcoded register if not in profile
+            register_addr = self._control_config['register']
+            _LOGGER.debug("Using fallback register %d for %s", register_addr, self._control_name)
+
         # Write to Modbus register
-        register = self._control_config['register']
         success = await self.hass.async_add_executor_job(
             self.coordinator.modbus_client.write_register,
-            register,
+            register_addr,
             value
         )
 
