@@ -46,6 +46,17 @@ async def async_setup_entry(
         if 202 in holding_registers:
             entities.append(GrowattWitWorkModeSelect(coordinator, config_entry))
 
+        # VPP Remote Control selects (30100, 30407)
+        for control_name in ['control_authority', 'remote_power_control_enable']:
+            if control_name in WRITABLE_REGISTERS:
+                control_config = WRITABLE_REGISTERS[control_name]
+                register_num = control_config['register']
+                if register_num in holding_registers:
+                    entities.append(
+                        GrowattGenericSelect(coordinator, config_entry, control_name, control_config)
+                    )
+                    _LOGGER.info("%s control enabled (register %d found)", control_name, register_num)
+
         if entities:
             entry_name = config_entry.data.get("name", config_entry.title)
             _LOGGER.info("Created %d WIT select entities for %s", len(entities), entry_name)

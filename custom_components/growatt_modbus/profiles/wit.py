@@ -388,6 +388,31 @@ WIT_4000_15000TL3 = {
         # TOU/OPERATING MODE CONTROL (30000+ range)
         # ============================================================================
 
+        # VPP Remote Control Authority
+        30100: {'name': 'control_authority', 'scale': 1, 'unit': '', 'access': 'RW',
+                'desc': 'VPP master enable switch',
+                'valid_range': (0, 1),
+                'values': {
+                    0: 'Disabled',
+                    1: 'Enabled'
+                }},
+
+        # VPP Timed Charge/Discharge Override (temporary power control)
+        30407: {'name': 'remote_power_control_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+                'desc': 'Enable timed charge/discharge power override',
+                'valid_range': (0, 1),
+                'values': {
+                    0: 'Disabled',
+                    1: 'Enabled'
+                }},
+        30408: {'name': 'remote_power_control_charging_time', 'scale': 1, 'unit': 'min', 'access': 'RW',
+                'desc': 'Duration for remote power control (0-1440 minutes)',
+                'valid_range': (0, 1440)},
+        30409: {'name': 'remote_charge_and_discharge_power', 'scale': 1, 'unit': '%', 'access': 'RW',
+                'desc': 'Remote charge/discharge power (-100% to +100%, negative=discharge, positive=charge)',
+                'valid_range': (-100, 100),
+                'signed': True},
+
         # Operating Mode Selection (default mode when no TOU period is active)
         30476: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'access': 'RW',
                 'desc': 'System operating mode (TOU default / outside configured periods)',

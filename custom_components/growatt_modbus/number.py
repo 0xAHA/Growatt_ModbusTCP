@@ -50,6 +50,17 @@ async def async_setup_entry(
         if 201 in holding_registers:
             entities.append(GrowattWitActivePowerRateNumber(coordinator, config_entry))
 
+        # VPP Remote Control number entities (30408, 30409)
+        for control_name in ['remote_power_control_charging_time', 'remote_charge_and_discharge_power']:
+            if control_name in WRITABLE_REGISTERS:
+                control_config = WRITABLE_REGISTERS[control_name]
+                register_num = control_config['register']
+                if register_num in holding_registers:
+                    entities.append(
+                        GrowattGenericNumber(coordinator, config_entry, control_name, control_config)
+                    )
+                    _LOGGER.info("%s control enabled (register %d found)", control_name, register_num)
+
         # NOTE: work_mode is a Select entity (in select.py)
         if entities:
             entry_name = config_entry.data.get("name", config_entry.title)
