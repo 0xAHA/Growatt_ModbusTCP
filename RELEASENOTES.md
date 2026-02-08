@@ -2,9 +2,11 @@
 
 # Release Notes - v0.4.4
 
-## 🐛 Critical Bug Fix: SPF Grid Device Sensors Showing Zero
+## 🐛 Critical Bug Fixes: SPF Grid Sensors + Missing WIT Battery Sensors
 
-**Fixed:** All Grid device sensors for SPF models (SPF 6000 ES Plus) were showing zero values even though `read_register` service returned correct values.
+**Fixed:**
+1. SPF Grid device sensors (generator, grid voltage/frequency) showing zero values
+2. WIT battery sensors (SOH, BMS voltage, AC charge total) missing from v0.4.3 fix
 
 ---
 
@@ -54,6 +56,28 @@ Generator power from reg 96: 1250 W (raw cache: 1250)
 - Changed from "Uses 0-88 register range" to "Uses 0-97 register range"
 - Reflects addition of generator sensors at registers 92-97
 
+#### 4. 🔧 Fixed Missing WIT Battery Sensors (Incomplete v0.4.3 Fix)
+
+**Root Cause:** v0.4.3 claimed to fix missing dataclass fields but only added 3 WIT sensors (`extra_power_to_grid`, `extra_energy_today`, `extra_energy_total`). It **missed** 3 other WIT battery sensors that had the same issue.
+
+**Missing WIT sensors (now fixed in v0.4.4):**
+- `battery_soh` (register 8094) - Battery State of Health percentage
+- `battery_voltage_bms` (register 8095) - BMS-reported voltage (more accurate than standard reading)
+- `ac_charge_energy_total` (registers 8059-8060) - Total AC charge energy from grid
+
+**The Complete Fix:**
+1. Added missing dataclass fields to `GrowattData`
+2. Added register reading code in `_read_battery_data()`
+3. Updated comment to clarify `ac_charge_energy_today` is for both WIT and SPF
+
+**Impact:**
+- ✅ WIT users can now see Battery State of Health (SOH)
+- ✅ WIT users can now see accurate BMS voltage reading
+- ✅ WIT users can now see total AC charge energy counter
+- ✅ Completes the v0.4.3 fix that was only partially implemented
+
+**Note:** These sensors were defined in the profile and sensor.py since earlier releases, but v0.4.3's dataclass fix was incomplete.
+
 ---
 
 ### Migration Notes:
@@ -64,6 +88,12 @@ Generator power from reg 96: 1250 W (raw cache: 1250)
 - Generator sensors will now show actual values instead of zero
 - If you previously dismissed Grid device sensors as "broken," they should now work
 - Enable debug logging (see below) if you want to verify register reads
+
+**For WIT users:**
+- Battery SOH (State of Health) sensor will now appear and show correct values
+- Battery Voltage BMS sensor will now appear (more accurate than standard voltage)
+- AC Charge Energy Total sensor will now appear
+- These sensors should have been working in v0.4.3 but were missed
 
 **Debug logging setup** (optional, for troubleshooting):
 ```yaml
@@ -76,9 +106,10 @@ logger:
 ---
 
 ### Files Changed:
-- `custom_components/growatt_modbus/growatt_modbus.py` - Added generator register reading code + enhanced debug logging
+- `custom_components/growatt_modbus/growatt_modbus.py` - Added SPF generator + WIT battery register reading code + enhanced debug logging + 3 missing dataclass fields
 - `custom_components/growatt_modbus/profiles/spf.py` - Updated register range documentation
 - `custom_components/growatt_modbus/manifest.json` - Version bump to 0.4.4
+- `RELEASENOTES.md` - Updated with v0.4.4 changes
 
 ---
 

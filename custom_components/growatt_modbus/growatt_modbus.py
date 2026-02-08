@@ -123,8 +123,9 @@ class GrowattData:
     generator_discharge_today: float = 0.0  # kWh
     generator_discharge_total: float = 0.0  # kWh
 
-    # SPF AC Charge/Discharge Energy (from grid/generator)
+    # SPF/WIT AC Charge/Discharge Energy (from grid/generator)
     ac_charge_energy_today: float = 0.0     # kWh
+    ac_charge_energy_total: float = 0.0     # kWh (WIT/SPF)
     ac_discharge_energy_today: float = 0.0  # kWh
     ac_discharge_energy_total: float = 0.0  # kWh
 
@@ -154,6 +155,8 @@ class GrowattData:
     battery_current: float = 0.0      # A (signed: +discharge, -charge)
     battery_soc: float = 0.0          # %
     battery_temp: float = 0.0         # °C
+    battery_soh: float = 0.0          # % (State of Health - WIT)
+    battery_voltage_bms: float = 0.0  # V (BMS voltage reading - WIT)
     charge_power: float = 0.0         # W
     discharge_power: float = 0.0      # W
     charge_energy_today: float = 0.0  # kWh
@@ -1256,6 +1259,18 @@ class GrowattModbus:
                 data.battery_temp = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery temp from reg {addr}: {data.battery_temp}°C")
 
+            # Battery State of Health (WIT)
+            addr = self._find_register_by_name('battery_soh')
+            if addr:
+                data.battery_soh = self._get_register_value(addr) or 0.0
+                logger.debug(f"Battery SOH from reg {addr}: {data.battery_soh}%")
+
+            # Battery Voltage BMS (WIT - more accurate than standard battery_voltage)
+            addr = self._find_register_by_name('battery_voltage_bms')
+            if addr:
+                data.battery_voltage_bms = self._get_register_value(addr) or 0.0
+                logger.debug(f"Battery voltage BMS from reg {addr}: {data.battery_voltage_bms}V")
+
             # Battery power (signed: positive=charging, negative=discharging)
             # Try new signed battery_power register first (MOD series @ 31126)
             addr = self._find_register_by_name('battery_power_low')
@@ -1397,6 +1412,15 @@ class GrowattModbus:
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.discharge_energy_total = self._get_register_value(addr) or 0.0
                 logger.debug(f"Discharge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_energy_total} kWh")
+
+            # AC Charge Energy Total (WIT/SPF - from grid/generator to battery)
+            addr = self._find_register_by_name('ac_charge_energy_total_low')
+            if addr:
+                raw_low = self._register_cache.get(addr, 0)
+                pair_addr = self._find_register_by_name('ac_charge_energy_total_high')
+                raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
+                data.ac_charge_energy_total = self._get_register_value(addr) or 0.0
+                logger.debug(f"AC charge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.ac_charge_energy_total} kWh")
 
             if data.battery_voltage > 0:
                 logger.debug(f"Battery summary: {data.battery_voltage}V, {data.battery_current}A, {data.battery_soc}%, {data.battery_temp}°C, Charge={data.charge_power}W, Discharge={data.discharge_power}W")
