@@ -1,5 +1,82 @@
 # Release Notes
 
+# Release Notes - v0.4.3
+
+## 🐛 Critical Bug Fix: Missing Dataclass Fields
+
+**Fixed:** SPF generator sensors and WIT extra_energy sensors not appearing despite being properly configured.
+
+---
+
+### What's Fixed in v0.4.3:
+
+#### 1. 🔧 Added Missing GrowattData Dataclass Fields
+
+**Root Cause:** 28 sensor fields were missing from the `GrowattData` dataclass, causing `hasattr()` checks to fail and sensors to show "condition not met" in logs.
+
+**SPF Off-Grid sensors added (14 fields):**
+- `grid_voltage`, `grid_frequency` - AC input voltage/frequency monitoring
+- `ac_input_power`, `ac_apparent_power` - AC input power monitoring
+- `load_percentage` - Load percentage monitoring
+- `generator_power`, `generator_voltage` - Generator monitoring
+- `generator_discharge_today`, `generator_discharge_total` - Generator energy counters
+- `ac_charge_energy_today`, `ac_discharge_energy_today`, `ac_discharge_energy_total` - AC charge/discharge energy
+- `op_discharge_energy_today`, `op_discharge_energy_total` - Operational discharge energy
+
+**WIT sensors added (3 fields):**
+- `extra_power_to_grid` - Parallel inverter power export
+- `extra_energy_today`, `extra_energy_total` - Parallel inverter energy counters
+
+**Impact:**
+- ✅ SPF 6000 ES Plus generator entities now appear correctly
+- ✅ WIT extra_energy sensors now work (no longer show "not in profile")
+- ✅ All SPF AC input monitoring sensors now functional
+
+#### 2. 📚 Documentation Improvements
+
+**Added comprehensive sensor addition guide:**
+- Created `SENSOR_CHECKLIST.md` - One-page printable checklist with all 6 required steps
+- Created `validate_sensors.py` - Automated validation script to catch missing steps
+- Updated `claude.md` with detailed 6-step process including the critical dataclass step
+
+**The 6-Step Process:**
+1. Add register definition to `profiles/*.py`
+2. **Add field to GrowattData dataclass** ← NEW! (most commonly forgotten)
+3. Add sensor definition to `sensor.py`
+4. Assign device type in `const.py`
+5. Add to sensor group in `device_profiles.py`
+6. Run validation script
+
+**Why this matters:** The dataclass step was previously undocumented but is REQUIRED. Without it, the integration tries to set `data.sensor_name = value`, but `hasattr(data, 'sensor_name')` returns `False`, causing sensor conditions to fail silently.
+
+---
+
+### Migration Notes:
+
+**No action required** - This is a bug fix release. All previously working sensors continue to work, and missing sensors will now appear after upgrade.
+
+**For SPF users:**
+- Generator sensors will now appear if you have generator input configured
+- AC input monitoring sensors (grid voltage/frequency) will now show
+
+**For WIT users:**
+- Extra/parallel inverter sensors will now appear if you have multiple inverters
+
+---
+
+### Files Changed:
+- `custom_components/growatt_modbus/growatt_modbus.py` - Added 28 missing dataclass fields
+- `SENSOR_CHECKLIST.md` - NEW: Quick reference checklist
+- `validate_sensors.py` - NEW: Automated validation tool
+- `claude.md` - Updated with complete 6-step documentation
+
+---
+
+### Known Issues:
+- None - All sensors should now appear correctly if defined in the profile
+
+---
+
 # Release Notes - v0.4.2
 
 ## ✨ MAJOR UX IMPROVEMENT: All Profile Sensors Always Visible
