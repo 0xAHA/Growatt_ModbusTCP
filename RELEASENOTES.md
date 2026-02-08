@@ -1,5 +1,112 @@
 # Release Notes
 
+# Release Notes - v0.4.4
+
+## 🐛 Critical Bug Fix: SPF Grid Device Sensors Showing Zero
+
+**Fixed:** All Grid device sensors for SPF models (SPF 6000 ES Plus) were showing zero values even though `read_register` service returned correct values.
+
+---
+
+### What's Fixed in v0.4.4:
+
+#### 1. 🔧 Added Missing Generator Register Reading Code
+
+**Root Cause:** Generator sensors (registers 92-97) were added to the SPF profile in v0.4.3, which made the sensors *appear* in Home Assistant, but the code to actually *read* these registers into the `GrowattData` object was never added. This caused all generator sensors to permanently show zero values.
+
+**Affected sensors (now fixed):**
+- `generator_power` (register 96) - Current generator power output
+- `generator_voltage` (register 97) - Current generator voltage
+- `generator_discharge_today` (registers 92-93) - Generator energy today
+- `generator_discharge_total` (registers 94-95) - Generator lifetime energy
+
+**The Fix:** Added register reading code in `read_all_data()` following the same pattern as other SPF sensors like `grid_voltage` and `ac_input_power`.
+
+**Impact:**
+- ✅ SPF 6000 ES Plus generator sensors now show correct values
+- ✅ Grid device for SPF models now fully functional
+- ✅ Other Grid sensors (`grid_voltage`, `grid_frequency`, `ac_input_power`) continue to work
+
+#### 2. 📊 Enhanced Debug Logging for Troubleshooting
+
+**Added comprehensive diagnostic logging:**
+- Shows full register range being read (e.g., "Register range: 0-97")
+- Logs when registers are not found in profile
+- Shows raw cache values alongside scaled values
+- Helps diagnose sensor value issues
+
+**Example debug output:**
+```
+[SPF 3000-6000 ES PLUS] Register range: 0-97 (42 registers defined)
+Reading base range (0-124)
+Grid voltage from reg 20: 230.5 V (raw cache: 2305)
+Generator power from reg 96: 1250 W (raw cache: 1250)
+```
+
+**Impact:**
+- ✅ Easier troubleshooting for users and developers
+- ✅ Clear visibility into which registers are being read
+- ✅ Raw hardware values visible for validation
+
+#### 3. 📝 Updated SPF Profile Documentation
+
+**Updated register range note:**
+- Changed from "Uses 0-88 register range" to "Uses 0-97 register range"
+- Reflects addition of generator sensors at registers 92-97
+
+---
+
+### Migration Notes:
+
+**No action required** - This is a bug fix release. Simply upgrade and the Grid device sensors will start showing correct values.
+
+**For SPF users:**
+- Generator sensors will now show actual values instead of zero
+- If you previously dismissed Grid device sensors as "broken," they should now work
+- Enable debug logging (see below) if you want to verify register reads
+
+**Debug logging setup** (optional, for troubleshooting):
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.growatt_modbus: debug
+```
+
+---
+
+### Files Changed:
+- `custom_components/growatt_modbus/growatt_modbus.py` - Added generator register reading code + enhanced debug logging
+- `custom_components/growatt_modbus/profiles/spf.py` - Updated register range documentation
+- `custom_components/growatt_modbus/manifest.json` - Version bump to 0.4.4
+
+---
+
+### Technical Details:
+
+**Why did this happen?**
+
+v0.4.3 fixed the missing dataclass fields, which made the generator sensors *appear* in Home Assistant. However, there were still 3 missing pieces:
+
+1. ✅ Register definitions in profile - PRESENT (added in earlier release for Issue #145)
+2. ✅ GrowattData dataclass fields - FIXED in v0.4.3
+3. ✅ Sensor definitions in sensor.py - PRESENT
+4. ❌ **Register reading code** - MISSING until v0.4.4
+
+**The chain of events:**
+1. Registers can be read via `read_register` service → Hardware works ✅
+2. Sensors appear in entity list → Dataclass fields exist ✅
+3. But sensors show zero → No code to read registers into data object ❌
+
+This is a classic case of partial implementation where the infrastructure existed but the actual data pipeline connection was missing.
+
+---
+
+### Known Issues:
+- None - All SPF Grid device sensors should now show correct values
+
+---
+
 # Release Notes - v0.4.3
 
 ## 🐛 Critical Bug Fix: Missing Dataclass Fields
