@@ -179,6 +179,13 @@ class GrowattData:
     charge_power_rate: int = 0        # 0-100 (battery charge power %)
     charge_stopped_soc: int = 0       # 0-100 (stop charge at SOC %)
     ac_charge_enable: int = 0         # 0=Disabled, 1=Enabled
+
+    # WIT VPP Remote Control (30000+ range)
+    control_authority: int = 0        # 0=Disabled, 1=Enabled (VPP master enable)
+    remote_power_control_enable: int = 0  # 0=Disabled, 1=Enabled (timed override enable)
+    remote_power_control_charging_time: int = 0  # 0-1440 minutes (duration)
+    remote_charge_and_discharge_power: int = 0   # -100 to +100% (negative=discharge, positive=charge)
+
     time_period_1_enable: int = 0     # 0=Disabled, 1=Enabled
     time_period_1_start: int = 0      # HHMM format (e.g., 530 = 05:30)
     time_period_1_end: int = 0        # HHMM format
@@ -596,10 +603,12 @@ class GrowattModbus:
         
         min_addr = min(addresses)
         max_addr = max(addresses)
-        
+
+        logger.debug(f"[{self.register_map['name']}] Register range: {min_addr}-{max_addr} ({len(addresses)} registers defined)")
+
         # Clear cache
         self._register_cache = {}
-        
+
         # Determine which ranges we need to read
         # Check if we have registers in different ranges
         has_base_range = any(0 <= addr < 1000 for addr in addresses)
@@ -887,13 +896,45 @@ class GrowattModbus:
             ac_input_power_low_addr = self._find_register_by_name('ac_input_power_low')
             if grid_voltage_addr:
                 data.grid_voltage = self._get_register_value(grid_voltage_addr) or 0.0
-                logger.debug(f"Grid voltage from reg {grid_voltage_addr}: {data.grid_voltage} V")
+                logger.debug(f"Grid voltage from reg {grid_voltage_addr}: {data.grid_voltage} V (raw cache: {self._register_cache.get(grid_voltage_addr)})")
+            else:
+                logger.debug("Grid voltage register not found in profile")
             if grid_frequency_addr:
                 data.grid_frequency = self._get_register_value(grid_frequency_addr) or 0.0
-                logger.debug(f"Grid frequency from reg {grid_frequency_addr}: {data.grid_frequency} Hz")
+                logger.debug(f"Grid frequency from reg {grid_frequency_addr}: {data.grid_frequency} Hz (raw cache: {self._register_cache.get(grid_frequency_addr)})")
+            else:
+                logger.debug("Grid frequency register not found in profile")
             if ac_input_power_low_addr:
                 data.ac_input_power = self._get_register_value(ac_input_power_low_addr) or 0.0
                 logger.debug(f"AC input power from reg {ac_input_power_low_addr}: {data.ac_input_power} W")
+            else:
+                logger.debug("AC input power register not found in profile")
+
+            # Generator Sensors (SPF Off-Grid with generator input)
+            generator_power_addr = self._find_register_by_name('generator_power')
+            generator_voltage_addr = self._find_register_by_name('generator_voltage')
+            generator_discharge_today_low_addr = self._find_register_by_name('generator_discharge_today_low')
+            generator_discharge_total_low_addr = self._find_register_by_name('generator_discharge_total_low')
+            if generator_power_addr:
+                data.generator_power = self._get_register_value(generator_power_addr) or 0.0
+                logger.debug(f"Generator power from reg {generator_power_addr}: {data.generator_power} W (raw cache: {self._register_cache.get(generator_power_addr)})")
+            else:
+                logger.debug("Generator power register not found in profile")
+            if generator_voltage_addr:
+                data.generator_voltage = self._get_register_value(generator_voltage_addr) or 0.0
+                logger.debug(f"Generator voltage from reg {generator_voltage_addr}: {data.generator_voltage} V (raw cache: {self._register_cache.get(generator_voltage_addr)})")
+            else:
+                logger.debug("Generator voltage register not found in profile")
+            if generator_discharge_today_low_addr:
+                data.generator_discharge_today = self._get_register_value(generator_discharge_today_low_addr) or 0.0
+                logger.debug(f"Generator discharge today from reg {generator_discharge_today_low_addr}: {data.generator_discharge_today} kWh")
+            else:
+                logger.debug("Generator discharge today register not found in profile")
+            if generator_discharge_total_low_addr:
+                data.generator_discharge_total = self._get_register_value(generator_discharge_total_low_addr) or 0.0
+                logger.debug(f"Generator discharge total from reg {generator_discharge_total_low_addr}: {data.generator_discharge_total} kWh")
+            else:
+                logger.debug("Generator discharge total register not found in profile")
 
             # Three-Phase AC Output (individual phases)
             # Phase R
@@ -1526,15 +1567,17 @@ class GrowattModbus:
                 logger.debug(f"Could not read ac_to_bat_volt register: {e}")
 
         # --- SPH/SPM Battery Control registers (1000+ range) ---
-        # Priority Mode (1044)
-        if 1044 in holding_map:
+        # Priority Mode (1044 for SPH/SPH-TL3, 30476 for WIT)
+        priority_addr = 1044 if 1044 in holding_map else (30476 if 30476 in holding_map else None)
+        if priority_addr:
             try:
-                priority_regs = self.read_holding_registers(1044, 1)
+                priority_regs = self.read_holding_registers(priority_addr, 1)
                 if priority_regs is not None and len(priority_regs) >= 1:
                     data.priority_mode = int(priority_regs[0])
-                    logger.debug("[SPH CTRL] priority_mode=%s", data.priority_mode)
+                    profile_name = "WIT" if priority_addr == 30476 else "SPH"
+                    logger.debug("[%s CTRL] priority_mode=%s", profile_name, data.priority_mode)
             except Exception as e:
-                logger.debug(f"Could not read priority_mode register: {e}")
+                logger.debug(f"Could not read priority_mode register {priority_addr}: {e}")
 
         # Discharge Control (1070-1071)
         if any(reg in holding_map for reg in [1070, 1071]):
@@ -1595,6 +1638,37 @@ class GrowattModbus:
                                data.time_period_3_start, data.time_period_3_end, data.time_period_3_enable)
             except Exception as e:
                 logger.debug(f"Could not read time period control registers: {e}")
+
+        # --- WIT VPP Remote Control registers (30000+ range) ---
+        # Control Authority (30100)
+        if 30100 in holding_map:
+            try:
+                vpp_ctrl_regs = self.read_holding_registers(30100, 1)
+                if vpp_ctrl_regs is not None and len(vpp_ctrl_regs) >= 1:
+                    data.control_authority = int(vpp_ctrl_regs[0])
+                    logger.debug("[WIT VPP] control_authority=%s", data.control_authority)
+            except Exception as e:
+                logger.debug(f"Could not read VPP control_authority register 30100: {e}")
+
+        # Remote Power Control (30407-30409)
+        if any(reg in holding_map for reg in [30407, 30408, 30409]):
+            try:
+                vpp_power_regs = self.read_holding_registers(30407, 3)
+                if vpp_power_regs is not None and len(vpp_power_regs) >= 3:
+                    if 30407 in holding_map:
+                        data.remote_power_control_enable = int(vpp_power_regs[0])
+                    if 30408 in holding_map:
+                        data.remote_power_control_charging_time = int(vpp_power_regs[1])
+                    if 30409 in holding_map:
+                        # Register 30409 is signed (-100 to +100)
+                        raw_val = vpp_power_regs[2]
+                        if raw_val > 32767:  # Handle signed 16-bit
+                            raw_val = raw_val - 65536
+                        data.remote_charge_and_discharge_power = int(raw_val)
+                    logger.debug("[WIT VPP] remote_power_control_enable=%s, charging_time=%s min, charge_discharge_power=%s%%",
+                               data.remote_power_control_enable, data.remote_power_control_charging_time, data.remote_charge_and_discharge_power)
+            except Exception as e:
+                logger.debug(f"Could not read VPP remote power control registers 30407-30409: {e}")
 
     def get_status_text(self, status_code: int) -> str:
         """Convert status code to human readable text"""

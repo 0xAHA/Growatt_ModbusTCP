@@ -155,6 +155,10 @@ WRITABLE_REGISTERS = {
     #   201 = Active Power Rate (%)
     #   202 = Work Mode / Remote Command (0 standby, 1 charge, 2 discharge)
     #   203 = Export Limit (W), 0 = zero export
+    #   30100 = VPP Control Authority (master enable)
+    #   30407 = Remote Power Control Enable (timed override)
+    #   30408 = Remote Power Control Charging Time (minutes)
+    #   30409 = Remote Charge/Discharge Power (%)
     # =========================================================================
     'active_power_rate': {
         'register': 201,
@@ -180,6 +184,41 @@ WRITABLE_REGISTERS = {
         'valid_range': (0, 20000),
         'unit': 'W',
         'desc': 'Export limit in watts (0 = zero export)'
+    },
+    'control_authority': {
+        'register': 30100,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'VPP master enable switch'
+    },
+    'remote_power_control_enable': {
+        'register': 30407,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'Enable timed charge/discharge power override'
+    },
+    'remote_power_control_charging_time': {
+        'register': 30408,
+        'scale': 1,
+        'valid_range': (0, 1440),
+        'unit': 'min',
+        'desc': 'Duration for remote power control (0-1440 minutes)'
+    },
+    'remote_charge_and_discharge_power': {
+        'register': 30409,
+        'scale': 1,
+        'valid_range': (-100, 100),
+        'unit': '%',
+        'desc': 'Remote charge/discharge power (-100% to +100%, negative=discharge, positive=charge)',
+        'signed': True
     },
 
 
@@ -560,7 +599,9 @@ def get_device_type_for_control(control_name: str) -> str:
         'grid', 'ongrid', 'offgrid', 'vpp', 'export', 'import',
         'phase_mode', 'phase_sequence', 'antibackflow',
         # SPF off-grid AC input controls
-        'ac_input_mode'
+        'ac_input_mode',
+        # WIT VPP remote control
+        'control_authority', 'remote_power_control', 'remote_charge_and_discharge'
     ]):
         return DEVICE_TYPE_GRID
 

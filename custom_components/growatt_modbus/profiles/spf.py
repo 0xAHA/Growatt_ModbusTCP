@@ -34,7 +34,7 @@ Battery Sensor Limitations:
 SPF_3000_6000_ES_PLUS = {
     'name': 'SPF 3000-6000 ES PLUS',
     'description': 'Off-grid solar inverter with battery storage and AC charging (3-6kW)',
-    'notes': 'Uses 0-88 register range. Off-grid system with AC input, battery, and load output. No grid export.',
+    'notes': 'Uses 0-97 register range. Off-grid system with AC input, battery, and load output. No grid export.',
     'offgrid_protocol': True,
     'input_registers': {
         # System Status
