@@ -109,7 +109,34 @@ class GrowattData:
     energy_to_grid_total: float = 0.0 # kWh
     load_energy_today: float = 0.0    # kWh
     load_energy_total: float = 0.0    # kWh
-    
+
+    # SPF Off-Grid AC Input (from grid/generator)
+    grid_voltage: float = 0.0         # V (AC input voltage)
+    grid_frequency: float = 0.0       # Hz (AC input frequency)
+    ac_input_power: float = 0.0       # W (AC input power)
+    ac_apparent_power: float = 0.0    # VA (AC apparent power)
+    load_percentage: float = 0.0      # % (Load percentage)
+
+    # SPF Generator Sensors
+    generator_power: float = 0.0      # W
+    generator_voltage: float = 0.0    # V
+    generator_discharge_today: float = 0.0  # kWh
+    generator_discharge_total: float = 0.0  # kWh
+
+    # SPF AC Charge/Discharge Energy (from grid/generator)
+    ac_charge_energy_today: float = 0.0     # kWh
+    ac_discharge_energy_today: float = 0.0  # kWh
+    ac_discharge_energy_total: float = 0.0  # kWh
+
+    # SPF Operational Discharge Energy
+    op_discharge_energy_today: float = 0.0  # kWh
+    op_discharge_energy_total: float = 0.0  # kWh
+
+    # WIT Extra/Parallel Inverter Sensors (multi-inverter systems)
+    extra_power_to_grid: float = 0.0  # W
+    extra_energy_today: float = 0.0   # kWh
+    extra_energy_total: float = 0.0   # kWh
+
     # Temperatures
     inverter_temp: float = 0.0        # °C
     ipm_temp: float = 0.0             # °C
