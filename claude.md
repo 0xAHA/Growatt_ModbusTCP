@@ -8,13 +8,14 @@ This document provides comprehensive guidelines for AI assistants (and developer
 
 **BEFORE making ANY changes to sensors or registers:**
 
-### 1. **Required Checklist** (Complete ALL 5 steps)
+### 1. **Required Checklist** (Complete ALL 6 steps)
 ```
 □ Step 1: Update profile file (profiles/*.py) - Add register definition
-□ Step 2: Add sensor definition (sensor.py) - SENSOR_DEFINITIONS
-□ Step 3: Assign device type (const.py) - SENSOR_DEVICE_MAP
-□ Step 4: Add to sensor group (device_profiles.py) - BATTERY_SENSORS/GRID_SENSORS/etc
-□ Step 5: Run validation script: python3 validate_sensors.py --sensor <name>
+□ Step 2: Add to GrowattData dataclass (growatt_modbus.py) - Add field
+□ Step 3: Add sensor definition (sensor.py) - SENSOR_DEFINITIONS
+□ Step 4: Assign device type (const.py) - SENSOR_DEVICE_MAP
+□ Step 5: Add to sensor group (device_profiles.py) - BATTERY_SENSORS/GRID_SENSORS/etc
+□ Step 6: Run validation script: python3 validate_sensors.py --sensor <name>
 ```
 
 ### 2. **Validation Tools**
@@ -114,7 +115,39 @@ Add the register definition:
 - For 32-bit values, define both `_high` and `_low` with `pair` attribute
 - Mark signed values with `'signed': True`
 
-#### Step 2: Add Sensor Definition (`sensor.py`)
+#### Step 2: Add to GrowattData Dataclass (`growatt_modbus.py`)
+
+**Location:** `custom_components/growatt_modbus/growatt_modbus.py` (~lines 60-180)
+
+Add the field to the `@dataclass` definition:
+
+```python
+@dataclass
+class GrowattData:
+    """Container for Growatt inverter data"""
+    # ... existing fields ...
+
+    # SPF Off-Grid AC Input (from grid/generator)
+    grid_voltage: float = 0.0         # V (AC input voltage)
+    grid_frequency: float = 0.0       # Hz (AC input frequency)
+```
+
+**⚠️ CRITICAL:** This step is often forgotten but is REQUIRED! Without this field:
+- The code will try to set `data.grid_voltage = value`
+- But `hasattr(data, 'grid_voltage')` returns `False`
+- Sensor conditions fail and sensor doesn't appear
+
+**Type Guidelines:**
+- `float = 0.0` - For all sensor values (voltage, current, power, energy, temperature, percentages)
+- `int = 0` - For status codes, counts, or control registers
+- `str = ""` - For text fields (firmware version, serial number)
+
+**Organization:**
+- Group related fields together with comment headers
+- Place near similar sensors (battery fields together, PV fields together, etc.)
+- See existing dataclass structure for examples
+
+#### Step 3: Add Sensor Definition (`sensor.py`)
 
 **Location:** `custom_components/growatt_modbus/sensor.py`
 
@@ -143,7 +176,7 @@ Add to `SENSOR_DEFINITIONS` dictionary (~line 40-700):
 - `condition` - Lambda function to conditionally create sensor
 - `entity_category` - Set to `EntityCategory.DIAGNOSTIC` for technical sensors
 
-#### Step 3: Assign Device Type (`const.py`)
+#### Step 4: Assign Device Type (`const.py`)
 
 **Location:** `custom_components/growatt_modbus/const.py` (~line 416-488)
 
@@ -166,7 +199,7 @@ SENSOR_DEVICE_MAP = {
 - `DEVICE_TYPE_BATTERY` - Battery storage, SOC, charge/discharge
 - `DEVICE_TYPE_INVERTER` - Status, faults, temperatures, system info
 
-#### Step 4: Add to Sensor Group (`device_profiles.py`)
+#### Step 5: Add to Sensor Group (`device_profiles.py`)
 
 **Location:** `custom_components/growatt_modbus/device_profiles.py` (Lines 5-110)
 
@@ -200,7 +233,7 @@ GRID_SENSORS: Set[str] = {
 
 **Why this matters:** Profiles in `INVERTER_PROFILES` compose these sensor groups (e.g., `sensors: BASIC_PV_SENSORS | BATTERY_SENSORS`). If the sensor isn't in the right group, it won't be included in any profile.
 
-#### Step 5: Validate Across Project
+#### Step 6: Validate Across Project
 
 **Run the validation script (REQUIRED):**
 ```bash
@@ -464,14 +497,17 @@ When adding a new profile:
 
 ### Issue 1: Sensor Not Appearing
 
-**Symptoms:** Register defined in profile, but sensor doesn't appear in HA
+**Symptoms:** Register defined in profile, but sensor doesn't appear in HA. Logs show "condition not met".
 
 **Checklist:**
-- ✅ Added to profile `'sensors'` set?
+- ✅ Added field to `GrowattData` dataclass in `growatt_modbus.py`? **← Most common issue!**
+- ✅ Added to appropriate sensor group in `device_profiles.py`?
 - ✅ Added to `sensor.py` `SENSOR_DEFINITIONS`?
 - ✅ Added to `const.py` `SENSOR_DEVICE_MAP`?
-- ✅ `attr` in sensor definition matches register `name`?
+- ✅ `attr` in sensor definition matches register `name` AND dataclass field name?
 - ✅ Condition in sensor definition evaluates to true?
+
+**Common cause:** Field missing from `GrowattData` dataclass → `hasattr(data, 'field_name')` returns False → condition fails
 
 ### Issue 2: Wrong Device Assignment
 
@@ -666,9 +702,10 @@ When preparing a release:
 | File | Purpose | When to Update |
 |------|---------|----------------|
 | `profiles/*.py` | Register definitions | Adding/updating registers |
+| `growatt_modbus.py` | Data container (GrowattData) | **REQUIRED: Adding new sensor fields** |
 | `sensor.py` | Sensor entity definitions | Adding new sensors |
 | `const.py` | Device assignments, categories | Assigning sensors to devices |
-| `device_profiles.py` | Profile registry | Adding new profiles |
+| `device_profiles.py` | Profile registry, sensor groups | Adding new profiles or sensors |
 | `auto_detection.py` | Auto-detection logic | New DTC codes, refinement logic |
 | `coordinator.py` | Data processing | Special handling, fallback logic |
 | `diagnostic.py` | Scanner/diagnostics | Detection improvements |
