@@ -1,5 +1,81 @@
 # Release Notes
 
+# Release Notes - v0.4.2
+
+## ✨ MAJOR UX IMPROVEMENT: All Profile Sensors Always Visible
+
+**Philosophy Change:** If a sensor is in the profile, it should always be created (showing "0" when inactive), not hidden based on current value.
+
+---
+
+### What's Fixed in v0.4.2:
+
+#### 1. 🎯 Removed ALL Value-Based Sensor Conditions
+
+**32 sensors fixed** - removed `> 0` checks that caused sensors to disappear:
+
+**Power Flow (3):**
+- `power_to_grid`, `power_to_load`, `power_to_user` - Now show "0 W" when inactive
+
+**Energy Counters (8):**
+- `energy_to_grid_today/total` - Show 0 kWh when no export
+- `load_energy_today/total` - Show 0 kWh when no load
+- `grid_energy_today/total`, `grid_import_energy_today/total` - Use smart hardware detection
+
+**Temperature Sensors (3):**
+- `ipm_temp`, `boost_temp`, `dcdc_temp` - Always show (can be 0°C)
+
+**Battery Core (3):**
+- `battery_voltage`, `battery_soc`, `battery_current` - Always visible
+
+**BMS Sensors (7):**
+- All BMS sensors now show "0" when value is 0 (instead of disappearing)
+
+**Diagnostic (3):**
+- `fault_code`, `warning_code`, `derating_mode` - Always visible (0 = healthy)
+
+**SPF Operational (2):**
+- `op_discharge_energy_today/total` - Fixed (missed in v0.4.1)
+
+#### 2. 📋 New Sensor Condition Rules
+
+**Conditions now ONLY check:**
+- ✅ `hasattr()` - For optional hardware (BMS, dcdc converter, etc.)
+- ✅ OR combinations - For calculated sensors needing source data
+- ❌ NO `> 0` value checks - Profile membership determines creation
+
+**Example:**
+```python
+# OLD (wrong):
+"condition": lambda data: data.battery_voltage > 0  # Hidden when 0!
+
+# NEW (correct):
+# No condition, or:
+"condition": lambda data: hasattr(data, 'battery_voltage')  # Only check if exists
+```
+
+#### 3. 🎁 Benefits
+
+✅ **Clear Status**: "0" means inactive, not "sensor doesn't exist"
+✅ **Better Diagnostics**: See full sensor inventory regardless of state
+✅ **No Surprises**: Sensors don't disappear when values reach 0
+✅ **HA Best Practice**: Entities show state changes, don't appear/disappear
+✅ **Profile-Driven**: If it's in the profile, we create it
+
+---
+
+### User Action Required:
+
+1. Update to v0.4.2
+2. Reload integration or restart Home Assistant
+3. Many more sensors will now be visible (showing appropriate 0 values)
+
+### Files Changed:
+- `sensor.py` - Removed 32 value-based conditions
+- `manifest.json`, `README.md`, `RELEASENOTES.md` - Version 0.4.2
+
+---
+
 # Release Notes - v0.4.1 (HOTFIX)
 
 ## 🔥 CRITICAL HOTFIX: Sensor Conditions Fixed
