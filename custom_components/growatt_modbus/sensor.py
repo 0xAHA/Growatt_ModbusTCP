@@ -312,7 +312,6 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfPower.WATT,
         "attr": "power_to_grid",
-        "condition": lambda data: data.power_to_grid > 0,
     },
     "power_to_load": {
         "name": "Power to Load",
@@ -321,7 +320,6 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfPower.WATT,
         "attr": "power_to_load",
-        "condition": lambda data: data.power_to_load > 0,
     },
     "power_to_user": {
         "name": "Power to User",
@@ -330,7 +328,6 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfPower.WATT,
         "attr": "power_to_user",
-        "condition": lambda data: data.power_to_user > 0,
     },
     
     # Consumption Sensors
@@ -384,7 +381,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "calculated",
-        "condition": lambda data: data.load_energy_today > 0 or data.energy_to_grid_today > 0,
+        "condition": lambda data: hasattr(data, 'load_energy_today') or hasattr(data, 'energy_to_grid_today'),
     },
     "grid_energy_total": {
         "name": "Grid Energy Total",
@@ -393,7 +390,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "calculated",
-        "condition": lambda data: data.load_energy_total > 0 or data.energy_to_grid_total > 0,
+        "condition": lambda data: hasattr(data, 'load_energy_total') or hasattr(data, 'energy_to_grid_total'),
     },
     "energy_to_grid_today": {
         "name": "Energy to Grid Today",
@@ -402,7 +399,6 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "energy_to_grid_today",
-        "condition": lambda data: data.energy_to_grid_today > 0,
     },
     "energy_to_grid_total": {
         "name": "Energy to Grid Total",
@@ -411,7 +407,6 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "energy_to_grid_total",
-        "condition": lambda data: data.energy_to_grid_total > 0,
     },
     "grid_import_energy_today": {
         "name": "Grid Import Energy Today",
@@ -420,7 +415,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "calculated",
-        "condition": lambda data: data.load_energy_today > 0,
+        "condition": lambda data: hasattr(data, 'load_energy_today'),
     },
     "grid_import_energy_total": {
         "name": "Grid Import Energy Total",
@@ -429,7 +424,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "calculated",
-        "condition": lambda data: data.load_energy_total > 0,
+        "condition": lambda data: hasattr(data, 'load_energy_total'),
     },
     "load_energy_today": {
         "name": "Load Energy Today",
@@ -438,7 +433,6 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "load_energy_today",
-        "condition": lambda data: data.load_energy_today > 0,
     },
     "load_energy_total": {
         "name": "Load Energy Total",
@@ -447,7 +441,6 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "load_energy_total",
-        "condition": lambda data: data.load_energy_total > 0,
     },
     
     # Temperature Sensors
@@ -466,7 +459,6 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfTemperature.CELSIUS,
         "attr": "ipm_temp",
-        "condition": lambda data: data.ipm_temp > 0,
     },
     "boost_temp": {
         "name": "Boost Temperature",
@@ -475,7 +467,6 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfTemperature.CELSIUS,
         "attr": "boost_temp",
-        "condition": lambda data: data.boost_temp > 0,
     },
     "dcdc_temp": {
         "name": "DC-DC Temperature",
@@ -484,7 +475,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfTemperature.CELSIUS,
         "attr": "dcdc_temp",
-        "condition": lambda data: hasattr(data, 'dcdc_temp') and data.dcdc_temp > 0,
+        "condition": lambda data: hasattr(data, 'dcdc_temp'),
     },
     "buck1_temp": {
         "name": "Buck1 Temperature",
@@ -513,7 +504,6 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "battery_voltage",
-        "condition": lambda data: data.battery_voltage > 0,
     },
     "battery_current": {
         "name": "Battery Current",
@@ -522,7 +512,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "battery_current",
-        "condition": lambda data: hasattr(data, 'battery_current') and data.battery_voltage > 0,
+        "condition": lambda data: hasattr(data, 'battery_current'),
     },
     "inverter_current": {
         "name": "Inverter Current",
@@ -547,7 +537,6 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": PERCENTAGE,
         "attr": "battery_soc",
-        "condition": lambda data: data.battery_soc > 0,
     },
     "battery_temp": {
         "name": "Battery Temperature",
@@ -647,7 +636,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricCurrent.AMPERE,
         "attr": "bms_max_current",
-        "condition": lambda data: hasattr(data, 'bms_max_current') and data.bms_max_current > 0,
+        "condition": lambda data: hasattr(data, 'bms_max_current'),
     },
     "bms_cycle_count": {
         "name": "BMS Cycle Count",
@@ -671,7 +660,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "bms_constant_volt",
-        "condition": lambda data: hasattr(data, 'bms_constant_volt') and data.bms_constant_volt > 0,
+        "condition": lambda data: hasattr(data, 'bms_constant_volt'),
     },
     "bms_max_cell_volt": {
         "name": "BMS Max Cell Voltage",
@@ -680,7 +669,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "bms_max_cell_volt",
-        "condition": lambda data: hasattr(data, 'bms_max_cell_volt') and data.bms_max_cell_volt > 0,
+        "condition": lambda data: hasattr(data, 'bms_max_cell_volt'),
     },
     "bms_min_cell_volt": {
         "name": "BMS Min Cell Voltage",
@@ -689,19 +678,19 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "bms_min_cell_volt",
-        "condition": lambda data: hasattr(data, 'bms_min_cell_volt') and data.bms_min_cell_volt > 0,
+        "condition": lambda data: hasattr(data, 'bms_min_cell_volt'),
     },
     "bms_module_num": {
         "name": "BMS Module Count",
         "icon": "mdi:battery-sync",
         "attr": "bms_module_num",
-        "condition": lambda data: hasattr(data, 'bms_module_num') and data.bms_module_num > 0,
+        "condition": lambda data: hasattr(data, 'bms_module_num'),
     },
     "bms_battery_count": {
         "name": "BMS Battery Count",
         "icon": "mdi:battery-plus",
         "attr": "bms_battery_count",
-        "condition": lambda data: hasattr(data, 'bms_battery_count') and data.bms_battery_count > 0,
+        "condition": lambda data: hasattr(data, 'bms_battery_count'),
     },
     "bms_max_soc": {
         "name": "BMS Max SOC",
@@ -709,7 +698,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": "%",
         "attr": "bms_max_soc",
-        "condition": lambda data: hasattr(data, 'bms_max_soc') and data.bms_max_soc > 0,
+        "condition": lambda data: hasattr(data, 'bms_max_soc'),
     },
     "bms_min_soc": {
         "name": "BMS Min SOC",
@@ -717,7 +706,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": "%",
         "attr": "bms_min_soc",
-        "condition": lambda data: hasattr(data, 'bms_min_soc') and data.bms_min_soc > 0,
+        "condition": lambda data: hasattr(data, 'bms_min_soc'),
     },
     "battery_soh": {
         "name": "Battery State of Health",
@@ -780,7 +769,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "op_discharge_energy_today",
-        "condition": lambda data: hasattr(data, 'op_discharge_energy_today') and data.op_discharge_energy_today > 0,
+        "condition": lambda data: hasattr(data, 'op_discharge_energy_today'),
     },
     "op_discharge_energy_total": {
         "name": "Operational Discharge Energy Total",
@@ -789,7 +778,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "op_discharge_energy_total",
-        "condition": lambda data: hasattr(data, 'op_discharge_energy_total') and data.op_discharge_energy_total > 0,
+        "condition": lambda data: hasattr(data, 'op_discharge_energy_total'),
     },
 
     # Extra/Parallel Inverter Sensors (WIT multi-inverter systems)
@@ -837,19 +826,16 @@ SENSOR_DEFINITIONS = {
         "name": "Derating Mode",
         "icon": "mdi:speedometer-slow",
         "attr": "derating_mode",
-        "condition": lambda data: data.derating_mode > 0,
     },
     "fault_code": {
         "name": "Fault Code",
         "icon": "mdi:alert-circle",
         "attr": "fault_code",
-        "condition": lambda data: data.fault_code > 0,
     },
     "warning_code": {
         "name": "Warning Code",
         "icon": "mdi:alert",
         "attr": "warning_code",
-        "condition": lambda data: data.warning_code > 0,
     },
 
     # Load Sensors (SPF Off-Grid)

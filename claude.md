@@ -2,6 +2,45 @@
 
 This document provides comprehensive guidelines for AI assistants (and developers) working on the Growatt Modbus Home Assistant integration.
 
+---
+
+## 🚨 START HERE - Adding/Updating Sensors 🚨
+
+**BEFORE making ANY changes to sensors or registers:**
+
+### 1. **Required Checklist** (Complete ALL 5 steps)
+```
+□ Step 1: Update profile file (profiles/*.py) - Add register definition
+□ Step 2: Add sensor definition (sensor.py) - SENSOR_DEFINITIONS
+□ Step 3: Assign device type (const.py) - SENSOR_DEVICE_MAP
+□ Step 4: Add to sensor group (device_profiles.py) - BATTERY_SENSORS/GRID_SENSORS/etc
+□ Step 5: Run validation script: python3 validate_sensors.py --sensor <name>
+```
+
+### 2. **Validation Tools**
+```bash
+# Validate a specific sensor
+python3 validate_sensors.py --sensor battery_power
+
+# Validate all sensors
+python3 validate_sensors.py
+
+# Validate entire profile
+python3 validate_sensors.py --profile sph
+```
+
+### 3. **Quick Search Check**
+```bash
+# After making changes, verify sensor appears in all places:
+grep -r "your_sensor_name" custom_components/growatt_modbus/
+```
+
+**If ANY step is skipped, the sensor WILL NOT work correctly!**
+
+See [Register Update/Addition Process](#register-updateaddition-process) below for detailed instructions.
+
+---
+
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
@@ -127,29 +166,54 @@ SENSOR_DEVICE_MAP = {
 - `DEVICE_TYPE_BATTERY` - Battery storage, SOC, charge/discharge
 - `DEVICE_TYPE_INVERTER` - Status, faults, temperatures, system info
 
-#### Step 4: Add to Profile Sensors List (`profiles/*.py`)
+#### Step 4: Add to Sensor Group (`device_profiles.py`)
 
-**Location:** Bottom of each profile file
+**Location:** `custom_components/growatt_modbus/device_profiles.py` (Lines 5-110)
 
-Add the sensor key to the `'sensors'` set:
+Add the sensor key to the appropriate sensor group set:
 
 ```python
-SPF_3000_6000_ES_PLUS = {
-    'name': 'SPF 3000-6000 ES PLUS',
+BATTERY_SENSORS: Set[str] = {
+    "battery_voltage", "battery_current", "battery_soc",
+    "battery_temp", "battery_power",
+    "new_battery_sensor",  # ← Add here
     ...
-    'sensors': {
-        'pv1_voltage', 'pv1_current', 'pv1_power',
-        'grid_voltage',  # ← Add here
-        ...
-    }
+}
+
+GRID_SENSORS: Set[str] = {
+    "grid_power", "grid_export_power",
+    "grid_voltage",  # ← Or add here if it's a grid sensor
+    ...
 }
 ```
 
-**Why this matters:** The `sensors` set determines which sensors are available for each profile. If you forget this step, the sensor won't be created even if everything else is correct.
+**Available sensor groups:**
+- `BASIC_PV_SENSORS` - PV string sensors (voltage, current, power)
+- `BASIC_AC_SENSORS` - AC output sensors
+- `BATTERY_SENSORS` - Battery related sensors
+- `GRID_SENSORS` - Grid import/export sensors
+- `ENERGY_SENSORS` - Energy production sensors
+- `TEMPERATURE_SENSORS` - Temperature sensors
+- `STATUS_SENSORS` - Status and diagnostic sensors
+- `THREE_PHASE_SENSORS` - Three-phase AC sensors
+- `SPF_OFFGRID_SENSORS` - Off-grid specific sensors
+
+**Why this matters:** Profiles in `INVERTER_PROFILES` compose these sensor groups (e.g., `sensors: BASIC_PV_SENSORS | BATTERY_SENSORS`). If the sensor isn't in the right group, it won't be included in any profile.
 
 #### Step 5: Validate Across Project
 
-Run these checks:
+**Run the validation script (REQUIRED):**
+```bash
+python3 validate_sensors.py --sensor your_sensor_name
+```
+
+This will automatically check:
+- ✅ Register defined in profile
+- ✅ Added to sensor.py SENSOR_DEFINITIONS
+- ✅ Added to const.py SENSOR_DEVICE_MAP
+- ✅ Added to profile 'sensors' set
+
+**Additional manual checks:**
 
 1. **Search for similar register names** to ensure consistency:
    ```bash
