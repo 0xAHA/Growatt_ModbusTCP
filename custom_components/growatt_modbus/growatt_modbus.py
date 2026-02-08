@@ -603,10 +603,12 @@ class GrowattModbus:
         
         min_addr = min(addresses)
         max_addr = max(addresses)
-        
+
+        logger.debug(f"[{self.register_map['name']}] Register range: {min_addr}-{max_addr} ({len(addresses)} registers defined)")
+
         # Clear cache
         self._register_cache = {}
-        
+
         # Determine which ranges we need to read
         # Check if we have registers in different ranges
         has_base_range = any(0 <= addr < 1000 for addr in addresses)
@@ -894,13 +896,19 @@ class GrowattModbus:
             ac_input_power_low_addr = self._find_register_by_name('ac_input_power_low')
             if grid_voltage_addr:
                 data.grid_voltage = self._get_register_value(grid_voltage_addr) or 0.0
-                logger.debug(f"Grid voltage from reg {grid_voltage_addr}: {data.grid_voltage} V")
+                logger.debug(f"Grid voltage from reg {grid_voltage_addr}: {data.grid_voltage} V (raw cache: {self._register_cache.get(grid_voltage_addr)})")
+            else:
+                logger.debug("Grid voltage register not found in profile")
             if grid_frequency_addr:
                 data.grid_frequency = self._get_register_value(grid_frequency_addr) or 0.0
-                logger.debug(f"Grid frequency from reg {grid_frequency_addr}: {data.grid_frequency} Hz")
+                logger.debug(f"Grid frequency from reg {grid_frequency_addr}: {data.grid_frequency} Hz (raw cache: {self._register_cache.get(grid_frequency_addr)})")
+            else:
+                logger.debug("Grid frequency register not found in profile")
             if ac_input_power_low_addr:
                 data.ac_input_power = self._get_register_value(ac_input_power_low_addr) or 0.0
                 logger.debug(f"AC input power from reg {ac_input_power_low_addr}: {data.ac_input_power} W")
+            else:
+                logger.debug("AC input power register not found in profile")
 
             # Generator Sensors (SPF Off-Grid with generator input)
             generator_power_addr = self._find_register_by_name('generator_power')
@@ -909,16 +917,24 @@ class GrowattModbus:
             generator_discharge_total_low_addr = self._find_register_by_name('generator_discharge_total_low')
             if generator_power_addr:
                 data.generator_power = self._get_register_value(generator_power_addr) or 0.0
-                logger.debug(f"Generator power from reg {generator_power_addr}: {data.generator_power} W")
+                logger.debug(f"Generator power from reg {generator_power_addr}: {data.generator_power} W (raw cache: {self._register_cache.get(generator_power_addr)})")
+            else:
+                logger.debug("Generator power register not found in profile")
             if generator_voltage_addr:
                 data.generator_voltage = self._get_register_value(generator_voltage_addr) or 0.0
-                logger.debug(f"Generator voltage from reg {generator_voltage_addr}: {data.generator_voltage} V")
+                logger.debug(f"Generator voltage from reg {generator_voltage_addr}: {data.generator_voltage} V (raw cache: {self._register_cache.get(generator_voltage_addr)})")
+            else:
+                logger.debug("Generator voltage register not found in profile")
             if generator_discharge_today_low_addr:
                 data.generator_discharge_today = self._get_register_value(generator_discharge_today_low_addr) or 0.0
                 logger.debug(f"Generator discharge today from reg {generator_discharge_today_low_addr}: {data.generator_discharge_today} kWh")
+            else:
+                logger.debug("Generator discharge today register not found in profile")
             if generator_discharge_total_low_addr:
                 data.generator_discharge_total = self._get_register_value(generator_discharge_total_low_addr) or 0.0
                 logger.debug(f"Generator discharge total from reg {generator_discharge_total_low_addr}: {data.generator_discharge_total} kWh")
+            else:
+                logger.debug("Generator discharge total register not found in profile")
 
             # Three-Phase AC Output (individual phases)
             # Phase R
