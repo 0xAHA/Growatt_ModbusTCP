@@ -902,6 +902,24 @@ class GrowattModbus:
                 data.ac_input_power = self._get_register_value(ac_input_power_low_addr) or 0.0
                 logger.debug(f"AC input power from reg {ac_input_power_low_addr}: {data.ac_input_power} W")
 
+            # Generator Sensors (SPF Off-Grid with generator input)
+            generator_power_addr = self._find_register_by_name('generator_power')
+            generator_voltage_addr = self._find_register_by_name('generator_voltage')
+            generator_discharge_today_low_addr = self._find_register_by_name('generator_discharge_today_low')
+            generator_discharge_total_low_addr = self._find_register_by_name('generator_discharge_total_low')
+            if generator_power_addr:
+                data.generator_power = self._get_register_value(generator_power_addr) or 0.0
+                logger.debug(f"Generator power from reg {generator_power_addr}: {data.generator_power} W")
+            if generator_voltage_addr:
+                data.generator_voltage = self._get_register_value(generator_voltage_addr) or 0.0
+                logger.debug(f"Generator voltage from reg {generator_voltage_addr}: {data.generator_voltage} V")
+            if generator_discharge_today_low_addr:
+                data.generator_discharge_today = self._get_register_value(generator_discharge_today_low_addr) or 0.0
+                logger.debug(f"Generator discharge today from reg {generator_discharge_today_low_addr}: {data.generator_discharge_today} kWh")
+            if generator_discharge_total_low_addr:
+                data.generator_discharge_total = self._get_register_value(generator_discharge_total_low_addr) or 0.0
+                logger.debug(f"Generator discharge total from reg {generator_discharge_total_low_addr}: {data.generator_discharge_total} kWh")
+
             # Three-Phase AC Output (individual phases)
             # Phase R
             ac_voltage_r_addr = self._find_register_by_name('ac_voltage_r')
