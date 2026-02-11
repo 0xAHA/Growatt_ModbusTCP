@@ -483,20 +483,33 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         """Fetch data from the inverter (runs in executor)."""
         max_retries = 3
         retry_delay = 3  # seconds - increased from 2
-        
+
         for attempt in range(max_retries):
             try:
+                # Ensure clean state before connecting - always disconnect first
+                # This prevents file descriptor leaks from failed connection attempts
+                try:
+                    self._client.disconnect()
+                except Exception as err:
+                    _LOGGER.debug("Disconnect before connect raised exception (safe to ignore): %s", err)
+
                 if not self._client.connect():
                     _LOGGER.warning(
-                        "Failed to connect to Growatt inverter (attempt %d/%d)", 
+                        "Failed to connect to Growatt inverter (attempt %d/%d)",
                         attempt + 1, max_retries
                     )
+                    # CRITICAL: Always disconnect after failed connect to release serial port/socket
+                    try:
+                        self._client.disconnect()
+                    except Exception as err:
+                        _LOGGER.debug("Disconnect after failed connect raised exception: %s", err)
+
                     if attempt < max_retries - 1:
                         time.sleep(retry_delay)  # constant delay, not exponential
                         continue
                     _LOGGER.error("All connection attempts failed")
                     return None
-                    
+
                 data = self._client.read_all_data()
                 if data is not None:  # Success!
                     self._client.disconnect()
@@ -506,34 +519,35 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 _LOGGER.warning("Read returned None (attempt %d/%d)", attempt + 1, max_retries)
                 try:
                     self._client.disconnect()
-                except:
-                    pass
+                except Exception as err:
+                    _LOGGER.debug("Disconnect after failed read raised exception: %s", err)
+
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     continue
-                    
+
             except Exception as err:
                 _LOGGER.warning(
-                    "Error during data fetch (attempt %d/%d): %s", 
+                    "Error during data fetch (attempt %d/%d): %s",
                     attempt + 1, max_retries, err
                 )
                 if self._client:
                     try:
                         self._client.disconnect()
-                    except:
-                        pass
-                
+                    except Exception as disconnect_err:
+                        _LOGGER.debug("Disconnect after exception raised error: %s", disconnect_err)
+
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                 else:
                     _LOGGER.error("All fetch attempts failed after %d retries", max_retries)
                     return None
-        
+
         # Final disconnect if we get here
         try:
             self._client.disconnect()
-        except:
-            pass
+        except Exception as err:
+            _LOGGER.debug("Final disconnect raised exception: %s", err)
         return None
 
     async def async_config_entry_first_refresh(self) -> None:

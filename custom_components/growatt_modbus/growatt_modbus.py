@@ -330,6 +330,16 @@ class GrowattModbus:
     def connect(self) -> bool:
         """Establish connection to inverter"""
         try:
+            # Check if already connected (prevents double-open and file descriptor leaks)
+            if hasattr(self.client, 'is_socket_open'):
+                try:
+                    if self.client.is_socket_open():
+                        logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Already connected")
+                        return True
+                except Exception as e:
+                    logger.debug(f"[{self.register_map['name']}@{self.connection_id}] is_socket_open() check failed: {e}")
+                    # Continue to connect attempt below
+
             result = self.client.connect()
             if result:
                 logger.info(f"[{self.register_map['name']}@{self.connection_id}] Successfully connected")
@@ -341,10 +351,18 @@ class GrowattModbus:
             return False
     
     def disconnect(self):
-        """Close connection"""
+        """Close connection and release resources (critical for preventing file descriptor leaks)"""
         if self.client:
-            self.client.close()
-            logger.info(f"[{self.register_map['name']}@{self.connection_id}] Disconnected")
+            try:
+                self.client.close()
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Disconnected successfully")
+            except Exception as e:
+                # Log disconnect errors - these can indicate resource leaks
+                logger.warning(f"[{self.register_map['name']}@{self.connection_id}] Error during disconnect: {e}")
+                # Re-raise if it's a critical error (file descriptor issues)
+                if "Too many open files" in str(e) or "errno 24" in str(e):
+                    logger.error(f"[{self.register_map['name']}@{self.connection_id}] CRITICAL: File descriptor leak detected!")
+                    raise
     
     def _track_read_success(self):
         """Track successful read and restore fast polling if we had backed off"""
