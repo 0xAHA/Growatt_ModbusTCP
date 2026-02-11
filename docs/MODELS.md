@@ -38,7 +38,7 @@ The integration supports **residential and small commercial** Growatt inverters 
 |-----------------|-------------|------------|---------|-------------|--------|-------|
 | **MID 15000-25000TL3-X** | 15000-25000TL3-X | 2 | No | ✅ VPP + Legacy | ⚠️ Untested | Grid-tied, 15-25kW |
 | **MOD 6000-15000TL3-XH** | MOD 6000-15000TL3-XH | 3 | Yes | ✅ VPP + Legacy | ✅ **Tested** | Hybrid with battery, 6-15kW, **Fixed v0.2.4** |
-| **SPH-TL3 3000-10000** | SPH-TL3 3000-10000 | 2 | Yes | ✅ VPP + Legacy | ⚠️ Untested | Three-phase hybrid, 3-10kW |
+| **SPH-TL3 3000-10000** | SPH-TL3 3000-10000 | 2 | Yes | ✅ VPP + Legacy | ✅ **Tested** | Three-phase hybrid, 3-10kW, **Tested: SPH 8000TL3 BH-UP** |
 | **WIT 4000-15000TL3** | WIT 4000-15000TL3 | 2 | Yes | ✅ VPP v2.02 | ⚠️ Untested | Three-phase hybrid with advanced storage, 4-15kW, DTC 5603 |
 
 **Legend:**
@@ -236,6 +236,9 @@ The following models have been validated with real hardware:
 - ✅ **MIN TL-XH (MIN-4600TL-XH)** - Hybrid with ARK battery (v0.2.4)
 - ✅ **MOD 10000TL3-XH** - Three-phase hybrid with ARK battery (v0.2.4)
 - ✅ **SPF 6000 ES PLUS** - Off-grid with battery (v0.2.4)
+- ✅ **SPH 8000TL3 BH-UP** - Three-phase hybrid, auto-detection works perfectly (Issue #158)
+  - Hardware: Jevina RS 485 to WiFi Converter EW11A connected to RS 485-3 port
+  - All entities present and displayed correctly
 
 ### Community Testing Needed
 
