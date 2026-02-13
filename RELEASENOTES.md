@@ -1,5 +1,50 @@
 # Release Notes
 
+# Release Notes - v0.4.6
+
+## 🐛 Bug Fix: SPF AC Discharge Energy Sensors
+
+**Fixed:**
+- SPF AC Discharge Energy Today/Total sensors showing 0.00 (registers 64-67)
+
+---
+
+### What's Fixed in v0.4.6:
+
+#### 1. 🔧 Added Missing AC Discharge Energy Register Reading Code
+
+**Root Cause:** SPF AC Discharge Energy sensors (registers 64-67) had the same bug as generator sensors in v0.4.4 - the register definitions, dataclass fields, and sensor definitions all existed, but the code to actually READ these registers was missing.
+
+**Affected sensors (now fixed):**
+- `ac_discharge_energy_today` (registers 64-65) - AC discharge energy today from battery to loads
+- `ac_discharge_energy_total` (registers 66-67) - AC discharge energy total from battery to loads
+
+**What these registers measure:**
+- **AC Discharge Energy** = Energy from battery → loads via inverter (energy OUT from battery)
+- NOT the same as "total import from grid" - that's tracked by different registers
+
+**The Fix:** Added register reading code in `_read_energy_breakdown()` method, following the same pattern as operational discharge energy sensors.
+
+**Impact:**
+- ✅ SPF users can now see AC discharge energy values instead of 0.00
+- ✅ Complete energy flow tracking for SPF systems
+- ✅ Matches the fix pattern used for generator sensors in v0.4.4
+
+**Note for SPF Users:**
+- "AC Charge Energy" entities showing 0.00 is EXPECTED - these are WIT-only sensors
+- SPF uses "Battery Charge Today/Total" entities instead (registers 56-59)
+- Both track the same thing: grid/generator charging your battery
+
+---
+
+### Files Changed:
+- `custom_components/growatt_modbus/growatt_modbus.py` - Added AC discharge energy register reading code
+- `custom_components/growatt_modbus/manifest.json` - Version bump to 0.4.6
+- `README.md` - Version badge updated to 0.4.6
+- `RELEASENOTES.md` - Updated with v0.4.6 changes
+
+---
+
 # Release Notes - v0.4.5
 
 ## 🔥 CRITICAL Bug Fix: Serial Connection File Descriptor Leak

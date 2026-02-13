@@ -1240,6 +1240,17 @@ class GrowattModbus:
                 data.op_discharge_energy_total = self._get_register_value(addr) or 0.0
                 logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Operational discharge energy total from reg {addr}: {data.op_discharge_energy_total} kWh (cache: {self._register_cache.get(addr)})")
 
+            # AC Discharge Energy (SPF off-grid models - battery to load via inverter)
+            addr = self._find_register_by_name('ac_discharge_energy_today_low')
+            if addr:
+                data.ac_discharge_energy_today = self._get_register_value(addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] AC discharge energy today from reg {addr}: {data.ac_discharge_energy_today} kWh (cache: {self._register_cache.get(addr)})")
+
+            addr = self._find_register_by_name('ac_discharge_energy_total_low')
+            if addr:
+                data.ac_discharge_energy_total = self._get_register_value(addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] AC discharge energy total from reg {addr}: {data.ac_discharge_energy_total} kWh (cache: {self._register_cache.get(addr)})")
+
         except Exception as e:
             logger.debug(f"Energy breakdown not available: {e}")
     
