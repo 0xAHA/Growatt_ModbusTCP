@@ -1398,7 +1398,9 @@ class GrowattModbus:
                     pair_addr = self._find_register_by_name('battery_charge_today_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.charge_energy_today = self._get_register_value(addr) or 0.0
-                logger.debug(f"Charge energy today: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_energy_today} kWh")
+                # SPF uses charge_energy_* registers for AC charging - populate both fields
+                data.ac_charge_energy_today = data.charge_energy_today
+                logger.debug(f"Charge energy today: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_energy_today} kWh (also populating ac_charge_energy_today for SPF)")
 
             # Discharge energy today
             # Try both naming conventions: "discharge_energy_today" and "battery_discharge_today"
@@ -1426,7 +1428,9 @@ class GrowattModbus:
                     pair_addr = self._find_register_by_name('battery_charge_total_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.charge_energy_total = self._get_register_value(addr) or 0.0
-                logger.debug(f"Charge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_energy_total} kWh")
+                # SPF uses charge_energy_* registers for AC charging - populate both fields
+                data.ac_charge_energy_total = data.charge_energy_total
+                logger.debug(f"Charge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_energy_total} kWh (also populating ac_charge_energy_total for SPF)")
 
             # Discharge energy total
             # Try both naming conventions: "discharge_energy_total" and "battery_discharge_total"
@@ -1442,7 +1446,16 @@ class GrowattModbus:
                 data.discharge_energy_total = self._get_register_value(addr) or 0.0
                 logger.debug(f"Discharge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_energy_total} kWh")
 
-            # AC Charge Energy Total (WIT/SPF - from grid/generator to battery)
+            # AC Charge Energy Today (WIT-specific - SPF populates this from charge_energy_today above)
+            addr = self._find_register_by_name('ac_charge_energy_today_low')
+            if addr:
+                raw_low = self._register_cache.get(addr, 0)
+                pair_addr = self._find_register_by_name('ac_charge_energy_today_high')
+                raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
+                data.ac_charge_energy_today = self._get_register_value(addr) or 0.0
+                logger.debug(f"AC charge energy today: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.ac_charge_energy_today} kWh")
+
+            # AC Charge Energy Total (WIT-specific - SPF populates this from charge_energy_total above)
             addr = self._find_register_by_name('ac_charge_energy_total_low')
             if addr:
                 raw_low = self._register_cache.get(addr, 0)
