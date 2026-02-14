@@ -1,5 +1,132 @@
 # Release Notes
 
+# Release Notes - v0.4.8
+
+## 🔧 Bug Fix - MIC-1000TL-X Auto-Detection
+
+**Fixed (Issue #130):**
+- MIC-1000TL-X inverters incorrectly auto-detected as MIN series
+- Manual MIC profile selection showed incorrect/missing values
+
+---
+
+### What's Fixed in v0.4.8:
+
+#### 🔍 Improved MIC vs MIN Detection (Issue #130)
+
+**Problem:**
+- DTC code 5200 is shared by both MIC and MIN inverter series
+- Previous logic tested for 3000+ register range to distinguish models
+- Some MIC-1000TL-X inverters use MIN register layout (hybrid design) but are physically MIC hardware
+- This caused incorrect auto-detection and wrong sensor values
+
+**Root Cause:**
+- MIC-1000TL-X (2500-6000W range) can use either:
+  - Standard MIC layout: 0-179 registers only
+  - Hybrid layout: 0-124 + 3000-3124 (MIN addressing) BUT with MIC features
+- Previous detection tested register 3003 (MIN PV1 voltage)
+- If found → assumed MIN series ❌
+- If not found → assumed MIC series ✅
+
+**User Case:**
+- MIC-1000TL-X with firmware "PV 1000"
+- Has data in BOTH 0-124 AND 3000-3124 ranges (hybrid layout)
+- Previous detection saw 3000+ range → incorrectly selected MIN profile
+- MIN profile missing MIC-specific per-MPPT energy registers (59-62)
+- Result: Wrong/missing sensor values
+
+**The Fix:**
+
+1. **Hardware-Level Detection:**
+   - MIC inverters have per-MPPT energy tracking capability (registers 59-62)
+   - MIN inverters do NOT have these registers (not a firmware feature - hardware difference)
+   - Now test registers 59-62 FIRST before checking register range
+
+2. **New Detection Logic for DTC 5200:**
+   ```
+   Step 1: Test registers 59-62 (PV1/PV2 per-MPPT energy)
+   Step 2: If registers 59-62 have values:
+           → MIC hardware detected
+           → Check if uses MIN layout (3000+ range)
+           → If yes: Use new MIC_2500_6000TL_X_MIN_RANGE profile
+           → If no: Use standard MIC_600_3300TL_X_V201 profile
+   Step 3: If registers 59-62 empty:
+           → MIN hardware (no per-MPPT capability)
+           → Use MIN_3000_6000TL_X_V201 profile
+   ```
+
+3. **New MIC Profile Created:**
+   - Profile: `MIC_2500_6000TL_X_MIN_RANGE`
+   - Supports hybrid MIC inverters using MIN register addressing
+   - Combines:
+     - MIN 0-124 register range (basic data)
+     - MIN 3000-3124 register range (AC power, energy)
+     - MIC per-MPPT registers 59-62 (PV1/PV2 energy tracking)
+   - Provides complete sensor coverage for these hybrid models
+
+**Impact:**
+- ✅ MIC-1000TL-X correctly auto-detected regardless of register layout
+- ✅ All sensors show correct values
+- ✅ Per-MPPT energy tracking available for MIC users
+- ✅ MIN detection unaffected (backwards compatible)
+- ✅ Reliable hardware-level differentiation (not just register addressing)
+
+**Example - Before vs After:**
+```
+Before (v0.4.7):
+  Auto-Detection: MIN 3000-6000TL-X ❌ (wrong - saw 3000+ range)
+  AC Power: 1127 W ✅ (worked from 3000+ range)
+  Energy Today: 0.1 kWh ❌ (wrong - MIN profile missing PV1/PV2 registers)
+  PV1 Energy: Not available ❌ (MIN profile doesn't define register 59-60)
+
+After (v0.4.8):
+  Auto-Detection: MIC 2500-6000TL-X (MIN range) ✅ (correct - saw registers 59-62)
+  AC Power: 1127 W ✅ (from 3000+ range)
+  Energy Today: 0.1 kWh ✅ (correct - using per-MPPT registers)
+  PV1 Energy: 0.1 kWh ✅ (now available from register 59-60)
+  PV2 Energy: 44927.0 kWh ✅ (now available from register 61-62)
+```
+
+---
+
+### Technical Details:
+
+**Register Scan Analysis:**
+```
+MIC-1000TL-X Hybrid Layout:
+  Register 11-12: 0 (MIC AC power location - empty)
+  Register 35-36: 1127 (output power - populated)
+  Register 59-60: 1/1 (PV1 energy - MIC feature ✅)
+  Register 61-62: 44927/0 (PV2 energy - MIC feature ✅)
+  Register 3028-3029: 1127 (MIN AC power location - populated)
+  Register 3049-3052: energy values (MIN location - populated)
+
+MIN Profile (comparison):
+  Register 59-62: NOT DEFINED (MIN hardware lacks this capability)
+```
+
+**Key Insight:** Registers 59-62 are hardware-level differentiator, not just register layout variation.
+
+---
+
+### Migration Notes:
+
+**No action required** - Auto-detection improvement only.
+
+**For Affected MIC-1000TL-X Users (Issue #130):**
+- If previously manually selected MIN profile as workaround:
+  1. Remove integration
+  2. Re-add integration with auto-detection
+  3. Inverter will now correctly detect as MIC
+  4. All sensors (including per-MPPT energy) will appear
+
+**Detection Changes:**
+- MIC inverters with hybrid layout now correctly identified
+- All existing MIC and MIN inverters unaffected
+- More robust detection using hardware capabilities instead of register addressing
+
+---
+
 # Release Notes - v0.4.7
 
 ## 🐛 Bug Fix + 📊 Diagnostic Enhancement

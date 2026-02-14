@@ -154,6 +154,26 @@ INVERTER_PROFILES = {
         ),
     },
 
+    # MIC 2500-6000TL-X with MIN register layout (Hybrid profile)
+    # Uses MIN addressing (0-124 + 3000-3124) but has MIC per-MPPT energy tracking
+    "mic_2500_6000tl_x_min_range": {
+        "name": "MIC 2500-6000TL-X (MIN range)",
+        "description": "MIC inverter (2.5-6kW) using MIN register layout with per-MPPT tracking",
+        "register_map": "MIC_2500_6000TL_X_MIN_RANGE",
+        "phases": 1,
+        "has_pv3": False,
+        "has_battery": False,
+        "max_power_kw": 6.0,
+        "protocol_version": "hybrid",
+        "sensors": (
+            BASIC_PV_SENSORS |
+            BASIC_AC_SENSORS |
+            ENERGY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
     # ========================================================================
     # MIN SERIES - Single Phase String Inverters
     # ========================================================================
