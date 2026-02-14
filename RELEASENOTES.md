@@ -2,12 +2,18 @@
 
 # Release Notes - v0.4.6
 
-## 🐛 Bug Fixes: SPF AC Charge/Discharge Energy Sensors + Log Noise Reduction
+## 🐛 Bug Fixes + 🎯 WIT Control Stability Improvements
 
 **Fixed (Issue #163):**
 - SPF AC Charge Energy Today/Total sensors showing 0.00 (should show same values as Battery Charge sensors)
 - SPF AC Discharge Energy Today/Total sensors showing 0.00 (registers 64-67)
 - Noisy WARNING log message for SPF users: "load_energy_today_low register not found"
+
+**Improved (Issue #143):**
+- WIT control stability - prevent oscillation and unstable battery behavior
+- WIT control model clarified - VPP protocol vs Legacy protocol differences
+- Rate limiting added to prevent rapid control changes
+- Control conflict detection for TOU vs remote control scenarios
 
 ---
 
@@ -68,23 +74,103 @@ The code was logging this as a WARNING even though it's expected and harmless fo
 - ✅ Debug logging still available if needed for troubleshooting
 - ✅ No functional changes - purely cosmetic log improvement
 
+#### 3. 🎯 WIT Control Stability Improvements (Issue #143)
+
+**Problem:** WIT users experiencing power oscillation, charge/discharge looping, and unstable control behavior when using battery management features.
+
+**Root Cause:** WIT inverters use **VPP (Virtual Power Plant) protocol** with fundamentally different control model:
+- **WIT**: Time-limited overrides (NOT persistent mode changes like SPH/SPF)
+- Register 30476 (`priority_mode`) is **READ-ONLY** on WIT - shows TOU default, cannot be changed via Modbus
+- Proper control requires VPP remote registers (30407-30409) with duration-based commands
+- Rapid control changes cause oscillation and conflicts with TOU schedules
+
+**The Fixes:**
+
+1. **Register 30476 Marked Read-Only**
+   - WIT profile now correctly marks `priority_mode` (30476) as `'access': 'R'`
+   - Prevents users from trying to write to read-only register
+   - Description updated to clarify VPP control model
+   - Users guided to use proper VPP remote control instead
+
+2. **30-Second Rate Limiting**
+   - All WIT control writes now have 30-second cooldown
+   - Prevents rapid automation loops that cause oscillation
+   - Applies to registers: 201, 202, 203, 30100, 30407, 30408, 30409
+   - Warning logged if write blocked: "Rate limit: WIT control writes must be 30s apart"
+   - Gives inverter time to respond and stabilize
+
+3. **Control Conflict Detection**
+   - Detects multiple VPP remote controls active simultaneously
+   - Warns when TOU schedule conflicts with remote control
+   - Logs warnings to Home Assistant logs
+   - Helps users identify problematic automation patterns
+
+4. **Comprehensive WIT Control Guide**
+   - New documentation: `docs/WIT_CONTROL_GUIDE.md`
+   - Explains VPP vs Legacy protocol differences
+   - Shows proper WIT control patterns with examples
+   - Documents why register 30476 is read-only
+   - Provides automation templates for stable control
+   - Troubleshooting guide for common issues
+
+**Impact:**
+- ✅ WIT users can now implement stable battery control
+- ✅ Oscillation and looping behavior prevented
+- ✅ Clear guidance on proper VPP remote control usage
+- ✅ Automatic conflict detection helps debug issues
+- ✅ Rate limiting prevents automation mistakes
+
+**WIT Control Registers (Rate Limited):**
+- 201: Active Power Rate (Legacy VPP)
+- 202: Work Mode (Legacy VPP)
+- 203: Export Limit (W)
+- 30100: Control Authority (VPP master enable)
+- 30407: Remote Power Control Enable
+- 30408: Remote Charging Time (duration in minutes)
+- 30409: Remote Charge/Discharge Power (-100% to +100%)
+
+**For WIT Users:**
+- **Read the guide**: See `docs/WIT_CONTROL_GUIDE.md` for proper control patterns
+- **Use VPP remote control**: Don't try to write to register 30476
+- **Set durations**: All overrides should specify time duration (register 30408)
+- **Wait 30s between changes**: Rate limiting is intentional to prevent oscillation
+- **Check for conflicts**: Monitor logs for TOU vs remote control warnings
+
 ---
 
 ### Migration Notes:
 
-**No action required** - This is a bug fix release. Simply upgrade and:
+**No action required** - This is a bug fix and improvement release. Simply upgrade and:
 - SPF AC Charge/Discharge Energy sensors will show correct values
 - Log warnings for missing load_energy_today register will disappear
+- WIT control writes will have automatic rate limiting
 
 **For SPF users:**
 - All four AC Charge/Discharge Energy sensors will now work
 - "AC Charge Energy" sensors will show identical values to "Battery Charge" sensors (expected behavior)
 - Log noise from missing grid-tied registers eliminated
 
+**For WIT users:**
+- **IMPORTANT:** Read `docs/WIT_CONTROL_GUIDE.md` if you use battery control features
+- Control writes now have 30s cooldown (prevents oscillation - this is intentional)
+- Register 30476 (priority_mode) is now correctly marked read-only
+- If you have automations that write to WIT controls rapidly, they may need adjustment
+- Check logs for rate limit warnings and control conflict warnings
+
+**Debug logging setup** (optional, for troubleshooting):
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.growatt_modbus: debug
+```
+
 ---
 
 ### Files Changed:
-- `custom_components/growatt_modbus/growatt_modbus.py` - Added AC charge/discharge energy register mapping for SPF + reduced log noise
+- `custom_components/growatt_modbus/growatt_modbus.py` - Added AC charge/discharge energy register mapping for SPF + reduced log noise + WIT rate limiting + conflict detection
+- `custom_components/growatt_modbus/profiles/wit.py` - Marked priority_mode as read-only + added VPP control model documentation
+- `docs/WIT_CONTROL_GUIDE.md` - NEW: Comprehensive WIT control guide with examples and troubleshooting
 - `custom_components/growatt_modbus/manifest.json` - Version bump to 0.4.6
 - `README.md` - Version badge updated to 0.4.6
 - `RELEASENOTES.md` - Updated with v0.4.6 changes

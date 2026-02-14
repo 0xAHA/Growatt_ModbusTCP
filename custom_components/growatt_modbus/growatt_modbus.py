@@ -268,6 +268,21 @@ class GrowattModbus:
         # Format: set of (start_addr, count) tuples
         self._failed_optional_ranges = set()
 
+        # WIT control rate limiting (v0.4.6) - track last write time per register
+        # Prevents oscillation and unstable control behavior
+        self._wit_control_last_write = {}  # {register: timestamp}
+        self._wit_control_rate_limit_seconds = 30  # 30 second cooldown
+        # WIT control registers that require rate limiting
+        self._wit_control_registers = {
+            201,    # active_power_rate (Legacy VPP)
+            202,    # work_mode (Legacy VPP)
+            203,    # export_limit_w
+            30100,  # control_authority (VPP master enable)
+            30407,  # remote_power_control_enable
+            30408,  # remote_power_control_charging_time
+            30409,  # remote_charge_and_discharge_power
+        }
+
         # Adaptive polling: automatic backoff on errors
         self._consecutive_read_failures = 0
         self._read_failure_threshold = 5  # Back off after 5 consecutive failures
@@ -1106,6 +1121,26 @@ class GrowattModbus:
         try:
             logger.debug(f"[WRITE] Request to write register {register} with value {value}")
 
+            # WIT control rate limiting (v0.4.6) - prevent oscillation
+            if register in self._wit_control_registers:
+                import time
+                current_time = time.time()
+                last_write_time = self._wit_control_last_write.get(register, 0)
+                time_since_last_write = current_time - last_write_time
+
+                if time_since_last_write < self._wit_control_rate_limit_seconds:
+                    remaining = self._wit_control_rate_limit_seconds - time_since_last_write
+                    logger.warning(
+                        f"[WIT CTRL] Rate limit: Register {register} write blocked. "
+                        f"Must wait {remaining:.1f}s more (30s cooldown between WIT control writes). "
+                        f"See docs/WIT_CONTROL_GUIDE.md for details."
+                    )
+                    return False
+
+                # Update last write time
+                self._wit_control_last_write[register] = current_time
+                logger.debug(f"[WIT CTRL] Rate limit check passed for register {register}")
+
             if not self.client:
                 logger.error("[WRITE] Cannot write register - client not initialized")
                 return False
@@ -1175,6 +1210,11 @@ class GrowattModbus:
                 return False
 
             logger.info(f"[WRITE] Successfully wrote value {value} → register {register}")
+
+            # Check for WIT control conflicts after successful write (v0.4.6)
+            if register in self._wit_control_registers:
+                self._check_wit_control_conflicts(register, value)
+
             return True
             # -----------------------------------------------------------------------
 
@@ -1182,6 +1222,68 @@ class GrowattModbus:
             logger.error(f"[WRITE] Exception writing register {register}: {e}")
             return False
 
+    def _check_wit_control_conflicts(self, register: int, value: int) -> None:
+        """
+        Check for potential WIT control conflicts (v0.4.6 - Issue #143).
+
+        Detects situations that may cause unstable control behavior:
+        - Multiple VPP remote control registers active simultaneously
+        - Conflicting control commands within short time windows
+        - Potential TOU vs remote control conflicts
+
+        Args:
+            register: The register that was just written
+            value: The value that was written
+        """
+        try:
+            # Check for multiple active VPP remote controls
+            active_controls = []
+
+            # Check if remote power control is being enabled
+            if register == 30407 and value == 1:
+                active_controls.append("Remote Power Control (30407)")
+
+                # Check if control authority is also enabled
+                control_authority = self._register_cache.get(30100, 0)
+                if control_authority == 1:
+                    active_controls.append("Control Authority (30100)")
+
+            # Check for legacy VPP controls being active
+            if register == 202:  # work_mode
+                if value > 0:  # 1=charge, 2=discharge
+                    active_controls.append(f"Legacy Work Mode (202={value})")
+
+            # Warn if multiple control mechanisms are active
+            if len(active_controls) > 1:
+                logger.warning(
+                    f"[WIT CTRL] Multiple control mechanisms active simultaneously: {', '.join(active_controls)}. "
+                    f"This may cause conflicts. See docs/WIT_CONTROL_GUIDE.md for recommended patterns."
+                )
+
+            # Detect potential TOU conflicts when enabling remote control
+            if register == 30407 and value == 1:
+                # Check if any TOU periods are enabled (registers 954, 957, 960, 963, 966, 969)
+                tou_enabled_registers = [954, 957, 960, 963, 966, 969]
+                tou_periods_active = False
+
+                for tou_reg in tou_enabled_registers:
+                    if tou_reg in self._register_cache:
+                        # Bit 15 indicates if period is enabled
+                        tou_value = self._register_cache[tou_reg]
+                        if tou_value & 0x8000:  # Check bit 15
+                            tou_periods_active = True
+                            break
+
+                if tou_periods_active:
+                    logger.warning(
+                        f"[WIT CTRL] Remote power control enabled while TOU periods are configured. "
+                        f"TOU schedule may override remote commands during scheduled periods. "
+                        f"Consider disabling TOU via inverter panel if full remote control is needed."
+                    )
+
+        except Exception as e:
+            # Don't fail the write if conflict detection has issues
+            logger.debug(f"[WIT CTRL] Conflict detection error (non-critical): {e}")
 
     def _find_register_by_name(self, name: str) -> Optional[int]:
         """Find register address by its name or alias"""
