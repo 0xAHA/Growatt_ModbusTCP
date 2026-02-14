@@ -1222,7 +1222,7 @@ class GrowattModbus:
                 data.load_energy_today = self._get_register_value(addr) or 0.0
                 logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Load energy today from reg {addr}: {data.load_energy_today} kWh (cache: {self._register_cache.get(addr)})")
             else:
-                logger.warning(f"[{self.register_map['name']}@{self.connection_id}] load_energy_today_low register not found")
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] load_energy_today_low register not found (expected for off-grid models like SPF)")
 
             addr = self._find_register_by_name('load_energy_total_low')
             if addr:

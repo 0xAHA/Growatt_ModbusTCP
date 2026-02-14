@@ -1,5 +1,46 @@
 # Release Notes
 
+# Release Notes - v0.4.8
+
+## 🔧 Minor Fix: Reduce Log Noise for SPF Users
+
+**Fixed:**
+- Noisy WARNING log message for SPF users: "load_energy_today_low register not found"
+
+---
+
+### What's Fixed in v0.4.8:
+
+#### 1. 🔇 Reduced Log Noise for Off-Grid Inverters
+
+**Issue:** SPF users (and other off-grid models) saw constant WARNING messages in Home Assistant logs:
+```
+[SPF 3000-6000 ES PLUS@/dev/ttyACM0] load_energy_today_low register not found
+```
+
+**Root Cause:** The `load_energy_today` register is specific to **grid-tied inverters** (SPH/MIN/MID/MAX) that track energy consumed from grid by loads. **Off-grid inverters** like SPF don't have this register because they use different energy tracking:
+- `ac_discharge_energy_*` - Battery → loads via inverter
+- `op_discharge_energy_*` - Operational discharge energy
+
+The code was logging this as a WARNING even though it's expected and harmless for off-grid models.
+
+**The Fix:** Changed log level from WARNING to DEBUG with clarifying message: "register not found (expected for off-grid models like SPF)"
+
+**Impact:**
+- ✅ SPF users will no longer see noisy warnings in logs
+- ✅ Debug logging still available if needed for troubleshooting
+- ✅ No functional changes - purely cosmetic log improvement
+
+---
+
+### Files Changed:
+- `custom_components/growatt_modbus/growatt_modbus.py` - Downgraded log level from WARNING to DEBUG
+- `custom_components/growatt_modbus/manifest.json` - Version bump to 0.4.8
+- `README.md` - Version badge updated to 0.4.8
+- `RELEASENOTES.md` - Updated with v0.4.8 changes
+
+---
+
 # Release Notes - v0.4.7
 
 ## 🐛 Bug Fix: SPF AC Charge/Discharge Energy Sensors
