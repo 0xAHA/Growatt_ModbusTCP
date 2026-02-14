@@ -1,5 +1,182 @@
 # Release Notes
 
+# Release Notes - v0.4.6
+
+## 🐛 Bug Fixes + 🎯 WIT Control Stability Improvements
+
+**Fixed (Issue #163):**
+- SPF AC Charge Energy Today/Total sensors showing 0.00 (should show same values as Battery Charge sensors)
+- SPF AC Discharge Energy Today/Total sensors showing 0.00 (registers 64-67)
+- Noisy WARNING log message for SPF users: "load_energy_today_low register not found"
+
+**Improved (Issue #143):**
+- WIT control stability - prevent oscillation and unstable battery behavior
+- WIT control model clarified - VPP protocol vs Legacy protocol differences
+- Rate limiting added to prevent rapid control changes
+- Control conflict detection for TOU vs remote control scenarios
+
+---
+
+### What's Fixed in v0.4.6:
+
+#### 1. 🔧 Fixed SPF AC Charge/Discharge Energy Sensors
+
+**Root Cause:** SPF uses different register names than WIT for the same energy measurements, causing "AC Charge/Discharge Energy" sensors to show 0.00 even though the data exists.
+
+**Register Name Differences:**
+- **WIT:** Uses `ac_charge_energy_*` and `ac_discharge_energy_*` register names
+- **SPF:** Uses `charge_energy_*` (56-59) and `ac_discharge_energy_*` (64-67) register names
+- Same data, different naming convention
+
+**Affected sensors (now fixed):**
+- `ac_charge_energy_today` - Now populated from SPF's `charge_energy_today` (registers 56-57)
+- `ac_charge_energy_total` - Now populated from SPF's `charge_energy_total` (registers 58-59)
+- `ac_discharge_energy_today` - Now reads from registers 64-65
+- `ac_discharge_energy_total` - Now reads from registers 66-67
+
+**The Fix:**
+1. **AC Charge Energy**: SPF now populates BOTH `charge_energy_*` AND `ac_charge_energy_*` fields from the same registers (56-59)
+2. **AC Discharge Energy**: Added missing register reading code for registers 64-67
+3. **WIT compatibility**: WIT-specific register names still work for WIT inverters
+
+**Impact:**
+- ✅ SPF users will now see actual values in ALL "AC Charge/Discharge Energy" sensors
+- ✅ "AC Charge Energy" sensors will match "Battery Charge" sensors (same data source)
+- ✅ "AC Discharge Energy" sensors will show battery → load energy flow
+- ✅ Complete energy tracking for SPF 6000 ES Plus and similar models
+
+**What You'll See After Upgrade (SPF users):**
+- "Battery Charge Today" = 0.80 kWh ✅ (working before)
+- "AC Charge Energy Today" = 0.80 kWh ✅ (NOW FIXED - was 0.00)
+- "Battery Charge Total" = 446.90 kWh ✅ (working before)
+- "AC Charge Energy Total" = 446.90 kWh ✅ (NOW FIXED - was 0.00)
+- "AC Discharge Energy Today" = actual value ✅ (NOW FIXED - was 0.00)
+- "AC Discharge Energy Total" = actual value ✅ (NOW FIXED - was 0.00)
+
+**Note:** Both "Battery Charge" and "AC Charge Energy" sensors track the same thing (grid/generator charging your battery) and will show identical values. This is normal - they're just different sensor names for the same SPF register data.
+
+#### 2. 🔇 Reduced Log Noise for Off-Grid Inverters
+
+**Issue:** SPF users (and other off-grid models) saw constant WARNING messages in Home Assistant logs:
+
+    [SPF 3000-6000 ES PLUS@/dev/ttyACM0] load_energy_today_low register not found
+
+**Root Cause:** The `load_energy_today` register is specific to **grid-tied inverters** (SPH/MIN/MID/MAX) that track energy consumed from grid by loads. **Off-grid inverters** like SPF don't have this register because they use different energy tracking:
+- `ac_discharge_energy_*` - Battery → loads via inverter
+- `op_discharge_energy_*` - Operational discharge energy
+
+The code was logging this as a WARNING even though it's expected and harmless for off-grid models.
+
+**The Fix:** Changed log level from WARNING to DEBUG with clarifying message: "register not found (expected for off-grid models like SPF)"
+
+**Impact:**
+- ✅ SPF users will no longer see noisy warnings in logs
+- ✅ Debug logging still available if needed for troubleshooting
+- ✅ No functional changes - purely cosmetic log improvement
+
+#### 3. 🎯 WIT Control Stability Improvements (Issue #143)
+
+**Problem:** WIT users experiencing power oscillation, charge/discharge looping, and unstable control behavior when using battery management features.
+
+**Root Cause:** WIT inverters use **VPP (Virtual Power Plant) protocol** with fundamentally different control model:
+- **WIT**: Time-limited overrides (NOT persistent mode changes like SPH/SPF)
+- Register 30476 (`priority_mode`) is **READ-ONLY** on WIT - shows TOU default, cannot be changed via Modbus
+- Proper control requires VPP remote registers (30407-30409) with duration-based commands
+- Rapid control changes cause oscillation and conflicts with TOU schedules
+
+**The Fixes:**
+
+1. **Register 30476 Marked Read-Only**
+   - WIT profile now correctly marks `priority_mode` (30476) as `'access': 'R'`
+   - Prevents users from trying to write to read-only register
+   - Description updated to clarify VPP control model
+   - Users guided to use proper VPP remote control instead
+
+2. **30-Second Rate Limiting**
+   - All WIT control writes now have 30-second cooldown
+   - Prevents rapid automation loops that cause oscillation
+   - Applies to registers: 201, 202, 203, 30100, 30407, 30408, 30409
+   - Warning logged if write blocked: "Rate limit: WIT control writes must be 30s apart"
+   - Gives inverter time to respond and stabilize
+
+3. **Control Conflict Detection**
+   - Detects multiple VPP remote controls active simultaneously
+   - Warns when TOU schedule conflicts with remote control
+   - Logs warnings to Home Assistant logs
+   - Helps users identify problematic automation patterns
+
+4. **Comprehensive WIT Control Guide**
+   - New documentation: `docs/WIT_CONTROL_GUIDE.md`
+   - Explains VPP vs Legacy protocol differences
+   - Shows proper WIT control patterns with examples
+   - Documents why register 30476 is read-only
+   - Provides automation templates for stable control
+   - Troubleshooting guide for common issues
+
+**Impact:**
+- ✅ WIT users can now implement stable battery control
+- ✅ Oscillation and looping behavior prevented
+- ✅ Clear guidance on proper VPP remote control usage
+- ✅ Automatic conflict detection helps debug issues
+- ✅ Rate limiting prevents automation mistakes
+
+**WIT Control Registers (Rate Limited):**
+- 201: Active Power Rate (Legacy VPP)
+- 202: Work Mode (Legacy VPP)
+- 203: Export Limit (W)
+- 30100: Control Authority (VPP master enable)
+- 30407: Remote Power Control Enable
+- 30408: Remote Charging Time (duration in minutes)
+- 30409: Remote Charge/Discharge Power (-100% to +100%)
+
+**For WIT Users:**
+- **Read the guide**: See `docs/WIT_CONTROL_GUIDE.md` for proper control patterns
+- **Use VPP remote control**: Don't try to write to register 30476
+- **Set durations**: All overrides should specify time duration (register 30408)
+- **Wait 30s between changes**: Rate limiting is intentional to prevent oscillation
+- **Check for conflicts**: Monitor logs for TOU vs remote control warnings
+
+---
+
+### Migration Notes:
+
+**No action required** - This is a bug fix and improvement release. Simply upgrade and:
+- SPF AC Charge/Discharge Energy sensors will show correct values
+- Log warnings for missing load_energy_today register will disappear
+- WIT control writes will have automatic rate limiting
+
+**For SPF users:**
+- All four AC Charge/Discharge Energy sensors will now work
+- "AC Charge Energy" sensors will show identical values to "Battery Charge" sensors (expected behavior)
+- Log noise from missing grid-tied registers eliminated
+
+**For WIT users:**
+- **IMPORTANT:** Read `docs/WIT_CONTROL_GUIDE.md` if you use battery control features
+- Control writes now have 30s cooldown (prevents oscillation - this is intentional)
+- Register 30476 (priority_mode) is now correctly marked read-only
+- If you have automations that write to WIT controls rapidly, they may need adjustment
+- Check logs for rate limit warnings and control conflict warnings
+
+**Debug logging setup** (optional, for troubleshooting):
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.growatt_modbus: debug
+```
+
+---
+
+### Files Changed:
+- `custom_components/growatt_modbus/growatt_modbus.py` - Added AC charge/discharge energy register mapping for SPF + reduced log noise + WIT rate limiting + conflict detection
+- `custom_components/growatt_modbus/profiles/wit.py` - Marked priority_mode as read-only + added VPP control model documentation
+- `docs/WIT_CONTROL_GUIDE.md` - NEW: Comprehensive WIT control guide with examples and troubleshooting
+- `custom_components/growatt_modbus/manifest.json` - Version bump to 0.4.6
+- `README.md` - Version badge updated to 0.4.6
+- `RELEASENOTES.md` - Updated with v0.4.6 changes
+
+---
+
 # Release Notes - v0.4.5
 
 ## 🔥 CRITICAL Bug Fix: Serial Connection File Descriptor Leak
@@ -70,213 +247,3 @@ The coordinator's `_fetch_data()` method had three critical flaws:
 - `RELEASENOTES.md` - Updated with v0.4.5 changes
 
 ---
-
-# Release Notes - v0.4.4
-
-## 🐛 Critical Bug Fixes: SPF Grid Sensors + Missing WIT Battery Sensors
-
-**Fixed:**
-1. SPF Grid device sensors (generator, grid voltage/frequency) showing zero values (Issue #145)
-2. WIT battery sensors (SOH, BMS voltage, AC charge total) missing from v0.4.3 fix
-
----
-
-### What's Fixed in v0.4.4:
-
-#### 1. 🔧 Added Missing Generator Register Reading Code
-
-**Root Cause:** Generator sensors (registers 92-97) were added to the SPF profile in v0.4.3, which made the sensors *appear* in Home Assistant, but the code to actually *read* these registers into the `GrowattData` object was never added. This caused all generator sensors to permanently show zero values.
-
-**Affected sensors (now fixed):**
-- `generator_power` (register 96) - Current generator power output
-- `generator_voltage` (register 97) - Current generator voltage
-- `generator_discharge_today` (registers 92-93) - Generator energy today
-- `generator_discharge_total` (registers 94-95) - Generator lifetime energy
-
-**The Fix:** Added register reading code in `read_all_data()` following the same pattern as other SPF sensors like `grid_voltage` and `ac_input_power`.
-
-**Impact:**
-- ✅ SPF 6000 ES Plus generator sensors now show correct values
-- ✅ Grid device for SPF models now fully functional
-- ✅ Other Grid sensors (`grid_voltage`, `grid_frequency`, `ac_input_power`) continue to work
-
-#### 2. 📊 Enhanced Debug Logging for Troubleshooting
-
-**Added comprehensive diagnostic logging:**
-- Shows full register range being read (e.g., "Register range: 0-97")
-- Logs when registers are not found in profile
-- Shows raw cache values alongside scaled values
-- Helps diagnose sensor value issues
-
-**Example debug output:**
-```
-[SPF 3000-6000 ES PLUS] Register range: 0-97 (42 registers defined)
-Reading base range (0-124)
-Grid voltage from reg 20: 230.5 V (raw cache: 2305)
-Generator power from reg 96: 1250 W (raw cache: 1250)
-```
-
-**Impact:**
-- ✅ Easier troubleshooting for users and developers
-- ✅ Clear visibility into which registers are being read
-- ✅ Raw hardware values visible for validation
-
-#### 3. 📝 Updated SPF Profile Documentation
-
-**Updated register range note:**
-- Changed from "Uses 0-88 register range" to "Uses 0-97 register range"
-- Reflects addition of generator sensors at registers 92-97
-
-#### 4. 🔧 Fixed Missing WIT Battery Sensors (Incomplete v0.4.3 Fix)
-
-**Root Cause:** v0.4.3 claimed to fix missing dataclass fields but only added 3 WIT sensors (`extra_power_to_grid`, `extra_energy_today`, `extra_energy_total`). It **missed** 3 other WIT battery sensors that had the same issue.
-
-**Missing WIT sensors (now fixed in v0.4.4):**
-- `battery_soh` (register 8094) - Battery State of Health percentage
-- `battery_voltage_bms` (register 8095) - BMS-reported voltage (more accurate than standard reading)
-- `ac_charge_energy_total` (registers 8059-8060) - Total AC charge energy from grid
-
-**The Complete Fix:**
-1. Added missing dataclass fields to `GrowattData`
-2. Added register reading code in `_read_battery_data()`
-3. Updated comment to clarify `ac_charge_energy_today` is for both WIT and SPF
-
-**Impact:**
-- ✅ WIT users can now see Battery State of Health (SOH)
-- ✅ WIT users can now see accurate BMS voltage reading
-- ✅ WIT users can now see total AC charge energy counter
-- ✅ Completes the v0.4.3 fix that was only partially implemented
-
-**Note:** These sensors were defined in the profile and sensor.py since earlier releases, but v0.4.3's dataclass fix was incomplete.
-
----
-
-### Migration Notes:
-
-**No action required** - This is a bug fix release. Simply upgrade and the Grid device sensors will start showing correct values.
-
-**For SPF users:**
-- Generator sensors will now show actual values instead of zero
-- If you previously dismissed Grid device sensors as "broken," they should now work
-- Enable debug logging (see below) if you want to verify register reads
-
-**For WIT users:**
-- Battery SOH (State of Health) sensor will now appear and show correct values
-- Battery Voltage BMS sensor will now appear (more accurate than standard voltage)
-- AC Charge Energy Total sensor will now appear
-- These sensors should have been working in v0.4.3 but were missed
-
-**Debug logging setup** (optional, for troubleshooting):
-```yaml
-logger:
-  default: info
-  logs:
-    custom_components.growatt_modbus: debug
-```
-
----
-
-### Files Changed:
-- `custom_components/growatt_modbus/growatt_modbus.py` - Added SPF generator + WIT battery register reading code + enhanced debug logging + 3 missing dataclass fields
-- `custom_components/growatt_modbus/profiles/spf.py` - Updated register range documentation
-- `custom_components/growatt_modbus/manifest.json` - Version bump to 0.4.4
-- `RELEASENOTES.md` - Updated with v0.4.4 changes
-
----
-
-### Technical Details:
-
-**Why did this happen?**
-
-v0.4.3 fixed the missing dataclass fields, which made the generator sensors *appear* in Home Assistant. However, there were still 3 missing pieces:
-
-1. ✅ Register definitions in profile - PRESENT (added in earlier release for Issue #145)
-2. ✅ GrowattData dataclass fields - FIXED in v0.4.3
-3. ✅ Sensor definitions in sensor.py - PRESENT
-4. ❌ **Register reading code** - MISSING until v0.4.4
-
-**The chain of events:**
-1. Registers can be read via `read_register` service → Hardware works ✅
-2. Sensors appear in entity list → Dataclass fields exist ✅
-3. But sensors show zero → No code to read registers into data object ❌
-
-This is a classic case of partial implementation where the infrastructure existed but the actual data pipeline connection was missing.
-
----
-
-### Known Issues:
-- None - All SPF Grid device sensors should now show correct values
-
----
-
-# Release Notes - v0.4.3
-
-## 🐛 Critical Bug Fix: Missing Dataclass Fields
-
-**Fixed:** SPF generator sensors and WIT extra_energy sensors not appearing despite being properly configured.
-
----
-
-### What's Fixed in v0.4.3:
-
-#### 1. 🔧 Added Missing GrowattData Dataclass Fields
-
-**Root Cause:** 28 sensor fields were missing from the `GrowattData` dataclass, causing `hasattr()` checks to fail and sensors to show "condition not met" in logs.
-
-**SPF Off-Grid sensors added (14 fields):**
-- `grid_voltage`, `grid_frequency` - AC input voltage/frequency monitoring
-- `ac_input_power`, `ac_apparent_power` - AC input power monitoring
-- `load_percentage` - Load percentage monitoring
-- `generator_power`, `generator_voltage` - Generator monitoring
-- `generator_discharge_today`, `generator_discharge_total` - Generator energy counters
-- `ac_charge_energy_today`, `ac_discharge_energy_today`, `ac_discharge_energy_total` - AC charge/discharge energy
-- `op_discharge_energy_today`, `op_discharge_energy_total` - Operational discharge energy
-
-**WIT sensors added (3 fields):**
-- `extra_power_to_grid` - Parallel inverter power export
-- `extra_energy_today`, `extra_energy_total` - Parallel inverter energy counters
-
-**Impact:**
-- ✅ SPF 6000 ES Plus generator entities now appear correctly
-- ✅ WIT extra_energy sensors now work (no longer show "not in profile")
-- ✅ All SPF AC input monitoring sensors now functional
-
-#### 2. 📚 Documentation Improvements
-
-**Added:**
-- Comprehensive MODELS.md documentation listing all supported models
-- Protocol version documentation (VPP vs Legacy)
-- Testing status for each model series
-
-**Impact:**
-- ✅ Clear visibility into which models are supported
-- ✅ Protocol compatibility information
-- ✅ Community testing status
-
----
-
-### Migration Notes:
-
-**No action required** - Simply upgrade and the missing sensors will appear.
-
-**For SPF users:**
-- Generator power, voltage, and energy sensors will now appear
-- Grid/AC input sensors will now be available
-- Check your Grid device in Home Assistant - all entities should be present
-
-**For WIT users:**
-- Extra power to grid sensor will now appear
-- Extra energy today/total sensors will now be available
-
----
-
-### Files Changed:
-- `custom_components/growatt_modbus/growatt_modbus.py` - Added 28 missing dataclass fields
-- `docs/MODELS.md` - Comprehensive supported models documentation
-- `custom_components/growatt_modbus/manifest.json` - Version bump to 0.4.3
-
----
-
-### Known Issues:
-- SPF generator sensors appear but show zero values - **FIXED in v0.4.4**
-- WIT battery_soh, battery_voltage_bms, ac_charge_energy_total still missing - **FIXED in v0.4.4**

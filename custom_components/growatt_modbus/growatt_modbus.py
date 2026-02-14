@@ -268,6 +268,21 @@ class GrowattModbus:
         # Format: set of (start_addr, count) tuples
         self._failed_optional_ranges = set()
 
+        # WIT control rate limiting (v0.4.6) - track last write time per register
+        # Prevents oscillation and unstable control behavior
+        self._wit_control_last_write = {}  # {register: timestamp}
+        self._wit_control_rate_limit_seconds = 30  # 30 second cooldown
+        # WIT control registers that require rate limiting
+        self._wit_control_registers = {
+            201,    # active_power_rate (Legacy VPP)
+            202,    # work_mode (Legacy VPP)
+            203,    # export_limit_w
+            30100,  # control_authority (VPP master enable)
+            30407,  # remote_power_control_enable
+            30408,  # remote_power_control_charging_time
+            30409,  # remote_charge_and_discharge_power
+        }
+
         # Adaptive polling: automatic backoff on errors
         self._consecutive_read_failures = 0
         self._read_failure_threshold = 5  # Back off after 5 consecutive failures
@@ -1106,6 +1121,26 @@ class GrowattModbus:
         try:
             logger.debug(f"[WRITE] Request to write register {register} with value {value}")
 
+            # WIT control rate limiting (v0.4.6) - prevent oscillation
+            if register in self._wit_control_registers:
+                import time
+                current_time = time.time()
+                last_write_time = self._wit_control_last_write.get(register, 0)
+                time_since_last_write = current_time - last_write_time
+
+                if time_since_last_write < self._wit_control_rate_limit_seconds:
+                    remaining = self._wit_control_rate_limit_seconds - time_since_last_write
+                    logger.warning(
+                        f"[WIT CTRL] Rate limit: Register {register} write blocked. "
+                        f"Must wait {remaining:.1f}s more (30s cooldown between WIT control writes). "
+                        f"See docs/WIT_CONTROL_GUIDE.md for details."
+                    )
+                    return False
+
+                # Update last write time
+                self._wit_control_last_write[register] = current_time
+                logger.debug(f"[WIT CTRL] Rate limit check passed for register {register}")
+
             if not self.client:
                 logger.error("[WRITE] Cannot write register - client not initialized")
                 return False
@@ -1175,6 +1210,11 @@ class GrowattModbus:
                 return False
 
             logger.info(f"[WRITE] Successfully wrote value {value} → register {register}")
+
+            # Check for WIT control conflicts after successful write (v0.4.6)
+            if register in self._wit_control_registers:
+                self._check_wit_control_conflicts(register, value)
+
             return True
             # -----------------------------------------------------------------------
 
@@ -1182,6 +1222,68 @@ class GrowattModbus:
             logger.error(f"[WRITE] Exception writing register {register}: {e}")
             return False
 
+    def _check_wit_control_conflicts(self, register: int, value: int) -> None:
+        """
+        Check for potential WIT control conflicts (v0.4.6 - Issue #143).
+
+        Detects situations that may cause unstable control behavior:
+        - Multiple VPP remote control registers active simultaneously
+        - Conflicting control commands within short time windows
+        - Potential TOU vs remote control conflicts
+
+        Args:
+            register: The register that was just written
+            value: The value that was written
+        """
+        try:
+            # Check for multiple active VPP remote controls
+            active_controls = []
+
+            # Check if remote power control is being enabled
+            if register == 30407 and value == 1:
+                active_controls.append("Remote Power Control (30407)")
+
+                # Check if control authority is also enabled
+                control_authority = self._register_cache.get(30100, 0)
+                if control_authority == 1:
+                    active_controls.append("Control Authority (30100)")
+
+            # Check for legacy VPP controls being active
+            if register == 202:  # work_mode
+                if value > 0:  # 1=charge, 2=discharge
+                    active_controls.append(f"Legacy Work Mode (202={value})")
+
+            # Warn if multiple control mechanisms are active
+            if len(active_controls) > 1:
+                logger.warning(
+                    f"[WIT CTRL] Multiple control mechanisms active simultaneously: {', '.join(active_controls)}. "
+                    f"This may cause conflicts. See docs/WIT_CONTROL_GUIDE.md for recommended patterns."
+                )
+
+            # Detect potential TOU conflicts when enabling remote control
+            if register == 30407 and value == 1:
+                # Check if any TOU periods are enabled (registers 954, 957, 960, 963, 966, 969)
+                tou_enabled_registers = [954, 957, 960, 963, 966, 969]
+                tou_periods_active = False
+
+                for tou_reg in tou_enabled_registers:
+                    if tou_reg in self._register_cache:
+                        # Bit 15 indicates if period is enabled
+                        tou_value = self._register_cache[tou_reg]
+                        if tou_value & 0x8000:  # Check bit 15
+                            tou_periods_active = True
+                            break
+
+                if tou_periods_active:
+                    logger.warning(
+                        f"[WIT CTRL] Remote power control enabled while TOU periods are configured. "
+                        f"TOU schedule may override remote commands during scheduled periods. "
+                        f"Consider disabling TOU via inverter panel if full remote control is needed."
+                    )
+
+        except Exception as e:
+            # Don't fail the write if conflict detection has issues
+            logger.debug(f"[WIT CTRL] Conflict detection error (non-critical): {e}")
 
     def _find_register_by_name(self, name: str) -> Optional[int]:
         """Find register address by its name or alias"""
@@ -1222,7 +1324,7 @@ class GrowattModbus:
                 data.load_energy_today = self._get_register_value(addr) or 0.0
                 logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Load energy today from reg {addr}: {data.load_energy_today} kWh (cache: {self._register_cache.get(addr)})")
             else:
-                logger.warning(f"[{self.register_map['name']}@{self.connection_id}] load_energy_today_low register not found")
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] load_energy_today_low register not found (expected for off-grid models like SPF)")
 
             addr = self._find_register_by_name('load_energy_total_low')
             if addr:
@@ -1239,6 +1341,17 @@ class GrowattModbus:
             if addr:
                 data.op_discharge_energy_total = self._get_register_value(addr) or 0.0
                 logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Operational discharge energy total from reg {addr}: {data.op_discharge_energy_total} kWh (cache: {self._register_cache.get(addr)})")
+
+            # AC Discharge Energy (SPF off-grid models - battery to load via inverter)
+            addr = self._find_register_by_name('ac_discharge_energy_today_low')
+            if addr:
+                data.ac_discharge_energy_today = self._get_register_value(addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] AC discharge energy today from reg {addr}: {data.ac_discharge_energy_today} kWh (cache: {self._register_cache.get(addr)})")
+
+            addr = self._find_register_by_name('ac_discharge_energy_total_low')
+            if addr:
+                data.ac_discharge_energy_total = self._get_register_value(addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] AC discharge energy total from reg {addr}: {data.ac_discharge_energy_total} kWh (cache: {self._register_cache.get(addr)})")
 
         except Exception as e:
             logger.debug(f"Energy breakdown not available: {e}")
@@ -1387,7 +1500,9 @@ class GrowattModbus:
                     pair_addr = self._find_register_by_name('battery_charge_today_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.charge_energy_today = self._get_register_value(addr) or 0.0
-                logger.debug(f"Charge energy today: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_energy_today} kWh")
+                # SPF uses charge_energy_* registers for AC charging - populate both fields
+                data.ac_charge_energy_today = data.charge_energy_today
+                logger.debug(f"Charge energy today: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_energy_today} kWh (also populating ac_charge_energy_today for SPF)")
 
             # Discharge energy today
             # Try both naming conventions: "discharge_energy_today" and "battery_discharge_today"
@@ -1415,7 +1530,9 @@ class GrowattModbus:
                     pair_addr = self._find_register_by_name('battery_charge_total_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                 data.charge_energy_total = self._get_register_value(addr) or 0.0
-                logger.debug(f"Charge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_energy_total} kWh")
+                # SPF uses charge_energy_* registers for AC charging - populate both fields
+                data.ac_charge_energy_total = data.charge_energy_total
+                logger.debug(f"Charge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_energy_total} kWh (also populating ac_charge_energy_total for SPF)")
 
             # Discharge energy total
             # Try both naming conventions: "discharge_energy_total" and "battery_discharge_total"
@@ -1431,7 +1548,16 @@ class GrowattModbus:
                 data.discharge_energy_total = self._get_register_value(addr) or 0.0
                 logger.debug(f"Discharge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_energy_total} kWh")
 
-            # AC Charge Energy Total (WIT/SPF - from grid/generator to battery)
+            # AC Charge Energy Today (WIT-specific - SPF populates this from charge_energy_today above)
+            addr = self._find_register_by_name('ac_charge_energy_today_low')
+            if addr:
+                raw_low = self._register_cache.get(addr, 0)
+                pair_addr = self._find_register_by_name('ac_charge_energy_today_high')
+                raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
+                data.ac_charge_energy_today = self._get_register_value(addr) or 0.0
+                logger.debug(f"AC charge energy today: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.ac_charge_energy_today} kWh")
+
+            # AC Charge Energy Total (WIT-specific - SPF populates this from charge_energy_total above)
             addr = self._find_register_by_name('ac_charge_energy_total_low')
             if addr:
                 raw_low = self._register_cache.get(addr, 0)

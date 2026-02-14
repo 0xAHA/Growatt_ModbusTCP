@@ -1,13 +1,19 @@
 """
 WIT Series - Three-Phase Hybrid Inverters with Advanced Storage
-Based on legacy Growatt Modbus Protocol
+Based on VPP (Virtual Power Plant) Modbus Protocol
+
+IMPORTANT CONTROL MODEL DIFFERENCES:
+- WIT uses VPP protocol with time-limited overrides (NOT persistent mode control like SPH/SPF)
+- Register 30476 (priority_mode) is READ-ONLY - shows TOU default, cannot be changed via Modbus
+- For temporary control, use VPP remote control registers (30407-30409)
+- See docs/WIT_CONTROL_GUIDE.md for detailed control patterns and best practices
 """
 
 # WIT 4000-15000TL3 (Three-phase hybrid with battery, 4-15kW residential)
 WIT_4000_15000TL3 = {
     'name': 'WIT 4-15kW Hybrid',
     'description': 'Three-phase hybrid inverter with battery storage and UPS/EPS backup (4-15kW)',
-    'notes': 'Uses 0-124, 125-249, 875-999, 8000-8124 and VPP (31000-31399) register ranges. Battery data mapped to 8000-8124 range; battery temperature seen at 31223 (VPP block). Features: UPS 10ms switching, time-of-use programming, VPP/demand management.',
+    'notes': 'Uses 0-124, 125-249, 875-999, 8000-8124 and VPP (31000-31399) register ranges. Battery data mapped to 8000-8124 range; battery temperature seen at 31223 (VPP block). Features: UPS 10ms switching, time-of-use programming, VPP/demand management. CONTROL MODEL: VPP protocol with time-limited overrides - register 30476 is READ-ONLY. Use registers 30407-30409 for temporary control.',
     'input_registers': {
         # ============================================================================
         # BASE RANGE 0-124: PV, AC, and System Status (same as SPH-TL3)
@@ -413,9 +419,13 @@ WIT_4000_15000TL3 = {
                 'valid_range': (-100, 100),
                 'signed': True},
 
-        # Operating Mode Selection (default mode when no TOU period is active)
-        30476: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'access': 'RW',
-                'desc': 'System operating mode (TOU default / outside configured periods)',
+        # Operating Mode Selection (READ-ONLY - shows default mode when no TOU period is active)
+        # NOTE: WIT inverters do NOT support external mode control via Modbus.
+        # This register shows the current TOU default mode but cannot be changed via Modbus.
+        # For temporary overrides, use VPP remote control registers (30407-30409) instead.
+        # See docs/WIT_CONTROL_GUIDE.md for details.
+        30476: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'access': 'R',
+                'desc': 'System operating mode (READ-ONLY: TOU default / outside configured periods)',
                 'valid_range': (0, 2),
                 'values': {
                     0: 'Load First',
