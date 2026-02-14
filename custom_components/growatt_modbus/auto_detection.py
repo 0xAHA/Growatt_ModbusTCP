@@ -434,7 +434,7 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
 
         # MIN/TL-XH/MIC series - Official Growatt DTCs
         5100: 'tl_xh_3000_10000_v201',    # MIN 2500-6000TL-XH/XH(P) - covers TL-XH
-        5200: 'min_3000_6000_tl_x_v201',  # MIC/MIN 2500-6000TL-X/X2 - shared code, prioritize MIN
+        5200: 'min_3000_6000_tl_x_v201',  # MIC/MIN 2500-6000TL-X/X2 - refined by testing registers 59-62 (per-MPPT energy)
         5201: 'min_7000_10000_tl_x_v201', # MIN 7000-10000TL-X/X2
 
         # MOD/MID series - Official Growatt DTC
@@ -778,26 +778,80 @@ async def async_refine_dtc_detection(
                 _LOGGER.info("No 3000+ range detected - Standard TL-XH with 0-124 range")
                 return 'tl_xh_3000_10000_v201'
 
-        # DTC 5200: MIC vs MIN - Check register range (MIC uses 0-179, MIN uses 3000+)
+        # DTC 5200: MIC vs MIN - Use per-MPPT energy registers to differentiate
+        # Hardware difference: MIC has per-MPPT energy tracking (registers 59-62), MIN doesn't
+        # Some MIC models use MIN register layout (0-124 + 3000-3124) but retain MIC features
         elif dtc_code == 5200:
-            # Try V2.01 MIN range first (31010 - PV1 voltage in V2.01)
-            result = await hass.async_add_executor_job(
-                client.read_input_registers, 31010, 1  # V2.01 MIN PV1 voltage
-            )
-            if result is not None:
-                _LOGGER.info("Detected V2.01 31000+ range - MIN series")
-                return 'min_3000_6000_tl_x_v201'
+            _LOGGER.info("DTC 5200 detected - Testing registers 59-62 for MIC per-MPPT energy tracking")
 
-            # Fallback to legacy MIN's 3000 range
+            # Test MIC-specific per-MPPT energy registers (59-62)
+            # MIC hardware: registers contain plausible energy values (high word typically 0-100)
+            # MIN hardware: registers may return garbage/system values (e.g., DTC code 5200)
+            mic_registers_found = False
+
+            # Check register 59-60 (PV1 energy today)
             result = await hass.async_add_executor_job(
-                client.read_input_registers, 3003, 1  # Legacy MIN PV1 voltage
+                client.read_input_registers, 59, 2  # PV1 energy today (high/low)
+            )
+            if result is not None and len(result) == 2:
+                high_word = result[0]
+                low_word = result[1]
+                # Valid energy data: high word should be small (0-100 for reasonable energy values)
+                # MIN inverters return garbage (e.g., 5200 = DTC code) - reject these
+                if 0 < high_word < 100 or (high_word == 0 and low_word > 0):
+                    mic_registers_found = True
+                    _LOGGER.info(f"Register 59-60 (PV1 energy) = {high_word}/{low_word} - Valid MIC per-MPPT energy data detected")
+                elif high_word >= 100:
+                    _LOGGER.info(f"Register 59-60 = {high_word}/{low_word} - Invalid (garbage/system data, not energy)")
+
+            # Also check register 61-62 (PV2 energy today) for confirmation
+            if not mic_registers_found:
+                result = await hass.async_add_executor_job(
+                    client.read_input_registers, 61, 2  # PV2 energy today (high/low)
+                )
+                if result is not None and len(result) == 2:
+                    high_word = result[0]
+                    low_word = result[1]
+                    # Same validation: high word should be small for plausible energy
+                    if 0 < high_word < 100 or (high_word == 0 and low_word > 0):
+                        mic_registers_found = True
+                        _LOGGER.info(f"Register 61-62 (PV2 energy) = {high_word}/{low_word} - Valid MIC per-MPPT energy data detected")
+                    elif high_word >= 100:
+                        _LOGGER.info(f"Register 61-62 = {high_word}/{low_word} - Invalid (garbage/system data, not energy)")
+
+            # If MIC per-MPPT registers found, this is a MIC inverter
+            if mic_registers_found:
+                # Check if it uses MIN register layout (3000+ range)
+                result = await hass.async_add_executor_job(
+                    client.read_input_registers, 3003, 1  # MIN PV1 voltage
+                )
+                if result is not None:
+                    _LOGGER.info("MIC hardware detected with MIN register layout (hybrid) - MIC 2500-6000TL-X MIN range variant")
+                    return 'mic_2500_6000tl_x_min_range'
+                else:
+                    _LOGGER.info("MIC hardware detected with standard 0-179 layout - MIC 600-3300TL-X")
+                    return 'mic_600_3300tl_x_v201'
+
+            # No MIC per-MPPT registers - this is a MIN inverter
+            # Verify by checking 3000+ range (MIN register layout)
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 3003, 1  # MIN PV1 voltage
             )
             if result is not None:
-                _LOGGER.info("Detected legacy 3000+ range - MIN series")
+                _LOGGER.info("No MIC per-MPPT registers, 3000+ range present - MIN 3000-6000TL-X series")
                 return 'min_3000_6000_tl_x_v201'
             else:
-                _LOGGER.info("No 3000+ range - MIC series")
-                return 'mic_600_3300tl_x_v201'
+                # Fallback: Try V2.01 MIN range (31010)
+                result = await hass.async_add_executor_job(
+                    client.read_input_registers, 31010, 1  # V2.01 MIN PV1 voltage
+                )
+                if result is not None:
+                    _LOGGER.info("No MIC per-MPPT registers, V2.01 31000+ range present - MIN series")
+                    return 'min_3000_6000_tl_x_v201'
+                else:
+                    # Shouldn't reach here with DTC 5200, but default to MIN
+                    _LOGGER.warning("DTC 5200 but no clear register pattern - defaulting to MIN")
+                    return 'min_3000_6000_tl_x_v201'
 
     except Exception as e:
         _LOGGER.debug(f"Error during DTC refinement: {e}")

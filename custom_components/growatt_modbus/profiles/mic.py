@@ -145,8 +145,163 @@ MIC_600_3300TL_X_V201 = {
     }
 }
 
+# MIC 2500-6000TL-X (Hybrid MIN/MIC register layout)
+# These MIC models use MIN register addressing (0-124 + 3000-3124 ranges)
+# BUT retain MIC-specific per-MPPT energy tracking (registers 59-62)
+# Identified by: DTC 5200 + populated registers 59-62
+MIC_2500_6000TL_X_MIN_RANGE = {
+    'name': 'MIC 2500-6000TL-X (MIN range)',
+    'description': 'MIC inverter using MIN register layout with per-MPPT tracking',
+    'notes': 'Hybrid profile: Uses MIN addressing (0-124 + 3000-3124) but has MIC per-MPPT energy. DTC 5200 with registers 59-62 populated.',
+    'input_registers': {
+        # ============================================================================
+        # RANGE 0-124: MIN Base Range (overlaps with 3000-3124)
+        # ============================================================================
+
+        # System Status
+        0: {'name': 'inverter_status', 'scale': 1, 'unit': '', 'desc': '0=Waiting, 1=Normal, 3=Fault'},
+
+        # PV Total Power (32-bit)
+        1: {'name': 'pv_total_power_high', 'scale': 1, 'unit': '', 'pair': 2},
+        2: {'name': 'pv_total_power_low', 'scale': 1, 'unit': '', 'pair': 1, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # PV String 1
+        3: {'name': 'pv1_voltage', 'scale': 0.1, 'unit': 'V'},
+        4: {'name': 'pv1_current', 'scale': 0.1, 'unit': 'A'},
+        5: {'name': 'pv1_power_high', 'scale': 1, 'unit': '', 'pair': 6},
+        6: {'name': 'pv1_power_low', 'scale': 1, 'unit': '', 'pair': 5, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # PV String 2
+        7: {'name': 'pv2_voltage', 'scale': 0.1, 'unit': 'V'},
+        8: {'name': 'pv2_current', 'scale': 0.1, 'unit': 'A'},
+        9: {'name': 'pv2_power_high', 'scale': 1, 'unit': '', 'pair': 10},
+        10: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # AC Output Power (32-bit)
+        35: {'name': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36},
+        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # AC Grid
+        37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
+        38: {'name': 'ac_voltage', 'scale': 0.1, 'unit': 'V'},
+        39: {'name': 'ac_current', 'scale': 0.1, 'unit': 'A'},
+        40: {'name': 'ac_power_high', 'scale': 1, 'unit': '', 'pair': 41},
+        41: {'name': 'ac_power_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'VA'},
+
+        # Energy Today/Total (32-bit pairs)
+        53: {'name': 'energy_today_high', 'scale': 1, 'unit': '', 'pair': 54},
+        54: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'pair': 53, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        55: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'pair': 56},
+        56: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'pair': 55, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Operating Time
+        57: {'name': 'time_total_high', 'scale': 1, 'unit': '', 'pair': 58},
+        58: {'name': 'time_total_low', 'scale': 1, 'unit': '', 'pair': 57, 'combined_scale': 0.5, 'combined_unit': 's'},
+
+        # ============================================================================
+        # MIC-SPECIFIC: Per-MPPT Energy Tracking (MIC feature, NOT in MIN)
+        # These registers identify MIC hardware vs MIN
+        # ============================================================================
+        59: {'name': 'pv1_energy_today_high', 'scale': 1, 'unit': '', 'pair': 60, 'desc': 'PV1 energy today HIGH (MIC-specific per-MPPT)'},
+        60: {'name': 'pv1_energy_today_low', 'scale': 1, 'unit': '', 'pair': 59, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV1 energy today LOW'},
+        61: {'name': 'pv2_energy_today_high', 'scale': 1, 'unit': '', 'pair': 62, 'desc': 'PV2 energy today HIGH (MIC-specific per-MPPT)'},
+        62: {'name': 'pv2_energy_today_low', 'scale': 1, 'unit': '', 'pair': 61, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV2 energy today LOW'},
+
+        # Temperatures
+        93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+
+        # Bus Voltage
+        98: {'name': 'p_bus_voltage', 'scale': 0.1, 'unit': 'V'},
+        99: {'name': 'n_bus_voltage', 'scale': 0.1, 'unit': 'V'},
+
+        # Power Factor
+        100: {'name': 'power_factor', 'scale': 1, 'unit': '', 'desc': '0-10000=underexcited, 10001-20000=overexcited'},
+
+        # Diagnostics
+        104: {'name': 'derating_mode', 'scale': 1, 'unit': ''},
+        105: {'name': 'fault_code', 'scale': 1, 'unit': ''},
+        107: {'name': 'fault_subcode', 'scale': 1, 'unit': ''},
+        110: {'name': 'warning_high', 'scale': 1, 'unit': ''},
+        111: {'name': 'warning_subcode', 'scale': 1, 'unit': ''},
+        112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
+
+        # ============================================================================
+        # RANGE 3000-3124: MIN Extended Range (same data as 0-124, different addressing)
+        # ============================================================================
+
+        # System Status
+        3000: {'name': 'inverter_status_3k', 'scale': 1, 'unit': '', 'desc': '0=Waiting, 1=Normal, 3=Fault', 'maps_to': 'inverter_status'},
+
+        # PV Total Power
+        3001: {'name': 'pv_total_power_high_3k', 'scale': 1, 'unit': '', 'pair': 3002, 'maps_to': 'pv_total_power'},
+        3002: {'name': 'pv_total_power_low_3k', 'scale': 1, 'unit': '', 'pair': 3001, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # PV String 1
+        3003: {'name': 'pv1_voltage_3k', 'scale': 0.1, 'unit': 'V', 'maps_to': 'pv1_voltage'},
+        3004: {'name': 'pv1_current_3k', 'scale': 0.1, 'unit': 'A', 'maps_to': 'pv1_current'},
+        3005: {'name': 'pv1_power_high_3k', 'scale': 1, 'unit': '', 'pair': 3006, 'maps_to': 'pv1_power'},
+        3006: {'name': 'pv1_power_low_3k', 'scale': 1, 'unit': '', 'pair': 3005, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # PV String 2
+        3007: {'name': 'pv2_voltage_3k', 'scale': 0.1, 'unit': 'V', 'maps_to': 'pv2_voltage'},
+        3008: {'name': 'pv2_current_3k', 'scale': 0.1, 'unit': 'A', 'maps_to': 'pv2_current'},
+        3009: {'name': 'pv2_power_high_3k', 'scale': 1, 'unit': '', 'pair': 3010, 'maps_to': 'pv2_power'},
+        3010: {'name': 'pv2_power_low_3k', 'scale': 1, 'unit': '', 'pair': 3009, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # AC Output
+        3025: {'name': 'ac_frequency_3k', 'scale': 0.01, 'unit': 'Hz', 'maps_to': 'ac_frequency'},
+        3026: {'name': 'ac_voltage_3k', 'scale': 0.1, 'unit': 'V', 'maps_to': 'ac_voltage'},
+        3027: {'name': 'ac_current_3k', 'scale': 0.1, 'unit': 'A', 'maps_to': 'ac_current'},
+        3028: {'name': 'ac_power_high_3k', 'scale': 1, 'unit': '', 'pair': 3029, 'maps_to': 'ac_power'},
+        3029: {'name': 'ac_power_low_3k', 'scale': 1, 'unit': '', 'pair': 3028, 'combined_scale': 0.1, 'combined_unit': 'VA'},
+
+        # Power Flow
+        3041: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 3042},
+        3042: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 3041, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        3043: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 3044},
+        3044: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 3043, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        3045: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 3046},
+        3046: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 3045, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Energy Today/Total
+        3049: {'name': 'energy_today_high_3k', 'scale': 1, 'unit': '', 'pair': 3050, 'maps_to': 'energy_today'},
+        3050: {'name': 'energy_today_low_3k', 'scale': 1, 'unit': '', 'pair': 3049, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3051: {'name': 'energy_total_high_3k', 'scale': 1, 'unit': '', 'pair': 3052, 'maps_to': 'energy_total'},
+        3052: {'name': 'energy_total_low_3k', 'scale': 1, 'unit': '', 'pair': 3051, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Energy Breakdown
+        3067: {'name': 'energy_to_user_today_high', 'scale': 1, 'unit': '', 'pair': 3068},
+        3068: {'name': 'energy_to_user_today_low', 'scale': 1, 'unit': '', 'pair': 3067, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3071: {'name': 'energy_to_grid_today_high', 'scale': 1, 'unit': '', 'pair': 3072},
+        3072: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 3071, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3075: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3076},
+        3076: {'name': 'load_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3075, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Diagnostics
+        3086: {'name': 'derating_mode_3k', 'scale': 1, 'unit': '', 'maps_to': 'derating_mode'},
+        3092: {'name': 'bus_voltage', 'scale': 0.1, 'unit': 'V'},
+
+        # Temperatures
+        3093: {'name': 'inverter_temp_3k', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp', 'signed': True},
+        3094: {'name': 'ipm_temp_3k', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp', 'signed': True},
+        3095: {'name': 'boost_temp_3k', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp', 'signed': True},
+
+        # Fault Codes
+        3105: {'name': 'fault_code_3k', 'scale': 1, 'unit': '', 'maps_to': 'fault_code'},
+        3106: {'name': 'warning_code_3k', 'scale': 1, 'unit': '', 'maps_to': 'warning_code'},
+    },
+    'holding_registers': {
+        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
+        3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Max output power %'},
+        30: {'name': 'modbus_address', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Modbus address 1-254'},
+    }
+}
+
 # Export all MIC profiles
 MIC_REGISTER_MAPS = {
     'MIC_600_3300TL_X': MIC_600_3300TL_X,
     'MIC_600_3300TL_X_V201': MIC_600_3300TL_X_V201,
+    'MIC_2500_6000TL_X_MIN_RANGE': MIC_2500_6000TL_X_MIN_RANGE,
 }
