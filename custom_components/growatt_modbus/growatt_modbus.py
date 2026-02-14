@@ -62,15 +62,18 @@ class GrowattData:
     """Container for Growatt inverter data"""
     # Solar Input
     pv1_voltage: float = 0.0          # V
-    pv1_current: float = 0.0          # A  
+    pv1_current: float = 0.0          # A
     pv1_power: float = 0.0            # W
+    pv1_energy_today: float = 0.0     # kWh (WIT per-MPPT energy tracking - Issue #146)
     pv2_voltage: float = 0.0          # V
     pv2_current: float = 0.0          # A
     pv2_power: float = 0.0            # W
+    pv2_energy_today: float = 0.0     # kWh (WIT per-MPPT energy tracking - Issue #146)
     pv3_voltage: float = 0.0          # V
     pv3_current: float = 0.0          # A
     pv3_power: float = 0.0            # W
     pv_total_power: float = 0.0       # W
+    pv_energy_total: float = 0.0      # kWh (WIT total PV lifetime energy - Issue #146)
     
     # AC Output (generic - usually Phase R for 3-phase)
     ac_voltage: float = 0.0           # V
@@ -894,7 +897,24 @@ class GrowattModbus:
             else:
                 # Calculate from strings if not available
                 data.pv_total_power = data.pv1_power + data.pv2_power + data.pv3_power
-            
+
+            # PV Energy (WIT per-MPPT tracking - Issue #146)
+            # These registers track DC input from solar panels only (not total system output)
+            pv1_energy_today_addr = self._find_register_by_name('pv1_energy_today_low')
+            if pv1_energy_today_addr:
+                data.pv1_energy_today = self._get_register_value(pv1_energy_today_addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}] PV1 energy today from reg {pv1_energy_today_addr}: {data.pv1_energy_today} kWh")
+
+            pv2_energy_today_addr = self._find_register_by_name('pv2_energy_today_low')
+            if pv2_energy_today_addr:
+                data.pv2_energy_today = self._get_register_value(pv2_energy_today_addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}] PV2 energy today from reg {pv2_energy_today_addr}: {data.pv2_energy_today} kWh")
+
+            pv_energy_total_addr = self._find_register_by_name('pv_energy_total_low')
+            if pv_energy_total_addr:
+                data.pv_energy_total = self._get_register_value(pv_energy_total_addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}] PV energy total from reg {pv_energy_total_addr}: {data.pv_energy_total} kWh")
+
             # AC Output (generic - will use Phase R via alias for 3-phase)
             ac_voltage_addr = self._find_register_by_name('ac_voltage')
             ac_current_addr = self._find_register_by_name('ac_current')
@@ -1035,15 +1055,30 @@ class GrowattModbus:
                 data.power_to_load = self._get_register_value(power_to_load_addr) or 0.0
             
             # Energy Today
-            energy_today_addr = self._find_register_by_name('energy_today_low')
-            if energy_today_addr:
-                data.energy_today = self._get_register_value(energy_today_addr) or 0.0
-                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from reg {energy_today_addr}: {data.energy_today} kWh (cache: {self._register_cache.get(energy_today_addr)})")
-            
+            # For WIT with per-MPPT tracking: use sum of PV1+PV2 energy for accurate solar production
+            # Registers 53-54 show total system AC output (PV+battery), not PV-only (Issue #146)
+            if data.pv1_energy_today > 0 or data.pv2_energy_today > 0:
+                # WIT with per-MPPT energy: sum PV inputs for true solar production
+                data.energy_today = data.pv1_energy_today + data.pv2_energy_today
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today calculated from PV MPPTs: PV1={data.pv1_energy_today} + PV2={data.pv2_energy_today} = {data.energy_today} kWh")
+            else:
+                # Fallback to total system output for other inverters
+                energy_today_addr = self._find_register_by_name('energy_today_low')
+                if energy_today_addr:
+                    data.energy_today = self._get_register_value(energy_today_addr) or 0.0
+                    logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from reg {energy_today_addr}: {data.energy_today} kWh (cache: {self._register_cache.get(energy_today_addr)})")
+
             # Energy Total
-            energy_total_addr = self._find_register_by_name('energy_total_low')
-            if energy_total_addr:
-                data.energy_total = self._get_register_value(energy_total_addr) or 0.0
+            # For WIT: use total PV energy register if available (accurate DC input lifetime energy)
+            if data.pv_energy_total > 0:
+                # WIT with PV total energy register
+                data.energy_total = data.pv_energy_total
+                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy total from PV lifetime register: {data.energy_total} kWh")
+            else:
+                # Fallback to total system output for other inverters
+                energy_total_addr = self._find_register_by_name('energy_total_low')
+                if energy_total_addr:
+                    data.energy_total = self._get_register_value(energy_total_addr) or 0.0
             
             # Energy Breakdown (if available)
             self._read_energy_breakdown(data)

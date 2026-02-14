@@ -304,6 +304,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             profile_key = detection.get("profile_key", "N/A")
             dtc_code = detection.get("dtc_code")
             protocol_version = detection.get("protocol_version")
+            firmware_version = result.get("firmware_version")
 
             message_lines = [
                 f"**File saved:** `{result['filename']}`\n",
@@ -311,12 +312,14 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 f"**Confidence:** {confidence}",
             ]
 
-            # Add DTC/Protocol info if available
+            # Add DTC/Protocol/Firmware info if available
             if dtc_code:
                 message_lines.append(f"**DTC Code:** {dtc_code}")
             if protocol_version:
                 protocol_str = f"{protocol_version // 100}.{protocol_version % 100:02d}" if protocol_version >= 100 else str(protocol_version)
                 message_lines.append(f"**Protocol:** V{protocol_str}")
+            if firmware_version:
+                message_lines.append(f"**Firmware:** {firmware_version}")
 
             message_lines.extend([
                 f"**Suggested Profile:** `{profile_key}`\n",
@@ -1274,8 +1277,14 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         all_register_data = {}
         range_responses = {}
 
-        # FIRST: Read DTC code and protocol version (holding registers - critical for identification)
-        # SKIP if OffGrid mode to prevent SPF power resets!
+        # FIRST: Read DTC code, protocol version, and firmware version (holding registers - critical for identification)
+        # SKIP VPP registers if OffGrid mode to prevent SPF power resets!
+        # Always read firmware version (registers 9-11) - safe for all inverters
+        _LOGGER.info("Reading firmware version (holding registers 9-11)...")
+        fw_registers = _read_registers_chunked(client, 9, 3, slave_id, chunk_size=3, register_type='holding')
+        if fw_registers:
+            all_register_data.update(fw_registers)
+
         if not offgrid_mode:
             _LOGGER.info("Reading identification registers (DTC code, protocol version)...")
             id_registers = _read_registers_chunked(client, 30000, 100, slave_id, chunk_size=50, register_type='holding')
@@ -1382,6 +1391,26 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                 protocol_ver = detection["protocol_version"]
                 protocol_str = f"{protocol_ver // 100}.{protocol_ver % 100:02d}" if protocol_ver >= 100 else str(protocol_ver)
                 writer.writerow(["Protocol Version", f"V{protocol_str} (register value: {protocol_ver})"])
+
+            # Add firmware version if available (holding registers 9-11, ASCII encoded)
+            if 9 in all_register_data and 10 in all_register_data and 11 in all_register_data:
+                fw_regs = [all_register_data[9], all_register_data[10], all_register_data[11]]
+                if all(r['status'] == 'success' and r['value'] is not None for r in fw_regs):
+                    # Convert register values to ASCII (each register = 2 chars)
+                    fw_chars = []
+                    for reg_data in fw_regs:
+                        val = reg_data['value']
+                        # Extract high and low bytes
+                        high_byte = (val >> 8) & 0xFF
+                        low_byte = val & 0xFF
+                        # Convert to ASCII if printable
+                        if 32 <= high_byte <= 126:
+                            fw_chars.append(chr(high_byte))
+                        if 32 <= low_byte <= 126:
+                            fw_chars.append(chr(low_byte))
+                    firmware_version = ''.join(fw_chars).strip()
+                    if firmware_version:
+                        writer.writerow(["Firmware Version", firmware_version])
 
             writer.writerow(["Suggested Profile Key", detection["profile_key"]])
             writer.writerow(["Register Map", detection["register_map"]])
@@ -1571,15 +1600,34 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                                 status_comment
                             ])
         
+        # Extract firmware version from holding registers 9-11 (ASCII encoded)
+        firmware_version = None
+        if 9 in all_register_data and 10 in all_register_data and 11 in all_register_data:
+            fw_regs = [all_register_data[9], all_register_data[10], all_register_data[11]]
+            if all(r['status'] == 'success' and r['value'] is not None for r in fw_regs):
+                fw_chars = []
+                for reg_data in fw_regs:
+                    val = reg_data['value']
+                    high_byte = (val >> 8) & 0xFF
+                    low_byte = val & 0xFF
+                    if 32 <= high_byte <= 126:
+                        fw_chars.append(chr(high_byte))
+                    if 32 <= low_byte <= 126:
+                        fw_chars.append(chr(low_byte))
+                firmware_version = ''.join(fw_chars).strip()
+
         result["success"] = True
         result["filename"] = filename
         result["total_registers"] = total
         result["non_zero"] = non_zero
         result["responding_ranges"] = sum(1 for count in range_responses.values() if count > 0)
         result["detection"] = detection
-        
+        result["firmware_version"] = firmware_version
+
         _LOGGER.info(f"Universal scan complete: {filename}")
         _LOGGER.info(f"Detected: {detection['model']} (confidence: {detection['confidence']})")
+        if firmware_version:
+            _LOGGER.info(f"Firmware: {firmware_version}")
         
         return result
         
