@@ -785,7 +785,8 @@ async def async_refine_dtc_detection(
             _LOGGER.info("DTC 5200 detected - Testing registers 59-62 for MIC per-MPPT energy tracking")
 
             # Test MIC-specific per-MPPT energy registers (59-62)
-            # These registers exist in MIC hardware but NOT in MIN hardware
+            # MIC hardware: registers contain plausible energy values (high word typically 0-100)
+            # MIN hardware: registers may return garbage/system values (e.g., DTC code 5200)
             mic_registers_found = False
 
             # Check register 59-60 (PV1 energy today)
@@ -793,10 +794,15 @@ async def async_refine_dtc_detection(
                 client.read_input_registers, 59, 2  # PV1 energy today (high/low)
             )
             if result is not None and len(result) == 2:
-                # Check if ANY value is non-zero (indicates MIC hardware)
-                if result[0] > 0 or result[1] > 0:
+                high_word = result[0]
+                low_word = result[1]
+                # Valid energy data: high word should be small (0-100 for reasonable energy values)
+                # MIN inverters return garbage (e.g., 5200 = DTC code) - reject these
+                if 0 < high_word < 100 or (high_word == 0 and low_word > 0):
                     mic_registers_found = True
-                    _LOGGER.info(f"Register 59-60 (PV1 energy) = {result[0]}/{result[1]} - MIC per-MPPT feature detected")
+                    _LOGGER.info(f"Register 59-60 (PV1 energy) = {high_word}/{low_word} - Valid MIC per-MPPT energy data detected")
+                elif high_word >= 100:
+                    _LOGGER.info(f"Register 59-60 = {high_word}/{low_word} - Invalid (garbage/system data, not energy)")
 
             # Also check register 61-62 (PV2 energy today) for confirmation
             if not mic_registers_found:
@@ -804,9 +810,14 @@ async def async_refine_dtc_detection(
                     client.read_input_registers, 61, 2  # PV2 energy today (high/low)
                 )
                 if result is not None and len(result) == 2:
-                    if result[0] > 0 or result[1] > 0:
+                    high_word = result[0]
+                    low_word = result[1]
+                    # Same validation: high word should be small for plausible energy
+                    if 0 < high_word < 100 or (high_word == 0 and low_word > 0):
                         mic_registers_found = True
-                        _LOGGER.info(f"Register 61-62 (PV2 energy) = {result[0]}/{result[1]} - MIC per-MPPT feature detected")
+                        _LOGGER.info(f"Register 61-62 (PV2 energy) = {high_word}/{low_word} - Valid MIC per-MPPT energy data detected")
+                    elif high_word >= 100:
+                        _LOGGER.info(f"Register 61-62 = {high_word}/{low_word} - Invalid (garbage/system data, not energy)")
 
             # If MIC per-MPPT registers found, this is a MIC inverter
             if mic_registers_found:

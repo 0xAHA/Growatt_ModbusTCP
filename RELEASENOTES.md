@@ -44,14 +44,21 @@
 
 2. **New Detection Logic for DTC 5200:**
    ```
-   Step 1: Test registers 59-62 (PV1/PV2 per-MPPT energy)
-   Step 2: If registers 59-62 have values:
+   Step 1: Read registers 59-62 (PV1/PV2 per-MPPT energy)
+
+   Step 2: Validate if values are plausible energy data:
+           - MIC hardware: registers contain valid energy values (high word 0-100)
+           - MIN hardware: registers return garbage/system values (e.g., 5200 = DTC code)
+           - Check: high word < 100 (rejects invalid data like DTC codes)
+
+   Step 3: If valid energy data found in registers 59-62:
            → MIC hardware detected
            → Check if uses MIN layout (3000+ range)
            → If yes: Use new MIC_2500_6000TL_X_MIN_RANGE profile
            → If no: Use standard MIC_600_3300TL_X_V201 profile
-   Step 3: If registers 59-62 empty:
-           → MIN hardware (no per-MPPT capability)
+
+   Step 4: If registers 59-62 empty or invalid:
+           → MIN hardware (no per-MPPT capability or garbage data)
            → Use MIN_3000_6000TL_X_V201 profile
    ```
 
@@ -93,19 +100,28 @@ After (v0.4.8):
 
 **Register Scan Analysis:**
 ```
-MIC-1000TL-X Hybrid Layout:
+MIC-1000TL-X Hybrid Layout (verified):
   Register 11-12: 0 (MIC AC power location - empty)
   Register 35-36: 1127 (output power - populated)
-  Register 59-60: 1/1 (PV1 energy - MIC feature ✅)
-  Register 61-62: 44927/0 (PV2 energy - MIC feature ✅)
+  Register 59-60: 1/1 (PV1 energy - VALID energy data ✅)
+  Register 61-62: 44927/0 (PV2 energy - VALID energy data ✅)
   Register 3028-3029: 1127 (MIN AC power location - populated)
   Register 3049-3052: energy values (MIN location - populated)
 
-MIN Profile (comparison):
-  Register 59-62: NOT DEFINED (MIN hardware lacks this capability)
+MIN 3000-6000TL-X (verified):
+  Register 59: 5200 (garbage/DTC code - INVALID for energy ❌)
+  Register 59-62: Returns system values, not energy data
+  → Detection rejects high word >= 100 as garbage
 ```
 
-**Key Insight:** Registers 59-62 are hardware-level differentiator, not just register layout variation.
+**Validation Logic:**
+- Energy registers use 32-bit pairs (high word, low word)
+- Valid daily energy: 0-50 kWh → high word typically 0-1
+- Valid lifetime energy: 10,000 kWh → high word ~1-2
+- **Threshold: high word must be < 100 to be valid energy**
+- MIN garbage values (5200, DTC codes, etc.) correctly rejected
+
+**Key Insight:** Registers 59-62 differentiate MIC/MIN at hardware level. MIN may respond to these registers but returns garbage/system values, not energy data.
 
 ---
 
