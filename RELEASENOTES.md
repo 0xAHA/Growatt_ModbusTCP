@@ -1,5 +1,119 @@
 # Release Notes
 
+# Release Notes - v0.4.7
+
+## 🐛 Bug Fix + 📊 Diagnostic Enhancement
+
+**Fixed (Issue #146):**
+- WIT "Energy Today" sensor showing incorrect values (total system output instead of PV-only production)
+- WIT "Energy Total" sensor not reflecting actual solar panel production
+
+**Enhanced:**
+- Register scan now includes firmware version in metadata output
+
+---
+
+### What's Fixed in v0.4.7:
+
+#### 1. 🔧 Fixed WIT PV Energy Calculation (Issue #146)
+
+**Problem:** WIT users reported "Energy Today" sensor increasing at night when no solar production occurring.
+
+**Root Cause:**
+- Registers 53-56 (energy_today/total) track **total system AC output** (PV + battery discharge combined)
+- Not suitable for tracking solar production on hybrid inverters with batteries
+- Values increase whenever battery powers loads, even at night
+
+**User Report:**
+- Register 56 showed 6.2 kWh (wrong - total system output)
+- Register 60 (PV1): 4.8 kWh ✅
+- Register 64 (PV2): 2.7 kWh ✅
+- **Actual PV production: 4.8 + 2.7 = 7.5 kWh** ✅
+
+**The Fix:**
+1. **Added Missing Registers to WIT Profile:**
+   - 59-60: PV1 Energy Today (per-MPPT tracking)
+   - 63-64: PV2 Energy Today (per-MPPT tracking)
+   - 91-92: PV Energy Total (lifetime DC input from all MPPTs)
+
+2. **Added Dataclass Fields:**
+   - `pv1_energy_today` - PV1 MPPT daily production
+   - `pv2_energy_today` - PV2 MPPT daily production
+   - `pv_energy_total` - Lifetime PV production
+
+3. **Changed Energy Calculation for WIT:**
+   - `energy_today` now calculated as: **PV1 + PV2** (true solar production)
+   - `energy_total` now uses register 92 (total PV lifetime energy)
+   - Fallback to original registers for non-WIT inverters (backwards compatible)
+
+**Impact:**
+- ✅ WIT "Energy Today" now shows accurate solar production (not total system output)
+- ✅ Values only increase during daylight when panels are producing
+- ✅ Correctly tracks DC input from solar panels only
+- ✅ Other inverter series unaffected (backwards compatible)
+
+**Example - Before vs After:**
+```
+Before (v0.4.6):
+  Energy Today: 6.2 kWh  ❌ (total system including battery)
+
+After (v0.4.7):
+  Energy Today: 7.5 kWh  ✅ (PV1 4.8 + PV2 2.7 = actual solar)
+```
+
+#### 2. 📊 Register Scan Enhancement
+
+**Added:** Firmware version now included in register scan metadata output.
+
+**How it Works:**
+- Reads holding registers 9-11 (firmware version, ASCII encoded)
+- Decodes to human-readable version string
+- Displays in both CSV metadata and notification message
+
+**Example Output:**
+```
+DETECTION ANALYSIS
+Detected Model: WIT 4-15kW Hybrid
+Confidence: Very High
+DTC Code: 10046
+Protocol Version: V2.01
+Firmware: GH1.0     <-- NEW
+Suggested Profile: WIT_4000_15000TL3
+```
+
+**Impact:**
+- ✅ Easier troubleshooting - firmware version visible in scans
+- ✅ Helps identify firmware-specific behaviors
+- ✅ No additional user action required - automatic extraction
+
+---
+
+### Migration Notes:
+
+**No action required** - This is a bug fix and enhancement release.
+
+**For WIT Users:**
+- "Energy Today" and "Energy Total" sensors will now show correct PV production values
+- **IMPORTANT:** Values may differ from v0.4.6 - this is expected and correct
+- Previous values included battery discharge (wrong), new values are PV-only (correct)
+- Dashboard energy graphs may show a one-time step change after upgrade
+
+**For All Users:**
+- Next register scan will include firmware version automatically
+- No changes needed to existing scans
+
+---
+
+### Files Changed:
+- `custom_components/growatt_modbus/profiles/wit.py` - Added PV energy registers (59-60, 63-64, 91-92) with descriptions
+- `custom_components/growatt_modbus/growatt_modbus.py` - Added PV energy dataclass fields + reading code + smart calculation logic
+- `custom_components/growatt_modbus/diagnostic.py` - Added firmware version reading and display
+- `custom_components/growatt_modbus/manifest.json` - Version bump to 0.4.7
+- `README.md` - Version badge updated to 0.4.7
+- `RELEASENOTES.md` - Updated with v0.4.7 changes
+
+---
+
 # Release Notes - v0.4.6
 
 ## 🐛 Bug Fixes + 🎯 WIT Control Stability Improvements
