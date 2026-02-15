@@ -1019,35 +1019,54 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
             if self._sensor_key == "grid_power":
                 # Bidirectional grid power (signed value)
                 # Positive = export, Negative = import
+                # Per VPP V2.03: power_to_grid = "Total reverse power (grid export)"
+                # Per VPP V2.03: power_to_user = "Total forward power (grid import)"
                 export = getattr(data, "power_to_grid", 0)
-                solar = getattr(data, "pv_total_power", 0)
-                load = getattr(data, "power_to_load", 0)
-                charge = getattr(data, "charge_power", 0)
-                discharge = getattr(data, "discharge_power", 0)
-                
-                # Prefer inverter grid register (signed). When it's 0 or unavailable,
-                # fall back to net flow: (solar + battery discharge) - (load + battery charge)
-                grid_power = export if export != 0 else (solar + discharge) - (load + charge)
-                
+                import_power = getattr(data, "power_to_user", 0)
+
+                # Use direct register values when available (more accurate than calculation)
+                if export > 0:
+                    # Exporting to grid (positive)
+                    grid_power = export
+                elif import_power > 0:
+                    # Importing from grid (negative)
+                    grid_power = -import_power
+                else:
+                    # Fallback calculation when no direct register values
+                    solar = getattr(data, "pv_total_power", 0)
+                    load = getattr(data, "power_to_load", 0)
+                    charge = getattr(data, "charge_power", 0)
+                    discharge = getattr(data, "discharge_power", 0)
+                    grid_power = (solar + discharge) - (load + charge)
+
                 # Apply inversion if configured (CT clamp backwards)
                 if invert_grid_power:
                     grid_power = -grid_power
-                
+
                 raw_value = round(grid_power, 1)
-                
+
                 # Apply offline behavior
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
-                
+
             elif self._sensor_key == "grid_export_power":
                 # Export power (always positive or 0)
+                # Per VPP V2.03: power_to_grid = "Total reverse power (grid export)"
+                # Per VPP V2.03: power_to_user = "Total forward power (grid import)"
                 export = getattr(data, "power_to_grid", 0)
-                solar = getattr(data, "pv_total_power", 0)
-                load = getattr(data, "power_to_load", 0)
-                charge = getattr(data, "charge_power", 0)
-                discharge = getattr(data, "discharge_power", 0)
+                import_power = getattr(data, "power_to_user", 0)
 
-                # Calculate grid power (IEC standard: positive = export)
-                grid_power = export if export != 0 else (solar + discharge) - (load + charge)
+                # Determine grid power (positive = export, IEC convention)
+                # Prefer direct register values over fallback calculation
+                if export > 0:
+                    grid_power = export
+                elif import_power > 0:
+                    grid_power = -import_power
+                else:
+                    solar = getattr(data, "pv_total_power", 0)
+                    load = getattr(data, "power_to_load", 0)
+                    charge = getattr(data, "charge_power", 0)
+                    discharge = getattr(data, "discharge_power", 0)
+                    grid_power = (solar + discharge) - (load + charge)
 
                 # Apply inversion if configured (for HA convention: negative = export)
                 if invert_grid_power:
@@ -1059,14 +1078,23 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
 
             elif self._sensor_key == "grid_import_power":
                 # Import power (always positive or 0)
+                # Per VPP V2.03: power_to_user = "Total forward power (grid import)"
+                # Per VPP V2.03: power_to_grid = "Total reverse power (grid export)"
                 export = getattr(data, "power_to_grid", 0)
-                solar = getattr(data, "pv_total_power", 0)
-                load = getattr(data, "power_to_load", 0)
-                charge = getattr(data, "charge_power", 0)
-                discharge = getattr(data, "discharge_power", 0)
+                import_power = getattr(data, "power_to_user", 0)
 
-                # Calculate grid power (IEC standard: positive = export)
-                grid_power = export if export != 0 else (solar + discharge) - (load + charge)
+                # Determine grid power (positive = export, IEC convention)
+                # Prefer direct register values over fallback calculation
+                if export > 0:
+                    grid_power = export
+                elif import_power > 0:
+                    grid_power = -import_power
+                else:
+                    solar = getattr(data, "pv_total_power", 0)
+                    load = getattr(data, "power_to_load", 0)
+                    charge = getattr(data, "charge_power", 0)
+                    discharge = getattr(data, "discharge_power", 0)
+                    grid_power = (solar + discharge) - (load + charge)
 
                 # Apply inversion if configured (for HA convention: positive = import)
                 if invert_grid_power:
