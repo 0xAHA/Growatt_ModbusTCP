@@ -306,8 +306,8 @@ sync_tou_schedule:
         select:
           options:
             - label: "Load first (self-consumption/HOLD)"
-              value: 0
+              value: "0"
             - label: "Battery first"
-              value: 1
+              value: "1"
             - label: "Grid first"
-              value: 2
+              value: "2"
