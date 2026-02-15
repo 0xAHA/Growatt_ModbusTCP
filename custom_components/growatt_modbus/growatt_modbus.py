@@ -1197,6 +1197,46 @@ class GrowattModbus:
         
         return data
     
+    def _ensure_connection(self, tag: str) -> None:
+        """Ensure Modbus client is initialized and socket is connected.
+
+        Checks socket state and attempts reconnection if needed.
+        Used by write_register() and write_registers() to avoid duplication.
+
+        Args:
+            tag: Log prefix for identifying the caller (e.g. "[WRITE]")
+
+        Raises:
+            ModbusWriteError: If client is not initialized or reconnection fails
+        """
+        if not self.client:
+            raise ModbusWriteError(0, [], "Client not initialized")
+
+        if hasattr(self.client, 'is_socket_open'):
+            try:
+                socket_is_open = self.client.is_socket_open()
+                logger.debug(f"{tag} is_socket_open() returned: {socket_is_open}")
+
+                if not socket_is_open:
+                    logger.warning(f"{tag} Socket not open, attempting reconnect...")
+                    if not self.connect():
+                        raise ModbusWriteError(0, [], "Reconnect failed - not connected")
+                    logger.info(f"{tag} Reconnect successful, proceeding with write")
+
+            except ModbusWriteError:
+                raise
+            except Exception as e:
+                logger.warning(f"{tag} is_socket_open() threw exception: {e}")
+                logger.warning(f"{tag} Attempting reconnect due to error...")
+                if not self.connect():
+                    raise ModbusWriteError(0, [], "Reconnect failed after exception")
+                logger.info(f"{tag} Reconnect successful after exception")
+        else:
+            logger.debug(f"{tag} Client has no is_socket_open(), attempting reconnect...")
+            if not self.connect():
+                raise ModbusWriteError(0, [], "Reconnect failed - cannot determine socket state")
+            logger.info(f"{tag} Reconnect successful (no is_socket_open available)")
+
     def write_register(self, register: int, value: int) -> bool:
         """
         Write a single holding register.
@@ -1206,7 +1246,10 @@ class GrowattModbus:
             value: Value to write (already scaled as integer)
 
         Returns:
-            bool: True if write successful, False otherwise
+            bool: True if write successful, False only for WIT rate limiting
+
+        Raises:
+            ModbusWriteError: If the write fails, with detailed error information
         """
         try:
             logger.debug(f"[WRITE] Request to write register {register} with value {value}")
@@ -1231,44 +1274,7 @@ class GrowattModbus:
                 self._wit_control_last_write[register] = current_time
                 logger.debug(f"[WIT CTRL] Rate limit check passed for register {register}")
 
-            if not self.client:
-                logger.error("[WRITE] Cannot write register - client not initialized")
-                return False
-
-            # ---- Connection / socket check and reconnection ----------------------
-            # Check if socket is open, attempt reconnect if not
-            socket_is_open = False
-
-            if hasattr(self.client, 'is_socket_open'):
-                try:
-                    socket_is_open = self.client.is_socket_open()
-                    logger.debug(f"[WRITE] is_socket_open() returned: {socket_is_open}")
-
-                    if not socket_is_open:
-                        logger.warning("[WRITE] Socket not open, attempting reconnect...")
-                        if not self.connect():
-                            logger.error("[WRITE] Reconnect failed - not connected")
-                            return False
-                        logger.info("[WRITE] Reconnect successful, proceeding with write")
-                        socket_is_open = True
-
-                except Exception as e:
-                    logger.warning(f"[WRITE] is_socket_open() threw exception: {e}")
-                    logger.warning("[WRITE] Attempting reconnect due to error...")
-                    if not self.connect():
-                        logger.error("[WRITE] Reconnect failed after exception")
-                        return False
-                    logger.info("[WRITE] Reconnect successful after exception")
-                    socket_is_open = True
-            else:
-                # Client doesn't support is_socket_open(), try to reconnect to be safe
-                logger.debug("[WRITE] Client has no is_socket_open(), attempting reconnect...")
-                if not self.connect():
-                    logger.error("[WRITE] Reconnect failed - cannot determine socket state")
-                    return False
-                logger.info("[WRITE] Reconnect successful (no is_socket_open available)")
-                socket_is_open = True
-            # -----------------------------------------------------------------------
+            self._ensure_connection("[WRITE]")
 
             # ---- Perform actual write ---------------------------------------------
             logger.debug(f"[WRITE] Sending write_register({register}, {value}) to inverter")
@@ -1324,6 +1330,10 @@ class GrowattModbus:
         Required for atomic multi-register writes such as TOU period configuration
         where all registers (start, end, power) must be written together.
 
+        Note: WIT control rate limiting is intentionally not applied here.
+        This method is for TOU period configuration, not WIT control registers
+        which use single-register writes via write_register().
+
         Args:
             register: Starting register address
             values: List of integer values to write to consecutive registers
@@ -1337,46 +1347,10 @@ class GrowattModbus:
         try:
             logger.debug(f"[WRITE_MULTI] Request to write {len(values)} registers starting at {register}: {values}")
 
-            if not self.client:
-                logger.error("[WRITE_MULTI] Cannot write registers - client not initialized")
-                return False
-
             if not values:
-                logger.error("[WRITE_MULTI] Cannot write empty values list")
-                return False
+                raise ModbusWriteError(register, values, "Cannot write empty values list")
 
-            # ---- Connection / socket check and reconnection ----------------------
-            socket_is_open = False
-
-            if hasattr(self.client, 'is_socket_open'):
-                try:
-                    socket_is_open = self.client.is_socket_open()
-                    logger.debug(f"[WRITE_MULTI] is_socket_open() returned: {socket_is_open}")
-
-                    if not socket_is_open:
-                        logger.warning("[WRITE_MULTI] Socket not open, attempting reconnect...")
-                        if not self.connect():
-                            logger.error("[WRITE_MULTI] Reconnect failed - not connected")
-                            return False
-                        logger.info("[WRITE_MULTI] Reconnect successful, proceeding with write")
-                        socket_is_open = True
-
-                except Exception as e:
-                    logger.warning(f"[WRITE_MULTI] is_socket_open() threw exception: {e}")
-                    logger.warning("[WRITE_MULTI] Attempting reconnect due to error...")
-                    if not self.connect():
-                        logger.error("[WRITE_MULTI] Reconnect failed after exception")
-                        return False
-                    logger.info("[WRITE_MULTI] Reconnect successful after exception")
-                    socket_is_open = True
-            else:
-                logger.debug("[WRITE_MULTI] Client has no is_socket_open(), attempting reconnect...")
-                if not self.connect():
-                    logger.error("[WRITE_MULTI] Reconnect failed - cannot determine socket state")
-                    return False
-                logger.info("[WRITE_MULTI] Reconnect successful (no is_socket_open available)")
-                socket_is_open = True
-            # -----------------------------------------------------------------------
+            self._ensure_connection("[WRITE_MULTI]")
 
             # ---- Perform actual write (function 0x10) -----------------------------
             logger.debug(f"[WRITE_MULTI] Sending write_registers({register}, {values}) to inverter")
@@ -1479,16 +1453,21 @@ class GrowattModbus:
             logger.debug(f"[WIT CTRL] Conflict detection error (non-critical): {e}")
 
     def _find_register_by_name(self, name: str) -> Optional[int]:
-        """Find register address by its name, alias, or maps_to attribute"""
+        """Find register address by its name, alias, or maps_to attribute.
+
+        Searches input_registers for a matching register using three strategies:
+        1. Exact name match - standard register lookup
+        2. Alias match - for 3-phase registers that alias single-phase names
+        3. maps_to match - for VPP registers that map to standard sensor names
+           (e.g., a VPP register with maps_to='grid_power' resolves when
+           looking up 'grid_power')
+        """
         input_regs = self.register_map['input_registers']
         for addr, reg_info in input_regs.items():
-            # Check exact name match
             if reg_info['name'] == name:
                 return addr
-            # Check alias match (for 3-phase compatibility)
             if reg_info.get('alias') == name:
                 return addr
-            # Check maps_to match (for VPP registers that map to standard names)
             if reg_info.get('maps_to') == name:
                 return addr
         return None

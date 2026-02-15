@@ -113,7 +113,7 @@ SERVICE_WRITE_REGISTERS_SCHEMA = vol.Schema(
     {
         vol.Required("device_id"): cv.string,
         vol.Required("register"): vol.All(vol.Coerce(int), vol.Range(min=0, max=65535)),
-        vol.Required("values"): vol.All(cv.ensure_list, [vol.All(vol.Coerce(int), vol.Range(min=0, max=65535))]),
+        vol.Required("values"): vol.All(cv.ensure_list, vol.Length(min=1, max=123), [vol.All(vol.Coerce(int), vol.Range(min=0, max=65535))]),
     }
 )
 
@@ -398,6 +398,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError(f"Coordinator not found for device {device_id}")
 
         # Write the register using the coordinator's client
+        # write_register() raises ModbusWriteError on failure, returns False
+        # only for WIT rate limiting
         try:
             success = await hass.async_add_executor_job(
                 coordinator._client.write_register, register, value
@@ -407,8 +409,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 _LOGGER.info("Successfully wrote value %d to register %d", value, register)
                 await coordinator.async_request_refresh()
             else:
-                _LOGGER.error("Write returned False for register %d", register)
-                raise ValueError(f"Failed to write to register {register}")
+                _LOGGER.warning("Write to register %d was rate-limited", register)
+                raise ValueError(f"Write to register {register} was rate-limited (WIT cooldown)")
 
         except ModbusWriteError as e:
             _LOGGER.error("Modbus write error: %s", e.error_message)
@@ -451,17 +453,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError(f"Coordinator not found for device {device_id}")
 
         # Write the registers using the coordinator's client
+        # write_registers() always raises ModbusWriteError on failure
         try:
-            success = await hass.async_add_executor_job(
+            await hass.async_add_executor_job(
                 coordinator._client.write_registers, register, values
             )
-
-            if success:
-                _LOGGER.info("Successfully wrote %d values to registers starting at %d", len(values), register)
-                await coordinator.async_request_refresh()
-            else:
-                _LOGGER.error("Write returned False for registers starting at %d", register)
-                raise ValueError(f"Failed to write to registers starting at {register}")
+            _LOGGER.info("Successfully wrote %d values to registers starting at %d", len(values), register)
+            await coordinator.async_request_refresh()
 
         except ModbusWriteError as e:
             _LOGGER.error("Modbus write error: %s", e.error_message)
