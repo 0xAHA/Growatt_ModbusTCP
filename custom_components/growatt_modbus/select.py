@@ -46,6 +46,13 @@ async def async_setup_entry(
         if 202 in holding_registers:
             entities.append(GrowattWitWorkModeSelect(coordinator, config_entry))
 
+        # VPP Battery Mode (uses 30100, 30407, 30409, 30410, 30411, 30412-30414)
+        entities.append(GrowattWitVppBatteryModeSelect(coordinator, config_entry))
+
+        # VPP TOU Default Mode (30476) - behavior outside scheduled periods
+        if 30476 in holding_registers:
+            entities.append(GrowattWitVppTouDefaultModeSelect(coordinator, config_entry))
+
         # VPP Remote Control selects (30100, 30407)
         for control_name in ['control_authority', 'remote_power_control_enable']:
             if control_name in WRITABLE_REGISTERS:
@@ -263,3 +270,255 @@ class GrowattWitWorkModeSelect(CoordinatorEntity, SelectEntity):
             await self.coordinator.async_request_refresh()
         else:
             _LOGGER.error("[WIT] Failed to write work_mode")
+
+
+class GrowattWitVppBatteryModeSelect(CoordinatorEntity, SelectEntity):
+    """WIT VPP: Battery mode via VPP protocol registers (30xxx).
+
+    This uses the correct VPP protocol registers for WIT inverters:
+    - 30100: VPP Control Authority (must be 1)
+    - 30407: Remote Power Control Enable (0=off, 1=on)
+    - 30409: Remote Power Percent (+100=charge, -100=discharge)
+    - 30410: AC Charging Enable (required for grid charging)
+    - 30411: Number of TOU periods
+    - 30412-30414: TOU Period 1 (start, end, power)
+
+    CRITICAL - HOLD Mode Implementation:
+    - Simply setting 30407=0 returns to SELF-CONSUMPTION, NOT true HOLD!
+    - In self-consumption, battery WILL discharge to supply house load
+    - True HOLD requires TOU workaround: Set +1% charge via TOU period
+    - This firmware quirk creates actual idle state (battery neither charges nor discharges)
+    - WARNING: +1% = HOLD, but -1% = FULL DISCHARGE (asymmetric behavior!)
+
+    NOTE: Legacy registers 201/202 do NOT work on WIT inverters!
+    """
+
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:battery-clock"
+    _attr_options = ["Hold", "Charge", "Discharge"]
+
+    # VPP Register addresses
+    VPP_CONTROL_AUTHORITY = 30100
+    VPP_REMOTE_POWER_ENABLE = 30407
+    VPP_REMOTE_POWER_PERCENT = 30409
+    VPP_AC_CHARGE_ENABLE = 30410
+    VPP_TOU_NUM_PERIODS = 30411
+    VPP_TOU_PERIOD1_BASE = 30412
+
+    def __init__(
+        self,
+        coordinator: GrowattModbusCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        entry_name = config_entry.data.get("name", config_entry.title)
+        self._attr_name = f"{entry_name} Battery Mode (VPP)"
+        self._attr_unique_id = f"{config_entry.entry_id}_vpp_battery_mode"
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        device_type = get_device_type_for_control("work_mode")
+        return self.coordinator.get_device_info(device_type)
+
+    @property
+    def current_option(self) -> str | None:
+        # Use the last command we sent (VPP registers are write-only in some firmware)
+        last_mode = getattr(self.coordinator, "wit_vpp_last_mode", None)
+        if last_mode in ("Hold", "Charge", "Discharge"):
+            return last_mode
+        return "Hold"  # Default assumption
+
+    async def async_select_option(self, option: str) -> None:
+        if option not in ("Hold", "Charge", "Discharge"):
+            _LOGGER.error("[WIT-VPP] Invalid battery mode option: %s", option)
+            return
+
+        _LOGGER.info("[WIT-VPP] Setting battery mode to %s", option)
+
+        try:
+            client = self.coordinator.modbus_client
+
+            # Step 1: Enable VPP control authority (persists across power cycles)
+            _LOGGER.debug("[WIT-VPP] Enabling VPP control authority (30100=1)")
+            await self.hass.async_add_executor_job(
+                client.write_register, self.VPP_CONTROL_AUTHORITY, 1
+            )
+
+            if option == "Hold":
+                # HOLD: Use TOU +1% charge workaround for TRUE standby
+                # Simply disabling remote control (30407=0) returns to self-consumption
+                # where battery WILL discharge! This TOU workaround creates true idle.
+                # CRITICAL: +1% = HOLD, but -1% = FULL DISCHARGE (asymmetric!)
+                _LOGGER.debug("[WIT-VPP] Setting HOLD mode via TOU +1%% workaround")
+
+                # Enable AC charging (required for TOU charge to work)
+                try:
+                    await self.hass.async_add_executor_job(
+                        client.write_register, self.VPP_AC_CHARGE_ENABLE, 1
+                    )
+                except Exception as e:  # noqa: BLE001
+                    _LOGGER.warning("[WIT-VPP] AC charge enable (30410) failed: %s", e)
+
+                # Get current time for TOU period
+                from datetime import datetime
+                now = datetime.now()
+                current_minutes = now.hour * 60 + now.minute
+
+                # Create TOU period: (now - 5min) to (now + 2 hours) at +1% charge
+                start_min = max(0, current_minutes - 5)
+                end_min = min(1439, current_minutes + 120)
+
+                # Write TOU period using function 0x10 (write multiple registers)
+                _LOGGER.debug("[WIT-VPP] Writing TOU period %02d:%02d-%02d:%02d @ +1%%",
+                             start_min // 60, start_min % 60, end_min // 60, end_min % 60)
+                success = await self.hass.async_add_executor_job(
+                    client.write_registers, self.VPP_TOU_PERIOD1_BASE,
+                    [start_min, end_min, 1]  # +1% = HOLD (NOT -1% which = full discharge!)
+                )
+                if not success:
+                    _LOGGER.error("[WIT-VPP] Failed to write TOU period for HOLD mode")
+                    return
+
+                # Enable 1 TOU period
+                success = await self.hass.async_add_executor_job(
+                    client.write_register, self.VPP_TOU_NUM_PERIODS, 1
+                )
+                if not success:
+                    _LOGGER.error("[WIT-VPP] Failed to enable TOU period for HOLD mode")
+                    return
+
+            elif option == "Charge":
+                # CHARGE: Enable AC charging, enable remote control, set +100%
+                _LOGGER.debug("[WIT-VPP] Setting CHARGE mode")
+
+                # Clear any HOLD TOU periods first
+                success = await self.hass.async_add_executor_job(
+                    client.write_register, self.VPP_TOU_NUM_PERIODS, 0
+                )
+                if not success:
+                    _LOGGER.error("[WIT-VPP] Failed to clear TOU periods for CHARGE mode")
+                    return
+
+                # Enable AC charging (PV priority)
+                try:
+                    await self.hass.async_add_executor_job(
+                        client.write_register, self.VPP_AC_CHARGE_ENABLE, 1
+                    )
+                except Exception as e:  # noqa: BLE001
+                    _LOGGER.warning("[WIT-VPP] AC charge enable (30410) failed: %s", e)
+
+                # Enable remote power control
+                success = await self.hass.async_add_executor_job(
+                    client.write_register, self.VPP_REMOTE_POWER_ENABLE, 1
+                )
+                if not success:
+                    _LOGGER.error("[WIT-VPP] Failed to enable remote power control for CHARGE mode")
+                    return
+
+                # Set charge power (+100%)
+                power_percent = getattr(self.coordinator, "wit_vpp_power_percent", 100)
+                success = await self.hass.async_add_executor_job(
+                    client.write_register, self.VPP_REMOTE_POWER_PERCENT, power_percent
+                )
+                if not success:
+                    _LOGGER.error("[WIT-VPP] Failed to set charge power percentage")
+                    return
+
+            elif option == "Discharge":
+                # DISCHARGE: Enable remote control, set -100%
+                _LOGGER.debug("[WIT-VPP] Setting DISCHARGE mode")
+
+                # Clear any HOLD TOU periods first
+                success = await self.hass.async_add_executor_job(
+                    client.write_register, self.VPP_TOU_NUM_PERIODS, 0
+                )
+                if not success:
+                    _LOGGER.error("[WIT-VPP] Failed to clear TOU periods for DISCHARGE mode")
+                    return
+
+                # Enable remote power control
+                success = await self.hass.async_add_executor_job(
+                    client.write_register, self.VPP_REMOTE_POWER_ENABLE, 1
+                )
+                if not success:
+                    _LOGGER.error("[WIT-VPP] Failed to enable remote power control for DISCHARGE mode")
+                    return
+
+                # Set discharge power (-100% = 65436 unsigned)
+                power_percent = getattr(self.coordinator, "wit_vpp_power_percent", 100)
+                power_value = 65536 - power_percent  # Convert to unsigned 16-bit
+                success = await self.hass.async_add_executor_job(
+                    client.write_register, self.VPP_REMOTE_POWER_PERCENT, power_value
+                )
+                if not success:
+                    _LOGGER.error("[WIT-VPP] Failed to set discharge power percentage")
+                    return
+
+            # Store last mode for UI feedback (only reached if all writes succeeded)
+            setattr(self.coordinator, "wit_vpp_last_mode", option)
+            _LOGGER.info("[WIT-VPP] Successfully set battery mode to %s", option)
+
+            await self.coordinator.async_request_refresh()
+
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.exception("[WIT-VPP] Failed to set battery mode: %s", err)
+
+
+class GrowattWitVppTouDefaultModeSelect(CoordinatorEntity, SelectEntity):
+    """WIT VPP: TOU default mode (behavior outside scheduled periods)."""
+
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:calendar-clock"
+    _attr_options = ["Load First (Hold)", "Battery First", "Grid First"]
+
+    VPP_TOU_DEFAULT_MODE = 30476
+
+    def __init__(
+        self,
+        coordinator: GrowattModbusCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        entry_name = config_entry.data.get("name", config_entry.title)
+        self._attr_name = f"{entry_name} TOU Default Mode"
+        self._attr_unique_id = f"{config_entry.entry_id}_vpp_tou_default_mode"
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        device_type = get_device_type_for_control("work_mode")
+        return self.coordinator.get_device_info(device_type)
+
+    @property
+    def current_option(self) -> str | None:
+        last_mode = getattr(self.coordinator, "wit_vpp_tou_default_mode", 0)
+        mode_map = {0: "Load First (Hold)", 1: "Battery First", 2: "Grid First"}
+        return mode_map.get(last_mode, "Load First (Hold)")
+
+    async def async_select_option(self, option: str) -> None:
+        mode_map = {"Load First (Hold)": 0, "Battery First": 1, "Grid First": 2}
+        value = mode_map.get(option)
+
+        if value is None:
+            _LOGGER.error("[WIT-VPP] Invalid TOU default mode: %s", option)
+            return
+
+        _LOGGER.info("[WIT-VPP] Setting TOU default mode to %s (value=%d)", option, value)
+
+        try:
+            success = await self.hass.async_add_executor_job(
+                self.coordinator.modbus_client.write_register,
+                self.VPP_TOU_DEFAULT_MODE,
+                value
+            )
+
+            if success:
+                setattr(self.coordinator, "wit_vpp_tou_default_mode", value)
+                _LOGGER.info("[WIT-VPP] Successfully set TOU default mode to %s", option)
+                await self.coordinator.async_request_refresh()
+            else:
+                _LOGGER.error("[WIT-VPP] Failed to set TOU default mode")
+
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.exception("[WIT-VPP] Failed to set TOU default mode: %s", err)
