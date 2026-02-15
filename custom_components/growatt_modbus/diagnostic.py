@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple, Optional
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 
@@ -47,6 +47,7 @@ SERVICE_WRITE_REGISTER = "write_register"
 SERVICE_WRITE_REGISTERS = "write_registers"
 SERVICE_DETECT_GRID_ORIENTATION = "detect_grid_orientation"
 SERVICE_READ_REGISTER = "read_register"
+SERVICE_GET_REGISTER_DATA = "get_register_data"
 
 # Universal scan ranges - covers all Grid-Tied Growatt series
 # Split into chunks of max 125 registers to respect Modbus limits
@@ -122,6 +123,15 @@ SERVICE_READ_REGISTER_SCHEMA = vol.Schema(
         vol.Required("device_id"): cv.string,
         vol.Required("register"): vol.All(vol.Coerce(int), vol.Range(min=0, max=65535)),
         vol.Optional("register_type", default="input"): vol.In(["input", "holding"]),
+    }
+)
+
+SERVICE_GET_REGISTER_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): cv.string,
+        vol.Optional("register_type", default="input"): vol.In(["input", "holding"]),
+        vol.Required("start_address"): vol.All(vol.Coerce(int), vol.Range(min=0, max=65535)),
+        vol.Required("count"): vol.All(vol.Coerce(int), vol.Range(min=1, max=50)),
     }
 )
 
@@ -841,6 +851,55 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             },
         )
 
+    async def get_register_data(call: ServiceCall):
+        """Read specific Modbus registers and return values programmatically."""
+        device_id = call.data["device_id"]
+        register_type = call.data.get("register_type", "input")
+        start_address = call.data["start_address"]
+        count = call.data["count"]
+
+        # Get device registry
+        device_reg = dr.async_get(hass)
+        device_entry = device_reg.async_get(device_id)
+
+        if not device_entry:
+            _LOGGER.error("Device %s not found", device_id)
+            raise ValueError(f"Device {device_id} not found")
+
+        # Find the config entry for this device
+        config_entry_id = None
+        for entry_id in device_entry.config_entries:
+            if entry_id in hass.data.get(DOMAIN, {}):
+                config_entry_id = entry_id
+                break
+
+        if not config_entry_id:
+            _LOGGER.error("No config entry found for device %s", device_id)
+            raise ValueError(f"No config entry found for device {device_id}")
+
+        # Get the coordinator
+        coordinator = hass.data[DOMAIN][config_entry_id]
+
+        if not coordinator:
+            _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
+            raise ValueError(f"Coordinator not found for device {device_id}")
+
+        client = coordinator._client
+
+        def _read():
+            if register_type == "holding":
+                return client.read_holding_registers(start_address=start_address, count=count)
+            else:
+                return client.read_input_registers(start_address=start_address, count=count)
+
+        result = await hass.async_add_executor_job(_read)
+
+        if result is not None:
+            values = list(result) if not isinstance(result, list) else result
+            return {"success": True, "values": values}
+        else:
+            return {"success": False, "values": [], "error": "Register read failed"}
+
     # Register services
     hass.services.async_register(
         DOMAIN,
@@ -875,6 +934,14 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_WRITE_REGISTERS,
         write_registers,
         schema=SERVICE_WRITE_REGISTERS_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GET_REGISTER_DATA,
+        get_register_data,
+        schema=SERVICE_GET_REGISTER_DATA_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
     )
 
 
