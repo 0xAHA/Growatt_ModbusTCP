@@ -196,6 +196,7 @@ WIT_4000_15000TL3 = {
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
         31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
+        31218: {'name': 'battery_soh_vpp', 'scale': 1, 'unit': '%', 'desc': 'Battery SOH from VPP cluster (V2.03)'},
         # Per VPP Protocol V2.03 - firmware variant differences observed:
         # Some WIT firmware: 31222=temp, 31223=alt_temp (e.g., linksu79's unit)
         # Other WIT firmware: 31222=max_power(?), 31223=temp (e.g., YEAa141299/ZDDa-0014)
@@ -432,6 +433,63 @@ WIT_4000_15000TL3 = {
                 'valid_range': (-100, 100),
                 'signed': True},
 
+        # ============================================================================
+        # VPP EXTENDED CONTROL REGISTERS (V2.03): System Time, SOC Limits, TOU Schedule
+        # Based on Growatt VPP Protocol V2.03
+        # ============================================================================
+
+        # Inverter System Time (for TOU schedule reference)
+        30104: {'name': 'system_time_year', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Year (0-99, add 2000)'},
+        30105: {'name': 'system_time_month', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Month (1-12)'},
+        30106: {'name': 'system_time_day', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Day (1-31)'},
+        30107: {'name': 'system_time_hour', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Hour (0-23)'},
+        30108: {'name': 'system_time_minute', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Minute (0-59)'},
+        30109: {'name': 'system_time_second', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Second (0-59)'},
+
+        # SOC Limit Registers
+        30404: {'name': 'vpp_charge_cutoff_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+                'valid_range': (10, 100), 'desc': 'Stop charging when SOC reaches this %'},
+        30405: {'name': 'vpp_discharge_cutoff_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+                'valid_range': (10, 100), 'desc': 'Stop on-grid discharge when SOC drops to this %'},
+
+        # AC Charging Enable (NOTE: May return "Illegal function" on some WIT firmware)
+        30410: {'name': 'vpp_ac_charge_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+                'values': {0: 'Disabled', 1: 'PV priority', 2: 'AC priority'},
+                'desc': 'AC charging enable - required for grid charging'},
+
+        # TOU Schedule Configuration (VPP Protocol V2.03)
+        30411: {'name': 'vpp_tou_num_periods', 'scale': 1, 'unit': '', 'access': 'RW',
+                'valid_range': (0, 20), 'desc': 'Number of active TOU periods (0=self-consumption)'},
+
+        # TOU Period Registers (30412-30471): Up to 20 periods, 3 registers each (start, end, power)
+        # Period N: base + (N-1)*3 = start, base + (N-1)*3 + 1 = end, base + (N-1)*3 + 2 = power
+        # Start/End in minutes since midnight (0-1439), Power in % (-100 to +100, signed)
+        # CRITICAL: Periods CANNOT overlap! Use XX:59 end times with XX:00 start times.
+        30412: {'name': 'vpp_tou_period1_start', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 1 start (minutes since midnight)'},
+        30413: {'name': 'vpp_tou_period1_end', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 1 end (minutes since midnight)'},
+        30414: {'name': 'vpp_tou_period1_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Period 1 power (+charge/-discharge)'},
+        30415: {'name': 'vpp_tou_period2_start', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 2 start'},
+        30416: {'name': 'vpp_tou_period2_end', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 2 end'},
+        30417: {'name': 'vpp_tou_period2_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Period 2 power'},
+        30418: {'name': 'vpp_tou_period3_start', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 3 start'},
+        30419: {'name': 'vpp_tou_period3_end', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 3 end'},
+        30420: {'name': 'vpp_tou_period3_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Period 3 power'},
+        30421: {'name': 'vpp_tou_period4_start', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 4 start'},
+        30422: {'name': 'vpp_tou_period4_end', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 4 end'},
+        30423: {'name': 'vpp_tou_period4_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Period 4 power'},
+        30424: {'name': 'vpp_tou_period5_start', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 5 start'},
+        30425: {'name': 'vpp_tou_period5_end', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 5 end'},
+        30426: {'name': 'vpp_tou_period5_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Period 5 power'},
+        # Periods 6-20 follow same pattern: 30427-30471
+
+        # Actual Control Value (Read-only feedback)
+        30474: {'name': 'vpp_actual_control_value', 'scale': 1, 'unit': '%', 'access': 'RO',
+                'signed': True, 'desc': 'Current charge/discharge power % being applied'},
+
+        # Off-grid Discharge SOC Limit
+        30475: {'name': 'vpp_offgrid_discharge_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+                'valid_range': (10, 100), 'desc': 'Stop off-grid discharge when SOC drops to this %'},
+
         # Operating Mode Selection (READ-ONLY - shows default mode when no TOU period is active)
         # NOTE: WIT inverters do NOT support external mode control via Modbus.
         # This register shows the current TOU default mode but cannot be changed via Modbus.
@@ -445,6 +503,11 @@ WIT_4000_15000TL3 = {
                     1: 'Battery First',
                     2: 'Grid First'
                 }},
+
+        # TOU Reset
+        30477: {'name': 'vpp_tou_reset_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+                'values': {0: 'Normal', 1: 'Clear all periods'},
+                'desc': 'Set to 1 to clear all TOU periods on next write'},
 
         # Time-of-Use Programming (6 time slots)
         954: {'name': 'time1_enable', 'scale': 1, 'unit': '', 'access': 'RW',
