@@ -1142,6 +1142,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_SET_BATTERY_MODE,
         set_battery_mode,
         schema=SERVICE_SET_BATTERY_MODE_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_WRITE_REGISTERS,
         write_registers,
         schema=SERVICE_WRITE_REGISTERS_SCHEMA,
@@ -1152,12 +1156,15 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_SYNC_TOU_SCHEDULE,
         sync_tou_schedule,
         schema=SERVICE_SYNC_TOU_SCHEDULE_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_GET_REGISTER_DATA,
         get_register_data,
         schema=SERVICE_GET_REGISTER_DATA_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
-
 
 def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk_size: int = 50, register_type: str = 'input') -> Dict[int, Dict[str, Any]]:
     """
@@ -1876,6 +1883,101 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                             suggested_match,
                             status_comment
                         ])
+
+            # THEN: Output key holding registers (9-11 firmware)
+            # Note: Scan currently only reads holding registers 9-11 (firmware) and 30000-30099 (VPP ID)
+            key_holding_registers = {k: v for k, v in all_register_data.items() if k in [9, 10, 11]}
+            if key_holding_registers:
+                writer.writerow([])
+                writer.writerow([f"--- Holding Registers (Key Registers) ---"])
+
+                for reg_addr in sorted(key_holding_registers.keys()):
+                    reg_info = key_holding_registers[reg_addr]
+                    value = reg_info['value']
+                    status = reg_info['status']
+                    error = reg_info['error']
+
+                    total += 1
+
+                    # Build status/comment field with register name
+                    if status == 'success':
+                        if value == 0:
+                            status_comment = "Read OK (zero value)"
+                        else:
+                            status_comment = "Read OK"
+                            non_zero += 1
+
+                        # Special handling for known holding registers
+                        if reg_addr == 9:
+                            status_comment += " [Firmware version byte 1-2]"
+                            # Decode ASCII characters
+                            high_byte = (value >> 8) & 0xFF
+                            low_byte = value & 0xFF
+                            chars = ""
+                            if 32 <= high_byte <= 126:
+                                chars += chr(high_byte)
+                            if 32 <= low_byte <= 126:
+                                chars += chr(low_byte)
+                            if chars:
+                                status_comment += f" ASCII: '{chars}'"
+                        elif reg_addr == 10:
+                            status_comment += " [Firmware version byte 3-4]"
+                            high_byte = (value >> 8) & 0xFF
+                            low_byte = value & 0xFF
+                            chars = ""
+                            if 32 <= high_byte <= 126:
+                                chars += chr(high_byte)
+                            if 32 <= low_byte <= 126:
+                                chars += chr(low_byte)
+                            if chars:
+                                status_comment += f" ASCII: '{chars}'"
+                        elif reg_addr == 11:
+                            status_comment += " [Firmware version byte 5-6]"
+                            high_byte = (value >> 8) & 0xFF
+                            low_byte = value & 0xFF
+                            chars = ""
+                            if 32 <= high_byte <= 126:
+                                chars += chr(high_byte)
+                            if 32 <= low_byte <= 126:
+                                chars += chr(low_byte)
+                            if chars:
+                                status_comment += f" ASCII: '{chars}'"
+
+                    elif status == 'error':
+                        status_comment = f"Modbus Error: {error}"
+                        value = ""
+                    else:  # exception
+                        status_comment = error
+                        value = ""
+
+                    # Calculate interpretations only for successful reads
+                    if status == 'success' and value is not None:
+                        scaled_01 = value * 0.1
+                        scaled_001 = value * 0.01
+                        signed = value - 65536 if value > 32767 else value
+                        combined_32bit = ""
+                    else:
+                        scaled_01 = ""
+                        scaled_001 = ""
+                        signed = ""
+                        combined_32bit = ""
+
+                    # No entity lookup for holding registers in current implementation
+                    entity_value = ""
+                    suggested_match = ""
+
+                    writer.writerow([
+                        f"H{reg_addr}",  # Mark as holding register with H prefix
+                        f"0x{reg_addr:04X}",
+                        value,
+                        f"{scaled_01:.1f}" if scaled_01 != "" else "",
+                        f"{scaled_001:.2f}" if scaled_001 != "" else "",
+                        signed,
+                        combined_32bit,
+                        entity_value,
+                        suggested_match,
+                        status_comment
+                    ])
 
             # THEN: Group by input register ranges for organized output
             for range_config in UNIVERSAL_SCAN_RANGES:
