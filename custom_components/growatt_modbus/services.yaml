@@ -243,3 +243,95 @@ read_register:
               value: "input"
             - label: "Holding Register (Settings/Control)"
               value: "holding"
+
+set_battery_mode:
+  name: Set Battery Mode (VPP)
+  description: "Set battery charge/discharge/hold mode via VPP protocol registers (30xxx). For WIT/WIS inverters only. CHARGE: Forces battery charging from grid+PV. DISCHARGE: Forces battery discharging to load. HOLD: Uses TOU +1% workaround for true standby (simply disabling remote control returns to self-consumption where battery discharges)."
+  fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device (WIT/WIS series)
+write_registers:
+  name: Write Multiple Modbus Registers
+  description: Write multiple consecutive holding registers using Modbus function 0x10. Required for atomic multi-register writes such as TOU period configuration.
+  fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device
+      required: true
+      selector:
+        device:
+          integration: growatt_modbus
+    mode:
+      name: Mode
+      description: "Battery operating mode: charge, discharge, or hold"
+      required: true
+      selector:
+        select:
+          options:
+            - label: "Charge (from grid+PV)"
+              value: "charge"
+            - label: "Discharge (to load)"
+              value: "discharge"
+            - label: "Hold (true standby)"
+              value: "hold"
+    power_percent:
+      name: Power Percentage
+      description: Charge/discharge power as percentage of rated power (1-100%)
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: "%"
+
+sync_tou_schedule:
+  name: Sync TOU Schedule
+  description: "Write Time-of-Use schedule to inverter for autonomous operation. The inverter will follow this schedule even if Home Assistant goes offline. Maximum 20 periods. CRITICAL: Periods CANNOT overlap! Use XX:59 end times (e.g., 119 for 01:59) then start next at XX:00 (e.g., 120 for 02:00). For HOLD mode, use power=1 (+1% charge = true standby)."
+  fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device (WIT/WIS series)
+      required: true
+      selector:
+        device:
+          integration: growatt_modbus
+    periods:
+      name: Schedule Periods
+      description: "List of TOU periods. CRITICAL: NO OVERLAPPING! Use XX:59 end times. power=1 for HOLD (true standby), +100 for charge, -100 for discharge."
+      required: true
+      example: '[{"start": 0, "end": 119, "power": 100}, {"start": 120, "end": 1019, "power": 1}, {"start": 1020, "end": 1259, "power": -100}]'
+      selector:
+        object:
+    default_mode:
+      name: Default Mode
+      description: "Behavior outside scheduled periods: 0=Load first (self-consumption/HOLD), 1=Battery first, 2=Grid first"
+      required: false
+      default: 0
+      selector:
+        select:
+          options:
+            - label: "Load first (self-consumption/HOLD)"
+              value: "0"
+            - label: "Battery first"
+              value: "1"
+            - label: "Grid first"
+              value: "2"
+    register:
+      name: Start Address
+      description: Starting holding register address
+      required: true
+      example: 30412
+      selector:
+        number:
+          min: 0
+          max: 65535
+          mode: box
+    values:
+      name: Values
+      description: List of values to write to consecutive registers
+      required: true
+      example: "[0, 120, 100]"
+      selector:
+        object:

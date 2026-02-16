@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple, Optional
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 
@@ -44,8 +44,12 @@ def _get_integration_version() -> str:
 # Service names
 SERVICE_EXPORT_DUMP = "export_register_dump"
 SERVICE_WRITE_REGISTER = "write_register"
+SERVICE_WRITE_REGISTERS = "write_registers"
 SERVICE_DETECT_GRID_ORIENTATION = "detect_grid_orientation"
 SERVICE_READ_REGISTER = "read_register"
+SERVICE_SET_BATTERY_MODE = "set_battery_mode"
+SERVICE_SYNC_TOU_SCHEDULE = "sync_tou_schedule"
+SERVICE_GET_REGISTER_DATA = "get_register_data"
 
 # Universal scan ranges - covers all Grid-Tied Growatt series
 # Split into chunks of max 125 registers to respect Modbus limits
@@ -108,11 +112,49 @@ SERVICE_DETECT_GRID_ORIENTATION_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_WRITE_REGISTERS_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): cv.string,
+        vol.Required("register"): vol.All(vol.Coerce(int), vol.Range(min=0, max=65535)),
+        vol.Required("values"): vol.All(cv.ensure_list, vol.Length(min=1, max=123), [vol.All(vol.Coerce(int), vol.Range(min=0, max=65535))]),
+    }
+)
+
 SERVICE_READ_REGISTER_SCHEMA = vol.Schema(
     {
         vol.Required("device_id"): cv.string,
         vol.Required("register"): vol.All(vol.Coerce(int), vol.Range(min=0, max=65535)),
         vol.Optional("register_type", default="input"): vol.In(["input", "holding"]),
+    }
+)
+
+SERVICE_SET_BATTERY_MODE_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): cv.string,
+        vol.Required("mode"): vol.In(["charge", "discharge", "hold"]),
+        vol.Optional("power_percent", default=100): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
+    }
+)
+
+SERVICE_SYNC_TOU_SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): cv.string,
+        vol.Required("periods"): vol.All(cv.ensure_list, [
+            vol.Schema({
+                vol.Required("start"): vol.All(vol.Coerce(int), vol.Range(min=0, max=1439)),
+                vol.Required("end"): vol.All(vol.Coerce(int), vol.Range(min=0, max=1439)),
+                vol.Required("power"): vol.All(vol.Coerce(int), vol.Range(min=-100, max=100)),
+            })
+        ]),
+        vol.Optional("default_mode", default=0): vol.All(vol.Coerce(int), vol.Range(min=0, max=2)),
+    }
+)
+SERVICE_GET_REGISTER_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): cv.string,
+        vol.Optional("register_type", default="input"): vol.In(["input", "holding"]),
+        vol.Required("start_address"): vol.All(vol.Coerce(int), vol.Range(min=0, max=65535)),
+        vol.Required("count"): vol.All(vol.Coerce(int), vol.Range(min=1, max=50)),
     }
 )
 
@@ -354,6 +396,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def write_register(call: ServiceCall) -> None:
         """Write a value to a Modbus holding register."""
+        from .growatt_modbus import ModbusWriteError
+
         device_id = call.data["device_id"]
         register = call.data["register"]
         value = call.data["value"]
@@ -387,17 +431,72 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError(f"Coordinator not found for device {device_id}")
 
         # Write the register using the coordinator's client
-        success = await hass.async_add_executor_job(
-            coordinator._client.write_register, register, value
-        )
+        # write_register() raises ModbusWriteError on failure, returns False
+        # only for WIT rate limiting
+        try:
+            success = await hass.async_add_executor_job(
+                coordinator._client.write_register, register, value
+            )
 
-        if success:
-            _LOGGER.info("Successfully wrote value %d to register %d", value, register)
-            # Trigger a refresh to update the UI
+            if success:
+                _LOGGER.info("Successfully wrote value %d to register %d", value, register)
+                await coordinator.async_request_refresh()
+            else:
+                _LOGGER.warning("Write to register %d was rate-limited", register)
+                raise ValueError(f"Write to register {register} was rate-limited (WIT cooldown)")
+
+        except ModbusWriteError as e:
+            _LOGGER.error("Modbus write error: %s", e.error_message)
+            raise ValueError(f"Modbus write failed: {e.error_message}")
+
+    async def write_registers(call: ServiceCall) -> None:
+        """Write multiple consecutive Modbus holding registers (function 0x10)."""
+        from .growatt_modbus import ModbusWriteError
+
+        device_id = call.data["device_id"]
+        register = call.data["register"]
+        values = call.data["values"]
+
+        _LOGGER.info("Write registers service called: device=%s, register=%d, values=%s", device_id, register, values)
+
+        # Get device registry
+        device_reg = dr.async_get(hass)
+        device_entry = device_reg.async_get(device_id)
+
+        if not device_entry:
+            _LOGGER.error("Device %s not found", device_id)
+            raise ValueError(f"Device {device_id} not found")
+
+        # Find the config entry for this device
+        config_entry_id = None
+        for entry_id in device_entry.config_entries:
+            if entry_id in hass.data.get(DOMAIN, {}):
+                config_entry_id = entry_id
+                break
+
+        if not config_entry_id:
+            _LOGGER.error("No config entry found for device %s", device_id)
+            raise ValueError(f"No config entry found for device {device_id}")
+
+        # Get the coordinator
+        coordinator = hass.data[DOMAIN][config_entry_id]
+
+        if not coordinator:
+            _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
+            raise ValueError(f"Coordinator not found for device {device_id}")
+
+        # Write the registers using the coordinator's client
+        # write_registers() always raises ModbusWriteError on failure
+        try:
+            await hass.async_add_executor_job(
+                coordinator._client.write_registers, register, values
+            )
+            _LOGGER.info("Successfully wrote %d values to registers starting at %d", len(values), register)
             await coordinator.async_request_refresh()
-        else:
-            _LOGGER.error("Failed to write value %d to register %d", value, register)
-            raise ValueError(f"Failed to write to register {register}")
+
+        except ModbusWriteError as e:
+            _LOGGER.error("Modbus write error: %s", e.error_message)
+            raise ValueError(f"Modbus write failed: {e.error_message}")
 
     async def detect_grid_orientation(call: ServiceCall) -> None:
         """Detect if grid power CT clamp needs inversion based on current power flow."""
@@ -775,6 +874,240 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             },
         )
 
+    async def set_battery_mode(call: ServiceCall) -> None:
+        """Set battery mode via VPP protocol registers (30xxx) for WIT inverters.
+
+        CRITICAL - HOLD Mode Implementation:
+        - Simply setting 30407=0 returns to SELF-CONSUMPTION, NOT true HOLD!
+        - In self-consumption, battery WILL discharge to supply house load
+        - True HOLD requires TOU workaround: Set +1% charge via TOU period
+        - This firmware quirk creates actual idle state
+        - WARNING: +1% = HOLD, but -1% = FULL DISCHARGE (asymmetric behavior!)
+        """
+        device_id = call.data["device_id"]
+        mode = call.data["mode"]
+        power_percent = call.data.get("power_percent", 100)
+
+        _LOGGER.info("Set battery mode service called: device=%s, mode=%s, power=%d%%", device_id, mode, power_percent)
+    async def get_register_data(call: ServiceCall):
+        """Read specific Modbus registers and return values programmatically."""
+        device_id = call.data["device_id"]
+        register_type = call.data.get("register_type", "input")
+        start_address = call.data["start_address"]
+        count = call.data["count"]
+
+        # Get device registry
+        device_reg = dr.async_get(hass)
+        device_entry = device_reg.async_get(device_id)
+
+        if not device_entry:
+            _LOGGER.error("Device %s not found", device_id)
+            raise ValueError(f"Device {device_id} not found")
+
+        # Find the config entry for this device
+        config_entry_id = None
+        for entry_id in device_entry.config_entries:
+            if entry_id in hass.data.get(DOMAIN, {}):
+                config_entry_id = entry_id
+                break
+
+        if not config_entry_id:
+            raise ValueError(f"No config entry found for device {device_id}")
+
+        coordinator = hass.data[DOMAIN][config_entry_id]
+        if not coordinator:
+            _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
+            raise ValueError(f"Coordinator not found for device {device_id}")
+
+        client = coordinator._client
+
+        # VPP Register addresses
+        VPP_CONTROL_AUTHORITY = 30100
+        VPP_AC_CHARGE_ENABLE = 30410
+        VPP_REMOTE_POWER_ENABLE = 30407
+        VPP_REMOTE_POWER_PERCENT = 30409
+        VPP_TOU_NUM_PERIODS = 30411
+        VPP_TOU_PERIOD1_BASE = 30412
+
+        try:
+            # Step 1: Enable VPP control authority
+            success = await hass.async_add_executor_job(client.write_register, VPP_CONTROL_AUTHORITY, 1)
+            if not success:
+                _LOGGER.warning("Failed to enable VPP control authority, continuing anyway...")
+
+            if mode == "hold":
+                # HOLD: Use TOU +1% charge workaround for TRUE standby
+                _LOGGER.debug("Setting HOLD mode via TOU +1%% workaround")
+
+                success = await hass.async_add_executor_job(client.write_register, VPP_AC_CHARGE_ENABLE, 1)
+                if not success:
+                    _LOGGER.warning("Failed to enable AC charging (30410)")
+
+                from datetime import datetime as dt
+                now = dt.now()
+                current_minutes = now.hour * 60 + now.minute
+                start_min = max(0, current_minutes - 5)
+                end_min = min(1439, current_minutes + 120)
+
+                success = await hass.async_add_executor_job(
+                    client.write_registers, VPP_TOU_PERIOD1_BASE,
+                    [start_min, end_min, 1]  # +1% = HOLD (NOT -1% which = full discharge!)
+                )
+                if not success:
+                    raise ValueError("Failed to write TOU period for HOLD mode")
+
+                success = await hass.async_add_executor_job(client.write_register, VPP_TOU_NUM_PERIODS, 1)
+                if not success:
+                    raise ValueError("Failed to enable TOU period")
+
+            elif mode == "charge":
+                await hass.async_add_executor_job(client.write_register, VPP_TOU_NUM_PERIODS, 0)
+
+                success = await hass.async_add_executor_job(client.write_register, VPP_AC_CHARGE_ENABLE, 1)
+                if not success:
+                    _LOGGER.warning("Failed to enable AC charging (30410)")
+
+                success = await hass.async_add_executor_job(client.write_register, VPP_REMOTE_POWER_ENABLE, 1)
+                if not success:
+                    raise ValueError("Failed to enable remote power control")
+
+                success = await hass.async_add_executor_job(client.write_register, VPP_REMOTE_POWER_PERCENT, power_percent)
+                if not success:
+                    raise ValueError("Failed to set charge power percentage")
+
+            elif mode == "discharge":
+                await hass.async_add_executor_job(client.write_register, VPP_TOU_NUM_PERIODS, 0)
+
+                success = await hass.async_add_executor_job(client.write_register, VPP_REMOTE_POWER_ENABLE, 1)
+                if not success:
+                    raise ValueError("Failed to enable remote power control")
+
+                power_value = 65536 - power_percent  # -100 becomes 65436
+                success = await hass.async_add_executor_job(client.write_register, VPP_REMOTE_POWER_PERCENT, power_value)
+                if not success:
+                    raise ValueError("Failed to set discharge power percentage")
+
+            _LOGGER.info("Successfully set battery mode to %s at %d%%", mode.upper(), power_percent)
+            await coordinator.async_request_refresh()
+
+        except Exception as e:
+            _LOGGER.error("Failed to set battery mode: %s", e)
+            raise ValueError(f"Failed to set battery mode: {e}")
+
+    async def sync_tou_schedule(call: ServiceCall) -> None:
+        """Sync TOU schedule to inverter registers for autonomous operation.
+
+        CRITICAL: TOU periods CANNOT overlap or touch!
+        - End times should be XX:59 format (e.g., 359 = 05:59)
+        - Next period starts at XX:00 (e.g., 360 = 06:00)
+        - The inverter will REJECT writes if periods overlap!
+
+        For HOLD mode, use power=1 (+1% charge = true standby)
+        """
+        device_id = call.data["device_id"]
+        periods = call.data["periods"]
+        default_mode = call.data.get("default_mode", 0)
+
+        _LOGGER.info("Sync TOU schedule service called: device=%s, %d periods, default_mode=%d",
+                     device_id, len(periods), default_mode)
+
+        if len(periods) > 20:
+            raise ValueError("Maximum 20 TOU periods supported")
+
+        # Validate periods don't overlap
+        sorted_periods = sorted(periods, key=lambda p: p["start"])
+        for i in range(len(sorted_periods) - 1):
+            current_end = sorted_periods[i]["end"]
+            next_start = sorted_periods[i + 1]["start"]
+            if current_end >= next_start:
+                raise ValueError(
+                    f"TOU periods CANNOT overlap! Period {i+1} ends at {current_end} "
+                    f"but period {i+2} starts at {next_start}. "
+                    f"Use XX:59 end times (e.g., 359 for 05:59) with XX:00 start times."
+                )
+
+        # Get device registry
+        device_reg = dr.async_get(hass)
+        device_entry = device_reg.async_get(device_id)
+
+        if not device_entry:
+            raise ValueError(f"Device {device_id} not found")
+
+        config_entry_id = None
+        for entry_id in device_entry.config_entries:
+            if entry_id in hass.data.get(DOMAIN, {}):
+                config_entry_id = entry_id
+                break
+
+        if not config_entry_id:
+            raise ValueError(f"No config entry found for device {device_id}")
+
+        coordinator = hass.data[DOMAIN][config_entry_id]
+        if not coordinator:
+            raise ValueError(f"Coordinator not found for device {device_id}")
+
+        client = coordinator._client
+
+        VPP_CONTROL_AUTHORITY = 30100
+        VPP_TOU_NUM_PERIODS = 30411
+        VPP_TOU_DEFAULT_MODE = 30476
+        VPP_TOU_PERIOD_BASE = 30412
+
+        try:
+            # Step 1: Enable VPP control authority
+            success = await hass.async_add_executor_job(client.write_register, VPP_CONTROL_AUTHORITY, 1)
+            if not success:
+                _LOGGER.warning("Failed to enable VPP control authority, continuing anyway...")
+
+            # Step 2: Set default mode (behavior outside scheduled periods)
+            success = await hass.async_add_executor_job(client.write_register, VPP_TOU_DEFAULT_MODE, default_mode)
+            if not success:
+                _LOGGER.warning("Failed to set TOU default mode")
+
+            # Step 3: Write each period's registers
+            for i, period in enumerate(periods):
+                base_addr = VPP_TOU_PERIOD_BASE + (i * 3)
+                start = period["start"]
+                end = period["end"]
+                power = period["power"]
+
+                # Convert negative power to unsigned 16-bit
+                power_unsigned = power if power >= 0 else 65536 + power
+
+                _LOGGER.debug("Writing TOU period %d: addr=%d, start=%d, end=%d, power=%d (unsigned=%d)",
+                             i + 1, base_addr, start, end, power, power_unsigned)
+
+                success = await hass.async_add_executor_job(
+                    client.write_registers, base_addr, [start, end, power_unsigned]
+                )
+                if not success:
+                    raise ValueError(f"Failed to write TOU period {i + 1}")
+
+            # Step 4: Set number of active periods (activates the schedule)
+            success = await hass.async_add_executor_job(client.write_register, VPP_TOU_NUM_PERIODS, len(periods))
+            if not success:
+                raise ValueError("Failed to set number of TOU periods")
+
+            _LOGGER.info("Successfully synced %d TOU periods to inverter", len(periods))
+            await coordinator.async_request_refresh()
+
+        except Exception as e:
+            _LOGGER.error("Failed to sync TOU schedule: %s", e)
+            raise ValueError(f"Failed to sync TOU schedule: {e}")
+        def _read():
+            if register_type == "holding":
+                return client.read_holding_registers(start_address=start_address, count=count)
+            else:
+                return client.read_input_registers(start_address=start_address, count=count)
+
+        result = await hass.async_add_executor_job(_read)
+
+        if result is not None:
+            values = list(result) if not isinstance(result, list) else result
+            return {"success": True, "values": values}
+        else:
+            return {"success": False, "values": [], "error": "Register read failed"}
+
     # Register services
     hass.services.async_register(
         DOMAIN,
@@ -802,6 +1135,27 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_READ_REGISTER,
         read_register,
         schema=SERVICE_READ_REGISTER_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_BATTERY_MODE,
+        set_battery_mode,
+        schema=SERVICE_SET_BATTERY_MODE_SCHEMA,
+        SERVICE_WRITE_REGISTERS,
+        write_registers,
+        schema=SERVICE_WRITE_REGISTERS_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SYNC_TOU_SCHEDULE,
+        sync_tou_schedule,
+        schema=SERVICE_SYNC_TOU_SCHEDULE_SCHEMA,
+        SERVICE_GET_REGISTER_DATA,
+        get_register_data,
+        schema=SERVICE_GET_REGISTER_DATA_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
     )
 
 
