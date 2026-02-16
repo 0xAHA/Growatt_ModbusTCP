@@ -251,6 +251,13 @@ set_battery_mode:
     device_id:
       name: Device
       description: The Growatt inverter device (WIT/WIS series)
+write_registers:
+  name: Write Multiple Modbus Registers
+  description: Write multiple consecutive holding registers using Modbus function 0x10. Required for atomic multi-register writes such as TOU period configuration.
+  fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device
       required: true
       selector:
         device:
@@ -311,3 +318,20 @@ sync_tou_schedule:
               value: "1"
             - label: "Grid first"
               value: "2"
+    register:
+      name: Start Address
+      description: Starting holding register address
+      required: true
+      example: 30412
+      selector:
+        number:
+          min: 0
+          max: 65535
+          mode: box
+    values:
+      name: Values
+      description: List of values to write to consecutive registers
+      required: true
+      example: "[0, 120, 100]"
+      selector:
+        object:
