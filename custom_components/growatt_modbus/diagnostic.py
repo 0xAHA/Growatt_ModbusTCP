@@ -147,6 +147,8 @@ SERVICE_SYNC_TOU_SCHEDULE_SCHEMA = vol.Schema(
             })
         ]),
         vol.Optional("default_mode", default=0): vol.All(vol.Coerce(int), vol.Range(min=0, max=2)),
+    }
+)
 SERVICE_GET_REGISTER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required("device_id"): cv.string,
