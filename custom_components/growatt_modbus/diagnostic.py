@@ -804,6 +804,34 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         schema=SERVICE_READ_REGISTER_SCHEMA,
     )
 
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_BATTERY_MODE,
+        set_battery_mode,
+        schema=SERVICE_SET_BATTERY_MODE_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_WRITE_REGISTERS,
+        write_registers,
+        schema=SERVICE_WRITE_REGISTERS_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SYNC_TOU_SCHEDULE,
+        sync_tou_schedule,
+        schema=SERVICE_SYNC_TOU_SCHEDULE_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GET_REGISTER_DATA,
+        get_register_data,
+        schema=SERVICE_GET_REGISTER_DATA_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
 
 def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk_size: int = 50, register_type: str = 'input') -> Dict[int, Dict[str, Any]]:
     """
