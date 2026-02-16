@@ -61,6 +61,15 @@ async def async_setup_entry(
                     )
                     _LOGGER.info("%s control enabled (register %d found)", control_name, register_num)
 
+        # VPP Battery Control number entities (30xxx registers)
+        entities.append(GrowattWitVppPowerPercentNumber(coordinator, config_entry))
+        if 30404 in holding_registers:
+            entities.append(GrowattWitVppChargeCutoffSocNumber(coordinator, config_entry))
+        if 30405 in holding_registers:
+            entities.append(GrowattWitVppDischargeCutoffSocNumber(coordinator, config_entry))
+        if 30411 in holding_registers:
+            entities.append(GrowattWitVppTouPeriodsNumber(coordinator, config_entry))
+
         # NOTE: work_mode is a Select entity (in select.py)
         if entities:
             entry_name = config_entry.data.get("name", config_entry.title)
@@ -513,3 +522,218 @@ class GrowattWitActivePowerRateNumber(CoordinatorEntity, NumberEntity):
             await self.coordinator.async_request_refresh()
         else:
             _LOGGER.error("[WIT] Failed to write active_power_rate")
+
+
+# =============================================================================
+# WIT VPP-specific Number Entities (30xxx registers)
+# =============================================================================
+
+class GrowattWitVppPowerPercentNumber(CoordinatorEntity, NumberEntity):
+    """WIT VPP: Power percentage for charge/discharge operations.
+
+    This value is applied when Battery Mode is set to Charge or Discharge.
+    It's stored locally and used by the Battery Mode select entity.
+    """
+
+    _attr_mode = NumberMode.SLIDER
+    _attr_native_min_value = 1.0
+    _attr_native_max_value = 100.0
+    _attr_native_step = 1.0
+    _attr_native_unit_of_measurement = "%"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:gauge"
+
+    def __init__(
+        self,
+        coordinator: GrowattModbusCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        entry_name = config_entry.data.get("name", config_entry.title)
+        self._attr_name = f"{entry_name} VPP Power Rate"
+        self._attr_unique_id = f"{config_entry.entry_id}_vpp_power_percent"
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        device_type = get_device_type_for_control("active_power_rate")
+        return self.coordinator.get_device_info(device_type)
+
+    @property
+    def native_value(self) -> float | None:
+        return float(getattr(self.coordinator, "wit_vpp_power_percent", 100))
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Store the power percentage for use by Battery Mode entity."""
+        power_percent = int(value)
+        setattr(self.coordinator, "wit_vpp_power_percent", power_percent)
+        _LOGGER.info("[WIT-VPP] Set power rate to %d%% (will apply on next mode change)", power_percent)
+
+
+class GrowattWitVppChargeCutoffSocNumber(CoordinatorEntity, NumberEntity):
+    """WIT VPP: Charge cutoff SOC (30404) - stop charging when SOC reaches this %."""
+
+    _attr_mode = NumberMode.SLIDER
+    _attr_native_min_value = 10.0
+    _attr_native_max_value = 100.0
+    _attr_native_step = 1.0
+    _attr_native_unit_of_measurement = "%"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:battery-charging-high"
+
+    VPP_CHARGE_CUTOFF_SOC = 30404
+
+    def __init__(
+        self,
+        coordinator: GrowattModbusCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        entry_name = config_entry.data.get("name", config_entry.title)
+        self._attr_name = f"{entry_name} Charge Cutoff SOC"
+        self._attr_unique_id = f"{config_entry.entry_id}_vpp_charge_cutoff_soc"
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        device_type = get_device_type_for_control("work_mode")
+        return self.coordinator.get_device_info(device_type)
+
+    @property
+    def native_value(self) -> float | None:
+        return float(getattr(self.coordinator, "wit_vpp_charge_cutoff_soc", 100))
+
+    async def async_set_native_value(self, value: float) -> None:
+        raw_value = int(value)
+        _LOGGER.info("[WIT-VPP] Setting charge cutoff SOC to %d%%", raw_value)
+
+        try:
+            success = await self.hass.async_add_executor_job(
+                self.coordinator.modbus_client.write_register,
+                self.VPP_CHARGE_CUTOFF_SOC,
+                raw_value
+            )
+
+            if success:
+                setattr(self.coordinator, "wit_vpp_charge_cutoff_soc", raw_value)
+                _LOGGER.info("[WIT-VPP] Successfully set charge cutoff SOC to %d%%", raw_value)
+                await self.coordinator.async_request_refresh()
+            else:
+                _LOGGER.error("[WIT-VPP] Failed to set charge cutoff SOC")
+
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.exception("[WIT-VPP] Failed to set charge cutoff SOC: %s", err)
+
+
+class GrowattWitVppDischargeCutoffSocNumber(CoordinatorEntity, NumberEntity):
+    """WIT VPP: Discharge cutoff SOC (30405) - stop discharging when SOC drops to this %."""
+
+    _attr_mode = NumberMode.SLIDER
+    _attr_native_min_value = 10.0
+    _attr_native_max_value = 100.0
+    _attr_native_step = 1.0
+    _attr_native_unit_of_measurement = "%"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:battery-alert-variant-outline"
+
+    VPP_DISCHARGE_CUTOFF_SOC = 30405
+
+    def __init__(
+        self,
+        coordinator: GrowattModbusCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        entry_name = config_entry.data.get("name", config_entry.title)
+        self._attr_name = f"{entry_name} Discharge Cutoff SOC"
+        self._attr_unique_id = f"{config_entry.entry_id}_vpp_discharge_cutoff_soc"
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        device_type = get_device_type_for_control("work_mode")
+        return self.coordinator.get_device_info(device_type)
+
+    @property
+    def native_value(self) -> float | None:
+        return float(getattr(self.coordinator, "wit_vpp_discharge_cutoff_soc", 10))
+
+    async def async_set_native_value(self, value: float) -> None:
+        raw_value = int(value)
+        _LOGGER.info("[WIT-VPP] Setting discharge cutoff SOC to %d%%", raw_value)
+
+        try:
+            success = await self.hass.async_add_executor_job(
+                self.coordinator.modbus_client.write_register,
+                self.VPP_DISCHARGE_CUTOFF_SOC,
+                raw_value
+            )
+
+            if success:
+                setattr(self.coordinator, "wit_vpp_discharge_cutoff_soc", raw_value)
+                _LOGGER.info("[WIT-VPP] Successfully set discharge cutoff SOC to %d%%", raw_value)
+                await self.coordinator.async_request_refresh()
+            else:
+                _LOGGER.error("[WIT-VPP] Failed to set discharge cutoff SOC")
+
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.exception("[WIT-VPP] Failed to set discharge cutoff SOC: %s", err)
+
+
+class GrowattWitVppTouPeriodsNumber(CoordinatorEntity, NumberEntity):
+    """WIT VPP: Number of active TOU periods (30411).
+
+    Setting this to 0 disables TOU schedule and returns to self-consumption.
+    Maximum 20 periods supported.
+    """
+
+    _attr_mode = NumberMode.BOX
+    _attr_native_min_value = 0.0
+    _attr_native_max_value = 20.0
+    _attr_native_step = 1.0
+    _attr_native_unit_of_measurement = None
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:calendar-range"
+
+    VPP_TOU_NUM_PERIODS = 30411
+
+    def __init__(
+        self,
+        coordinator: GrowattModbusCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        entry_name = config_entry.data.get("name", config_entry.title)
+        self._attr_name = f"{entry_name} TOU Active Periods"
+        self._attr_unique_id = f"{config_entry.entry_id}_vpp_tou_periods"
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        device_type = get_device_type_for_control("work_mode")
+        return self.coordinator.get_device_info(device_type)
+
+    @property
+    def native_value(self) -> float | None:
+        return float(getattr(self.coordinator, "wit_vpp_tou_periods", 0))
+
+    async def async_set_native_value(self, value: float) -> None:
+        raw_value = int(value)
+        _LOGGER.info("[WIT-VPP] Setting number of TOU periods to %d", raw_value)
+
+        try:
+            success = await self.hass.async_add_executor_job(
+                self.coordinator.modbus_client.write_register,
+                self.VPP_TOU_NUM_PERIODS,
+                raw_value
+            )
+
+            if success:
+                setattr(self.coordinator, "wit_vpp_tou_periods", raw_value)
+                _LOGGER.info("[WIT-VPP] Successfully set TOU periods to %d", raw_value)
+                await self.coordinator.async_request_refresh()
+            else:
+                _LOGGER.error("[WIT-VPP] Failed to set TOU periods")
+
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.exception("[WIT-VPP] Failed to set TOU periods: %s", err)
