@@ -1165,10 +1165,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         schema=SERVICE_GET_REGISTER_DATA_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
-<<<<<<< HEAD
-=======
-
->>>>>>> ddbc6854761070d9d320c6f6cf5f6fe0bd9f984a
 
 def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk_size: int = 50, register_type: str = 'input') -> Dict[int, Dict[str, Any]]:
     """
