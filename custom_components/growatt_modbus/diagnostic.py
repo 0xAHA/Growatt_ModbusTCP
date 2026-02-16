@@ -1142,6 +1142,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_SET_BATTERY_MODE,
         set_battery_mode,
         schema=SERVICE_SET_BATTERY_MODE_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_WRITE_REGISTERS,
         write_registers,
         schema=SERVICE_WRITE_REGISTERS_SCHEMA,
@@ -1152,6 +1156,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_SYNC_TOU_SCHEDULE,
         sync_tou_schedule,
         schema=SERVICE_SYNC_TOU_SCHEDULE_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_GET_REGISTER_DATA,
         get_register_data,
         schema=SERVICE_GET_REGISTER_DATA_SCHEMA,
