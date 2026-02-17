@@ -417,6 +417,15 @@ WIT_4000_15000TL3 = {
                     1: 'Enabled'
                 }},
 
+        # VPP Export Limitation Control
+        30200: {'name': 'vpp_export_limit_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+                'desc': 'Export limitation master switch',
+                'valid_range': (0, 1),
+                'values': {0: 'Disabled', 1: 'Enabled'}},
+        30201: {'name': 'vpp_export_limit_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
+                'signed': True, 'valid_range': (-100, 100),
+                'desc': 'Export limit power rate (-100 to +100%, positive=export, negative=import, 0=zero export)'},
+
         # VPP Timed Charge/Discharge Override (temporary power control)
         30407: {'name': 'remote_power_control_enable', 'scale': 1, 'unit': '', 'access': 'RW',
                 'desc': 'Enable timed charge/discharge power override',

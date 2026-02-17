@@ -54,7 +54,7 @@ async def async_setup_entry(
             entities.append(GrowattWitVppTouDefaultModeSelect(coordinator, config_entry))
 
         # VPP Remote Control selects (30100, 30407)
-        for control_name in ['control_authority', 'remote_power_control_enable']:
+        for control_name in ['control_authority', 'remote_power_control_enable', 'vpp_export_limit_enable']:
             if control_name in WRITABLE_REGISTERS:
                 control_config = WRITABLE_REGISTERS[control_name]
                 register_num = control_config['register']

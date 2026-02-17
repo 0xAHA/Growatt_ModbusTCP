@@ -195,6 +195,24 @@ WRITABLE_REGISTERS = {
         },
         'desc': 'VPP master enable switch'
     },
+    'vpp_export_limit_enable': {
+        'register': 30200,
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {
+            0: 'Disabled',
+            1: 'Enabled'
+        },
+        'desc': 'VPP Export limitation enable'
+    },
+    'vpp_export_limit_power_rate': {
+        'register': 30201,
+        'scale': 1,
+        'valid_range': (-100, 100),
+        'unit': '%',
+        'signed': True,
+        'desc': 'Export limit power rate (-100 to +100%, positive=export, 0=zero export)'
+    },
     'remote_power_control_enable': {
         'register': 30407,
         'scale': 1,
