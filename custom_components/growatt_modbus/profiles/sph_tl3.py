@@ -58,10 +58,22 @@ SPH_TL3_3000_10000 = {
         49: {'name': 'ac_power_t_low', 'scale': 1, 'unit': '', 'pair': 48, 'combined_scale': 0.1, 'combined_unit': 'W'},
         
         # Energy
-        53: {'name': 'energy_today_high', 'scale': 1, 'unit': '', 'desc': 'Today energy HIGH', 'pair': 54},
-        54: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'desc': 'Today energy LOW', 'pair': 53, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        55: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'desc': 'Total energy HIGH', 'pair': 56},
-        56: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'desc': 'Total energy LOW', 'pair': 55, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # NOTE: Registers 53-54 show total AC output energy (what went to grid/loads)
+        # For true total PV production on hybrid inverters, use PV1+PV2 energy (59-60, 63-64)
+        53: {'name': 'energy_today_high', 'scale': 1, 'unit': '', 'desc': 'Total AC output today HIGH (PV+Battery discharge, NOT PV-only)', 'pair': 54},
+        54: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'desc': 'Total AC output today LOW', 'pair': 53, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        55: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'desc': 'Total AC output lifetime HIGH', 'pair': 56},
+        56: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'desc': 'Total AC output lifetime LOW', 'pair': 55, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Per-MPPT PV Energy (true solar production, excludes DC battery charging)
+        59: {'name': 'pv1_energy_today_high', 'scale': 1, 'unit': '', 'pair': 60, 'desc': 'PV1 DC energy today HIGH (true solar production from string 1)'},
+        60: {'name': 'pv1_energy_today_low', 'scale': 1, 'unit': '', 'pair': 59, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV1 DC energy today LOW'},
+        63: {'name': 'pv2_energy_today_high', 'scale': 1, 'unit': '', 'pair': 64, 'desc': 'PV2 DC energy today HIGH (true solar production from string 2)'},
+        64: {'name': 'pv2_energy_today_low', 'scale': 1, 'unit': '', 'pair': 63, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV2 DC energy today LOW'},
+
+        # Total PV Energy (lifetime sum of all DC input from solar panels)
+        91: {'name': 'pv_energy_total_high', 'scale': 1, 'unit': '', 'pair': 92, 'desc': 'Total PV energy lifetime HIGH (DC input from all MPPTs)'},
+        92: {'name': 'pv_energy_total_low', 'scale': 1, 'unit': '', 'pair': 91, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Total PV energy lifetime LOW'},
 
         # Temperatures
         93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
