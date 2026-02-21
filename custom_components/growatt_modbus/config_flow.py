@@ -459,7 +459,7 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                 if connection_type == "tcp":
                     config_data[CONF_HOST] = self._discovered_data[CONF_HOST]
                     config_data[CONF_PORT] = self._discovered_data[CONF_PORT]
-                    unique_id = f"{config_data[CONF_HOST]}_{config_data[CONF_SLAVE_ID]}"
+                    unique_id = f"{config_data[CONF_HOST]}:{config_data[CONF_PORT]}_{config_data[CONF_SLAVE_ID]}"
                 else:  # serial
                     config_data[CONF_DEVICE_PATH] = self._discovered_data[CONF_DEVICE_PATH]
                     config_data[CONF_BAUDRATE] = self._discovered_data[CONF_BAUDRATE]
@@ -618,7 +618,7 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                     if connection_type == "tcp":
                         config_data[CONF_HOST] = self._discovered_data[CONF_HOST]
                         config_data[CONF_PORT] = self._discovered_data[CONF_PORT]
-                        unique_id = f"{config_data[CONF_HOST]}_{config_data[CONF_SLAVE_ID]}"
+                        unique_id = f"{config_data[CONF_HOST]}:{config_data[CONF_PORT]}_{config_data[CONF_SLAVE_ID]}"
                     else:  # serial
                         config_data[CONF_DEVICE_PATH] = self._discovered_data[CONF_DEVICE_PATH]
                         config_data[CONF_BAUDRATE] = self._discovered_data[CONF_BAUDRATE]
