@@ -246,6 +246,8 @@ class GrowattData:
     remote_power_control_enable: int = 0  # 0=Disabled, 1=Enabled (timed override enable)
     remote_power_control_charging_time: int = 0  # 0-1440 minutes (duration)
     remote_charge_and_discharge_power: int = 0   # -100 to +100% (negative=discharge, positive=charge)
+    vpp_export_limit_enable: int = 0          # 0=Disabled, 1=Enabled
+    vpp_export_limit_power_rate: int = 0      # -100 to +100% (positive=export, 0=zero export)
 
     time_period_1_enable: int = 0     # 0=Disabled, 1=Enabled
     time_period_1_start: int = 0      # HHMM format (e.g., 530 = 05:30)
@@ -336,6 +338,8 @@ class GrowattModbus:
             202,    # work_mode (Legacy VPP)
             203,    # export_limit_w
             30100,  # control_authority (VPP master enable)
+            30200,  # vpp_export_limit_enable
+            30201,  # vpp_export_limit_power_rate
             30407,  # remote_power_control_enable
             30408,  # remote_power_control_charging_time
             30409,  # remote_charge_and_discharge_power
@@ -1992,6 +1996,24 @@ class GrowattModbus:
                     logger.debug("[WIT VPP] control_authority=%s", data.control_authority)
             except Exception as e:
                 logger.debug(f"Could not read VPP control_authority register 30100: {e}")
+
+        # VPP Export Limitation (30200-30201)
+        if any(reg in holding_map for reg in [30200, 30201]):
+            try:
+                vpp_export_regs = self.read_holding_registers(30200, 2)
+                if vpp_export_regs is not None and len(vpp_export_regs) >= 2:
+                    if 30200 in holding_map:
+                        data.vpp_export_limit_enable = int(vpp_export_regs[0])
+                    if 30201 in holding_map:
+                        # Register 30201 is signed (-100 to +100)
+                        raw_val = vpp_export_regs[1]
+                        if raw_val > 32767:  # Handle signed 16-bit
+                            raw_val = raw_val - 65536
+                        data.vpp_export_limit_power_rate = int(raw_val)
+                    logger.debug("[WIT VPP] vpp_export_limit_enable=%s, vpp_export_limit_power_rate=%s%%",
+                               data.vpp_export_limit_enable, data.vpp_export_limit_power_rate)
+            except Exception as e:
+                logger.debug(f"Could not read VPP export limitation registers 30200-30201: {e}")
 
         # Remote Power Control (30407-30409)
         if any(reg in holding_map for reg in [30407, 30408, 30409]):

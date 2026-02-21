@@ -50,8 +50,8 @@ async def async_setup_entry(
         if 201 in holding_registers:
             entities.append(GrowattWitActivePowerRateNumber(coordinator, config_entry))
 
-        # VPP Remote Control number entities (30408, 30409)
-        for control_name in ['remote_power_control_charging_time', 'remote_charge_and_discharge_power']:
+        # VPP Remote Control number entities (30408, 30409, 30201)
+        for control_name in ['remote_power_control_charging_time', 'remote_charge_and_discharge_power', 'vpp_export_limit_power_rate']:
             if control_name in WRITABLE_REGISTERS:
                 control_config = WRITABLE_REGISTERS[control_name]
                 register_num = control_config['register']
@@ -126,6 +126,7 @@ class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
             'active_power_rate': 'VPP Active Power Rate',
             'export_limit_w': 'VPP Export Limit (W)',
             'max_output_power_rate': 'Max Output Power Rate',
+            'vpp_export_limit_power_rate': 'VPP Export Limit Power Rate',
         }
         friendly_name = friendly_overrides.get(control_name, control_name.replace('_', ' ').title())
         self._attr_name = f"{config_entry.data['name']} {friendly_name}"
@@ -146,6 +147,7 @@ class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
             'gen_charge_current': 'mdi:current-ac',
             'bat_low_to_uti': 'mdi:battery-alert',
             'ac_to_bat_volt': 'mdi:battery-charging',
+            'vpp_export_limit_power_rate': 'mdi:transmission-tower-export',
         }
         return icon_map.get(control_name, 'mdi:tune')
 
