@@ -4,6 +4,81 @@
 
 ---
 
+# Release Notes - v0.4.9b3 (Pre-Release)
+
+## 🔧 Bug Fix - SPH TL3 Energy Today Incorrect Values
+
+**Fixed (Issue #172):**
+- SPH TL3 "Energy Today" sensor showing AC output energy instead of true PV solar production
+- On hybrid inverters with batteries, DC-coupled battery charging was excluded from the total
+
+---
+
+### What's Fixed in v0.4.9b3:
+
+#### 🔧 Fixed SPH TL3 Energy Today Calculation (Issue #172)
+
+**Problem:** SPH TL3 users reported "Energy Today" showing significantly lower values than actual solar production. For example, a user producing ~8.1 kWh saw only 1.5-2.6 kWh reported.
+
+**Root Cause:**
+- Registers 53-54 (`energy_today`) on SPH TL3 measure **total AC output energy** (what goes to grid/loads)
+- On hybrid inverters with batteries, energy that goes directly from PV to battery via DC coupling **bypasses the AC side** and is NOT counted in registers 53-54
+- This means the "Energy Today" sensor was underreporting by the amount of DC-coupled battery charging
+
+**User Case:**
+- SPH TL3 inverter with battery
+- Register 54 = 15 → 1.5 kWh (AC output only)
+- Registers 60 (PV1) + 64 (PV2) = actual total PV production (~8.1 kWh)
+- Difference = energy going directly to battery via DC coupling
+
+**The Fix:**
+
+1. **Added Per-MPPT PV Energy Registers to SPH TL3 Profile:**
+   - 59-60: `pv1_energy_today` (PV string 1 DC energy production)
+   - 63-64: `pv2_energy_today` (PV string 2 DC energy production)
+   - 91-92: `pv_energy_total` (lifetime total PV energy from all MPPTs)
+
+2. **Automatic Calculation:**
+   - Existing code already sums PV1 + PV2 when per-MPPT registers are available
+   - `energy_today` now calculated as: **PV1 + PV2** (true solar production)
+   - Same approach already working correctly for WIT profile (Issue #146 fix in v0.4.7)
+
+**Impact:**
+- Energy Today now shows accurate total PV production (DC input from solar panels)
+- Values include energy going to battery via DC coupling (previously excluded)
+- Energy Total (lifetime) now uses PV energy total register for accuracy
+- Other inverter profiles unaffected (backwards compatible)
+
+**Example - Before vs After:**
+```
+Before (v0.4.9b1):
+  Energy Today: 1.5 kWh  (AC output only, missing DC battery charging)
+
+After (v0.4.9b3):
+  Energy Today: 8.1 kWh  (PV1 + PV2 = true solar production)
+```
+
+---
+
+### Migration Notes:
+
+**No action required** - Fix is automatic after upgrade.
+
+**For SPH TL3 Users:**
+- "Energy Today" will now show higher (correct) values that include DC battery charging
+- Dashboard energy graphs may show a one-time step change after upgrade - this is expected
+- Previous values excluded DC-coupled battery charging (incorrect), new values are PV-only production (correct)
+
+---
+
+### Files Changed:
+- `custom_components/growatt_modbus/profiles/sph_tl3.py` - Added per-MPPT PV energy registers (59-60, 63-64, 91-92)
+- `custom_components/growatt_modbus/manifest.json` - Version bump to 0.4.9b3
+- `README.md` - Version badge updated to 0.4.9b3
+- `RELEASENOTES.md` - Updated with v0.4.9b3 changes
+
+---
+
 # Release Notes - v0.4.8
 
 ## 🔧 Bug Fix - MIC-1000TL-X Auto-Detection
