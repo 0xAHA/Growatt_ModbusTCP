@@ -4,6 +4,85 @@
 
 ---
 
+# Release Notes - v0.4.9b4 (Pre-Release)
+
+## 🔧 Bug Fix - Multiple Inverters on Same IP
+
+**Fixed (Issue #179):**
+- Multiple inverters on the same IP address (different ports) could not be configured
+- Integration rejected second inverter with "This inverter is already configured"
+- Common scenario with Modbus proxies/gateways exposing multiple inverters
+
+---
+
+### What's Fixed in v0.4.9b4:
+
+#### 🔧 Fixed Unique ID Collision for Same-IP Multi-Inverter Setups (Issue #179)
+
+**Problem:** Users with multiple inverters behind a Modbus proxy or gateway (same IP, different ports) could only configure one inverter. The second would fail with "This inverter is already configured."
+
+**Root Cause:**
+- TCP unique ID format was: `{host}_{slave_id}`
+- Ignored the port number completely
+- Multiple inverters on same IP with different ports generated identical unique IDs
+
+**User Case (Issue #179):**
+- Setup: 2 inverters → Waveshare → evcc → ModbusProxy
+- SPH 10k TL3 BH-UP: `192.168.168.4:5021` (slave 1)
+- MOD 10k TL3-XH: `192.168.168.4:5022` (slave 1)
+- Both generated unique_id: `192.168.168.4_1` ❌ **COLLISION!**
+- Only first inverter could be added
+
+**The Fix:**
+
+Changed TCP unique ID format to include port number:
+- **Old format:** `{host}_{slave_id}` (e.g., `192.168.168.4_1`)
+- **New format:** `{host}:{port}_{slave_id}` (e.g., `192.168.168.4:5021_1`)
+
+**Impact:**
+- ✅ Multiple inverters on same IP with different ports now supported
+- ✅ Common Modbus proxy/gateway setups now work correctly
+- ✅ Still prevents true duplicates (same IP+port+slave_id)
+- ✅ Serial connections unchanged
+
+**Example - Now Works:**
+```
+Configuration:
+  SPH 10k TL3:  192.168.168.4:5021 slave_id=1 → unique_id: 192.168.168.4:5021_1 ✅
+  MOD 10k TL3:  192.168.168.4:5022 slave_id=1 → unique_id: 192.168.168.4:5022_1 ✅
+
+Still Blocks Duplicates:
+  First:   192.168.168.4:502 slave_id=1 → unique_id: 192.168.168.4:502_1 ✅ (allowed)
+  Second:  192.168.168.4:502 slave_id=1 → unique_id: 192.168.168.4:502_1 ❌ (blocked - true duplicate)
+```
+
+---
+
+### Migration Notes:
+
+**No action required for existing single-inverter setups** - unique IDs will update automatically.
+
+**For Multi-Inverter Setups (Issue #179):**
+- If you previously couldn't add a second inverter on the same IP:
+  1. Upgrade to v0.4.9b4
+  2. Try adding the second inverter again
+  3. Both inverters will now configure successfully
+
+**Technical Note:**
+- Existing integrations will get new unique IDs on next restart
+- Home Assistant handles unique ID changes automatically
+- No need to remove/re-add existing integrations
+
+---
+
+### Files Changed:
+- `custom_components/growatt_modbus/config_flow.py` - Updated TCP unique_id format to include port
+- `custom_components/growatt_modbus/manifest.json` - Version bump to 0.4.9b4
+- `README.md` - Version badge updated to 0.4.9b4
+- `RELEASENOTES.md` - Updated with v0.4.9b4 changes
+
+---
+
 # Release Notes - v0.4.9b3 (Pre-Release)
 
 ## 🔧 Bug Fix - SPH TL3 Energy Today Incorrect Values
