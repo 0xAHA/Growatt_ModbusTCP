@@ -4,6 +4,290 @@
 
 ---
 
+# Release Notes - v0.5.0
+
+## 🔧 Critical Bug Fix - Diagnostic DTC Detection
+
+This release fixes a critical bug in the diagnostic scanner that caused incorrect profile suggestions for VPP 2.01 inverters.
+
+### What Was Fixed:
+
+**Problem:** Diagnostic scanner incorrectly overriding DTC-based detection with register-based detection:
+- DTC code would correctly identify inverter model (e.g., DTC 3501 = SPH 3-6kW)
+- Register-based detection would then override with wrong model (e.g., SPH 8-10kW HU)
+- Users ended up with wrong profile selection, causing missing or incorrect sensors
+
+**Root Cause:**
+- Diagnostic scanner performed DTC detection first
+- Then continued to register-based detection logic
+- Register-based detection would override correct DTC mapping
+- Example: SPH 3-6kW V2.01 has storage range (1000+) which triggered HU detection
+
+**The Fix:**
+- Added early exit after successful DTC detection
+- Register-based detection now only runs if DTC detection fails
+- DTC detection takes priority as most reliable method
+
+**Impact:**
+- ✅ DTC 3501 (SPH 3-6kW) now correctly suggests `sph_3000_6000_v201` instead of `sph_8000_10000_hu`
+- ✅ All VPP 2.01 inverters with valid DTC codes get correct profile suggestions
+- ✅ Battery sensors work correctly with proper profile
+
+### 📋 Action Required for Existing Users:
+
+If you previously ran the diagnostic scanner and it suggested the **wrong profile**, you need to update your configuration:
+
+**Symptoms of wrong profile:**
+- Missing battery sensors
+- Incorrect power readings
+- Diagnostic showed different model than what you selected
+
+**How to Fix:**
+
+1. **Update to v0.5.0**
+2. **Re-run diagnostic scanner** (it will now show correct profile)
+3. **Update your integration configuration:**
+   - Go to: **Settings → Devices & Services → Integrations**
+   - Find **Growatt Modbus** integration
+   - Click **Configure**
+   - Change **Inverter Series** to match diagnostic suggestion
+   - Click **Submit**
+4. **Restart Home Assistant**
+
+**Common Corrections:**
+- DTC 3501/3502: Change from `SPH 8-10kW HU` → `SPH 3-6kW (V2.01)`
+- DTC 3501/3502: Change from `SPH 7-10kW` → `SPH 3-6kW (V2.01)`
+
+### Technical Details:
+
+**File Changed:** `diagnostic.py`
+
+**Code Added:**
+```python
+# If DTC detected model, skip other detection logic
+if detection["confidence"] == "Very High":
+    return detection
+```
+
+This ensures DTC-based detection (confidence = "Very High") takes priority and prevents register-based detection from overriding the correct profile.
+
+**Affected DTC Codes:**
+- 3501, 3502, 3735 (SPH/SPA 3-6kW)
+- 3601, 3725 (SPH/SPA TL3)
+- 5100 (TL-XH)
+- 5200, 5201 (MIN/MIC)
+- 5400 (MOD-XH/MID-XH)
+- 5603, 5601, 5800 (WIT/WIS)
+
+---
+
+# Release Notes - v0.4.9
+
+## 🔧 Bug Fixes + ✨ New Features + 🎯 WIT/SPH Enhancements
+
+This release combines all improvements from beta versions (v0.4.9b1-b4) plus additional bug fixes.
+
+**Fixed:**
+- Battery power sign inversion for VPP protocol registers (1013-1014 swapped)
+- Missing energy and battery registers in SPH V2.01 profiles (Issue #176)
+- Multiple inverters on same IP rejected with "already configured" (Issue #179)
+- SPH TL3 Energy Today showing AC output instead of PV production (Issue #172)
+
+**Added:**
+- Multi-register write support for advanced Modbus operations
+- WIT VPP battery control entities and services (PR #171)
+- WIT VPP export limitation controls (30200/30201 registers, PR #175)
+- WIT VPP V2.03 register definitions (TOU schedule, SOC limits, system time)
+- Grid power sensor improvement using power_to_user register (PR #170)
+- Register scan now includes holding registers in CSV output
+- New `get_register_data` service for programmatic register reads
+
+---
+
+## What's New in v0.4.9:
+
+### 1. 🔋 Fixed Battery Power Sign for VPP Protocol Registers
+
+**Problem:** VPP protocol inverters (WIT, SPH V2.01) showing inverted battery power signs:
+- Battery charging (power should be positive) showed negative values
+- Battery discharging (power should be negative) showed positive values
+- Caused confusion in energy monitoring and automation
+
+**Root Cause:**
+- VPP protocol stores battery power in registers 1013-1014 in **swapped order**
+- Register 1013: Low word (W)
+- Register 1014: High word (kW)
+- Integration was reading them as 1014+1013 (reversed), causing sign inversion
+
+**The Fix:**
+- Registers 1013-1014 now read in correct order for VPP protocol profiles
+- Battery power signs now match physical behavior:
+  - **Positive = Charging** (power going INTO battery)
+  - **Negative = Discharging** (power coming OUT of battery)
+- Affects: WIT, SPH V2.01, and other VPP protocol inverters
+
+**Impact:**
+- ✅ Battery power values now show correct sign
+- ✅ Automation triggers work as expected
+- ✅ Energy flow visualization accurate
+
+### 2. 🔋 Added Missing Registers to SPH V2.01 Profiles (Issue #176)
+
+**Added to SPH V2.01:**
+- Battery registers: SOC, voltage, current, power, temperature, discharge limits
+- Energy registers: Battery charge/discharge energy (today & total)
+- Complete battery monitoring for SPH inverters using VPP protocol
+
+**Impact:**
+- ✅ SPH V2.01 users now have full battery monitoring
+- ✅ Battery charge/discharge energy tracking available
+- ✅ Complete parity with SPH TL3 legacy profile features
+
+### 3. 🔧 Fixed Unique ID Collision for Multiple Inverters (Issue #179)
+
+**Problem:** Multiple inverters on same IP (different ports) could not be configured:
+- Common with Modbus proxy/gateway setups
+- Second inverter rejected: "This inverter is already configured"
+
+**Root Cause:**
+- TCP unique ID format was: `{host}_{slave_id}` (ignored port number)
+- Multiple inverters on same IP with different ports generated identical unique IDs
+
+**The Fix:**
+- Changed TCP unique ID format to: `{host}:{port}_{slave_id}`
+- Example: `192.168.168.4:5021_1` vs `192.168.168.4:5022_1`
+
+**Impact:**
+- ✅ Multiple inverters on same IP with different ports now supported
+- ✅ Modbus proxy/gateway setups work correctly
+- ✅ Still prevents true duplicates (same IP+port+slave_id)
+
+### 4. 🔧 Fixed SPH TL3 Energy Today (Issue #172)
+
+**Problem:** SPH TL3 "Energy Today" showing AC output instead of true PV production:
+- DC-coupled battery charging excluded from total
+- Reported values significantly lower than actual solar production
+
+**The Fix:**
+- Added per-MPPT PV energy registers (59-60, 63-64, 91-92) to SPH TL3 profile
+- Energy Today now calculated as: **PV1 + PV2** (true solar production)
+- Same fix previously applied to WIT profile in v0.4.7
+
+**Impact:**
+- ✅ Energy Today shows accurate total PV production
+- ✅ Values include DC-coupled battery charging
+- ✅ Consistent with WIT behavior
+
+### 5. ✨ Multi-Register Write Support (PR #168)
+
+**Added:** Ability to write multiple registers in a single Modbus transaction
+- New `write_multiple_registers` method in GrowattModbus class
+- Improved error reporting with detailed Modbus exception handling
+- Atomic multi-register writes for complex settings
+
+**Use Cases:**
+- Setting TOU schedules (multiple time/power registers)
+- Batch configuration updates
+- Advanced inverter programming
+
+### 6. 🎯 WIT VPP Battery Control Enhancements (PR #171)
+
+**Added:**
+- WIT VPP battery control entities (charge/discharge power, duration)
+- Service handlers for programmatic battery control
+- Remote control enable/disable functionality
+- Integration with VPP protocol time-limited overrides
+
+**New Entities:**
+- Remote Power Control Enable (register 30407)
+- Remote Charging Time (register 30408, duration in minutes)
+- Remote Charge/Discharge Power (register 30409, -100% to +100%)
+
+### 7. 🎯 WIT VPP Export Limitation (PR #175)
+
+**Added:**
+- VPP export limitation control registers (30200/30201)
+- Enable/disable export limiting
+- Set maximum export power to grid
+
+**Use Cases:**
+- Comply with grid connection agreements
+- Prevent export during peak pricing
+- Dynamic export control based on conditions
+
+### 8. 📊 WIT VPP V2.03 Register Additions (PR #169)
+
+**Added:**
+- TOU (Time of Use) schedule registers
+- SOC (State of Charge) limit registers
+- System time registers
+- Enhanced VPP protocol support
+
+### 9. 🔌 Grid Power Sensor Improvement (PR #170)
+
+**Changed:** Grid power calculation now uses `power_to_user` register
+- More accurate grid import/export measurements
+- Better handling of CT clamp configurations
+- Improved power flow calculations
+
+### 10. 🛠️ Enhanced Services and Diagnostics
+
+**Added:**
+- `get_register_data` service for programmatic register reads
+- Holding registers now included in register scan CSV output
+- Better integration with automation and scripts
+
+---
+
+## Migration Notes:
+
+**No action required** - This is a bug fix and enhancement release.
+
+**For VPP Protocol Users (WIT, SPH V2.01):**
+- Battery power signs will flip after upgrade (this is the fix - values are now correct)
+- **Positive = Charging**, **Negative = Discharging**
+- Update any automations that relied on the incorrect sign behavior
+
+**For SPH TL3 Users:**
+- Energy Today values will increase (now showing true PV production)
+- Dashboard graphs may show a step change (expected - previous values were too low)
+
+**For SPH V2.01 Users:**
+- Battery sensors will now appear after upgrade
+- Full battery monitoring now available
+
+**For Multi-Inverter Setups (Issue #179):**
+- If you couldn't add a second inverter on same IP, try adding it again after upgrade
+- Both inverters will now configure successfully
+
+**For WIT Users:**
+- New battery control and export limitation features available
+- See PR documentation for usage examples
+- Rate limiting (30s cooldown) applies to control writes
+
+---
+
+## Files Changed:
+
+Core functionality:
+- `custom_components/growatt_modbus/growatt_modbus.py` - Battery power sign fix, multi-register write support, enhanced services
+- `custom_components/growatt_modbus/config_flow.py` - Updated TCP unique_id format
+- `custom_components/growatt_modbus/services.yaml` - Added get_register_data service
+- `custom_components/growatt_modbus/select.py` - VPP export limitation
+- `custom_components/growatt_modbus/diagnostic.py` - Enhanced register scanning
+
+Profile updates:
+- `custom_components/growatt_modbus/profiles/sph_tl3.py` - Added per-MPPT energy registers
+- `custom_components/growatt_modbus/profiles/sph_v201.py` - Added battery and energy registers
+- `custom_components/growatt_modbus/profiles/wit.py` - VPP control registers, export limitation
+
+Version bump:
+- `custom_components/growatt_modbus/manifest.json` - Version 0.4.9
+- `README.md` - Version badge updated to 0.4.9
+- `RELEASENOTES.md` - Updated with v0.4.9 changes
+
+---
+
 # Release Notes - v0.4.9b4 (Pre-Release)
 
 ## 🔧 Bug Fix - Multiple Inverters on Same IP

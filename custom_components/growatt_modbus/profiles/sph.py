@@ -414,6 +414,38 @@ SPH_3000_6000_V201 = {
         # === Legacy REGISTERS (0-124 range) ===
         **SPH_3000_6000['input_registers'],
 
+        # === STORAGE RANGE REGISTERS (1000-1124) ===
+        # Grid Energy (to grid / export)
+        1048: {'name': 'energy_to_grid_today_high', 'scale': 1, 'unit': '', 'pair': 1049},
+        1049: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 1048, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1050: {'name': 'energy_to_grid_total_high', 'scale': 1, 'unit': '', 'pair': 1051},
+        1051: {'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 1050, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Grid Energy (from grid / import)
+        1052: {'name': 'grid_import_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1053},
+        1053: {'name': 'grid_import_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1054: {'name': 'grid_import_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1055},
+        1055: {'name': 'grid_import_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Load Energy
+        1060: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1061},
+        1061: {'name': 'load_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1060, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1062: {'name': 'load_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1063},
+        1063: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1062, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # === MIN/MOD RANGE REGISTERS (3000-3124) ===
+        # Grid Energy (to grid / export)
+        3071: {'name': 'energy_to_grid_today_high_mod', 'scale': 1, 'unit': '', 'pair': 3072, 'maps_to': 'energy_to_grid_today'},
+        3072: {'name': 'energy_to_grid_today_low_mod', 'scale': 1, 'unit': '', 'pair': 3071, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3073: {'name': 'energy_to_grid_total_high_mod', 'scale': 1, 'unit': '', 'pair': 3074, 'maps_to': 'energy_to_grid_total'},
+        3074: {'name': 'energy_to_grid_total_low_mod', 'scale': 1, 'unit': '', 'pair': 3073, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Load Energy
+        3075: {'name': 'load_energy_today_high_mod', 'scale': 1, 'unit': '', 'pair': 3076, 'maps_to': 'load_energy_today'},
+        3076: {'name': 'load_energy_today_low_mod', 'scale': 1, 'unit': '', 'pair': 3075, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3077: {'name': 'load_energy_total_high_mod', 'scale': 1, 'unit': '', 'pair': 3078, 'maps_to': 'load_energy_total'},
+        3078: {'name': 'load_energy_total_low_mod', 'scale': 1, 'unit': '', 'pair': 3077, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
         # === V2.01 REGISTERS (31000+ range) ===
         # Status
         31000: {'name': 'equipment_status', 'scale': 1, 'unit': '', 'desc': 'Equipment running status'},
@@ -470,10 +502,14 @@ SPH_3000_6000_V201 = {
         31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         # Note: 31202-31203 might be charge energy per VPP spec, but keeping as charge power for now (needs validation)
         31202: {'name': 'battery_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31203},
-        31203: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        31203: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
         31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
+        31218: {'name': 'battery_soh', 'scale': 1, 'unit': '%', 'desc': 'Battery state of health'},
+        # AC Charge Energy (from grid to battery)
+        31220: {'name': 'ac_charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31221},
+        31221: {'name': 'ac_charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31220, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
 
         # Battery Cluster 2 State (31300-31323) - Optional second battery
@@ -524,6 +560,38 @@ SPH_7000_10000_V201 = {
     'input_registers': {
         # === Legacy REGISTERS (0-124 range) ===
         **SPH_7000_10000['input_registers'],
+
+        # === STORAGE RANGE REGISTERS (1000-1124) ===
+        # Grid Energy (to grid / export)
+        1048: {'name': 'energy_to_grid_today_high', 'scale': 1, 'unit': '', 'pair': 1049},
+        1049: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 1048, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1050: {'name': 'energy_to_grid_total_high', 'scale': 1, 'unit': '', 'pair': 1051},
+        1051: {'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 1050, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Grid Energy (from grid / import)
+        1052: {'name': 'grid_import_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1053},
+        1053: {'name': 'grid_import_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1054: {'name': 'grid_import_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1055},
+        1055: {'name': 'grid_import_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Load Energy
+        1060: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1061},
+        1061: {'name': 'load_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1060, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1062: {'name': 'load_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1063},
+        1063: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1062, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # === MIN/MOD RANGE REGISTERS (3000-3124) ===
+        # Grid Energy (to grid / export)
+        3071: {'name': 'energy_to_grid_today_high_mod', 'scale': 1, 'unit': '', 'pair': 3072, 'maps_to': 'energy_to_grid_today'},
+        3072: {'name': 'energy_to_grid_today_low_mod', 'scale': 1, 'unit': '', 'pair': 3071, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3073: {'name': 'energy_to_grid_total_high_mod', 'scale': 1, 'unit': '', 'pair': 3074, 'maps_to': 'energy_to_grid_total'},
+        3074: {'name': 'energy_to_grid_total_low_mod', 'scale': 1, 'unit': '', 'pair': 3073, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Load Energy
+        3075: {'name': 'load_energy_today_high_mod', 'scale': 1, 'unit': '', 'pair': 3076, 'maps_to': 'load_energy_today'},
+        3076: {'name': 'load_energy_today_low_mod', 'scale': 1, 'unit': '', 'pair': 3075, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3077: {'name': 'load_energy_total_high_mod', 'scale': 1, 'unit': '', 'pair': 3078, 'maps_to': 'load_energy_total'},
+        3078: {'name': 'load_energy_total_low_mod', 'scale': 1, 'unit': '', 'pair': 3077, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # === V2.01 REGISTERS (31000+ range) ===
         # Status
@@ -581,10 +649,14 @@ SPH_7000_10000_V201 = {
         31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         # Note: 31202-31203 might be charge energy per VPP spec, but keeping as charge power for now (needs validation)
         31202: {'name': 'battery_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31203},
-        31203: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        31203: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
         31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
+        31218: {'name': 'battery_soh', 'scale': 1, 'unit': '%', 'desc': 'Battery state of health'},
+        # AC Charge Energy (from grid to battery)
+        31220: {'name': 'ac_charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31221},
+        31221: {'name': 'ac_charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31220, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
 
         # Battery Cluster 2 State

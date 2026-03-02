@@ -1277,6 +1277,7 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
 
         # Map DTC to profile (from auto_detection.py)
         dtc_map = {
+            3501: ('SPH 3-6kW', 'sph_3000_6000_v201'),
             3502: ('SPH 3-6kW', 'sph_3000_6000_v201'),
             3735: ('SPA 3-6kW', 'sph_3000_6000_v201'),
             3601: ('SPH-TL3 4-10kW', 'sph_tl3_3000_10000_v201'),
