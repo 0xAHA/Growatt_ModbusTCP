@@ -4,6 +4,83 @@
 
 ---
 
+# Release Notes - v0.5.0
+
+## 🔧 Critical Bug Fix - Diagnostic DTC Detection
+
+This release fixes a critical bug in the diagnostic scanner that caused incorrect profile suggestions for VPP 2.01 inverters.
+
+### What Was Fixed:
+
+**Problem:** Diagnostic scanner incorrectly overriding DTC-based detection with register-based detection:
+- DTC code would correctly identify inverter model (e.g., DTC 3501 = SPH 3-6kW)
+- Register-based detection would then override with wrong model (e.g., SPH 8-10kW HU)
+- Users ended up with wrong profile selection, causing missing or incorrect sensors
+
+**Root Cause:**
+- Diagnostic scanner performed DTC detection first
+- Then continued to register-based detection logic
+- Register-based detection would override correct DTC mapping
+- Example: SPH 3-6kW V2.01 has storage range (1000+) which triggered HU detection
+
+**The Fix:**
+- Added early exit after successful DTC detection
+- Register-based detection now only runs if DTC detection fails
+- DTC detection takes priority as most reliable method
+
+**Impact:**
+- ✅ DTC 3501 (SPH 3-6kW) now correctly suggests `sph_3000_6000_v201` instead of `sph_8000_10000_hu`
+- ✅ All VPP 2.01 inverters with valid DTC codes get correct profile suggestions
+- ✅ Battery sensors work correctly with proper profile
+
+### 📋 Action Required for Existing Users:
+
+If you previously ran the diagnostic scanner and it suggested the **wrong profile**, you need to update your configuration:
+
+**Symptoms of wrong profile:**
+- Missing battery sensors
+- Incorrect power readings
+- Diagnostic showed different model than what you selected
+
+**How to Fix:**
+
+1. **Update to v0.5.0**
+2. **Re-run diagnostic scanner** (it will now show correct profile)
+3. **Update your integration configuration:**
+   - Go to: **Settings → Devices & Services → Integrations**
+   - Find **Growatt Modbus** integration
+   - Click **Configure**
+   - Change **Inverter Series** to match diagnostic suggestion
+   - Click **Submit**
+4. **Restart Home Assistant**
+
+**Common Corrections:**
+- DTC 3501/3502: Change from `SPH 8-10kW HU` → `SPH 3-6kW (V2.01)`
+- DTC 3501/3502: Change from `SPH 7-10kW` → `SPH 3-6kW (V2.01)`
+
+### Technical Details:
+
+**File Changed:** `diagnostic.py`
+
+**Code Added:**
+```python
+# If DTC detected model, skip other detection logic
+if detection["confidence"] == "Very High":
+    return detection
+```
+
+This ensures DTC-based detection (confidence = "Very High") takes priority and prevents register-based detection from overriding the correct profile.
+
+**Affected DTC Codes:**
+- 3501, 3502, 3735 (SPH/SPA 3-6kW)
+- 3601, 3725 (SPH/SPA TL3)
+- 5100 (TL-XH)
+- 5200, 5201 (MIN/MIC)
+- 5400 (MOD-XH/MID-XH)
+- 5603, 5601, 5800 (WIT/WIS)
+
+---
+
 # Release Notes - v0.4.9
 
 ## 🔧 Bug Fixes + ✨ New Features + 🎯 WIT/SPH Enhancements
