@@ -13,7 +13,6 @@ Profile Structure:
 - wit.py: WIT series (4-15kW three-phase hybrid with advanced storage)
 """
 
-from typing import Dict, List, Optional
 
 # Import register maps from individual profile files
 from .mic import MIC_REGISTER_MAPS
@@ -41,7 +40,7 @@ REGISTER_MAPS = {
 }
 
 
-def get_profile(profile_key: str) -> Optional[Dict]:
+def get_profile(profile_key: str) -> dict | None:
     """Get a profile by its key.
     
     Args:
@@ -54,7 +53,7 @@ def get_profile(profile_key: str) -> Optional[Dict]:
     return REGISTER_MAPS.get(profile_key)
 
 
-def get_available_profiles() -> Dict[str, str]:
+def get_available_profiles() -> dict[str, str]:
     """Get all available profiles as key: name pairs.
     
     Returns:
@@ -66,7 +65,7 @@ def get_available_profiles() -> Dict[str, str]:
     }
 
 
-def get_profile_keys() -> List[str]:
+def get_profile_keys() -> list[str]:
     """Get list of all profile keys.
     
     Returns:

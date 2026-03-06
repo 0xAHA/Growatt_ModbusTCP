@@ -4,7 +4,7 @@ import csv
 import json
 import os
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any
 
 import voluptuous as vol
 
@@ -200,7 +200,7 @@ def _read_single_register(client, register: int, register_type: str = 'input') -
         }
 
 
-def _lookup_register_info(register_addr: int) -> Optional[str]:
+def _lookup_register_info(register_addr: int) -> str | None:
     """
     Look up register information from the register maps.
 
@@ -245,7 +245,7 @@ def _lookup_register_info(register_addr: int) -> Optional[str]:
     return None
 
 
-def _get_entity_value_for_register(register_addr: int, coordinator, register_type: str = 'input') -> Optional[str]:
+def _get_entity_value_for_register(register_addr: int, coordinator, register_type: str = 'input') -> str | None:
     """
     Get the calculated entity value for a register from the coordinator.
 
@@ -1166,7 +1166,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         supports_response=SupportsResponse.OPTIONAL,
     )
 
-def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk_size: int = 50, register_type: str = 'input') -> Dict[int, Dict[str, Any]]:
+def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk_size: int = 50, register_type: str = 'input') -> dict[int, dict[str, Any]]:
     """
     Read registers in chunks to avoid timeouts.
 
@@ -1249,7 +1249,7 @@ def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk
     return register_data
 
 
-def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str, str]:
+def _detect_inverter_model(register_data: dict[int, dict[str, Any]]) -> dict[str, str]:
     """
     Analyze register responses to detect inverter model.
 

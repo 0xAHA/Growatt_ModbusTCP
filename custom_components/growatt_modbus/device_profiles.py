@@ -1,48 +1,47 @@
 """Device profiles for Growatt inverters."""
-from typing import Dict, Set
 
 # ============================================================================
 # SENSOR GROUPS
 # ============================================================================
 
-BASIC_PV_SENSORS: Set[str] = {
+BASIC_PV_SENSORS: set[str] = {
     "pv1_voltage", "pv1_current", "pv1_power",
     "pv2_voltage", "pv2_current", "pv2_power",
     "pv_total_power",
 }
 
-PV3_SENSORS: Set[str] = {
+PV3_SENSORS: set[str] = {
     "pv3_voltage", "pv3_current", "pv3_power",
 }
 
-BASIC_AC_SENSORS: Set[str] = {
+BASIC_AC_SENSORS: set[str] = {
     "ac_voltage", "ac_current", "ac_power", "ac_frequency",
 }
 
-GRID_SENSORS: Set[str] = {
+GRID_SENSORS: set[str] = {
     "grid_power", "grid_export_power", "grid_import_power",
 }
 
-POWER_FLOW_SENSORS: Set[str] = {
+POWER_FLOW_SENSORS: set[str] = {
     "power_to_grid", "power_to_load", "power_to_user",
 }
 
-CONSUMPTION_SENSORS: Set[str] = {
+CONSUMPTION_SENSORS: set[str] = {
     "self_consumption", "self_consumption_percentage", "house_consumption",
 }
 
-ENERGY_SENSORS: Set[str] = {
+ENERGY_SENSORS: set[str] = {
     "energy_today", "energy_total",
 }
 
-ENERGY_BREAKDOWN_SENSORS: Set[str] = {
+ENERGY_BREAKDOWN_SENSORS: set[str] = {
     "grid_energy_today", "grid_energy_total",
     "energy_to_grid_today", "energy_to_grid_total",
     "grid_import_energy_today", "grid_import_energy_total",
     "load_energy_today", "load_energy_total",
 }
 
-BATTERY_SENSORS: Set[str] = {
+BATTERY_SENSORS: set[str] = {
     "battery_voltage", "battery_current", "battery_soc",
     "battery_temp", "battery_power",
     "battery_charge_power", "battery_discharge_power",
@@ -54,7 +53,7 @@ BATTERY_SENSORS: Set[str] = {
     "ac_charge_energy_total", "ac_discharge_energy_total",
 }
 
-BMS_SENSORS: Set[str] = {
+BMS_SENSORS: set[str] = {
     "bms_status", "bms_error", "bms_warn_info",
     "bms_max_current", "bms_cycle_count", "bms_soh",
     "bms_constant_volt", "bms_max_cell_volt", "bms_min_cell_volt",
@@ -62,15 +61,15 @@ BMS_SENSORS: Set[str] = {
     "bms_max_soc", "bms_min_soc",
 }
 
-TEMPERATURE_SENSORS: Set[str] = {
+TEMPERATURE_SENSORS: set[str] = {
     "inverter_temp", "ipm_temp", "boost_temp",
 }
 
-STATUS_SENSORS: Set[str] = {
+STATUS_SENSORS: set[str] = {
     "status", "last_update", "derating_mode", "fault_code", "warning_code",
 }
 
-THREE_PHASE_SENSORS: Set[str] = {
+THREE_PHASE_SENSORS: set[str] = {
     "ac_voltage_r", "ac_voltage_s", "ac_voltage_t",  # Phase voltages
     "ac_voltage_rs", "ac_voltage_st", "ac_voltage_tr",  # Line-to-line voltages
     "ac_current_r", "ac_current_s", "ac_current_t",  # Phase currents
@@ -78,11 +77,11 @@ THREE_PHASE_SENSORS: Set[str] = {
     "ac_frequency",
 }
 
-SYSTEM_OUTPUT_SENSORS: Set[str] = {
+SYSTEM_OUTPUT_SENSORS: set[str] = {
     "system_output_power",
 }
 
-SPF_OFFGRID_SENSORS: Set[str] = {
+SPF_OFFGRID_SENSORS: set[str] = {
     # Load monitoring
     "load_percentage",
     # AC apparent power (VA)
@@ -102,7 +101,7 @@ SPF_OFFGRID_SENSORS: Set[str] = {
     "dcdc_temp", "buck1_temp", "buck2_temp",
 }
 
-WIT_EXTRA_SENSORS: Set[str] = {
+WIT_EXTRA_SENSORS: set[str] = {
     # Extra/parallel inverter output (multi-inverter systems)
     "extra_power_to_grid",
     "extra_energy_today", "extra_energy_total",
@@ -820,7 +819,7 @@ def get_profile(series: str):
     return INVERTER_PROFILES.get(series, INVERTER_PROFILES["min_7000_10000_tl_x"])
 
 
-def get_available_profiles(legacy_only: bool = False, friendly_names: bool = True) -> Dict[str, str]:
+def get_available_profiles(legacy_only: bool = False, friendly_names: bool = True) -> dict[str, str]:
     """Get dict of available profiles for UI selection.
 
     Args:
@@ -904,7 +903,7 @@ def get_display_name_for_profile(profile_id: str) -> str:
     return profile_id
 
 
-def get_sensors_for_profile(series: str) -> Set[str]:
+def get_sensors_for_profile(series: str) -> set[str]:
     """Get available sensors for a profile."""
     profile = get_profile(series)
     return profile.get("sensors", set())

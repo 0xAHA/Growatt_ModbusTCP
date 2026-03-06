@@ -3,10 +3,10 @@
 These helpers reduce repetition across profiles by providing common register sets.
 """
 
-from typing import Dict, Any
+from typing import Any
 
 
-def merge_register_maps(*maps: Dict[str, Any]) -> Dict[str, Any]:
+def merge_register_maps(*maps: dict[str, Any]) -> dict[str, Any]:
     """Merge multiple register maps into one.
 
     Args:
@@ -21,7 +21,7 @@ def merge_register_maps(*maps: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def create_base_registers() -> Dict[str, Any]:
+def create_base_registers() -> dict[str, Any]:
     """Create common base registers found in all inverters.
 
     Returns:
@@ -44,7 +44,7 @@ def create_base_registers() -> Dict[str, Any]:
     }
 
 
-def create_diagnostic_registers() -> Dict[str, Any]:
+def create_diagnostic_registers() -> dict[str, Any]:
     """Create common diagnostic registers for fault/warning codes.
 
     Returns:
@@ -57,7 +57,7 @@ def create_diagnostic_registers() -> Dict[str, Any]:
     }
 
 
-def create_temperature_registers() -> Dict[str, Any]:
+def create_temperature_registers() -> dict[str, Any]:
     """Create common temperature sensor registers.
 
     Returns:
@@ -70,7 +70,7 @@ def create_temperature_registers() -> Dict[str, Any]:
     }
 
 
-def create_pv3_registers() -> Dict[str, Any]:
+def create_pv3_registers() -> dict[str, Any]:
     """Create PV3 string registers for 3-string inverters.
 
     Returns:
@@ -83,7 +83,7 @@ def create_pv3_registers() -> Dict[str, Any]:
     }
 
 
-def create_battery_registers() -> Dict[str, Any]:
+def create_battery_registers() -> dict[str, Any]:
     """Create battery storage registers for hybrid inverters.
 
     Returns:
@@ -98,7 +98,7 @@ def create_battery_registers() -> Dict[str, Any]:
     }
 
 
-def create_three_phase_registers() -> Dict[str, Any]:
+def create_three_phase_registers() -> dict[str, Any]:
     """Create three-phase AC registers.
 
     Returns:

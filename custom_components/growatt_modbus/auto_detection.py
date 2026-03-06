@@ -9,7 +9,6 @@ select the correct profile.
 """
 
 import logging
-from typing import Optional, Tuple
 
 from homeassistant.core import HomeAssistant
 
@@ -19,7 +18,7 @@ from .growatt_modbus import GrowattModbus
 _LOGGER = logging.getLogger(__name__)
 
 
-def detect_profile_from_model_name(model_name: str) -> Optional[str]:
+def detect_profile_from_model_name(model_name: str) -> str | None:
     """
     Match a model name string to a profile key.
     
@@ -126,7 +125,7 @@ async def async_read_serial_number(
     hass: HomeAssistant,
     client: GrowattModbus,
     device_id: int = 1
-) -> Optional[str]:
+) -> str | None:
     """
     Read inverter serial number from holding registers.
     
@@ -173,7 +172,7 @@ async def async_read_model_name(
     hass: HomeAssistant,
     client: GrowattModbus,
     device_id: int = 1
-) -> Optional[str]:
+) -> str | None:
     """
     Read inverter model name from holding registers.
     
@@ -220,7 +219,7 @@ async def async_read_dtc_code_offgrid(
     hass: HomeAssistant,
     client: GrowattModbus,
     device_id: int = 1
-) -> Optional[int]:
+) -> int | None:
     """
     Read DTC (Device Type Code) from OffGrid protocol registers.
 
@@ -293,7 +292,7 @@ async def async_read_dtc_code(
     hass: HomeAssistant,
     client: GrowattModbus,
     device_id: int = 1
-) -> Optional[int]:
+) -> int | None:
     """
     Read DTC (Device Type Code) from VPP 2.01 holding register 30000.
 
@@ -337,7 +336,7 @@ async def async_read_protocol_version(
     hass: HomeAssistant,
     client: GrowattModbus,
     device_id: int = 1
-) -> Optional[int]:
+) -> int | None:
     """
     Read VPP Protocol Version from holding register 30099.
 
@@ -383,7 +382,7 @@ async def async_read_protocol_version(
         return None
 
 
-def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
+def detect_profile_from_dtc(dtc_code: int) -> str | None:
     """
     Match DTC (Device Type Code) to a profile.
 
@@ -494,7 +493,7 @@ async def async_detect_inverter_series(
     hass: HomeAssistant,
     client: GrowattModbus,
     device_id: int = 1
-) -> Optional[str]:
+) -> str | None:
     """
     Detect inverter series by probing different register ranges.
     
@@ -864,7 +863,7 @@ async def async_determine_inverter_type(
     hass: HomeAssistant,
     client: GrowattModbus,
     device_id: int = 1
-) -> Tuple[Optional[str], Optional[dict]]:
+) -> tuple[str | None, dict | None]:
     """
     Automatically determine the inverter type and return appropriate profile.
 

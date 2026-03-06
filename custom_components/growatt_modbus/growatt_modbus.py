@@ -7,7 +7,7 @@ This module handles communication with Growatt MIN series inverters via RS485 Mo
 Based on Growatt Modbus RTU Protocol V1.39 documentation.
 
 REQUIREMENTS:
-- Python 3.7+
+- Python 3.10+
 - pymodbus (pip install pymodbus)
 - pyserial (pip install pyserial) 
 
@@ -19,7 +19,7 @@ Hardware Setup:
 import time
 import logging
 from dataclasses import dataclass
-from typing import Dict, Any, Optional, Tuple, Union
+from typing import Any
 from homeassistant.config_entries import ConfigEntry
 
 # Import register definitions
@@ -295,7 +295,7 @@ class GrowattModbus:
         """
         self.connection_type = connection_type
         self.slave_id = slave_id
-        self.client: Optional[Union['ModbusTcpClient', 'ModbusSerialClient']] = None
+        self.client: 'ModbusTcpClient | ModbusSerialClient | None' = None
         self.last_read_time = 0
         self.min_read_interval = 0.25  # 250ms minimum between reads (reduced from 1s, safe for serial and TCP)
         self._timeout = timeout
@@ -481,7 +481,7 @@ class GrowattModbus:
             time.sleep(sleep_time)
         self.last_read_time = time.time()
     
-    def read_input_registers(self, start_address: int, count: int) -> Optional[list]:
+    def read_input_registers(self, start_address: int, count: int) -> list | None:
         """Read input registers with error handling"""
         self._enforce_read_interval()
         
@@ -543,7 +543,7 @@ class GrowattModbus:
             self._track_read_failure()
             return None
     
-    def read_holding_registers(self, start_address: int, count: int) -> Optional[list]:
+    def read_holding_registers(self, start_address: int, count: int) -> list | None:
         """Read holding registers with error handling (no unit/slave, no positional count)."""
         self._enforce_read_interval()
         try:
@@ -563,7 +563,7 @@ class GrowattModbus:
             self._track_read_failure()
             return None
 
-    def _detect_battery_power_scale(self, voltage: float, current: float, power_register_value: int) -> Optional[float]:
+    def _detect_battery_power_scale(self, voltage: float, current: float, power_register_value: int) -> float | None:
         """
         Auto-detect correct battery power scale using V×I validation.
 
@@ -623,7 +623,7 @@ class GrowattModbus:
 
         return None
 
-    def _get_register_value(self, address: int) -> Optional[float]:
+    def _get_register_value(self, address: int) -> float | None:
         """
         Get scaled value from register, handling 32-bit pairs automatically
         """
@@ -686,7 +686,7 @@ class GrowattModbus:
 
             return raw_value * scale
 
-    def read_all_data(self) -> Optional[GrowattData]:
+    def read_all_data(self) -> 'GrowattData | None':
         """Read all relevant data from inverter"""
         data = GrowattData()
         
@@ -1456,7 +1456,7 @@ class GrowattModbus:
             # Don't fail the write if conflict detection has issues
             logger.debug(f"[WIT CTRL] Conflict detection error (non-critical): {e}")
 
-    def _find_register_by_name(self, name: str) -> Optional[int]:
+    def _find_register_by_name(self, name: str) -> int | None:
         """Find register address by its name, alias, or maps_to attribute.
 
         Searches input_registers for a matching register using three strategies:
