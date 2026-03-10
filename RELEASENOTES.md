@@ -4,6 +4,81 @@
 
 ---
 
+# Release Notes - v0.5.1
+
+## 🔧 Bug Fix - SPH 3-6kW Battery Sensor Inaccuracies
+
+This release fixes critical battery sensor issues for SPH 3-6kW V2.01 inverters where battery sensors were showing incorrect values.
+
+### What Was Fixed:
+
+**Problem:** SPH 3-6kW V2.01 users reporting incorrect battery sensor values (Issue #185):
+- Battery SOC showing 0% instead of actual value (e.g., 31%)
+- AC Charge Energy Total showing garbage value (70,516,736 kWh)
+- Battery charge/discharge energy sensors showing incorrect or missing values
+
+**Root Cause:**
+- Register 17 (inherited from base profile) returns 0 for SOC on V2.01 inverters
+- Correct SOC value is available in register 1086 (BMS register) but wasn't configured
+- Battery energy registers in VPP range (31202-31209) were incorrectly mapped
+- AC Charge Energy Total used wrong 32-bit register pairing (31220-31221)
+
+**The Fix:**
+
+1. **Added Correct Battery SOC Register:**
+   - Added register 1086 for `battery_soc` in SPH 3-6kW V2.01 profile
+   - Overrides inherited register 17 which returns 0
+   - Provides accurate SOC value directly from BMS
+
+2. **Fixed Battery Energy Register Mappings:**
+   - Changed registers 31202-31203 from power to discharge_today energy
+   - Added registers 31204-31205 for battery_charge_total
+   - Added registers 31206-31207 for battery_charge_today
+   - Added registers 31208-31209 for battery_discharge_total
+   - All battery energy tracking now accurate
+
+3. **Fixed AC Charge Energy Total:**
+   - Removed incorrect 32-bit pairing of registers 31220-31221
+   - Added register 115 for `ac_charge_energy_total`
+   - Prevents garbage value of 70,516,736 kWh
+
+**Impact:**
+- ✅ Battery SOC now shows correct value (e.g., 31% instead of 0%)
+- ✅ AC Charge Energy Total shows realistic value (e.g., 7.8 kWh instead of 70M kWh)
+- ✅ Battery charge/discharge energy sensors now accurate
+- ✅ Complete battery monitoring for SPH 3-6kW V2.01 users
+
+### 📋 Action Required for SPH 3-6kW Users:
+
+If you have an SPH 3-6kW inverter with V2.01 protocol:
+
+1. **Update to v0.5.1**
+2. **Restart Home Assistant**
+3. **Verify sensors show correct values:**
+   - Battery SOC should show actual percentage (not 0%)
+   - AC Charge Energy Total should be realistic (not millions of kWh)
+   - Battery energy today/total sensors should update properly
+
+**No configuration changes needed** - fix is automatic after upgrade.
+
+### Technical Details:
+
+**File Changed:** `custom_components/growatt_modbus/profiles/sph.py`
+
+**Registers Added/Modified:**
+- 1086: `battery_soc` (overrides register 17)
+- 115: `ac_charge_energy_total` (replaces incorrect 31220-31221 pair)
+- 31202-31203: `battery_discharge_today` (was incorrectly mapped as power)
+- 31204-31205: `battery_charge_total` (newly added)
+- 31206-31207: `battery_charge_today` (newly added)
+- 31208-31209: `battery_discharge_total` (newly added)
+
+**Affected Models:**
+- SPH 3000-6000 (V2.01 protocol only)
+- Does not affect SPH 7-10kW or other SPH models
+
+---
+
 # Release Notes - v0.5.0
 
 ## 🔧 Critical Bug Fix - Diagnostic DTC Detection
