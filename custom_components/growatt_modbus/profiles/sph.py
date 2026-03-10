@@ -62,6 +62,9 @@ SPH_3000_6000 = {
         104: {'name': 'derating_mode', 'scale': 1, 'unit': ''},
         105: {'name': 'fault_code', 'scale': 1, 'unit': ''},
         112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
+
+        # Battery AC Charge Energy (SPH 3-6kW V201 with newer firmware)
+        115: {'name': 'ac_charge_energy_total', 'scale': 0.1, 'unit': 'kWh', 'desc': 'Total energy charged from AC/grid to battery'},
     },
     'holding_registers': {
         # Basic Control
@@ -415,6 +418,9 @@ SPH_3000_6000_V201 = {
         **SPH_3000_6000['input_registers'],
 
         # === STORAGE RANGE REGISTERS (1000-1124) ===
+        # Override battery_soc from inherited register 17 (which shows 0) with actual BMS value
+        1086: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery state of charge from BMS'},
+
         # Grid Energy (to grid / export)
         1048: {'name': 'energy_to_grid_today_high', 'scale': 1, 'unit': '', 'pair': 1049},
         1049: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 1048, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
@@ -500,16 +506,23 @@ SPH_3000_6000_V201 = {
         # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
         31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        # Note: 31202-31203 might be charge energy per VPP spec, but keeping as charge power for now (needs validation)
-        31202: {'name': 'battery_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31203},
-        31203: {'name': 'battery_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+
+        # Battery Energy (VPP registers - validated against scan data)
+        31202: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery discharge energy today HIGH'},
+        31203: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31204: {'name': 'battery_charge_total_high', 'scale': 1, 'unit': '', 'pair': 31205, 'desc': 'Battery charge energy total HIGH'},
+        31205: {'name': 'battery_charge_total_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31206: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery charge energy today HIGH'},
+        31207: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31208: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 31209, 'desc': 'Battery discharge energy total HIGH'},
+        31209: {'name': 'battery_discharge_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
         31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
         31218: {'name': 'battery_soh', 'scale': 1, 'unit': '%', 'desc': 'Battery state of health'},
-        # AC Charge Energy (from grid to battery)
-        31220: {'name': 'ac_charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31221},
-        31221: {'name': 'ac_charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31220, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # Note: Registers 31220-31221 appear to contain incorrect data when paired as 32-bit
+        # AC charge energy total is available in register 115 (legacy range) instead
         31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
 
         # Battery Cluster 2 State (31300-31323) - Optional second battery
@@ -654,9 +667,8 @@ SPH_7000_10000_V201 = {
         31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
         31218: {'name': 'battery_soh', 'scale': 1, 'unit': '%', 'desc': 'Battery state of health'},
-        # AC Charge Energy (from grid to battery)
-        31220: {'name': 'ac_charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31221},
-        31221: {'name': 'ac_charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31220, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # Note: Registers 31220-31221 appear to contain incorrect data when paired as 32-bit
+        # AC charge energy total is available in register 115 (legacy range) instead
         31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
 
         # Battery Cluster 2 State
