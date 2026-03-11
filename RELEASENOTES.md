@@ -4,6 +4,79 @@
 
 ---
 
+# Release Notes - v0.5.2
+
+## 🔧 Critical Bug Fix - Integration Initialization Failure (Issue #188)
+
+This release fixes a critical bug where the integration fails to initialize on inverters that don't support extended register ranges added in v0.5.0.
+
+### What Was Fixed:
+
+**Problem:** After upgrading to v0.5.*, some users reported:
+- Integration stuck in "Initializing" state with constant retrying
+- Error in logs: `ExceptionResponse(dev_id=1, function_code=132, exception_code=4)`
+- Error message: `Modbus error reading input registers 3000-3078`
+- Downgrading to v0.4.8 resolves the issue
+
+**Root Cause:**
+- In v0.5.0, registers 3071-3078 were added to SPH V2.01 profiles for load energy and grid export energy metrics
+- These registers are in the MIN/MOD range (3000-3124) which not all inverters support
+- When reading the 3000 range, inverters without these registers return Modbus exception code 4 (Slave Device Failure)
+- The code treated this as a **fatal error** and aborted initialization by returning `None`
+- This was inconsistent with how other register ranges (storage 1000-1124, business 875-999) handle failures
+
+**The Fix:**
+
+Changed 3000 range register read failure handling from fatal to graceful degradation:
+
+1. **Non-Fatal Error Handling:**
+   - Changed from `logger.error()` + `return None` to `logger.warning()` + continue
+   - Matches the pattern used for storage and business register ranges
+   - Allows initialization to complete even if extended registers aren't available
+
+2. **Graceful Degradation:**
+   - Inverters **with** extended registers: Get full data including load energy metrics
+   - Inverters **without** extended registers: Work normally with core functionality
+   - No user intervention required - automatic compatibility
+
+**Impact:**
+- ✅ Integration initializes successfully on all inverter models
+- ✅ Fixes "stuck in Initializing" issue reported in #188
+- ✅ Backward compatible with inverters lacking extended register support
+- ✅ Forward compatible - still provides enhanced data when registers are available
+- ✅ No configuration changes needed
+
+### 📋 Action Required:
+
+**For users experiencing initialization failures:**
+
+1. **Update to v0.5.2**
+2. **Restart Home Assistant**
+3. **Verify integration initializes successfully:**
+   - Integration should complete initialization within 30 seconds
+   - No more "Initializing" stuck state
+   - All supported sensors should appear and update normally
+
+**No configuration changes needed** - fix is automatic after upgrade.
+
+### Technical Details:
+
+**Files Changed:**
+- `custom_components/growatt_modbus/growatt_modbus.py:824-825`
+
+**What Changed:**
+- Modified `_read_registers()` method to handle 3000 range read failures gracefully
+- Changed error handling from fatal (return None) to warning (continue)
+- Inverters report Modbus exception code 4 when unsupported registers are requested
+- Integration now continues with available data instead of aborting
+
+**Affected Models:**
+- All inverter models that don't support registers 3071-3078 (load energy, grid export in MIN/MOD range)
+- Primarily affects inverters without VPP V2.01 protocol extended register support
+- Fixes compatibility regression introduced in v0.5.0
+
+---
+
 # Release Notes - v0.5.1
 
 ## 🔧 Bug Fixes - SPH Battery & Grid Energy Sensors
