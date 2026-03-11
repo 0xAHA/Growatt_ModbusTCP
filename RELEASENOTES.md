@@ -75,6 +75,89 @@ Changed 3000 range register read failure handling from fatal to graceful degrada
 - Primarily affects inverters without VPP V2.01 protocol extended register support
 - Fixes compatibility regression introduced in v0.5.0
 
+## 🚀 Enhancement - MIC Auto-Detection Fix for Waveshare Adapters (Issue #187)
+
+This release fixes auto-detection timeouts for MIC micro inverters when using Waveshare RS485-to-ETH adapters.
+
+### What Was Fixed:
+
+**Problem:** MIC 3000TLX users with Waveshare RS485-ETH adapters reported:
+- Integration hangs at "off-grid inverter warning" screen during setup
+- Setup takes ~10 minutes instead of completing immediately
+- Logs show: `No response received after 3 retries` when reading register 30000
+- Integration eventually times out and fails to initialize
+
+**Root Cause:**
+- MIC micro inverters use **legacy V3.05 protocol** (registers 0-179 only)
+- Auto-detection was attempting to read VPP 2.01 register 30000 before checking legacy registers
+- MIC doesn't support register 30000, causing long timeout with Waveshare adapters
+- Legacy register detection (which includes MIC) only ran AFTER the VPP timeout
+
+**The Fix:**
+
+Added **early legacy register detection** before attempting VPP register reads:
+
+1. **Quick Legacy Check (Step 1.5):**
+   - Try reading register 3 (PV1 voltage) - exists in most legacy protocols
+   - If register 3 responds, check if register 3003 is absent
+   - Register 3 present + register 3003 absent = MIC series (0-179 range only)
+
+2. **Skip VPP Detection:**
+   - Once MIC is detected via legacy registers, skip reading register 30000
+   - Prevents long timeout on unsupported VPP registers
+   - Detection completes in <1 second instead of ~10 minutes
+
+3. **Detection Order Updated:**
+   - Step 1: OffGrid DTC (registers 34/43) - SPF detection
+   - **Step 1.5: Legacy register check (NEW) - MIC detection**
+   - Step 2: VPP DTC (register 30000) - V2.01 inverters
+   - Step 3: Model name read
+   - Step 4: Register probing (fallback)
+
+**Impact:**
+- ✅ MIC inverters detected immediately via legacy registers
+- ✅ No timeout on unsupported VPP register 30000
+- ✅ Setup completes in <1 second instead of ~10 minutes
+- ✅ Works with all RS485-to-TCP adapters including Waveshare
+- ✅ No impact on other inverter models
+
+### 📋 Waveshare RS485-to-ETH Configuration
+
+For users with Waveshare RS485-to-ETH adapters, use these settings:
+
+**Connection Parameters:**
+- **Baud Rate:** 9600
+- **Data Bits:** 8
+- **Parity:** None
+- **Stop Bits:** 1
+- **Port:** 502 (Modbus TCP standard)
+- **Reset:** Off
+- **Link:** On
+- **Index:** Off
+- **RFC2217 (Similar):** On
+
+These settings are now documented in the README for reference.
+
+### Technical Details:
+
+**Files Changed:**
+- `custom_components/growatt_modbus/auto_detection.py:923-945`
+- `README.md:118-131` (added Waveshare configuration guide)
+
+**Detection Logic:**
+```python
+# Before: VPP DTC read first → timeout on MIC
+1. OffGrid DTC → VPP DTC → Model name → Register probing
+
+# After: Legacy check before VPP → instant MIC detection
+1. OffGrid DTC → Legacy check (MIC) → VPP DTC → Model name → Register probing
+```
+
+**Affected Models:**
+- MIC 600-3300TL-X series (all micro inverters using 0-179 register range)
+- Any legacy inverter using V3.05 protocol without VPP 2.01 support
+- Particularly affects users with Waveshare RS485-to-ETH adapters
+
 ---
 
 # Release Notes - v0.5.1
