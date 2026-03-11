@@ -154,11 +154,12 @@ INVERTER_PROFILES = {
         ),
     },
 
-    # MIC 2500-6000TL-X with MIN register layout (Hybrid profile)
+    # MIC 1000-6000TL-X with MIN register layout (Hybrid profile)
     # Uses MIN addressing (0-124 + 3000-3124) but has MIC per-MPPT energy tracking
+    # Includes MIC-1000TL-X models with firmware "PV 1000"
     "mic_2500_6000tl_x_min_range": {
-        "name": "MIC 2500-6000TL-X (MIN range)",
-        "description": "MIC inverter (2.5-6kW) using MIN register layout with per-MPPT tracking",
+        "name": "MIC 1000-6000TL-X (MIN range)",
+        "description": "MIC inverter (1-6kW) using MIN register layout with per-MPPT tracking",
         "register_map": "MIC_2500_6000TL_X_MIN_RANGE",
         "phases": 1,
         "has_pv3": False,

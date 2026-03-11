@@ -142,6 +142,41 @@ Modified sensor.py to check for energy_to_user_today/total registers and use the
 
 ---
 
+## ⚠️ Known Issue - MIC-1000TL-X Profile Selection (Issue #130)
+
+Some MIC-1000TL-X inverters (firmware "PV 1000") may show zero values for AC power, energy today, energy total, AC current, and AC frequency when using the "MIC 600-3300TL-X (V2.01)" profile.
+
+### Problem:
+
+MIC-1000TL-X inverters can have **two different register layouts**:
+
+1. **Standard layout** (0-179 range): AC data at registers 11-12, 26-27
+2. **Hybrid MIN layout** (0-124 + 3000-3124 range): AC data at registers 3028-3029, 3049-3050
+
+If you selected "MIC 600-3300TL-X (V2.01)" but your inverter uses the hybrid MIN layout, the integration will read the wrong registers and show zeros.
+
+### Solution:
+
+1. Go to **Settings → Devices & Services → Integrations**
+2. Find your **Growatt Modbus** integration
+3. Click **Configure**
+4. Change **Inverter Series** to: **MIC 1000-6000TL-X (MIN range)**
+5. Click **Submit**
+6. Restart Home Assistant
+
+After restart, all sensors should show correct values.
+
+### How to Identify if You Need This:
+
+- **Inverter model:** MIC-1000TL-X (or similar MIC models 1-3.3kW)
+- **Firmware:** "PV 1000" or similar
+- **Symptoms:** AC power = 0, Energy today = 0, but PV power shows correct values
+- **Profile needed:** MIC 1000-6000TL-X (MIN range)
+
+**Note:** The profile name says "1000-6000" but works for all MIC inverters (including MIC-1000TL-X) that use the hybrid MIN register layout. The auto-detection should select this automatically, but if you manually selected a profile, you may need to change it.
+
+---
+
 # Release Notes - v0.5.0
 
 ## 🔧 Critical Bug Fix - Diagnostic DTC Detection
