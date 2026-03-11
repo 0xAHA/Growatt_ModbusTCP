@@ -821,12 +821,12 @@ class GrowattModbus:
                 logger.debug(f"Reading 3000 range (3000-{max_3000_addr}, {count_3000} registers)")
                 registers = self.read_input_registers(3000, count_3000)
                 if registers is None:
-                    logger.error("Failed to read main input register block")
-                    return None
-
-                # Populate cache
-                for i, value in enumerate(registers):
-                    self._register_cache[3000 + i] = value
+                    logger.warning("Failed to read 3000 register block (extended data may be unavailable)")
+                    # Don't return None - continue with what we have
+                else:
+                    # Populate cache
+                    for i, value in enumerate(registers):
+                        self._register_cache[3000 + i] = value
 
         # Read 8000 range if needed - WIT/WIS battery/storage data
         if has_8000_range:

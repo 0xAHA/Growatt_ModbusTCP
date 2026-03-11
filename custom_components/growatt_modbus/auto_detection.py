@@ -920,8 +920,32 @@ async def async_determine_inverter_type(
                 _LOGGER.info(f"✓ Auto-detected from OffGrid DTC code {dtc_code}: {profile['name']}")
                 return profile_key, profile
 
-    # Step 2: Try VPP 2.01 DTC (register 30000) if OffGrid detection failed
-    # Safe now because SPF would have been detected in Step 1
+    # Step 1.5: Quick check for legacy protocol before attempting VPP registers
+    # This prevents long timeouts on MIC and other legacy inverters that don't support VPP
+    # Try reading PV1 voltage at register 3 (exists in most legacy inverters)
+    try:
+        legacy_test = await hass.async_add_executor_job(
+            client.read_input_registers, 3, 1
+        )
+        if legacy_test is not None and len(legacy_test) > 0:
+            # Legacy registers responding - check if this is MIC (0-179 range without 3000 range)
+            min_range_test = await hass.async_add_executor_job(
+                client.read_input_registers, 3003, 1
+            )
+            if min_range_test is None:
+                # Has 0-179 range but NOT 3000 range = MIC series
+                # Skip VPP detection to avoid timeout
+                _LOGGER.info("✓ Legacy register detection - MIC micro inverter detected (0-179 range only)")
+                _LOGGER.info("⚠ Skipping VPP register probing to avoid timeout on legacy MIC protocol")
+                profile_key = 'mic_600_3300tl_x'
+                profile = get_profile(profile_key)
+                if profile:
+                    return profile_key, profile
+    except Exception as e:
+        _LOGGER.debug(f"Legacy register quick check failed: {e}")
+
+    # Step 2: Try VPP 2.01 DTC (register 30000) if OffGrid and legacy detection failed
+    # Safe now because SPF would have been detected in Step 1, and MIC in Step 1.5
     dtc_code = await async_read_dtc_code(hass, client, device_id)
 
     if dtc_code:
