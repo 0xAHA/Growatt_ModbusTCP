@@ -6,9 +6,9 @@
 
 # Release Notes - v0.5.1
 
-## 🔧 Bug Fix - SPH 3-6kW Battery Sensor Inaccuracies
+## 🔧 Bug Fixes - SPH Battery & Grid Energy Sensors
 
-This release fixes critical battery sensor issues for SPH 3-6kW V2.01 inverters where battery sensors were showing incorrect values.
+This release fixes critical sensor issues for SPH inverters including battery sensor inaccuracies and grid energy calculation errors.
 
 ### What Was Fixed:
 
@@ -48,9 +48,55 @@ This release fixes critical battery sensor issues for SPH 3-6kW V2.01 inverters 
 - ✅ Battery charge/discharge energy sensors now accurate
 - ✅ Complete battery monitoring for SPH 3-6kW V2.01 users
 
-### 📋 Action Required for SPH 3-6kW Users:
+---
 
-If you have an SPH 3-6kW inverter with V2.01 protocol:
+## 🔧 Bug Fix - SPH-TL3 Grid Import Energy Calculation (Issue #183)
+
+This release fixes incorrect grid import energy values for SPH-TL3 inverters where the energy sensor would show decreasing values or incorrect totals.
+
+### What Was Fixed:
+
+**Problem:** SPH-TL3 users reporting incorrect grid import energy:
+- Grid import energy showing values that decrease when solar production starts
+- Calculated values significantly different from actual grid consumption
+- Energy meters not reflecting true grid import
+
+**Root Cause:**
+- SPH-TL3 has hardware registers for grid import energy (energy_to_user_today at 1044-1045 and energy_to_user_total at 1046-1047)
+- Code was checking for energy_from_grid_today/total which don't exist on SPH-TL3
+- This caused fallback to calculation: `import = load - solar + export`
+- Calculation was **incorrect for hybrid inverters** because `solar` (energy_today) includes both PV generation AND battery discharge
+- When solar production increased, calculated import energy would decrease (mathematically incorrect)
+
+**The Fix:**
+
+Modified sensor.py to check for energy_to_user_today/total registers and use them directly when available:
+
+1. **Added Hardware Register Support:**
+   - Check for registers 1044-1045 (`energy_to_user_today`) for daily grid import
+   - Check for registers 1046-1047 (`energy_to_user_total`) for total grid import
+   - Use hardware meter readings directly instead of calculation
+
+2. **Improved CT Clamp Handling:**
+   - Normal orientation + hardware register: use energy_to_user directly
+   - CT clamp backwards + hardware register: use energy_to_grid (swapped)
+   - No hardware register available: fall back to calculation (MIN series, etc.)
+
+3. **Accurate Grid Import Tracking:**
+   - Values now come directly from hardware meter
+   - No dependency on PV production or battery discharge calculations
+   - Grid import energy never decreases incorrectly
+
+**Impact:**
+- ✅ SPH-TL3 grid import energy now accurate from hardware registers
+- ✅ Values stable and don't decrease when solar production starts
+- ✅ Proper handling of CT clamp orientation (normal vs backwards)
+- ✅ Fallback calculation still works for inverters without hardware registers
+- ✅ Fixes issue #183
+
+### 📋 Action Required for SPH Users:
+
+**For SPH 3-6kW V2.01 inverters:**
 
 1. **Update to v0.5.1**
 2. **Restart Home Assistant**
@@ -59,13 +105,24 @@ If you have an SPH 3-6kW inverter with V2.01 protocol:
    - AC Charge Energy Total should be realistic (not millions of kWh)
    - Battery energy today/total sensors should update properly
 
-**No configuration changes needed** - fix is automatic after upgrade.
+**For SPH-TL3 inverters:**
+
+1. **Update to v0.5.1**
+2. **Restart Home Assistant**
+3. **Verify grid import energy:**
+   - Grid import energy should be stable and accurate
+   - Values should not decrease when solar production increases
+   - Energy readings should match your actual grid consumption
+
+**No configuration changes needed** - fixes are automatic after upgrade.
 
 ### Technical Details:
 
-**File Changed:** `custom_components/growatt_modbus/profiles/sph.py`
+**Files Changed:**
+- `custom_components/growatt_modbus/profiles/sph.py` (SPH 3-6kW battery sensors)
+- `custom_components/growatt_modbus/sensor.py` (SPH-TL3 grid energy calculation)
 
-**Registers Added/Modified:**
+**SPH 3-6kW Battery Fix - Registers Added/Modified:**
 - 1086: `battery_soc` (overrides register 17)
 - 115: `ac_charge_energy_total` (replaces incorrect 31220-31221 pair)
 - 31202-31203: `battery_discharge_today` (was incorrectly mapped as power)
@@ -73,8 +130,14 @@ If you have an SPH 3-6kW inverter with V2.01 protocol:
 - 31206-31207: `battery_charge_today` (newly added)
 - 31208-31209: `battery_discharge_total` (newly added)
 
+**SPH-TL3 Grid Energy Fix - Registers Used:**
+- 1044-1045: `energy_to_user_today` (daily grid import from hardware meter)
+- 1046-1047: `energy_to_user_total` (total grid import from hardware meter)
+- Fallback calculation for inverters without hardware registers (MIN series, etc.)
+
 **Affected Models:**
-- SPH 3000-6000 (V2.01 protocol only)
+- **Battery sensor fix:** SPH 3000-6000 (V2.01 protocol only)
+- **Grid energy fix:** SPH-TL3 (all versions with hardware meter registers)
 - Does not affect SPH 7-10kW or other SPH models
 
 ---
