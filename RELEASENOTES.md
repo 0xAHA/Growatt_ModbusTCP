@@ -4,6 +4,98 @@
 
 ---
 
+# Release Notes - v0.5.3
+
+## 🔧 Bug Fix - Missing Battery BMS Temperature Register (Issue #184)
+
+This release fixes an issue where register 3136 (battery BMS temperature) was undefined in MOD and MIN TL-XH profiles, causing incorrect sensor values in Home Assistant.
+
+### What Was Fixed:
+
+**Problem:** Users reported seeing duplicate/incorrect battery sensors:
+- "Battery charging from mains power: **36.60 kWh**" (incorrect - actually a temperature!)
+- "Boost Temperature: 0.0°C" (incorrect - register 95 reads 0)
+- Missing battery BMS temperature sensor
+
+**Root Cause:**
+- Register 3136 was **not defined** in MOD 6000-15000TL3-XH and MIN TL-XH profiles
+- Raw value: 366 (36.6 with ×0.1 scale)
+- Integration misinterpreted this as **energy data** (36.60 kWh) instead of **temperature** (36.6°C)
+- Register is in the 3000+ extended range used by both MOD and MIN profiles
+
+**Additional Issue:**
+- User had MIN 3000 TL-XH (single-phase) but auto-detection selected MOD profile (three-phase)
+- Phase S/T registers all showed 0, confirming single-phase inverter
+- Wrong profile caused incorrect register mappings and missing/duplicate sensors
+
+**The Fix:**
+
+Added missing battery BMS temperature register to both profiles:
+
+1. **MOD 6000-15000TL3-XH Profile** (`profiles/mod.py`):
+   - Register 96: `temp_sensor_1` (36.6°C - additional BMS/battery temperature)
+   - Register 97: `temp_sensor_2` (32.7°C - matches Growatt server Boost Temp)
+   - Register 3136: `battery_bms_temp` (36.6°C - battery BMS/module temperature)
+
+2. **MIN TL-XH 3000-10000 Profile** (`profiles/tl_xh.py`):
+   - Register 3136: `battery_bms_temp` (36.6°C - battery BMS/module temperature)
+
+**Why Both Profiles:**
+- Register 3136 is in the **3000+ extended range** shared by both MOD and MIN inverters
+- Registers 96-97 are MOD-specific (0-124 base range, not used by MIN)
+- Fix benefits both actual MOD users and users who should be using MIN profile
+
+**Impact:**
+- ✅ New sensor: "Battery BMS Temp" showing correct temperature (36.6°C)
+- ✅ Removes incorrect "Battery charging from mains power: 36.60 kWh" sensor
+- ✅ Properly identifies temperature vs energy data
+- ✅ Fixes duplicate sensor issues for MOD/MIN TL-XH users
+
+### 📋 Action Required:
+
+**For users with MIN 3000 TL-XH inverters:**
+
+1. **Update to v0.5.3**
+2. **Reconfigure to correct profile:**
+   - Go to: Settings → Devices & Services → Growatt
+   - Click **Configure** on your inverter
+   - Change profile to: **MIN TL-XH 3000-10000 (V2.01)**
+   - Save and restart Home Assistant
+
+3. **Verify after restart:**
+   - ✅ "Battery BMS Temp" sensor appears (~36.6°C)
+   - ❌ Incorrect "36.60 kWh" sensor removed
+   - ✅ Battery power sensors still work correctly
+   - ✅ Three-phase sensors (Phase S/T) hidden
+
+**For users with actual MOD inverters:**
+- Simply update to v0.5.3 and restart
+- New temperature sensors will appear automatically
+
+### Technical Details:
+
+**Register Analysis from Scan (2026-03-09 14:12:43):**
+- Register 96 (base range): 366 raw = 36.6°C
+- Register 97 (base range): 327 raw = 32.7°C (matches Growatt server)
+- Register 3136 (extended): 366 raw = 36.6°C
+- Battery charging: 2.14kW (Growatt server), 1626W (register 3181) ✓ correct
+- Phase S/T registers: All 0 → Single-phase → MIN profile needed
+
+**Files Changed:**
+- `custom_components/growatt_modbus/profiles/mod.py` (lines 77-78, 123)
+- `custom_components/growatt_modbus/profiles/tl_xh.py` (line 312)
+
+**Affected Models:**
+- MOD 6000-15000TL3-XH (three-phase hybrid)
+- MIN TL-XH 3000-10000 (single-phase hybrid)
+- Any inverter using these profiles with battery BMS temperature at register 3136
+
+**Detection Improvement Needed:**
+- Auto-detection currently selects MOD for MIN inverters
+- Future improvement: Check phase S/T registers to distinguish single vs three-phase
+
+---
+
 # Release Notes - v0.5.2
 
 ## 🔧 Critical Bug Fix - Integration Initialization Failure (Issue #188)
