@@ -4,6 +4,179 @@
 
 ---
 
+# Release Notes - v0.5.1
+
+## 🔧 Bug Fixes - SPH Battery & Grid Energy Sensors
+
+This release fixes critical sensor issues for SPH inverters including battery sensor inaccuracies and grid energy calculation errors.
+
+### What Was Fixed:
+
+**Problem:** SPH 3-6kW V2.01 users reporting incorrect battery sensor values (Issue #185):
+- Battery SOC showing 0% instead of actual value (e.g., 31%)
+- AC Charge Energy Total showing garbage value (70,516,736 kWh)
+- Battery charge/discharge energy sensors showing incorrect or missing values
+
+**Root Cause:**
+- Register 17 (inherited from base profile) returns 0 for SOC on V2.01 inverters
+- Correct SOC value is available in register 1086 (BMS register) but wasn't configured
+- Battery energy registers in VPP range (31202-31209) were incorrectly mapped
+- AC Charge Energy Total used wrong 32-bit register pairing (31220-31221)
+
+**The Fix:**
+
+1. **Added Correct Battery SOC Register:**
+   - Added register 1086 for `battery_soc` in SPH 3-6kW V2.01 profile
+   - Overrides inherited register 17 which returns 0
+   - Provides accurate SOC value directly from BMS
+
+2. **Fixed Battery Energy Register Mappings:**
+   - Changed registers 31202-31203 from power to discharge_today energy
+   - Added registers 31204-31205 for battery_charge_total
+   - Added registers 31206-31207 for battery_charge_today
+   - Added registers 31208-31209 for battery_discharge_total
+   - All battery energy tracking now accurate
+
+3. **Fixed AC Charge Energy Total:**
+   - Removed incorrect 32-bit pairing of registers 31220-31221
+   - Added register 115 for `ac_charge_energy_total`
+   - Prevents garbage value of 70,516,736 kWh
+
+**Impact:**
+- ✅ Battery SOC now shows correct value (e.g., 31% instead of 0%)
+- ✅ AC Charge Energy Total shows realistic value (e.g., 7.8 kWh instead of 70M kWh)
+- ✅ Battery charge/discharge energy sensors now accurate
+- ✅ Complete battery monitoring for SPH 3-6kW V2.01 users
+
+---
+
+## 🔧 Bug Fix - SPH-TL3 Grid Import Energy Calculation (Issue #183)
+
+This release fixes incorrect grid import energy values for SPH-TL3 inverters where the energy sensor would show decreasing values or incorrect totals.
+
+### What Was Fixed:
+
+**Problem:** SPH-TL3 users reporting incorrect grid import energy:
+- Grid import energy showing values that decrease when solar production starts
+- Calculated values significantly different from actual grid consumption
+- Energy meters not reflecting true grid import
+
+**Root Cause:**
+- SPH-TL3 has hardware registers for grid import energy (energy_to_user_today at 1044-1045 and energy_to_user_total at 1046-1047)
+- Code was checking for energy_from_grid_today/total which don't exist on SPH-TL3
+- This caused fallback to calculation: `import = load - solar + export`
+- Calculation was **incorrect for hybrid inverters** because `solar` (energy_today) includes both PV generation AND battery discharge
+- When solar production increased, calculated import energy would decrease (mathematically incorrect)
+
+**The Fix:**
+
+Modified sensor.py to check for energy_to_user_today/total registers and use them directly when available:
+
+1. **Added Hardware Register Support:**
+   - Check for registers 1044-1045 (`energy_to_user_today`) for daily grid import
+   - Check for registers 1046-1047 (`energy_to_user_total`) for total grid import
+   - Use hardware meter readings directly instead of calculation
+
+2. **Improved CT Clamp Handling:**
+   - Normal orientation + hardware register: use energy_to_user directly
+   - CT clamp backwards + hardware register: use energy_to_grid (swapped)
+   - No hardware register available: fall back to calculation (MIN series, etc.)
+
+3. **Accurate Grid Import Tracking:**
+   - Values now come directly from hardware meter
+   - No dependency on PV production or battery discharge calculations
+   - Grid import energy never decreases incorrectly
+
+**Impact:**
+- ✅ SPH-TL3 grid import energy now accurate from hardware registers
+- ✅ Values stable and don't decrease when solar production starts
+- ✅ Proper handling of CT clamp orientation (normal vs backwards)
+- ✅ Fallback calculation still works for inverters without hardware registers
+- ✅ Fixes issue #183
+
+### 📋 Action Required for SPH Users:
+
+**For SPH 3-6kW V2.01 inverters:**
+
+1. **Update to v0.5.1**
+2. **Restart Home Assistant**
+3. **Verify sensors show correct values:**
+   - Battery SOC should show actual percentage (not 0%)
+   - AC Charge Energy Total should be realistic (not millions of kWh)
+   - Battery energy today/total sensors should update properly
+
+**For SPH-TL3 inverters:**
+
+1. **Update to v0.5.1**
+2. **Restart Home Assistant**
+3. **Verify grid import energy:**
+   - Grid import energy should be stable and accurate
+   - Values should not decrease when solar production increases
+   - Energy readings should match your actual grid consumption
+
+**No configuration changes needed** - fixes are automatic after upgrade.
+
+### Technical Details:
+
+**Files Changed:**
+- `custom_components/growatt_modbus/profiles/sph.py` (SPH 3-6kW battery sensors)
+- `custom_components/growatt_modbus/sensor.py` (SPH-TL3 grid energy calculation)
+
+**SPH 3-6kW Battery Fix - Registers Added/Modified:**
+- 1086: `battery_soc` (overrides register 17)
+- 115: `ac_charge_energy_total` (replaces incorrect 31220-31221 pair)
+- 31202-31203: `battery_discharge_today` (was incorrectly mapped as power)
+- 31204-31205: `battery_charge_total` (newly added)
+- 31206-31207: `battery_charge_today` (newly added)
+- 31208-31209: `battery_discharge_total` (newly added)
+
+**SPH-TL3 Grid Energy Fix - Registers Used:**
+- 1044-1045: `energy_to_user_today` (daily grid import from hardware meter)
+- 1046-1047: `energy_to_user_total` (total grid import from hardware meter)
+- Fallback calculation for inverters without hardware registers (MIN series, etc.)
+
+**Affected Models:**
+- **Battery sensor fix:** SPH 3000-6000 (V2.01 protocol only)
+- **Grid energy fix:** SPH-TL3 (all versions with hardware meter registers)
+- Does not affect SPH 7-10kW or other SPH models
+
+---
+
+## ⚠️ Known Issue - MIC-1000TL-X Profile Selection (Issue #130)
+
+Some MIC-1000TL-X inverters (firmware "PV 1000") may show zero values for AC power, energy today, energy total, AC current, and AC frequency when using the "MIC 600-3300TL-X (V2.01)" profile.
+
+### Problem:
+
+MIC-1000TL-X inverters can have **two different register layouts**:
+
+1. **Standard layout** (0-179 range): AC data at registers 11-12, 26-27
+2. **Hybrid MIN layout** (0-124 + 3000-3124 range): AC data at registers 3028-3029, 3049-3050
+
+If you selected "MIC 600-3300TL-X (V2.01)" but your inverter uses the hybrid MIN layout, the integration will read the wrong registers and show zeros.
+
+### Solution:
+
+1. Go to **Settings → Devices & Services → Integrations**
+2. Find your **Growatt Modbus** integration
+3. Click **Configure**
+4. Change **Inverter Series** to: **MIC 1000-6000TL-X (MIN range)**
+5. Click **Submit**
+6. Restart Home Assistant
+
+After restart, all sensors should show correct values.
+
+### How to Identify if You Need This:
+
+- **Inverter model:** MIC-1000TL-X (or similar MIC models 1-3.3kW)
+- **Firmware:** "PV 1000" or similar
+- **Symptoms:** AC power = 0, Energy today = 0, but PV power shows correct values
+- **Profile needed:** MIC 1000-6000TL-X (MIN range)
+
+**Note:** The profile name says "1000-6000" but works for all MIC inverters (including MIC-1000TL-X) that use the hybrid MIN register layout. The auto-detection should select this automatically, but if you manually selected a profile, you may need to change it.
+
+---
+
 # Release Notes - v0.5.0
 
 ## 🔧 Critical Bug Fix - Diagnostic DTC Detection

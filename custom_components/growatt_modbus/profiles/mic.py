@@ -145,14 +145,15 @@ MIC_600_3300TL_X_V201 = {
     }
 }
 
-# MIC 2500-6000TL-X (Hybrid MIN/MIC register layout)
+# MIC 1000-6000TL-X (Hybrid MIN/MIC register layout)
 # These MIC models use MIN register addressing (0-124 + 3000-3124 ranges)
 # BUT retain MIC-specific per-MPPT energy tracking (registers 59-62)
 # Identified by: DTC 5200 + populated registers 59-62
+# IMPORTANT: Includes MIC-1000TL-X models with hybrid layout (firmware "PV 1000")
 MIC_2500_6000TL_X_MIN_RANGE = {
-    'name': 'MIC 2500-6000TL-X (MIN range)',
-    'description': 'MIC inverter using MIN register layout with per-MPPT tracking',
-    'notes': 'Hybrid profile: Uses MIN addressing (0-124 + 3000-3124) but has MIC per-MPPT energy. DTC 5200 with registers 59-62 populated.',
+    'name': 'MIC 1000-6000TL-X (MIN range)',
+    'description': 'MIC inverter (1-6kW) using MIN register layout with per-MPPT tracking',
+    'notes': 'Hybrid profile: Uses MIN addressing (0-124 + 3000-3124) but has MIC per-MPPT energy. DTC 5200 with registers 59-62 populated. Includes MIC-1000TL-X with firmware "PV 1000".',
     'input_registers': {
         # ============================================================================
         # RANGE 0-124: MIN Base Range (overlaps with 3000-3124)

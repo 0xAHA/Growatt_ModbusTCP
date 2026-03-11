@@ -1217,18 +1217,25 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
 
             elif self._sensor_key == "grid_import_energy_today":
-                # Grid import energy - must be calculated for most inverters
-                # Only inverters with separate hardware import registers can use inversion shortcut
+                # Grid import energy - use hardware register if available, otherwise calculate
+                # SPH/SPH-TL3: energy_to_user_today (VPP: "Total forward power/energy" = grid import)
+                # Other models: energy_from_grid_today
 
                 # Check if inverter has hardware import energy register
-                has_hardware_import = hasattr(data, "energy_from_grid_today")
+                # SPH-TL3 uses "energy_to_user", other models might use "energy_from_grid"
+                has_hardware_import = hasattr(data, "energy_from_grid_today") or hasattr(data, "energy_to_user_today")
 
                 if invert_grid_power and has_hardware_import:
                     # CT clamp backwards AND inverter has hardware import register
+                    # When CT is backwards, import/export are swapped, so read from export register
                     raw_value = getattr(data, "energy_to_grid_today", 0)
+                elif has_hardware_import:
+                    # Hardware register available and CT clamp is correct orientation
+                    # Use the hardware import register directly
+                    raw_value = getattr(data, "energy_to_user_today", 0) if hasattr(data, "energy_to_user_today") else getattr(data, "energy_from_grid_today", 0)
                 else:
-                    # Always calculate for inverters without hardware import registers (MIN, etc.)
-                    # Or calculate normally when inversion is off
+                    # No hardware import register - must calculate
+                    # This calculation works for non-hybrid inverters (MIN, etc.)
                     load_energy = getattr(data, "load_energy_today", 0)
                     solar_energy = getattr(data, "energy_today", 0)
                     export_energy = getattr(data, "energy_to_grid_today", 0)
@@ -1238,18 +1245,25 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
 
             elif self._sensor_key == "grid_import_energy_total":
-                # Grid import energy - must be calculated for most inverters
-                # Only inverters with separate hardware import registers can use inversion shortcut
+                # Grid import energy - use hardware register if available, otherwise calculate
+                # SPH/SPH-TL3: energy_to_user_total (VPP: "Total forward power/energy" = grid import)
+                # Other models: energy_from_grid_total
 
                 # Check if inverter has hardware import energy register
-                has_hardware_import = hasattr(data, "energy_from_grid_total")
+                # SPH-TL3 uses "energy_to_user", other models might use "energy_from_grid"
+                has_hardware_import = hasattr(data, "energy_from_grid_total") or hasattr(data, "energy_to_user_total")
 
                 if invert_grid_power and has_hardware_import:
                     # CT clamp backwards AND inverter has hardware import register
+                    # When CT is backwards, import/export are swapped, so read from export register
                     raw_value = getattr(data, "energy_to_grid_total", 0)
+                elif has_hardware_import:
+                    # Hardware register available and CT clamp is correct orientation
+                    # Use the hardware import register directly
+                    raw_value = getattr(data, "energy_to_user_total", 0) if hasattr(data, "energy_to_user_total") else getattr(data, "energy_from_grid_total", 0)
                 else:
-                    # Always calculate for inverters without hardware import registers (MIN, etc.)
-                    # Or calculate normally when inversion is off
+                    # No hardware import register - must calculate
+                    # This calculation works for non-hybrid inverters (MIN, etc.)
                     load_energy = getattr(data, "load_energy_total", 0)
                     solar_energy = getattr(data, "energy_total", 0)
                     export_energy = getattr(data, "energy_to_grid_total", 0)
