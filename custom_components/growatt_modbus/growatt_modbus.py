@@ -1114,12 +1114,31 @@ class GrowattModbus:
                 data.power_to_load = self._get_register_value(power_to_load_addr) or 0.0
             
             # Energy Today
-            # For WIT with per-MPPT tracking: use sum of PV1+PV2 energy for accurate solar production
+            # For WIT/MIC with per-MPPT tracking: use sum of PV1+PV2 energy for accurate solar production
             # Registers 53-54 show total system AC output (PV+battery), not PV-only (Issue #146)
-            if data.pv1_energy_today > 0 or data.pv2_energy_today > 0:
-                # WIT with per-MPPT energy: sum PV inputs for true solar production
-                data.energy_today = data.pv1_energy_today + data.pv2_energy_today
-                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today calculated from PV MPPTs: PV1={data.pv1_energy_today} + PV2={data.pv2_energy_today} = {data.energy_today} kWh")
+            # IMPORTANT: Only use per-MPPT calculation if PV strings are actually connected (avoid garbage data)
+            pv1_connected = data.pv1_voltage > 0 or data.pv1_power > 0
+            pv2_connected = data.pv2_voltage > 0 or data.pv2_power > 0
+
+            if (pv1_connected or pv2_connected) and (data.pv1_energy_today > 0 or data.pv2_energy_today > 0):
+                # Calculate energy only from connected strings to avoid garbage data
+                pv_energy_sum = 0.0
+                if pv1_connected and data.pv1_energy_today > 0:
+                    pv_energy_sum += data.pv1_energy_today
+                if pv2_connected and data.pv2_energy_today > 0:
+                    pv_energy_sum += data.pv2_energy_today
+
+                # Sanity check: per-MPPT energy should be reasonable (< 100 kWh per day for MIC/small inverters)
+                if pv_energy_sum < 100:
+                    data.energy_today = pv_energy_sum
+                    logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from connected MPPTs: PV1={data.pv1_energy_today if pv1_connected else 'N/A'} + PV2={data.pv2_energy_today if pv2_connected else 'N/A'} = {data.energy_today} kWh")
+                else:
+                    # Garbage data detected - fall back to register reading
+                    logger.warning(f"[{self.register_map['name']}@{self.connection_id}] Per-MPPT energy {pv_energy_sum} kWh unrealistic - using fallback register instead")
+                    energy_today_addr = self._find_register_by_name('energy_today_low')
+                    if energy_today_addr:
+                        data.energy_today = self._get_register_value(energy_today_addr) or 0.0
+                        logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from reg {energy_today_addr}: {data.energy_today} kWh")
             else:
                 # Fallback to total system output for other inverters
                 energy_today_addr = self._find_register_by_name('energy_today_low')

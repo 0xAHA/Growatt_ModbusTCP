@@ -745,6 +745,11 @@ PROFILE_DISPLAY_NAMES = {
         "v201": "mic_600_3300tl_x_v201",
         "description": "Micro inverter, 1 PV string",
     },
+    "MIC (1-6kW MIN range)": {
+        "base": "mic_2500_6000tl_x_min_range",
+        "v201": "mic_2500_6000tl_x_min_range",  # Hybrid profile (same for both)
+        "description": "MIC inverter with MIN register layout, 1-2 PV strings",
+    },
     "MIN (3-6kW)": {
         "base": "min_3000_6000_tl_x",
         "v201": "min_3000_6000_tl_x_v201",
