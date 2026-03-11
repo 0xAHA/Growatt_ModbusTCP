@@ -309,6 +309,9 @@ MIN_TL_XH_3000_10000_V201 = {
         3105: {'name': 'fault_code', 'scale': 1, 'unit': '', 'desc': 'Main fault code'},
         3106: {'name': 'warning_code', 'scale': 1, 'unit': '', 'desc': 'Main warning code'},
 
+        # Battery Extended Diagnostics
+        3136: {'name': 'battery_bms_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery BMS/module temperature'},
+
         # === LEGACY BATTERY POWER REGISTERS (3178-3181) ===
         # Some TL-XH models provide unsigned battery power in addition to VPP 31200+ signed power
         # These are fallback registers when VPP 31200+ is not available
