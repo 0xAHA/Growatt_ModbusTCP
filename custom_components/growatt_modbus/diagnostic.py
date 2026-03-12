@@ -12,7 +12,8 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_INVERTER_SERIES
+from .device_profiles import get_display_name_for_profile, get_profile
 
 # Import register maps for "Suggested Match" column
 try:
@@ -1635,6 +1636,15 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         if not coordinator:
             _LOGGER.info("No matching coordinator found - entity values will not be included in CSV")
 
+        # Extract currently selected profile from coordinator (if available)
+        selected_profile_key = None
+        selected_profile_name = None
+        if coordinator and hasattr(coordinator, 'entry') and coordinator.entry.data:
+            selected_profile_key = coordinator.entry.data.get(CONF_INVERTER_SERIES)
+            if selected_profile_key:
+                selected_profile_name = get_display_name_for_profile(selected_profile_key)
+                _LOGGER.info(f"Currently selected profile: {selected_profile_name} ({selected_profile_key})")
+
         # Scan ALL ranges
         all_register_data = {}
         range_responses = {}
@@ -1739,8 +1749,16 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             writer.writerow(["Connection", connection_str])
             writer.writerow(["Connection Type", connection_type.upper()])
             writer.writerow(["Slave ID", slave_id])
+
+            # Add currently selected/configured profile (if coordinator found)
+            if selected_profile_key and selected_profile_name:
+                writer.writerow([])
+                writer.writerow(["CURRENTLY CONFIGURED PROFILE"])
+                writer.writerow(["Selected Profile", selected_profile_name])
+                writer.writerow(["Selected Profile Key", selected_profile_key])
+
             writer.writerow([])
-            
+
             # Detection analysis section
             writer.writerow(["DETECTION ANALYSIS"])
             writer.writerow(["Detected Model", detection["model"]])
