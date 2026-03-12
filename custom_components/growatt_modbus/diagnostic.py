@@ -1657,8 +1657,8 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                     # Get the value
                     try:
                         value = getattr(coordinator.data, attr_name, None)
-                        # Only include non-callable, non-None values
-                        if value is not None and not callable(value):
+                        # Include all non-callable values (including None, zero, etc.)
+                        if not callable(value):
                             current_entity_values[attr_name] = value
                     except Exception as e:
                         _LOGGER.debug(f"Could not get value for {attr_name}: {e}")
@@ -1786,15 +1786,15 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                 # Sort entities by name for easier reading
                 for entity_name in sorted(current_entity_values.keys()):
                     value = current_entity_values[entity_name]
-                    # Format the value nicely
-                    if isinstance(value, float):
-                        # Only show non-zero values to reduce clutter
-                        if abs(value) > 0.001:  # Small threshold for floating point
-                            writer.writerow([entity_name, f"{value:.3f}"])
-                    elif isinstance(value, (int, str, bool)):
-                        # Show all non-zero/non-empty values
-                        if value or isinstance(value, bool):
-                            writer.writerow([entity_name, value])
+                    # Format the value nicely - show ALL values including zeros and None
+                    if value is None:
+                        writer.writerow([entity_name, "None (unavailable)"])
+                    elif isinstance(value, float):
+                        writer.writerow([entity_name, f"{value:.3f}"])
+                    elif isinstance(value, bool):
+                        writer.writerow([entity_name, str(value)])
+                    elif isinstance(value, (int, str)):
+                        writer.writerow([entity_name, value])
                     else:
                         # Other types, just convert to string
                         writer.writerow([entity_name, str(value)])
