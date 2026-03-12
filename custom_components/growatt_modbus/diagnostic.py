@@ -1639,11 +1639,31 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         # Extract currently selected profile from coordinator (if available)
         selected_profile_key = None
         selected_profile_name = None
+        current_entity_values = {}
         if coordinator and hasattr(coordinator, 'entry') and coordinator.entry.data:
             selected_profile_key = coordinator.entry.data.get(CONF_INVERTER_SERIES)
             if selected_profile_key:
                 selected_profile_name = get_display_name_for_profile(selected_profile_key)
                 _LOGGER.info(f"Currently selected profile: {selected_profile_name} ({selected_profile_key})")
+
+            # Get current entity values from coordinator data
+            if coordinator.data:
+                _LOGGER.info("Extracting current entity values from coordinator...")
+                # Get all attributes from the GrowattData object
+                for attr_name in dir(coordinator.data):
+                    # Skip private/magic methods
+                    if attr_name.startswith('_'):
+                        continue
+                    # Get the value
+                    try:
+                        value = getattr(coordinator.data, attr_name, None)
+                        # Only include non-callable, non-None values
+                        if value is not None and not callable(value):
+                            current_entity_values[attr_name] = value
+                    except Exception as e:
+                        _LOGGER.debug(f"Could not get value for {attr_name}: {e}")
+
+                _LOGGER.info(f"Extracted {len(current_entity_values)} current entity values")
 
         # Scan ALL ranges
         all_register_data = {}
@@ -1756,6 +1776,28 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                 writer.writerow(["CURRENTLY CONFIGURED PROFILE"])
                 writer.writerow(["Selected Profile", selected_profile_name])
                 writer.writerow(["Selected Profile Key", selected_profile_key])
+
+            # Add current entity values from the integration (if coordinator found)
+            if current_entity_values:
+                writer.writerow([])
+                writer.writerow(["CURRENT ENTITY VALUES FROM INTEGRATION"])
+                writer.writerow(["Entity Name", "Current Value"])
+
+                # Sort entities by name for easier reading
+                for entity_name in sorted(current_entity_values.keys()):
+                    value = current_entity_values[entity_name]
+                    # Format the value nicely
+                    if isinstance(value, float):
+                        # Only show non-zero values to reduce clutter
+                        if abs(value) > 0.001:  # Small threshold for floating point
+                            writer.writerow([entity_name, f"{value:.3f}"])
+                    elif isinstance(value, (int, str, bool)):
+                        # Show all non-zero/non-empty values
+                        if value or isinstance(value, bool):
+                            writer.writerow([entity_name, value])
+                    else:
+                        # Other types, just convert to string
+                        writer.writerow([entity_name, str(value)])
 
             writer.writerow([])
 
