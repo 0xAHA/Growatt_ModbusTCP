@@ -4,6 +4,193 @@
 
 ---
 
+# Release Notes - v0.5.4
+
+## 🔧 Bug Fix & Enhancement - Register Scan Improvements (Issue #184)
+
+This release improves the diagnostic register scan service to provide better visibility and reduce confusion when troubleshooting profile selection issues.
+
+### What Was Fixed:
+
+**Problem:** Users manually selecting a profile (e.g., "MIN TL-XH") would run the register scan service and see only the auto-detected profile (e.g., "MOD series") in the CSV output. This caused confusion because:
+- The CSV only showed "Suggested Profile Key: mod_6000_15000tl3_xh" (auto-detected)
+- It didn't show what profile the user had actually selected and was using
+- Users thought the suggested profile was what they had configured
+
+**Impact:**
+- User's system was actually working correctly with the selected profile
+- But they couldn't see this in the diagnostic output
+- Led to confusion and unnecessary troubleshooting
+
+### What's New:
+
+#### 1. Currently Configured Profile Display
+
+The register scan CSV now shows **both** the selected profile AND the auto-detected profile:
+
+```csv
+SCAN METADATA
+Connection Type,TCP
+Slave ID,1
+
+CURRENTLY CONFIGURED PROFILE
+Selected Profile,MIN TL-XH 3000-10000
+Selected Profile Key,min_tl_xh_3000_10000_v201
+
+DETECTION ANALYSIS
+Detected Model,MOD Series 6000-15000TL3-XH
+Suggested Profile Key,mod_6000_15000tl3_xh
+```
+
+This makes it clear:
+- ✅ What profile you have configured and are currently using
+- ✅ What profile the auto-detection suggests
+- ✅ Whether there's a mismatch between selected and detected
+
+#### 2. Current Entity Values Section
+
+The register scan now includes a comprehensive snapshot of all current entity values from Home Assistant:
+
+```csv
+CURRENT ENTITY VALUES FROM INTEGRATION
+Entity Name,Current Value
+ac_current,5.234
+ac_frequency,50.020
+ac_power,1234.567
+ac_voltage,230.123
+battery_charge_power,0.000
+battery_current,2.345
+battery_power,567.890
+battery_soc,85.000
+battery_temp,None (unavailable)
+battery_voltage,51.234
+energy_today,12.345
+grid_power,1234.567
+house_consumption,567.890
+pv1_current,6.789
+pv1_power,1234.567
+pv1_voltage,182.345
+...
+```
+
+Features:
+- ✅ Shows **all** entity values including zeros and unavailable
+- ✅ Clearly marks unavailable values as "None (unavailable)"
+- ✅ Alphabetically sorted for easy lookup
+- ✅ Formatted for readability (floats to 3 decimals)
+
+Benefits for debugging:
+- Compare raw register values vs. processed entity values
+- See complete snapshot of integration state at scan time
+- Identify which values are zero vs. missing vs. unavailable
+- Verify entity processing and calculations
+
+### Files Changed:
+- `custom_components/growatt_modbus/diagnostic.py`:
+  - Added imports for profile display name functions
+  - Extract currently selected profile from coordinator
+  - Extract all current entity values from coordinator data
+  - Display both sections in CSV before detection analysis
+
+### Migration Notes:
+- **No action required** - Enhancement is automatic
+- Works when register scan finds a matching integration (same connection)
+- If no integration found, shows detection analysis only (as before)
+
+---
+
+# Release Notes - v0.5.3
+
+## 🔧 Bug Fix - Missing Battery BMS Temperature Register (Issue #184)
+
+This release fixes an issue where register 3136 (battery BMS temperature) was undefined in MOD and MIN TL-XH profiles, causing incorrect sensor values in Home Assistant.
+
+### What Was Fixed:
+
+**Problem:** Users reported seeing duplicate/incorrect battery sensors:
+- "Battery charging from mains power: **36.60 kWh**" (incorrect - actually a temperature!)
+- "Boost Temperature: 0.0°C" (incorrect - register 95 reads 0)
+- Missing battery BMS temperature sensor
+
+**Root Cause:**
+- Register 3136 was **not defined** in MOD 6000-15000TL3-XH and MIN TL-XH profiles
+- Raw value: 366 (36.6 with ×0.1 scale)
+- Integration misinterpreted this as **energy data** (36.60 kWh) instead of **temperature** (36.6°C)
+- Register is in the 3000+ extended range used by both MOD and MIN profiles
+
+**Additional Issue:**
+- User had MIN 3000 TL-XH (single-phase) but auto-detection selected MOD profile (three-phase)
+- Phase S/T registers all showed 0, confirming single-phase inverter
+- Wrong profile caused incorrect register mappings and missing/duplicate sensors
+
+**The Fix:**
+
+Added missing battery BMS temperature register to both profiles:
+
+1. **MOD 6000-15000TL3-XH Profile** (`profiles/mod.py`):
+   - Register 96: `temp_sensor_1` (36.6°C - additional BMS/battery temperature)
+   - Register 97: `temp_sensor_2` (32.7°C - matches Growatt server Boost Temp)
+   - Register 3136: `battery_bms_temp` (36.6°C - battery BMS/module temperature)
+
+2. **MIN TL-XH 3000-10000 Profile** (`profiles/tl_xh.py`):
+   - Register 3136: `battery_bms_temp` (36.6°C - battery BMS/module temperature)
+
+**Why Both Profiles:**
+- Register 3136 is in the **3000+ extended range** shared by both MOD and MIN inverters
+- Registers 96-97 are MOD-specific (0-124 base range, not used by MIN)
+- Fix benefits both actual MOD users and users who should be using MIN profile
+
+**Impact:**
+- ✅ New sensor: "Battery BMS Temp" showing correct temperature (36.6°C)
+- ✅ Removes incorrect "Battery charging from mains power: 36.60 kWh" sensor
+- ✅ Properly identifies temperature vs energy data
+- ✅ Fixes duplicate sensor issues for MOD/MIN TL-XH users
+
+### 📋 Action Required:
+
+**For users with MIN 3000 TL-XH inverters:**
+
+1. **Update to v0.5.3**
+2. **Reconfigure to correct profile:**
+   - Go to: Settings → Devices & Services → Growatt
+   - Click **Configure** on your inverter
+   - Change profile to: **MIN TL-XH 3000-10000 (V2.01)**
+   - Save and restart Home Assistant
+
+3. **Verify after restart:**
+   - ✅ "Battery BMS Temp" sensor appears (~36.6°C)
+   - ❌ Incorrect "36.60 kWh" sensor removed
+   - ✅ Battery power sensors still work correctly
+   - ✅ Three-phase sensors (Phase S/T) hidden
+
+**For users with actual MOD inverters:**
+- Simply update to v0.5.3 and restart
+- New temperature sensors will appear automatically
+
+### Technical Details:
+
+**Register Analysis from Scan (2026-03-09 14:12:43):**
+- Register 96 (base range): 366 raw = 36.6°C
+- Register 97 (base range): 327 raw = 32.7°C (matches Growatt server)
+- Register 3136 (extended): 366 raw = 36.6°C
+- Battery charging: 2.14kW (Growatt server), 1626W (register 3181) ✓ correct
+- Phase S/T registers: All 0 → Single-phase → MIN profile needed
+
+**Files Changed:**
+- `custom_components/growatt_modbus/profiles/mod.py` (lines 77-78, 123)
+- `custom_components/growatt_modbus/profiles/tl_xh.py` (line 312)
+
+**Affected Models:**
+- MOD 6000-15000TL3-XH (three-phase hybrid)
+- MIN TL-XH 3000-10000 (single-phase hybrid)
+- Any inverter using these profiles with battery BMS temperature at register 3136
+
+**Detection Improvement Needed:**
+- Auto-detection currently selects MOD for MIN inverters
+- Future improvement: Check phase S/T registers to distinguish single vs three-phase
+
+---
+
 # Release Notes - v0.5.2
 
 ## 🔧 Critical Bug Fix - Integration Initialization Failure (Issue #188)

@@ -74,13 +74,15 @@ MOD_6000_15000TL3_XH = {
         93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
         94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
         95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        96: {'name': 'temp_sensor_1', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Additional temperature sensor 1 (possibly BMS/battery related)'},
+        97: {'name': 'temp_sensor_2', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Additional temperature sensor 2 (appears to match Growatt server Boost Temp)'},
 
         # Status
         100: {'name': 'power_factor', 'scale': 1, 'unit': ''},
         104: {'name': 'derating_mode', 'scale': 1, 'unit': ''},
         105: {'name': 'fault_code', 'scale': 1, 'unit': ''},
         112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
-        
+
         # === BATTERY RANGE (3000+) - Battery & Power Flow ===
         # System Status
         3000: {'name': 'battery_status', 'scale': 1, 'unit': '', 'desc': 'Battery system status'},
@@ -118,7 +120,10 @@ MOD_6000_15000TL3_XH = {
         3130: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3129, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         3131: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3132, 'desc': 'Battery charge energy total (primary source for MOD XH)'},
         3132: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3131, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        
+
+        # Battery Extended Diagnostics
+        3136: {'name': 'battery_bms_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery BMS/module temperature (matches temp_sensor_1 at reg 96)'},
+
         # Battery State (3000 range - PRIMARY for MOD XH with ARK battery)
         # Note: VPP 31200+ range doesn't respond on MOD 10000TL3-XH, so 3000+ is primary
         3144: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'desc': '0=Load, 1=Battery, 2=Grid'},

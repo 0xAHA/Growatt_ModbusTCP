@@ -12,7 +12,8 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_INVERTER_SERIES
+from .device_profiles import get_display_name_for_profile, get_profile
 
 # Import register maps for "Suggested Match" column
 try:
@@ -1635,6 +1636,35 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         if not coordinator:
             _LOGGER.info("No matching coordinator found - entity values will not be included in CSV")
 
+        # Extract currently selected profile from coordinator (if available)
+        selected_profile_key = None
+        selected_profile_name = None
+        current_entity_values = {}
+        if coordinator and hasattr(coordinator, 'entry') and coordinator.entry.data:
+            selected_profile_key = coordinator.entry.data.get(CONF_INVERTER_SERIES)
+            if selected_profile_key:
+                selected_profile_name = get_display_name_for_profile(selected_profile_key)
+                _LOGGER.info(f"Currently selected profile: {selected_profile_name} ({selected_profile_key})")
+
+            # Get current entity values from coordinator data
+            if coordinator.data:
+                _LOGGER.info("Extracting current entity values from coordinator...")
+                # Get all attributes from the GrowattData object
+                for attr_name in dir(coordinator.data):
+                    # Skip private/magic methods
+                    if attr_name.startswith('_'):
+                        continue
+                    # Get the value
+                    try:
+                        value = getattr(coordinator.data, attr_name, None)
+                        # Include all non-callable values (including None, zero, etc.)
+                        if not callable(value):
+                            current_entity_values[attr_name] = value
+                    except Exception as e:
+                        _LOGGER.debug(f"Could not get value for {attr_name}: {e}")
+
+                _LOGGER.info(f"Extracted {len(current_entity_values)} current entity values")
+
         # Scan ALL ranges
         all_register_data = {}
         range_responses = {}
@@ -1739,8 +1769,38 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             writer.writerow(["Connection", connection_str])
             writer.writerow(["Connection Type", connection_type.upper()])
             writer.writerow(["Slave ID", slave_id])
+
+            # Add currently selected/configured profile (if coordinator found)
+            if selected_profile_key and selected_profile_name:
+                writer.writerow([])
+                writer.writerow(["CURRENTLY CONFIGURED PROFILE"])
+                writer.writerow(["Selected Profile", selected_profile_name])
+                writer.writerow(["Selected Profile Key", selected_profile_key])
+
+            # Add current entity values from the integration (if coordinator found)
+            if current_entity_values:
+                writer.writerow([])
+                writer.writerow(["CURRENT ENTITY VALUES FROM INTEGRATION"])
+                writer.writerow(["Entity Name", "Current Value"])
+
+                # Sort entities by name for easier reading
+                for entity_name in sorted(current_entity_values.keys()):
+                    value = current_entity_values[entity_name]
+                    # Format the value nicely - show ALL values including zeros and None
+                    if value is None:
+                        writer.writerow([entity_name, "None (unavailable)"])
+                    elif isinstance(value, float):
+                        writer.writerow([entity_name, f"{value:.3f}"])
+                    elif isinstance(value, bool):
+                        writer.writerow([entity_name, str(value)])
+                    elif isinstance(value, (int, str)):
+                        writer.writerow([entity_name, value])
+                    else:
+                        # Other types, just convert to string
+                        writer.writerow([entity_name, str(value)])
+
             writer.writerow([])
-            
+
             # Detection analysis section
             writer.writerow(["DETECTION ANALYSIS"])
             writer.writerow(["Detected Model", detection["model"]])
