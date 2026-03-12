@@ -4,6 +4,101 @@
 
 ---
 
+# Release Notes - v0.5.4
+
+## 🔧 Bug Fix & Enhancement - Register Scan Improvements (Issue #184)
+
+This release improves the diagnostic register scan service to provide better visibility and reduce confusion when troubleshooting profile selection issues.
+
+### What Was Fixed:
+
+**Problem:** Users manually selecting a profile (e.g., "MIN TL-XH") would run the register scan service and see only the auto-detected profile (e.g., "MOD series") in the CSV output. This caused confusion because:
+- The CSV only showed "Suggested Profile Key: mod_6000_15000tl3_xh" (auto-detected)
+- It didn't show what profile the user had actually selected and was using
+- Users thought the suggested profile was what they had configured
+
+**Impact:**
+- User's system was actually working correctly with the selected profile
+- But they couldn't see this in the diagnostic output
+- Led to confusion and unnecessary troubleshooting
+
+### What's New:
+
+#### 1. Currently Configured Profile Display
+
+The register scan CSV now shows **both** the selected profile AND the auto-detected profile:
+
+```csv
+SCAN METADATA
+Connection Type,TCP
+Slave ID,1
+
+CURRENTLY CONFIGURED PROFILE
+Selected Profile,MIN TL-XH 3000-10000
+Selected Profile Key,min_tl_xh_3000_10000_v201
+
+DETECTION ANALYSIS
+Detected Model,MOD Series 6000-15000TL3-XH
+Suggested Profile Key,mod_6000_15000tl3_xh
+```
+
+This makes it clear:
+- ✅ What profile you have configured and are currently using
+- ✅ What profile the auto-detection suggests
+- ✅ Whether there's a mismatch between selected and detected
+
+#### 2. Current Entity Values Section
+
+The register scan now includes a comprehensive snapshot of all current entity values from Home Assistant:
+
+```csv
+CURRENT ENTITY VALUES FROM INTEGRATION
+Entity Name,Current Value
+ac_current,5.234
+ac_frequency,50.020
+ac_power,1234.567
+ac_voltage,230.123
+battery_charge_power,0.000
+battery_current,2.345
+battery_power,567.890
+battery_soc,85.000
+battery_temp,None (unavailable)
+battery_voltage,51.234
+energy_today,12.345
+grid_power,1234.567
+house_consumption,567.890
+pv1_current,6.789
+pv1_power,1234.567
+pv1_voltage,182.345
+...
+```
+
+Features:
+- ✅ Shows **all** entity values including zeros and unavailable
+- ✅ Clearly marks unavailable values as "None (unavailable)"
+- ✅ Alphabetically sorted for easy lookup
+- ✅ Formatted for readability (floats to 3 decimals)
+
+Benefits for debugging:
+- Compare raw register values vs. processed entity values
+- See complete snapshot of integration state at scan time
+- Identify which values are zero vs. missing vs. unavailable
+- Verify entity processing and calculations
+
+### Files Changed:
+- `custom_components/growatt_modbus/diagnostic.py`:
+  - Added imports for profile display name functions
+  - Extract currently selected profile from coordinator
+  - Extract all current entity values from coordinator data
+  - Display both sections in CSV before detection analysis
+
+### Migration Notes:
+- **No action required** - Enhancement is automatic
+- Works when register scan finds a matching integration (same connection)
+- If no integration found, shows detection analysis only (as before)
+
+---
+
 # Release Notes - v0.5.3
 
 ## 🔧 Bug Fix - Missing Battery BMS Temperature Register (Issue #184)
