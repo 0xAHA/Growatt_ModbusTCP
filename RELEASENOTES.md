@@ -4,6 +4,95 @@
 
 ---
 
+# Release Notes - v0.5.7
+
+## 🔧 Critical Fix - MIN TL-XH Battery Registers Corrected (Issue #191)
+
+This release fixes a critical battery sensor issue for **MIN TL-XH 3000-10000 V2.01** inverters where all battery sensors (voltage, current, SOC, temperature) showed zero or incorrect values.
+
+### What Was Fixed:
+
+**Problem:**
+MIN TL-XH users with battery storage (e.g., MIN-4600TL-XH with ARK battery) reported zero values for all battery sensors:
+- Battery voltage: 0V (should be ~212V)
+- Battery current: 0A
+- Battery SOC: 0% (should be actual percentage like 54%)
+- Battery temperature: 0°C (should be actual temp like 21.2°C)
+
+**Root Cause:**
+The MIN TL-XH V2.01 profile was using VPP Protocol registers (31200+ range) for battery state, based on the official Growatt VPP Protocol V2.01 specification. However, user scan data proved that MIN TL-XH inverters **do NOT use the VPP 31200+ range** for battery state - they use the **3000+ range** (similar to MOD series layout).
+
+**Evidence from user register scan:**
+- VPP range (31200-31222): **ALL ZEROS** ❌
+  - 31214 battery_voltage: 0
+  - 31215 battery_current: 0
+  - 31217 battery_soc: 0
+  - 31222 battery_temp: 0
+
+- 3000+ range: **HAS BATTERY DATA** ✅
+  - 3169: 21194 → 211.94V (scale 0.01)
+  - 3170: battery current (scale 0.1)
+  - 3171: 54 → 54% SOC
+  - 3176: 212 → 21.2°C battery temp (scale 0.1)
+
+### The Fix:
+
+**For MIN_TL_XH_3000_10000_V201 profile:**
+
+1. **Added PRIMARY battery state registers** at 3169-3176 (3000+ range):
+   - 3169: battery_voltage (scale 0.01, note different scale than VPP!)
+   - 3170: battery_current (scale 0.1, signed)
+   - 3171: battery_soc (scale 1)
+   - 3176: battery_temp (scale 0.1, signed)
+
+2. **Renamed VPP 31200+ battery registers** with `_vpp` suffix:
+   - 31214: battery_voltage_vpp (not used on MIN TL-XH)
+   - 31215: battery_current_vpp (not used on MIN TL-XH)
+   - 31217: battery_soc_vpp (not used on MIN TL-XH)
+   - 31222: battery_temp_vpp (not used on MIN TL-XH)
+
+3. **Important scale difference**: Battery voltage uses scale **0.01** in 3000+ range vs **0.1** in VPP range!
+
+### Impact:
+
+- ✅ **MIN TL-XH with battery**: All battery sensors now show correct values
+- ✅ Battery voltage shows actual voltage (e.g., 211.94V instead of 0V)
+- ✅ Battery SOC shows actual percentage (e.g., 54% instead of 0%)
+- ✅ Battery temperature shows actual temp (e.g., 21.2°C instead of 0°C)
+- ✅ MIN TL-XH now uses MOD-like register layout for battery state
+
+### Affected Models:
+
+- MIN TL-XH 3000-10000 V2.01 with battery storage (e.g., MIN-4600TL-XH with ARK battery)
+
+### Technical Background:
+
+The VPP registers were originally added in November 2025 based on the **official Growatt VPP Communication Protocol V2.01 specification** (dated 2024.9.20), which documented the 31200+ range for battery information. The protocol specification was assumed to apply to all V2.01 inverters including MIN TL-XH.
+
+However, user feedback proved this assumption was **incorrect for MIN TL-XH** - these inverters follow the MOD series register layout (3000+ range) for battery state, not the VPP protocol layout. This is a case where real-world hardware behavior differs from the protocol specification.
+
+### Files Changed:
+
+- `custom_components/growatt_modbus/profiles/tl_xh.py`:
+  - MIN_TL_XH_3000_10000_V201: Added registers 3169-3176 as primary battery state
+  - Renamed VPP registers 31214/31215/31217/31222 with _vpp suffix
+- `custom_components/growatt_modbus/manifest.json`: Version bumped to 0.5.7
+- `README.md`: Version badge updated to 0.5.7
+
+### Migration Notes:
+
+- **No action required** - Updates apply automatically on restart
+- Battery sensors will immediately show correct values
+- If you previously had 0V/0%/0°C, values will now reflect actual battery state
+- Historical data remains unchanged (new readings start from restart)
+
+### Related Issues:
+
+- Fixes #191 - MIN TL-XH battery sensors showing zero
+- User-confirmed: 3000+ range contains correct battery data, VPP range returns zeros
+
+---
+
 # Release Notes - v0.5.6
 
 ## 🔧 Critical Fix - SPH Battery SOC Register Priority (Issue #185)
