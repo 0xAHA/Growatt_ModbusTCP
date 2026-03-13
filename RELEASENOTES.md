@@ -4,6 +4,69 @@
 
 ---
 
+# Release Notes - v0.5.5
+
+## 🔧 Bug Fix - SPH 7-10kW Battery Sensor Fixes
+
+This release applies the same battery sensor fixes from v0.5.1 (SPH 3-6kW) to the **SPH 7-10kW V2.01** profile, ensuring consistent and accurate battery monitoring across all SPH models.
+
+### What Was Fixed:
+
+**Problem:** SPH 7-10kW V2.01 users were experiencing the same battery sensor issues that were fixed for SPH 3-6kW in v0.5.1, but the fixes were never applied to the 7-10kW profile:
+- Battery SOC showing 0% instead of actual value (e.g., should be 85%)
+- Battery energy registers showing incorrect values
+- AC charge energy sensor potentially showing garbage values
+
+**Root Cause:**
+The battery sensor fixes from v0.5.1 (commit 9c71de7) were only applied to SPH_3000_6000_V201 but not to SPH_7000_10000_V201, leaving 7-10kW users with the same issues.
+
+### The Fix:
+
+Applied all three fixes to **SPH_7000_10000_V201** profile:
+
+**1. Battery SOC Fix:**
+- Added register 1086 for battery_soc (BMS value)
+- Overrides inherited register 17 which shows 0
+- Provides correct SOC reading from battery management system
+
+**2. Battery Energy Registers Fix:**
+- Changed registers 31202-31203 from `battery_charge_power` to `battery_discharge_today` (energy)
+- Added registers 31204-31205 for `battery_charge_total` (kWh)
+- Added registers 31206-31207 for `battery_charge_today` (kWh)
+- Added registers 31208-31209 for `battery_discharge_total` (kWh)
+- Matches VPP Protocol V2.01 specification and real-world register data
+
+**3. AC Charge Energy Fix:**
+- Added register 115 for `ac_charge_energy_total`
+- Prevents incorrect 32-bit pairing of registers 31220-31221
+- Avoids garbage values like 70M+ kWh
+
+### Impact:
+
+- ✅ **SPH 7-10kW** battery SOC now shows correct percentage (was 0%)
+- ✅ Battery energy tracking now accurate (charge/discharge today & total)
+- ✅ AC charge energy sensor shows correct values
+- ✅ **Full parity** with SPH 3-6kW fixes from v0.5.1
+
+### Affected Models:
+
+- SPH 7000-10000 V2.01 (single-phase hybrid with VPP protocol)
+
+### Files Changed:
+
+- `custom_components/growatt_modbus/profiles/sph.py`:
+  - Line ~579: Added register 1086 (battery_soc from BMS)
+  - Lines ~667-675: Fixed battery energy registers 31202-31209
+  - Line ~686: Added register 115 (ac_charge_energy_total)
+
+### Migration Notes:
+
+- **No action required** - Updates apply automatically on restart
+- Battery sensors will show correct values immediately
+- Historical data remains unchanged (new readings start from restart)
+
+---
+
 # Release Notes - v0.5.4
 
 ## 🔧 Bug Fix & Enhancement - Register Scan Improvements (Issue #184)
