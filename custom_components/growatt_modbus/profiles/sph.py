@@ -417,10 +417,10 @@ SPH_3000_6000_V201 = {
         # === Legacy REGISTERS (0-124 range) ===
         **SPH_3000_6000['input_registers'],
 
-        # === STORAGE RANGE REGISTERS (1000-1124) ===
-        # Override battery_soc from inherited register 17 (which shows 0) with actual BMS value
-        1086: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery state of charge from BMS'},
+        # Disable inherited register 17 - use VPP register 31217 instead (standard SPH models)
+        17: {'name': 'battery_soc_legacy', 'scale': 1, 'unit': '%', 'desc': 'Legacy SOC register (shows 0 - use VPP register 31217)'},
 
+        # === STORAGE RANGE REGISTERS (1000-1124) ===
         # Grid Energy (to grid / export)
         1048: {'name': 'energy_to_grid_today_high', 'scale': 1, 'unit': '', 'pair': 1049},
         1049: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 1048, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
@@ -574,10 +574,10 @@ SPH_7000_10000_V201 = {
         # === Legacy REGISTERS (0-124 range) ===
         **SPH_7000_10000['input_registers'],
 
-        # === STORAGE RANGE REGISTERS (1000-1124) ===
-        # Override battery_soc from inherited register 17 (which shows 0) with actual BMS value
-        1086: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery state of charge from BMS'},
+        # Disable inherited register 17 - use VPP register 31217 instead (standard SPH models)
+        17: {'name': 'battery_soc_legacy', 'scale': 1, 'unit': '%', 'desc': 'Legacy SOC register (shows 0 - use VPP register 31217)'},
 
+        # === STORAGE RANGE REGISTERS (1000-1124) ===
         # Grid Energy (to grid / export)
         1048: {'name': 'energy_to_grid_today_high', 'scale': 1, 'unit': '', 'pair': 1049},
         1049: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 1048, 'combined_scale': 0.1, 'combined_unit': 'kWh'},

@@ -4,6 +4,74 @@
 
 ---
 
+# Release Notes - v0.5.6
+
+## 🔧 Critical Fix - SPH Battery SOC Register Priority (Issue #185)
+
+This release fixes a critical battery SOC (State of Charge) reading issue for **SPH 3-6kW and 7-10kW V2.01** inverters where the SOC sensor disappeared or showed 0% after upgrading to v0.5.4+.
+
+### What Was Fixed:
+
+**Problem:**
+After upgrading to v0.5.4+, some SPH users reported that battery SOC disappeared or showed 0% instead of the actual value:
+- Battery SOC sensor showing 0% despite battery being charged (e.g., should be 100%)
+- Register 17 (legacy) returns incorrect value (0%)
+- Register 31217 (VPP range) contains the correct SOC value
+- The integration was reading register 17 first due to register lookup priority
+
+**Root Cause:**
+The `_find_register_by_name('battery_soc')` function searches input registers in insertion order and returns the first name match. Even though register 1086 was added in v0.5.5 as an "override" for standard SPH V201 models:
+1. Register 17 (inherited from base profile) with name='battery_soc' was found **first**
+2. Register 1086 with name='battery_soc' was never reached
+3. Register 31217 with maps_to='battery_soc' was never reached
+4. Result: Integration read register 17 (shows 0%) instead of register 31217 (correct value)
+
+### The Fix:
+
+**For SPH 3-6kW and 7-10kW V2.01 profiles:**
+
+1. **Renamed register 17** to `battery_soc_legacy` (prevents name match)
+2. **Removed register 1086** (BMS SOC) from standard SPH V201 profiles
+   - Register 1086 is only valid for HU models with Battery Management System
+   - Standard SPH 3-6kW/7-10kW models don't have BMS, so register 1086 may not respond
+3. **Uses register 31217** (VPP range) as primary SOC source via `maps_to='battery_soc'`
+   - User-confirmed working in Issue #185
+   - Matches VPP Protocol V2.01 specification
+
+### Impact:
+
+- ✅ **SPH 3-6kW V2.01**: Battery SOC now reads from register 31217 (correct value)
+- ✅ **SPH 7-10kW V2.01**: Battery SOC now reads from register 31217 (correct value)
+- ✅ Register priority fixed: 31217 (VPP) instead of 17 (legacy 0%)
+- ✅ HU models unaffected (still use register 1086 BMS SOC)
+
+### Affected Models:
+
+- SPH 3000-6000 V2.01 (standard, non-HU)
+- SPH 7000-10000 V2.01 (standard, non-HU)
+
+### Files Changed:
+
+- `custom_components/growatt_modbus/profiles/sph.py`:
+  - SPH_3000_6000_V201: Renamed register 17, removed register 1086
+  - SPH_7000_10000_V201: Renamed register 17, removed register 1086
+- `custom_components/growatt_modbus/manifest.json`: Version bumped to 0.5.6
+- `README.md`: Version badge updated to 0.5.6
+
+### Migration Notes:
+
+- **No action required** - Updates apply automatically on restart
+- Battery SOC sensor will immediately show correct percentage
+- If you previously had 0% SOC, it will now show actual battery charge level
+- Historical data remains unchanged (new readings start from restart)
+
+### Related Issues:
+
+- Fixes #185 - SPH3-6k battery SOC showing 0% after upgrade
+- User-confirmed: Register 31217 contains correct SOC value
+
+---
+
 # Release Notes - v0.5.5
 
 ## 🔧 Bug Fix - SPH 7-10kW Battery Sensor Fixes
