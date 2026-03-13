@@ -303,7 +303,7 @@ MIN_TL_XH_3000_10000_V201 = {
         # Temperatures
         3093: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Inverter temperature', 'signed': True},
         3094: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'IPM temperature', 'signed': True},
-        3095: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Boost temperature', 'signed': True},
+        97: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Boost temperature (at register 97, not 3095)', 'signed': True},
 
         # Fault Codes
         3105: {'name': 'fault_code', 'scale': 1, 'unit': '', 'desc': 'Main fault code'},
@@ -312,7 +312,15 @@ MIN_TL_XH_3000_10000_V201 = {
         # Battery Extended Diagnostics
         3136: {'name': 'battery_bms_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery BMS/module temperature'},
 
-        # === LEGACY BATTERY POWER REGISTERS (3178-3181) ===
+        # === BATTERY STATE REGISTERS (3169-3176) - PRIMARY for MIN TL-XH ===
+        # MIN TL-XH uses 3000+ range for battery state (not VPP 31200+ range)
+        # Similar to MOD series layout
+        3169: {'name': 'battery_voltage', 'scale': 0.01, 'unit': 'V', 'desc': 'Battery voltage (primary source for MIN TL-XH)'},
+        3170: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True, 'desc': 'Battery current (primary source for MIN TL-XH)'},
+        3171: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (primary source for MIN TL-XH)'},
+        3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature (primary source for MIN TL-XH)'},
+
+        # === BATTERY POWER REGISTERS (3178-3181) ===
         # Some TL-XH models provide unsigned battery power in addition to VPP 31200+ signed power
         # These are fallback registers when VPP 31200+ is not available
         3178: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 3179, 'desc': 'Battery discharge power HIGH (unsigned)'},
@@ -340,10 +348,10 @@ MIN_TL_XH_3000_10000_V201 = {
         31207: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery discharge energy today'},
         31208: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31209, 'desc': 'Battery discharge power HIGH'},
         31209: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery discharge power (signed: positive=discharging, negative=charging)'},
-        31214: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'signed': True},
-        31215: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
-        31217: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
-        31222: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'signed': True, 'desc': 'Battery voltage (VPP range - not used on MIN TL-XH, use 3169 instead)'},
+        31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'signed': True, 'desc': 'Battery current (VPP range - not used on MIN TL-XH, use 3170 instead)'},
+        31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (VPP range - not used on MIN TL-XH, use 3171 instead)'},
+        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temp (VPP range - not used on MIN TL-XH, use 3176 instead)'},
 
         # Battery power (calculated from charge/discharge)
         31220: {'name': 'battery_power', 'scale': 1, 'unit': 'W', 'desc': 'Battery power (positive=discharge, negative=charge)', 'signed': True},
