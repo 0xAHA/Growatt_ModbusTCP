@@ -1582,19 +1582,17 @@ class GrowattModbus:
         self._battery_range_detected = True
         return self._battery_register_range
 
-    def _get_register_value_with_fallback(self, name: str) -> Optional[float]:
-        """Get register value using detected battery register range preference.
+    def _find_register_by_name_with_fallback(self, name: str) -> Optional[int]:
+        """Find register address by name, respecting detected battery register range.
 
-        When both VPP (31000+) and fallback (1000+/3000+) registers exist for the same sensor:
-        1. On first call, detect which range has valid data by checking multiple key sensors
-        2. Use the detected range consistently for all subsequent reads
-        3. This prevents mixing VPP and fallback values and handles legitimate zeros correctly
+        Similar to _get_register_value_with_fallback() but returns the address instead of the value.
+        This is useful when we need the address for debugging or accessing paired registers.
 
         Args:
-            name: The register name to look up (e.g., 'battery_discharge_today_low')
+            name: The register name to look up (e.g., 'charge_power_low')
 
         Returns:
-            The scaled register value, or None if no valid value found
+            The register address in the preferred range, or None if not found
         """
         addresses = self._find_all_registers_by_name(name)
 
@@ -1616,9 +1614,30 @@ class GrowattModbus:
             if not preferred_addrs:
                 preferred_addrs = addresses  # Use whatever is available
 
-        # Use the first address from preferred range
-        addr = preferred_addrs[0]
+        # Return the first address from preferred range
+        return preferred_addrs[0]
+
+    def _get_register_value_with_fallback(self, name: str) -> Optional[float]:
+        """Get register value using detected battery register range preference.
+
+        When both VPP (31000+) and fallback (1000+/3000+) registers exist for the same sensor:
+        1. On first call, detect which range has valid data by checking multiple key sensors
+        2. Use the detected range consistently for all subsequent reads
+        3. This prevents mixing VPP and fallback values and handles legitimate zeros correctly
+
+        Args:
+            name: The register name to look up (e.g., 'battery_discharge_today_low')
+
+        Returns:
+            The scaled register value, or None if no valid value found
+        """
+        addr = self._find_register_by_name_with_fallback(name)
+
+        if addr is None:
+            return None
+
         value = self._get_register_value(addr)
+        preferred_range = self._battery_register_range
 
         if value is not None:
             logger.debug(f"Using {preferred_range} range register {addr} for '{name}': {value}")
@@ -1695,11 +1714,11 @@ class GrowattModbus:
                 data.battery_voltage = 0.0
 
             # Battery current (signed: positive=discharge, negative=charge)
-            # Try VPP protocol first (31216 - low register of 32-bit pair)
-            addr = self._find_register_by_name('battery_current_low')
+            # Use range-aware lookup to respect VPP vs fallback detection
+            addr = self._find_register_by_name_with_fallback('battery_current_low')
             if not addr:
                 # Fallback to single-register name (used by legacy/WIT maps)
-                addr = self._find_register_by_name('battery_current')
+                addr = self._find_register_by_name_with_fallback('battery_current')
             if not addr:
                 # Fallback to legacy register (3170)
                 addr = self._find_register_by_name('battery_current_legacy')
@@ -1715,7 +1734,8 @@ class GrowattModbus:
                 data.battery_soc = 0.0
 
             # Battery temperature
-            addr = self._find_register_by_name('battery_temp')
+            # Use range-aware lookup to respect VPP vs fallback detection
+            addr = self._find_register_by_name_with_fallback('battery_temp')
             if addr:
                 data.battery_temp = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery temp from reg {addr}: {data.battery_temp}°C")
@@ -1737,11 +1757,11 @@ class GrowattModbus:
                     logger.debug(f"Battery voltage BMS from reg {addr}: {value}V")
 
             # Battery power (signed: positive=charging, negative=discharging)
-            # Try new signed battery_power register first (MOD series @ 31126)
-            addr = self._find_register_by_name('battery_power_low')
+            # Use range-aware lookup to respect VPP vs fallback detection
+            addr = self._find_register_by_name_with_fallback('battery_power_low')
             if addr:
                 raw_low = self._register_cache.get(addr, 0)
-                pair_addr = self._find_register_by_name('battery_power_high')
+                pair_addr = self._find_register_by_name_with_fallback('battery_power_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
 
                 # WIT Battery Power Scale Auto-Detection (before applying scale)
@@ -1782,10 +1802,11 @@ class GrowattModbus:
             else:
                 # Fallback: Try old separate charge/discharge registers (SPH series)
                 # These registers are absolute values, but may be swapped for opposite convention inverters
-                addr = self._find_register_by_name('charge_power_low')
+                # Use range-aware lookup to respect VPP vs fallback detection
+                addr = self._find_register_by_name_with_fallback('charge_power_low')
                 if addr:
                     raw_low = self._register_cache.get(addr, 0)
-                    pair_addr = self._find_register_by_name('charge_power_high')
+                    pair_addr = self._find_register_by_name_with_fallback('charge_power_high')
                     raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                     raw_charge_power = self._get_register_value(addr) or 0.0
                     logger.debug(f"Charge power (raw): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {raw_charge_power}W")
@@ -1802,10 +1823,10 @@ class GrowattModbus:
                     data.charge_power = data.battery_voltage * abs(data.battery_current)
                     logger.debug(f"Charge power (calculated): {data.battery_voltage}V × {abs(data.battery_current)}A = {data.charge_power}W")
 
-                addr = self._find_register_by_name('discharge_power_low')
+                addr = self._find_register_by_name_with_fallback('discharge_power_low')
                 if addr:
                     raw_low = self._register_cache.get(addr, 0)
-                    pair_addr = self._find_register_by_name('discharge_power_high')
+                    pair_addr = self._find_register_by_name_with_fallback('discharge_power_high')
                     raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
                     raw_discharge_power = self._get_register_value(addr) or 0.0
                     logger.debug(f"Discharge power (raw): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {raw_discharge_power}W")
