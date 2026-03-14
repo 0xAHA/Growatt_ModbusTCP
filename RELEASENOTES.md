@@ -4,6 +4,27 @@
 
 ---
 
+# Release Notes - v0.5.9
+
+## 🔧 Fix - Battery Power Inversion for VPP Protocol Registers
+
+This release fixes battery power sign interpretation issues where charge/discharge values appeared inverted on inverters using VPP Protocol V2.01 registers.
+
+### What Was Fixed:
+
+- Battery power registers now correctly interpret signed 16-bit values
+- Fixed battery power showing inverted signs (positive when should be negative)
+- Added proper register range detection (VPP vs fallback) to ensure consistent battery data
+- Improved fallback register detection with score-based approach
+
+### Impact:
+
+- ✅ SPH, SPM, and MIN TL-XH inverters now show correct battery power signs
+- ✅ Battery calculations (V×I) now match power register readings
+- ✅ Consistent battery data from detected register range
+
+---
+
 # Release Notes - v0.5.8
 
 ## 🔧 Fix - Battery Power Sign Interpretation for VPP Protocol Registers
