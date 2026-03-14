@@ -213,8 +213,7 @@ class GrowattData:
     battery_current: float = 0.0      # A (signed: +discharge, -charge)
     battery_soc: float = 0.0          # %
     battery_temp: float = 0.0         # °C
-    battery_soh: float = 0.0          # % (State of Health - WIT)
-    battery_voltage_bms: float = 0.0  # V (BMS voltage reading - WIT)
+    # battery_soh and battery_voltage_bms are WIT-only - set dynamically if register exists
     charge_power: float = 0.0         # W
     discharge_power: float = 0.0      # W
     charge_energy_today: float = 0.0  # kWh
@@ -1721,17 +1720,21 @@ class GrowattModbus:
                 data.battery_temp = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery temp from reg {addr}: {data.battery_temp}°C")
 
-            # Battery State of Health (WIT)
+            # Battery State of Health (WIT-only - only set if register exists in profile)
             addr = self._find_register_by_name('battery_soh')
             if addr:
-                data.battery_soh = self._get_register_value(addr) or 0.0
-                logger.debug(f"Battery SOH from reg {addr}: {data.battery_soh}%")
+                value = self._get_register_value(addr)
+                if value is not None:
+                    setattr(data, 'battery_soh', value)
+                    logger.debug(f"Battery SOH from reg {addr}: {value}%")
 
-            # Battery Voltage BMS (WIT - more accurate than standard battery_voltage)
+            # Battery Voltage BMS (WIT-only - more accurate than standard battery_voltage)
             addr = self._find_register_by_name('battery_voltage_bms')
             if addr:
-                data.battery_voltage_bms = self._get_register_value(addr) or 0.0
-                logger.debug(f"Battery voltage BMS from reg {addr}: {data.battery_voltage_bms}V")
+                value = self._get_register_value(addr)
+                if value is not None:
+                    setattr(data, 'battery_voltage_bms', value)
+                    logger.debug(f"Battery voltage BMS from reg {addr}: {value}V")
 
             # Battery power (signed: positive=charging, negative=discharging)
             # Try new signed battery_power register first (MOD series @ 31126)
