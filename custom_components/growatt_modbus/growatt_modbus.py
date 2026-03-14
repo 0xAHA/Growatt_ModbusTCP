@@ -1494,7 +1494,69 @@ class GrowattModbus:
             if reg_info.get('maps_to') == name:
                 return addr
         return None
-    
+
+    def _find_all_registers_by_name(self, name: str) -> list[int]:
+        """Find ALL register addresses matching a name, alias, or maps_to attribute.
+
+        Returns a list of all matching addresses, sorted by preference:
+        1. Fallback ranges first (1000-1999, 3000-3999)
+        2. VPP ranges last (31000+)
+
+        This allows smart fallback when VPP registers return zero but fallback registers have valid data.
+        """
+        input_regs = self.register_map['input_registers']
+        matches = []
+
+        for addr, reg_info in input_regs.items():
+            if (reg_info['name'] == name or
+                reg_info.get('alias') == name or
+                reg_info.get('maps_to') == name):
+                matches.append(addr)
+
+        # Sort by priority: fallback ranges (1000-3999) before VPP (31000+)
+        def register_priority(addr):
+            if 1000 <= addr < 4000:  # Fallback ranges
+                return 0
+            elif addr >= 31000:  # VPP range
+                return 1
+            else:  # Other ranges
+                return 2
+
+        matches.sort(key=register_priority)
+        return matches
+
+    def _get_register_value_with_fallback(self, name: str) -> Optional[float]:
+        """Get register value with smart fallback between VPP and legacy ranges.
+
+        When both VPP (31000+) and fallback (1000+/3000+) registers exist for the same sensor:
+        1. Check all matching registers in priority order (fallback first, VPP last)
+        2. Return the first non-zero value found
+        3. This handles cases where VPP registers are readable but return 0
+
+        Args:
+            name: The register name to look up (e.g., 'battery_discharge_today_low')
+
+        Returns:
+            The scaled register value, or None if no valid value found
+        """
+        addresses = self._find_all_registers_by_name(name)
+
+        if not addresses:
+            return None
+
+        # Try each address in priority order (fallback ranges first)
+        for addr in addresses:
+            value = self._get_register_value(addr)
+            if value is not None and value != 0:
+                # Found a non-zero value!
+                logger.debug(f"Using value from register {addr} for '{name}': {value}")
+                return value
+
+        # All addresses returned zero or None - use the first one (highest priority)
+        value = self._get_register_value(addresses[0])
+        logger.debug(f"All registers for '{name}' are zero, using {addresses[0]}: {value}")
+        return value
+
     def _read_energy_breakdown(self, data: GrowattData) -> None:
         """Read detailed energy breakdown (storage/hybrid models)"""
         try:
@@ -1687,64 +1749,62 @@ class GrowattModbus:
                     logger.debug(f"Discharge power (calculated): {data.battery_voltage}V × {data.battery_current}A = {data.discharge_power}W")
             
             # Charge energy today
-            # Try both naming conventions: "charge_energy_today" and "battery_charge_today"
-            addr = self._find_register_by_name('charge_energy_today_low')
-            if not addr:
-                addr = self._find_register_by_name('battery_charge_today_low')
-            if addr:
-                raw_low = self._register_cache.get(addr, 0)
-                pair_addr = self._find_register_by_name('charge_energy_today_high')
-                if not pair_addr:
-                    pair_addr = self._find_register_by_name('battery_charge_today_high')
-                raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                data.charge_energy_today = self._get_register_value(addr) or 0.0
+            # Try both naming conventions with smart fallback: "charge_energy_today" and "battery_charge_today"
+            value = self._get_register_value_with_fallback('charge_energy_today_low')
+            if value is None:
+                value = self._get_register_value_with_fallback('battery_charge_today_low')
+            if value is not None:
+                data.charge_energy_today = value
                 # SPF uses charge_energy_* registers for AC charging - populate both fields
                 data.ac_charge_energy_today = data.charge_energy_today
-                logger.debug(f"Charge energy today: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_energy_today} kWh (also populating ac_charge_energy_today for SPF)")
+                # Log which register was used
+                addr = self._find_register_by_name('charge_energy_today_low') or self._find_register_by_name('battery_charge_today_low')
+                logger.debug(f"Charge energy today from register {addr}: {data.charge_energy_today} kWh (also populating ac_charge_energy_today for SPF)")
+            else:
+                data.charge_energy_today = 0.0
+                data.ac_charge_energy_today = 0.0
 
             # Discharge energy today
-            # Try both naming conventions: "discharge_energy_today" and "battery_discharge_today"
-            addr = self._find_register_by_name('discharge_energy_today_low')
-            if not addr:
-                addr = self._find_register_by_name('battery_discharge_today_low')
-            if addr:
-                raw_low = self._register_cache.get(addr, 0)
-                pair_addr = self._find_register_by_name('discharge_energy_today_high')
-                if not pair_addr:
-                    pair_addr = self._find_register_by_name('battery_discharge_today_high')
-                raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                data.discharge_energy_today = self._get_register_value(addr) or 0.0
-                logger.debug(f"Discharge energy today: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_energy_today} kWh")
+            # Try both naming conventions with smart fallback: "discharge_energy_today" and "battery_discharge_today"
+            value = self._get_register_value_with_fallback('discharge_energy_today_low')
+            if value is None:
+                value = self._get_register_value_with_fallback('battery_discharge_today_low')
+            if value is not None:
+                data.discharge_energy_today = value
+                # Log which register was used
+                addr = self._find_register_by_name('discharge_energy_today_low') or self._find_register_by_name('battery_discharge_today_low')
+                logger.debug(f"Discharge energy today from register {addr}: {data.discharge_energy_today} kWh")
+            else:
+                data.discharge_energy_today = 0.0
 
             # Charge energy total
-            # Try both naming conventions: "charge_energy_total" and "battery_charge_total"
-            addr = self._find_register_by_name('charge_energy_total_low')
-            if not addr:
-                addr = self._find_register_by_name('battery_charge_total_low')
-            if addr:
-                raw_low = self._register_cache.get(addr, 0)
-                pair_addr = self._find_register_by_name('charge_energy_total_high')
-                if not pair_addr:
-                    pair_addr = self._find_register_by_name('battery_charge_total_high')
-                raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                data.charge_energy_total = self._get_register_value(addr) or 0.0
+            # Try both naming conventions with smart fallback: "charge_energy_total" and "battery_charge_total"
+            value = self._get_register_value_with_fallback('charge_energy_total_low')
+            if value is None:
+                value = self._get_register_value_with_fallback('battery_charge_total_low')
+            if value is not None:
+                data.charge_energy_total = value
                 # SPF uses charge_energy_* registers for AC charging - populate both fields
                 data.ac_charge_energy_total = data.charge_energy_total
-                logger.debug(f"Charge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.charge_energy_total} kWh (also populating ac_charge_energy_total for SPF)")
+                # Log which register was used
+                addr = self._find_register_by_name('charge_energy_total_low') or self._find_register_by_name('battery_charge_total_low')
+                logger.debug(f"Charge energy total from register {addr}: {data.charge_energy_total} kWh (also populating ac_charge_energy_total for SPF)")
+            else:
+                data.charge_energy_total = 0.0
+                data.ac_charge_energy_total = 0.0
 
             # Discharge energy total
-            # Try both naming conventions: "discharge_energy_total" and "battery_discharge_total"
-            addr = self._find_register_by_name('discharge_energy_total_low')
-            if not addr:
-                addr = self._find_register_by_name('battery_discharge_total_low')
-            if addr:
-                raw_low = self._register_cache.get(addr, 0)
-                pair_addr = self._find_register_by_name('discharge_energy_total_high')
-                if not pair_addr:
-                    pair_addr = self._find_register_by_name('battery_discharge_total_high')
-                raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                data.discharge_energy_total = self._get_register_value(addr) or 0.0
-                logger.debug(f"Discharge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.discharge_energy_total} kWh")
+            # Try both naming conventions with smart fallback: "discharge_energy_total" and "battery_discharge_total"
+            value = self._get_register_value_with_fallback('discharge_energy_total_low')
+            if value is None:
+                value = self._get_register_value_with_fallback('battery_discharge_total_low')
+            if value is not None:
+                data.discharge_energy_total = value
+                # Log which register was used
+                addr = self._find_register_by_name('discharge_energy_total_low') or self._find_register_by_name('battery_discharge_total_low')
+                logger.debug(f"Discharge energy total from register {addr}: {data.discharge_energy_total} kWh")
+            else:
+                data.discharge_energy_total = 0.0
 
             # AC Charge Energy Today (WIT-specific - SPF populates this from charge_energy_today above)
             addr = self._find_register_by_name('ac_charge_energy_today_low')
