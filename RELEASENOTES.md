@@ -6,6 +6,116 @@
 
 # Release Notes - v0.5.8
 
+## 🔧 Fix - Battery Power Sign Interpretation for VPP Protocol Registers
+
+This release fixes battery power inversion issues where battery charge/discharge power values were showing with incorrect signs (positive when should be negative, or vice versa) on inverters using VPP Protocol V2.01 registers.
+
+### What Was Fixed:
+
+**Problem:**
+Users with SPH, SPM, and MIN TL-XH inverters using VPP protocol registers reported battery power values showing with inverted signs:
+- Battery power showing large positive values (e.g., 56353W) when actually discharging at -918.3W
+- Charge/discharge direction appearing backwards in Home Assistant
+- Battery power calculations not matching voltage × current
+
+**Root Cause:**
+Battery power registers in VPP protocol (31200-31209) use **signed 16-bit values**, but were being interpreted as unsigned integers. This caused:
+- Negative discharge values to wrap around to large positive numbers
+- Sign bit (0x8000) not being recognized
+- Example: -9183 (0xDC31) read as 56353 instead
+
+**Technical Details:**
+The existing `_get_register_value()` method already had correct signed conversion logic (lines 664-668 for 32-bit, 682-686 for 16-bit), but only when the register definition includes `'signed': True`. VPP battery power registers were missing this attribute.
+
+### The Fix:
+
+**Added `'signed': True` to VPP battery power registers:**
+
+1. **SPH profiles** (register 31203):
+   - `battery_charge_power_low` now marked as signed
+
+2. **TL_XH profiles** (registers 31205, 31209):
+   - `charge_power_low` now marked as signed
+   - `discharge_power_low` now marked as signed
+
+3. **MIN TL-XH profiles** (registers 31205, 31209):
+   - `charge_power_low` now marked as signed
+   - `discharge_power_low` now marked as signed
+
+**Updated register descriptions:**
+```python
+# Before:
+31205: {'name': 'charge_power_low', 'desc': 'Battery charge power (unsigned, positive=charging)'}
+
+# After:
+31205: {'name': 'charge_power_low', 'signed': True, 'desc': 'Battery charge power (signed: positive=charging, negative=discharging)'}
+```
+
+### VPP vs Fallback Register Range Detection
+
+Additionally, this release includes improved battery register fallback detection to ensure consistent data across all battery sensors.
+
+**The Challenge:**
+Inverters may support multiple register ranges for battery data:
+- **VPP registers** (31200-31299): Modern VPP Protocol V2.01 with signed values
+- **Fallback registers** (3000-3999): Legacy range with unsigned/different conventions
+
+Previous implementation would try both ranges independently for each sensor, which could:
+- Mix VPP and fallback values across different sensors
+- Not distinguish between "legitimately zero" vs "wrong register range"
+- Cause inconsistent battery power calculations
+
+**The Solution:**
+- Detect which register range is active (VPP vs fallback) **once per session**
+- Check multiple key battery sensors (voltage, SOC, power, energy) for non-zero values
+- Use score-based detection: whichever range has more non-zero values wins
+- Use the detected range **consistently** for ALL battery sensors
+- Default to fallback if both ranges are zero (more universal)
+
+This ensures:
+- Proper sign interpretation based on register range (VPP=signed, fallback=may vary)
+- Consistent data source across all battery sensors
+- No mixing of VPP and fallback register data
+- Correct handling of legitimate zero values
+
+### Impact:
+
+- ✅ **SPH inverters**: Battery power now shows correct sign (VPP registers properly signed)
+- ✅ **MIN TL-XH inverters**: Battery power direction correct (VPP registers properly signed)
+- ✅ **All VPP-enabled profiles**: Consistent battery data from detected register range
+- ✅ **Fallback registers**: Still work correctly when VPP registers unavailable
+- ✅ **Battery calculations**: V×I now matches power register readings
+
+### Affected Models:
+
+**Fixed by VPP register signing:**
+- SPH 3-6kW, 7-10kW (VPP Protocol V2.01)
+- SPM series
+- MIN TL-XH 3000-10000 (VPP Protocol V2.01)
+- MOD TL3-XH series
+
+**Improved by register range detection:**
+- All models with both VPP and fallback battery registers
+
+### Code Changes:
+
+**Profiles** (`sph.py`, `tl_xh.py`):
+- Added `'signed': True` to battery power registers 31203, 31205, 31209
+- Updated register descriptions to clarify sign conventions
+
+**Core Logic** (`growatt_modbus.py`):
+- Added `_battery_register_range` detection logic
+- Score-based detection across multiple battery sensors
+- Consistent range usage via `_get_register_value_with_fallback()`
+
+### Files Changed:
+
+- `custom_components/growatt_modbus/profiles/sph.py`: Signed battery power registers
+- `custom_components/growatt_modbus/profiles/tl_xh.py`: Signed battery power registers
+- `custom_components/growatt_modbus/growatt_modbus.py`: VPP vs fallback range detection
+
+---
+
 ## 🔧 Fix - WIT Sensors No Longer Appear on Non-WIT Profiles
 
 This release fixes a sensor visibility issue where **WIT-specific sensors** (`battery_soh` and `battery_voltage_bms`) incorrectly appeared on non-WIT inverter profiles, showing confusing 0 values.
