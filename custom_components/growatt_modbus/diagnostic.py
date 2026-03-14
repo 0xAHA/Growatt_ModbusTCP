@@ -551,8 +551,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         pv_power = getattr(data, "pv_total_power", 0)
         consumption = getattr(data, "house_consumption", 0) or getattr(data, "power_to_load", 0)
 
-        # Read RAW grid power (before inversion)
-        raw_grid_power = getattr(data, "power_to_grid", 0)
+        # SPH-TL3 specific: Check both power_to_grid AND power_to_user
+        # Different CT sensor configs (no sensor/single/dual) affect which registers are active
+        power_to_grid = getattr(data, "power_to_grid", 0)
+        power_to_user = getattr(data, "power_to_user", 0)
 
         # Need clear export scenario for reliable detection
         if pv_power < 1000:
@@ -600,11 +602,26 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             )
             return
 
+        # Determine which register has the actual grid power value
+        # Typically one register shows export, the other shows import
+        if abs(power_to_grid) > abs(power_to_user):
+            # power_to_grid has the dominant value
+            raw_grid_power = power_to_grid
+            register_name = "power_to_grid"
+        else:
+            # power_to_user has the dominant value (or they're equal)
+            # For import scenarios, power_to_user is typically positive
+            # We need to negate it to get the grid power sign
+            raw_grid_power = -power_to_user
+            register_name = "power_to_user"
+
         # Analyze grid power sign
         _LOGGER.info(
             "Grid orientation detection: PV=%.0fW, Consumption=%.0fW, "
-            "Expected export=%.0fW, Raw grid=%.0fW",
-            pv_power, consumption, expected_export, raw_grid_power
+            "Expected export=%.0fW, power_to_grid=%.0fW, power_to_user=%.0fW, "
+            "Using %s=%.0fW",
+            pv_power, consumption, expected_export, power_to_grid, power_to_user,
+            register_name, raw_grid_power
         )
 
         # IEC 61850 standard: positive = export, negative = import
@@ -620,25 +637,28 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             recommended_invert = True
             confidence = "High"
             explanation = (
-                "Your inverter follows **IEC 61850 standard** (positive = export).\n"
-                "Home Assistant expects **negative = export** for visualization.\n"
-                "**Inversion is needed** for correct display."
+                f"Your inverter follows **IEC 61850 standard** (positive = export).\n"
+                f"Register used: **{register_name}** = {power_to_grid if register_name == 'power_to_grid' else power_to_user:.0f}W\n"
+                f"Home Assistant expects **negative = export** for visualization.\n"
+                f"**Inversion is needed** for correct display."
             )
         elif raw_grid_power < -100:
             # Negative grid power while exporting = already inverted or wrong
             recommended_invert = False
             confidence = "High"
             explanation = (
-                "Your grid power is already in **Home Assistant format** (negative = export).\n"
-                "**No inversion needed** for correct display."
+                f"Your grid power is already in **Home Assistant format** (negative = export).\n"
+                f"Register used: **{register_name}** = {power_to_grid if register_name == 'power_to_grid' else power_to_user:.0f}W\n"
+                f"**No inversion needed** for correct display."
             )
         else:
             # Close to zero - ambiguous
             confidence = "Low"
             recommended_invert = current_invert_setting  # Keep current
             explanation = (
-                "Grid power too close to zero for reliable detection.\n"
-                "Try again with higher export levels."
+                f"Grid power too close to zero for reliable detection.\n"
+                f"power_to_grid = {power_to_grid:.0f}W, power_to_user = {power_to_user:.0f}W\n"
+                f"Try again with higher export levels."
             )
 
         # Determine action needed
