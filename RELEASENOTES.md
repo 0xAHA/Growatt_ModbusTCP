@@ -4,6 +4,96 @@
 
 ---
 
+# Release Notes - v0.5.8
+
+## 🔧 Fix - WIT Sensors No Longer Appear on Non-WIT Profiles
+
+This release fixes a sensor visibility issue where **WIT-specific sensors** (`battery_soh` and `battery_voltage_bms`) incorrectly appeared on non-WIT inverter profiles, showing confusing 0 values.
+
+### What Was Fixed:
+
+**Problem:**
+Users with non-WIT inverters (MIN TL-XH, SPH, MOD, etc.) reported seeing WIT-only battery sensors that always showed 0:
+- Battery State of Health (SOH): 0%
+- Battery Voltage BMS: 0V
+
+These sensors are only valid for **WIT series inverters** (WIT 4-15kW), which have specialized battery management registers.
+
+**Root Cause:**
+The `battery_soh` and `battery_voltage_bms` attributes were defined in the `GrowattData` dataclass with default values of 0.0. This meant `hasattr(data, 'battery_soh')` always returned `True`, causing Home Assistant to create sensors for all inverter profiles regardless of whether they actually support these registers.
+
+**Evidence:**
+- MIN TL-XH profile: No registers 8094 (battery_soh) or 8095 (battery_voltage_bms)
+- SPH TL3 profile: No WIT battery registers
+- WIT profile: Has registers 8094 and 8095 ✅
+
+### The Fix:
+
+**Changed sensor creation logic:**
+
+1. **Removed from dataclass defaults**: `battery_soh` and `battery_voltage_bms` no longer have default 0.0 values in `GrowattData`
+
+2. **Set dynamically only**: These attributes are now only created via `setattr()` when:
+   - The profile has the corresponding registers (8094, 8095)
+   - The registers have valid data
+
+3. **Matches BMS sensor pattern**: This follows the same approach used for other advanced sensors like `bms_soh`, `bms_constant_volt`, etc.
+
+### Impact:
+
+- ✅ **WIT inverters** (WIT 4-15kW): Sensors still created normally (registers exist)
+- ✅ **MIN TL-XH inverters**: WIT sensors no longer appear (eliminated confusion)
+- ✅ **SPH, MOD, TL-XH**: No WIT sensors (cleaner sensor list)
+- ✅ **No user confusion**: Only see sensors your inverter actually supports
+
+### Code Changes:
+
+**Lines 216-217** (`growatt_modbus.py`):
+```python
+# Before:
+battery_soh: float = 0.0          # % (State of Health - WIT)
+battery_voltage_bms: float = 0.0  # V (BMS voltage reading - WIT)
+
+# After:
+# battery_soh and battery_voltage_bms are WIT-only - set dynamically if register exists
+```
+
+**Lines 1724-1737** (`growatt_modbus.py`):
+```python
+# Changed from direct assignment to conditional setattr:
+if addr:
+    value = self._get_register_value(addr)
+    if value is not None:
+        setattr(data, 'battery_soh', value)  # Only set if register exists
+```
+
+### Affected Models:
+
+**Benefit from this fix** (cleaner sensor list):
+- MIN TL-XH 3000-10000
+- SPH 3-6kW, 7-10kW, SPH-TL3
+- MOD 6000-15000TL3-XH
+- MIC, MIN, MID, TL-XH series
+- SPF off-grid series
+
+**Still see these sensors** (as intended):
+- WIT 4000-15000TL3 (only series with these registers)
+
+### Migration Notes:
+
+- **No action required** - Updates apply automatically on restart
+- WIT sensors will disappear from non-WIT inverters
+- No impact on actual functionality, only sensor visibility
+- Historical data unaffected
+
+### Files Changed:
+
+- `custom_components/growatt_modbus/growatt_modbus.py`: Updated GrowattData dataclass and battery data reading logic
+- `custom_components/growatt_modbus/manifest.json`: Version bumped to 0.5.8
+- `README.md`: Version badge updated to 0.5.8
+
+---
+
 # Release Notes - v0.5.7
 
 ## 🔧 Critical Fix - MIN TL-XH Battery Registers Corrected (Issue #191)
