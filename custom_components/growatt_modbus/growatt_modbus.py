@@ -357,6 +357,10 @@ class GrowattModbus:
         self._battery_power_scale_samples = []  # Store validation samples
         self._battery_power_scale_validated = False  # Set to True once detection is complete
 
+        # Battery register range detection (VPP vs fallback)
+        self._battery_register_range = None  # 'vpp' or 'fallback' - determined on first read
+        self._battery_range_detected = False  # Set to True once detection is complete
+
         if connection_type == 'tcp':
             if not TCP_AVAILABLE:
                 raise ImportError("pymodbus not available for TCP connection")
@@ -1525,13 +1529,67 @@ class GrowattModbus:
         matches.sort(key=register_priority)
         return matches
 
+    def _detect_battery_register_range(self) -> str:
+        """Detect which register range contains valid battery data (VPP vs fallback).
+
+        Checks multiple key battery sensors to determine if VPP (31000+) or
+        fallback (1000+/3000+) registers contain the active data. This ensures
+        consistent register usage across all battery sensors.
+
+        Returns:
+            'vpp', 'fallback', or 'unknown'
+        """
+        if self._battery_range_detected:
+            return self._battery_register_range
+
+        # Key sensors to check for valid data (non-zero indicates active range)
+        test_sensors = [
+            'battery_voltage',
+            'battery_soc',
+            'battery_power_low',
+            'battery_discharge_today_low',
+            'battery_charge_today_low',
+        ]
+
+        vpp_score = 0
+        fallback_score = 0
+
+        for sensor_name in test_sensors:
+            addresses = self._find_all_registers_by_name(sensor_name)
+
+            for addr in addresses:
+                value = self._register_cache.get(addr)
+                if value is not None and value > 0:
+                    # This register has valid data
+                    if addr >= 31000:
+                        vpp_score += 1
+                        logger.debug(f"VPP range active for {sensor_name}: reg {addr} = {value}")
+                    elif 1000 <= addr < 4000:
+                        fallback_score += 1
+                        logger.debug(f"Fallback range active for {sensor_name}: reg {addr} = {value}")
+
+        # Determine winner
+        if vpp_score > fallback_score:
+            self._battery_register_range = 'vpp'
+            logger.info(f"Battery register range detected: VPP (31000+) - VPP score: {vpp_score}, Fallback score: {fallback_score}")
+        elif fallback_score > 0:
+            self._battery_register_range = 'fallback'
+            logger.info(f"Battery register range detected: Fallback (1000-3999) - VPP score: {vpp_score}, Fallback score: {fallback_score}")
+        else:
+            # Both ranges are zero - default to fallback (more universal)
+            self._battery_register_range = 'fallback'
+            logger.info(f"Battery register range detected: Fallback (default) - All sensors zero or unavailable")
+
+        self._battery_range_detected = True
+        return self._battery_register_range
+
     def _get_register_value_with_fallback(self, name: str) -> Optional[float]:
-        """Get register value with smart fallback between VPP and legacy ranges.
+        """Get register value using detected battery register range preference.
 
         When both VPP (31000+) and fallback (1000+/3000+) registers exist for the same sensor:
-        1. Check all matching registers in priority order (fallback first, VPP last)
-        2. Return the first non-zero value found
-        3. This handles cases where VPP registers are readable but return 0
+        1. On first call, detect which range has valid data by checking multiple key sensors
+        2. Use the detected range consistently for all subsequent reads
+        3. This prevents mixing VPP and fallback values and handles legitimate zeros correctly
 
         Args:
             name: The register name to look up (e.g., 'battery_discharge_today_low')
@@ -1544,17 +1602,28 @@ class GrowattModbus:
         if not addresses:
             return None
 
-        # Try each address in priority order (fallback ranges first)
-        for addr in addresses:
-            value = self._get_register_value(addr)
-            if value is not None and value != 0:
-                # Found a non-zero value!
-                logger.debug(f"Using value from register {addr} for '{name}': {value}")
-                return value
+        # Detect which register range to use (only done once per session)
+        preferred_range = self._detect_battery_register_range()
 
-        # All addresses returned zero or None - use the first one (highest priority)
-        value = self._get_register_value(addresses[0])
-        logger.debug(f"All registers for '{name}' are zero, using {addresses[0]}: {value}")
+        # Filter addresses by preferred range
+        if preferred_range == 'vpp':
+            # Prefer VPP range (31000+), fallback to others if not available
+            preferred_addrs = [a for a in addresses if a >= 31000]
+            if not preferred_addrs:
+                preferred_addrs = addresses  # Use whatever is available
+        else:  # 'fallback' or 'unknown'
+            # Prefer fallback range (1000-3999), fallback to others if not available
+            preferred_addrs = [a for a in addresses if 1000 <= a < 4000]
+            if not preferred_addrs:
+                preferred_addrs = addresses  # Use whatever is available
+
+        # Use the first address from preferred range
+        addr = preferred_addrs[0]
+        value = self._get_register_value(addr)
+
+        if value is not None:
+            logger.debug(f"Using {preferred_range} range register {addr} for '{name}': {value}")
+
         return value
 
     def _read_energy_breakdown(self, data: GrowattData) -> None:
@@ -1619,11 +1688,12 @@ class GrowattModbus:
     def _read_battery_data(self, data: GrowattData) -> None:
         """Read battery data (storage/hybrid models)"""
         try:
-            # Battery voltage
-            addr = self._find_register_by_name('battery_voltage')
-            if addr:
-                data.battery_voltage = self._get_register_value(addr) or 0.0
-                logger.debug(f"Battery voltage from reg {addr}: {data.battery_voltage}V")
+            # Battery voltage (use smart fallback if multiple ranges available)
+            value = self._get_register_value_with_fallback('battery_voltage')
+            if value is not None:
+                data.battery_voltage = value
+            else:
+                data.battery_voltage = 0.0
 
             # Battery current (signed: positive=discharge, negative=charge)
             # Try VPP protocol first (31216 - low register of 32-bit pair)
@@ -1638,11 +1708,12 @@ class GrowattModbus:
                 data.battery_current = self._get_register_value(addr) or 0.0
                 logger.debug(f"Battery current from reg {addr}: {data.battery_current}A")
 
-            # Battery SOC
-            addr = self._find_register_by_name('battery_soc')
-            if addr:
-                data.battery_soc = self._get_register_value(addr) or 0.0
-                logger.debug(f"Battery SOC from reg {addr}: {data.battery_soc}%")
+            # Battery SOC (use smart fallback if multiple ranges available)
+            value = self._get_register_value_with_fallback('battery_soc')
+            if value is not None:
+                data.battery_soc = value
+            else:
+                data.battery_soc = 0.0
 
             # Battery temperature
             addr = self._find_register_by_name('battery_temp')
