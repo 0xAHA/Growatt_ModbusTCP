@@ -4,7 +4,7 @@
 
 ---
 
-# Release Notes - v0.5.9
+# Release Notes - v0.6.0
 
 ## 🔧 Fix - Battery Power Inversion for VPP Protocol Registers
 
