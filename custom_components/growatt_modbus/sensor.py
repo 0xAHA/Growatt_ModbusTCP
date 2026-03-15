@@ -1013,6 +1013,8 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
         
         # Get invert grid power option
         invert_grid_power = self._config_entry.options.get(CONF_INVERT_GRID_POWER, False)
+        inverter_series = self._config_entry.data.get(CONF_INVERTER_SERIES, "").lower()
+        is_sph_family = inverter_series.startswith("sph_")
         
         # Special handling for calculated sensors
         if self._sensor_def.get("attr") == "calculated":
@@ -1222,8 +1224,11 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 # Other models: energy_from_grid_today
 
                 # Check if inverter has hardware import energy register
-                # SPH-TL3 uses "energy_to_user", other models might use "energy_from_grid"
-                has_hardware_import = hasattr(data, "energy_from_grid_today") or hasattr(data, "energy_to_user_today")
+                # SPH family uses "energy_to_user" for import, while non-SPH models
+                # should not treat energy_to_user as grid import
+                has_hardware_import = hasattr(data, "energy_from_grid_today") or (
+                    is_sph_family and hasattr(data, "energy_to_user_today")
+                )
 
                 if invert_grid_power and has_hardware_import:
                     # CT clamp backwards AND inverter has hardware import register
@@ -1250,8 +1255,11 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 # Other models: energy_from_grid_total
 
                 # Check if inverter has hardware import energy register
-                # SPH-TL3 uses "energy_to_user", other models might use "energy_from_grid"
-                has_hardware_import = hasattr(data, "energy_from_grid_total") or hasattr(data, "energy_to_user_total")
+                # SPH family uses "energy_to_user" for import, while non-SPH models
+                # should not treat energy_to_user as grid import
+                has_hardware_import = hasattr(data, "energy_from_grid_total") or (
+                    is_sph_family and hasattr(data, "energy_to_user_total")
+                )
 
                 if invert_grid_power and has_hardware_import:
                     # CT clamp backwards AND inverter has hardware import register
@@ -1284,6 +1292,21 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 return None
             
             return None
+
+        # MIN TL-XH energy_today register (3049/3050) can represent total system AC
+        # output and include battery discharge. For solar reporting, derive PV-only
+        # daily energy from energy balance terms.
+        if self._sensor_key == "energy_today" and inverter_series.startswith("min_tl_xh_"):
+            load_energy = getattr(data, "load_energy_today", 0.0)
+            grid_import = getattr(data, "energy_to_user_today", 0.0)
+            grid_export = getattr(data, "energy_to_grid_today", 0.0)
+            battery_charge = getattr(data, "charge_energy_today", 0.0)
+            battery_discharge = getattr(data, "discharge_energy_today", 0.0)
+
+            pv_energy_today = load_energy + battery_charge + grid_export - grid_import - battery_discharge
+            pv_energy_today = round(max(0.0, pv_energy_today), 2)
+
+            return self.coordinator.get_sensor_value(self._sensor_key, pv_energy_today)
         
         # Regular sensor - get value from data attribute
         value = getattr(data, self._sensor_def["attr"], None)
