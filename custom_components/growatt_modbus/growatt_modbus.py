@@ -1604,15 +1604,17 @@ class GrowattModbus:
 
         # Filter addresses by preferred range
         if preferred_range == 'vpp':
-            # Prefer VPP range (31000+), fallback to others if not available
+            # Prefer VPP range (31000+), strict - no fallback
             preferred_addrs = [a for a in addresses if a >= 31000]
             if not preferred_addrs:
-                preferred_addrs = addresses  # Use whatever is available
+                # Register doesn't exist in VPP range - return None to trigger fallback logic
+                return None
         else:  # 'fallback' or 'unknown'
-            # Prefer fallback range (1000-3999), fallback to others if not available
+            # Prefer fallback range (1000-3999), strict - no fallback
             preferred_addrs = [a for a in addresses if 1000 <= a < 4000]
             if not preferred_addrs:
-                preferred_addrs = addresses  # Use whatever is available
+                # Register doesn't exist in fallback range - return None to trigger alternative registers
+                return None
 
         # Return the first address from preferred range
         return preferred_addrs[0]
