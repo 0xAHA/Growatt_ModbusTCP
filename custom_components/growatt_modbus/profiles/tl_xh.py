@@ -320,6 +320,14 @@ MIN_TL_XH_3000_10000_V201 = {
         3171: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (primary source for MIN TL-XH)'},
         3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature (primary source for MIN TL-XH)'},
 
+        # === BATTERY ENERGY REGISTERS (3125-3130) ===
+        # Battery energy totals in fallback 3000 range (similar to MOD series)
+        # These are fallback registers when VPP 31200+ is not available
+        3125: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3126, 'desc': 'Battery discharge energy today HIGH (fallback range)'},
+        3126: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3125, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery discharge energy today (fallback range)'},
+        3129: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3130, 'desc': 'Battery charge energy today HIGH (fallback range)'},
+        3130: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3129, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy today (fallback range)'},
+
         # === BATTERY POWER REGISTERS (3178-3181) ===
         # Some TL-XH models provide unsigned battery power in addition to VPP 31200+ signed power
         # These are fallback registers when VPP 31200+ is not available
