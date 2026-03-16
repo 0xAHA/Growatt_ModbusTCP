@@ -4,6 +4,114 @@
 
 ---
 
+# Release Notes - v0.6.1
+
+## 🔧 Critical Fix - MIN TL-XH Solar and Grid-Import Energy Calculations
+
+This release fixes critical energy calculation issues for **MIN TL-XH 3000-10000 V2.01** inverters that were introduced in v0.5.1.
+
+### What Was Fixed:
+
+**Problem 1: Grid Import Energy Showing Zero or Null**
+
+After upgrading from v0.4.9 to v0.5.1+, MIN TL-XH users reported:
+- Grid import energy became null/zero after update
+- Grid power visible but grid import energy was 0
+- Energy dashboard showed no grid import despite actually importing from grid
+
+**Root Cause:**
+Version 0.5.1 (commit df333cb) fixed SPH-TL3 grid import energy by using hardware register `energy_to_user_today/total`. However, the code incorrectly assumed this register means "grid import" for ALL inverter models.
+
+The `energy_to_user` register has **different meanings** on different inverter series:
+- **SPH family**: `energy_to_user` = Grid IMPORT energy (energy FROM grid TO load)
+- **MIN TL-XH family**: `energy_to_user` = Forward active energy (NOT grid import)
+
+This caused MIN TL-XH to use the wrong register (3067-3068) for grid import, resulting in null/zero values.
+
+**Problem 2: Battery Discharge Counted as Solar Production**
+
+MIN TL-XH users reported:
+- Solar energy showing higher values than expected
+- Battery discharge energy being counted as solar production
+- Home energy calculations incorrect due to inflated solar values
+
+**Root Cause:**
+The `energy_today` register (3049-3050) on MIN TL-XH represents total system AC output and includes battery discharge. When battery was discharging, this energy was incorrectly counted as solar production.
+
+### The Fix:
+
+**1. Restrict `energy_to_user` Hardware Register to SPH Family Only**
+
+Modified grid import energy calculation to only treat `energy_to_user` as grid import for SPH family profiles:
+
+```python
+is_sph_family = inverter_series.startswith("sph_")
+has_hardware_import = hasattr(data, "energy_from_grid_today") or (
+    is_sph_family and hasattr(data, "energy_to_user_today")
+)
+```
+
+This ensures MIN TL-XH no longer uses the wrong register for grid import calculations.
+
+**2. Derive MIN TL-XH Solar Energy from Energy Balance**
+
+For MIN TL-XH inverters, calculate true PV-only energy from energy balance terms:
+
+```python
+pv_energy_today = load_energy + battery_charge + grid_export
+                  - grid_import - battery_discharge
+```
+
+This ensures:
+- Battery discharge is NOT counted as solar production
+- Solar energy reflects actual PV generation only
+- Energy balance is mathematically correct
+
+### Impact:
+
+**Grid Import Energy:**
+- ✅ MIN TL-XH now correctly calculates grid import energy
+- ✅ No longer uses wrong `energy_to_user` register
+- ✅ Grid import values are accurate and stable
+- ✅ SPH family continues to work correctly with `energy_to_user` register
+
+**Solar Energy Production:**
+- ✅ Battery discharge no longer counted as solar
+- ✅ Solar energy shows accurate PV-only generation
+- ✅ Home energy calculations now correct
+- ✅ Energy balance mathematically accurate
+
+### Affected Versions:
+
+- **Broken**: v0.5.1 through v0.6.0 (grid import null/zero, battery counted as solar)
+- **Working**: v0.4.9 and earlier (used calculated import, but had battery discharge issue)
+- **Fixed**: v0.6.1 (both issues resolved)
+
+### Affected Models:
+
+- MIN TL-XH 3000-10000 V2.01 (all models in this series)
+
+### Migration Notes:
+
+- **No action required** - Updates apply automatically on restart
+- Grid import energy will immediately show correct values
+- Solar energy will decrease to accurate PV-only values (excluding battery discharge)
+- Historical data remains unchanged (new calculations start from restart)
+
+### Technical Details:
+
+**Files Changed:**
+- `custom_components/growatt_modbus/sensor.py`:
+  - Restricted `energy_to_user` to SPH family only (lines 1227, 1258)
+  - Added MIN TL-XH energy balance calculation (lines 1295-1308)
+
+**Related Issues:**
+- Fixes user report: Grid import null after v0.4.9 update
+- Fixes user report: Battery discharge counted as solar energy
+- Related to Issue #183 (SPH-TL3 grid energy fix that caused this regression)
+
+---
+
 # Release Notes - v0.6.0
 
 ## 🔧 Fix - Battery Power Inversion for VPP Protocol Registers
