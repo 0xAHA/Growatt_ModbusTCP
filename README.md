@@ -1,7 +1,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.6.1-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.6.2b1-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -50,6 +50,7 @@ A native Home Assistant integration for Growatt solar inverters using direct Mod
 - 🏠 **Residential focus** - Optimized profiles for home solar (0.6-25kW)
 - 🔍 **Universal scanner** - One-click diagnostic tool with auto-detection
 - 📱 **Device identification** - Automatic serial, firmware, model, protocol version
+- 🎛️ **Inverter control** - Battery priority, charge/discharge limits, AC charge for SPH, SPF, and WIT
 
 ---
 
@@ -100,6 +101,8 @@ A native Home Assistant integration for Growatt solar inverters using direct Mod
 - **3 PV strings:** MIN 7-10kW, SPH/SPM 8-10kW HU, TL-XH, MOD
 
 📖 **[Complete sensor list by model →](docs/MODELS.md#-sensor-availability-by-model)**
+
+📖 **[Inverter control guide (SPH / SPF / WIT / MOD) →](docs/CONTROL.md)**
 
 ---
 

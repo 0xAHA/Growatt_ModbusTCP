@@ -50,8 +50,8 @@ BATTERY_SENSORS: Set[str] = {
     "battery_charge_total", "battery_discharge_total",
     # WIT: Battery SOH and BMS voltage
     "battery_soh", "battery_voltage_bms",
-    # WIT/SPF: AC charge/discharge energy totals
-    "ac_charge_energy_total", "ac_discharge_energy_total",
+    # WIT/SPF/MOD: AC charge/discharge energy
+    "ac_charge_energy_today", "ac_charge_energy_total", "ac_discharge_energy_total",
 }
 
 BMS_SENSORS: Set[str] = {

@@ -121,8 +121,13 @@ MOD_6000_15000TL3_XH = {
         3131: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3132, 'desc': 'Battery charge energy total (primary source for MOD XH)'},
         3132: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3131, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
-        # Battery Extended Diagnostics
-        3136: {'name': 'battery_bms_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery BMS/module temperature (matches temp_sensor_1 at reg 96)'},
+        # AC Charge Energy (grid→battery) - confirmed via hardware scan (MOD 10000TL3-XH, Feb 2026)
+        # Register 3133/3134: AC charge today = 4.0 kWh at scan time
+        # Register 3135/3136: AC charge total = 530.5 kWh at scan time (corrected from wrong battery_bms_temp mapping)
+        3133: {'name': 'ac_charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3134, 'desc': 'AC charge energy today HIGH (grid→battery)'},
+        3134: {'name': 'ac_charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3133, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'AC charge energy today (grid→battery)'},
+        3135: {'name': 'ac_charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3136, 'desc': 'AC charge energy total HIGH (grid→battery lifetime)'},
+        3136: {'name': 'ac_charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3135, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'AC charge energy total (grid→battery lifetime)'},
 
         # Battery State (3000 range - PRIMARY for MOD XH with ARK battery)
         # Note: VPP 31200+ range doesn't respond on MOD 10000TL3-XH, so 3000+ is primary

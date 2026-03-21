@@ -320,13 +320,21 @@ MIN_TL_XH_3000_10000_V201 = {
         3171: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (primary source for MIN TL-XH)'},
         3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature (primary source for MIN TL-XH)'},
 
-        # === BATTERY ENERGY REGISTERS (3125-3130) ===
-        # Battery energy totals in fallback 3000 range (similar to MOD series)
+        # === BATTERY ENERGY REGISTERS (3125-3136) ===
+        # Battery energy today/total in fallback 3000 range (same layout as MOD series)
         # These are fallback registers when VPP 31200+ is not available
         3125: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3126, 'desc': 'Battery discharge energy today HIGH (fallback range)'},
         3126: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3125, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery discharge energy today (fallback range)'},
+        3127: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3128, 'desc': 'Battery discharge energy total HIGH (confirmed: 481.5 kWh)'},
+        3128: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3127, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery discharge energy total'},
         3129: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3130, 'desc': 'Battery charge energy today HIGH (fallback range)'},
         3130: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3129, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy today (fallback range)'},
+        3131: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3132, 'desc': 'Battery charge energy total HIGH (confirmed: 528.9 kWh)'},
+        3132: {'name': 'charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3131, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy total'},
+        3133: {'name': 'ac_charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3134, 'desc': 'AC (grid→battery) charge energy today HIGH'},
+        3134: {'name': 'ac_charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3133, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'AC (grid→battery) charge energy today'},
+        3135: {'name': 'ac_charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3136, 'desc': 'AC (grid→battery) charge energy total HIGH (confirmed: 37.4 kWh)'},
+        3136: {'name': 'ac_charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3135, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'AC (grid→battery) charge energy total'},
 
         # === BATTERY POWER REGISTERS (3178-3181) ===
         # Some TL-XH models provide unsigned battery power in addition to VPP 31200+ signed power

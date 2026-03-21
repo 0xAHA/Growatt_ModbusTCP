@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git log:*)",
+      "Bash(grep -n ''holding_registers'': /c/Users/ANDY/OneDrive/Desktop/Git/Growatt_ModbusTCP/custom_components/growatt_modbus/profiles/*.py)",
+      "Bash(gh issue:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(python3 -m py_compile custom_components/growatt_modbus/profiles/mod.py custom_components/growatt_modbus/profiles/tl_xh.py custom_components/growatt_modbus/device_profiles.py)"
+    ]
+  }
+}

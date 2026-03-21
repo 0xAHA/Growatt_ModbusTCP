@@ -4,7 +4,130 @@
 
 ---
 
-# Release Notes - v0.6.1
+## v0.6.2
+
+> **Beta:** `v0.6.2b1` — in testing.
+
+### 🔧 Fix — MIN TL-XH Battery Energy Totals Showing Zero (Issue #191)
+
+Three battery energy sensors were always reporting 0 for **MIN TL-XH 3000-10000 V2.01** inverters after the v0.6.1 upgrade.
+
+**Sensors affected:** Battery Charge Total, Battery Discharge Total, AC Charge Energy Total
+
+**Root cause:** The `MIN_TL_XH_3000_10000_V201` profile defined battery energy *today* registers (3125–3130) but was missing the corresponding *total* registers. The coordinator searched for register names `charge_energy_total_low`, `discharge_energy_total_low`, and `ac_charge_energy_total_low` — none existed in the profile — and fell back to the `GrowattData` defaults of `0.0`. Because `hasattr()` still returned `True` (the field exists in the dataclass), sensors appeared in HA but perpetually showed 0.
+
+**Fix:** Added the missing registers to `profiles/tl_xh.py`, confirmed against real hardware scan:
+
+| Registers | Sensor | Confirmed Value |
+| --- | --- | --- |
+| 3127 / 3128 | Battery Discharge Total | 481.5 kWh |
+| 3131 / 3132 | Battery Charge Total | 528.9 kWh |
+| 3133 / 3134 | AC Charge Energy Today | ~0 kWh (grid→battery today) |
+| 3135 / 3136 | AC Charge Energy Total | 37.4 kWh (grid→battery lifetime) |
+
+The `ac_charge_energy_total` register (3135/3136) tracks exclusively grid→battery charging, matching the Growatt server "Batterieladung aus Stromnetz" lifetime value.
+
+---
+
+### 🆕 MOD TL3-XH — Battery Sensors Added (Issue #131)
+
+The **MOD 10000TL3-XH** (VPP V2.01, DTC 5400) profile now exposes complete battery monitoring from the 3125–3185 and 31218 register ranges. Previously these registers were either absent from the profile or incorrectly mapped (`ac_charge_energy_total` was misidentified as `battery_bms_temp` at register 3136, which would have shown 530.5°C).
+
+**New sensors for MOD TL3-XH:**
+
+| Registers | Sensor | Scale | Confirmed at Scan |
+| --- | --- | --- | --- |
+| 3125 / 3126 | Battery Discharge Today | ×0.1 kWh | 6.3 kWh |
+| 3127 / 3128 | Battery Discharge Total | ×0.1 kWh | 1216.9 kWh |
+| 3129 / 3130 | Battery Charge Today | ×0.1 kWh | 4.3 kWh |
+| 3131 / 3132 | Battery Charge Total | ×0.1 kWh | 1389.0 kWh |
+| 3133 / 3134 | AC Charge Energy Today | ×0.1 kWh | 4.0 kWh |
+| 3135 / 3136 | AC Charge Energy Total | ×0.1 kWh | 530.5 kWh |
+| 3169 | Battery Voltage | ×0.01 V | 72.83 V |
+| 3170 | Battery Current | ×0.1 A | 0.0 A |
+| 3171 | Battery SOC | ×1 % | 10% (confirmed at scan) |
+| 3175 / 3176 | Battery Temp | ×0.1 °C | 45.4°C |
+| 3178 / 3179 | Battery Discharge Power | ×0.1 W | 5.0 W |
+| 3180 / 3181 | Battery Charge Power | ×0.1 W | 0.0 W |
+| 31218 | Battery SOH | ×1 % | 100% |
+
+Register scan was conducted at night (SOC=10% confirmed), validating register 3171=10 as SOC and 31218=100 as State of Health.
+
+**Bug fix (same PR):** Register 3136 was previously mapped as `battery_bms_temp` — a copy-paste error from a nearby temperature register. The raw value of 5305 × 0.1 = 530.5 kWh is clearly an energy value, not a temperature. Corrected to `ac_charge_energy_total_low`.
+
+**Battery control (MOD):** Battery control holding registers have not yet been confirmed for MOD hardware. Register scan showed the SPH-style 1000–1124 range returns all zeros, and VPP control (30099=0) is not available. Control is deferred to a follow-up release pending hardware confirmation. See [docs/CONTROL.md](docs/CONTROL.md) for details.
+
+---
+
+### 🎛️ Inverter Control — SPH, SPF, WIT
+
+This release documents and validates the full control entity stack for SPH, SPF, and WIT inverter families. These controls were already implemented in the codebase; this release confirms their status, adds documentation, and ensures all are correctly exposed in Home Assistant.
+
+**Control is profile-gated:** entities are only instantiated when the corresponding holding registers are present in the active profile. No controls appear for models without confirmed registers.
+
+#### SPH Hybrid (3–10kW) — Persistent Writes
+
+| Entity | Type | Register | Options / Range |
+| --- | --- | --- | --- |
+| Priority Mode | Select | 1044 | Load First / Battery First / Grid First |
+| AC Charge Enable | Select | 1092 | Disabled / Enabled |
+| Discharge Power Rate | Number | 1070 | 0–100 % |
+| Discharge Stop SOC | Number | 1071 | 0–100 % |
+| Charge Power Rate | Number | 1090 | 0–100 % |
+| Charge Stop SOC | Number | 1091 | 0–100 % |
+| Time Period 1–3 Start/End/Enable | Number/Select | 1100–1108 | HHMM / Enabled-Disabled |
+| System Enable | Select | 1008 | Disabled / Enabled *(HU models only)* |
+
+#### SPF Off-Grid (3–6kW) — Persistent Writes
+
+| Entity | Type | Register | Options / Range |
+| --- | --- | --- | --- |
+| Output Priority | Select | 1 | SBU / SOL / UTI / SUB |
+| Charge Priority | Select | 2 | CSO / SNU / OSO |
+| AC Input Mode | Select | 8 | APL / UPS / GEN |
+| Battery Type | Select | 39 | AGM / Flooded / User / Lithium / User 2 |
+| AC Charge Current | Number | 38 | 0–80 A |
+| Generator Charge Current | Number | 83 | 0–80 A |
+| Battery→Utility SOC | Number | 37 | 0–100 % (Lithium) |
+| Utility→Battery SOC | Number | 95 | 0–100 % (Lithium) |
+
+#### WIT Commercial Hybrid (4–15kW) — VPP Time-Limited Overrides
+
+| Entity | Type | Register | Options / Range |
+| --- | --- | --- | --- |
+| Work Mode | Select | 202 | Standby / Charge / Discharge |
+| Active Power Rate | Number | 201 | 0–100 % |
+| Export Limit (W) | Number | 203 | 0–20000 W |
+| Control Authority | Select | 30100 | Disabled / Enabled |
+| VPP Export Limit Enable | Select | 30200 | Disabled / Enabled |
+| VPP Export Limit Rate | Number | 30201 | −100–+100 % |
+| Remote Power Control | Select | 30407 | Disabled / Enabled |
+| Remote Control Duration | Number | 30408 | 0–1440 min |
+| Remote Charge/Discharge Power | Number | 30409 | −100–+100 % |
+
+WIT commands are time-limited. The inverter reverts to its TOU schedule when the duration expires. See [docs/WIT_CONTROL_GUIDE.md](WIT_CONTROL_GUIDE.md) for the full VPP protocol explanation.
+
+📖 **[Full control documentation →](docs/CONTROL.md)**
+
+---
+
+### Model and Sensor Availability Summary
+
+| Model | Battery Sensors | Battery Control | Control Method | Notes |
+| --- | --- | --- | --- | --- |
+| **SPH 3–6kW** | Yes | Yes | Persistent writes | Registers 1044, 1070–1108 |
+| **SPH 7–10kW** | Yes | Yes | Persistent writes | Same register range as 3–6kW |
+| **SPH/SPM HU 8–10kW** | Yes + BMS | Yes | Persistent writes | Adds BMS sensors, system_enable (1008) |
+| **SPF 3–6kW ES PLUS** | Yes (limited) | Yes | Persistent writes | No battery temp; current only during AC charge |
+| **WIT 4–15kW** | Yes | Yes (timed) | VPP overrides | Time-limited; base mode is read-only |
+| **MOD 10000TL3-XH** | Yes (new) | No (pending) | — | Control registers not yet confirmed |
+| **MIN TL-XH 3–10kW** | Yes (fixed) | No | — | No battery control registers |
+| **MIN 3–10kW** | No | No | — | Grid-tied, no battery |
+| **MIC 0.6–3.3kW** | No | No | — | Grid-tied micro inverter |
+
+---
+
+## v0.6.1
 
 ## 🔧 Critical Fix - MIN TL-XH Solar and Grid-Import Energy Calculations
 
