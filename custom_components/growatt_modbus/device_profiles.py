@@ -35,6 +35,10 @@ ENERGY_SENSORS: Set[str] = {
     "energy_today", "energy_total",
 }
 
+PV_DC_ENERGY_SENSORS: Set[str] = {
+    "pv_energy_total",  # Epv — raw DC input from panels (separate from Eac energy_total)
+}
+
 ENERGY_BREAKDOWN_SENSORS: Set[str] = {
     "grid_energy_today", "grid_energy_total",
     "energy_to_grid_today", "energy_to_grid_total",
@@ -195,6 +199,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
@@ -219,6 +224,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
@@ -242,6 +248,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
@@ -266,6 +273,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
@@ -292,6 +300,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -315,6 +324,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -340,6 +350,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -364,6 +375,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -389,6 +401,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -458,6 +471,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -481,6 +495,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -504,6 +519,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             BMS_SENSORS |
@@ -529,6 +545,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -553,6 +570,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -579,6 +597,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -603,6 +622,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -729,6 +749,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -753,6 +774,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
@@ -783,6 +805,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             WIT_EXTRA_SENSORS |

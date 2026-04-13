@@ -1310,20 +1310,21 @@ class GrowattModbus:
                 data.power_to_load = self._get_register_value(power_to_load_addr) or 0.0
             
             # Energy Today
-            # For WIT/MIC/SPH-TL3 with per-MPPT tracking: use sum of PV string energy for accurate solar production
-            # Registers 53-54 show total system AC output (PV+battery), not PV-only (Issue #146)
-            # Use per-MPPT values whenever any register has a non-zero accumulated value.
-            # Do NOT gate on pv*_connected (voltage/power > 0): at sunset those drop to 0 but the
-            # per-MPPT energy registers still hold today's accumulated total. Gating on connected
-            # caused a data-source switch at end of day, producing a spurious drop (Issue #225).
-            # Each string contributes only if its own energy_today > 0, so a 2-string model with
-            # pv3_energy_today = 0 all day is handled correctly without the connected check.
-            has_mppt_energy = (data.pv1_energy_today > 0 or data.pv2_energy_today > 0 or data.pv3_energy_today > 0)
+            # For hybrid inverters (WIT/SPH-TL3 etc.), the AC energy_today register (e.g. reg 53/54)
+            # reflects total system output including battery discharge — not solar-only production.
+            # Those profiles set 'use_mppt_energy_today': True so we sum the per-MPPT DC string
+            # registers instead, which track true solar input unaffected by battery activity.
+            # Issue #146, #225: do NOT gate on pv*_connected (voltage drops at sunset but
+            # accumulated daily totals remain valid until midnight reset).
+            # For pure grid-tied profiles (MIN, MIC, MOD) this flag is absent/False and
+            # energy_today is read directly from its register — no summation.
+            use_mppt = self.register_map.get('use_mppt_energy_today', False)
+            has_mppt_energy = use_mppt and (data.pv1_energy_today > 0 or data.pv2_energy_today > 0 or data.pv3_energy_today > 0)
 
             if has_mppt_energy:
                 pv_energy_sum = data.pv1_energy_today + data.pv2_energy_today + data.pv3_energy_today
 
-                # Sanity check: per-MPPT energy should be reasonable (< 100 kWh per day for MIC/small inverters)
+                # Sanity check: per-MPPT energy should be reasonable (< 100 kWh per day)
                 if pv_energy_sum < 100:
                     data.energy_today = pv_energy_sum
                     logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from per-MPPT registers: PV1={data.pv1_energy_today} + PV2={data.pv2_energy_today} + PV3={data.pv3_energy_today} = {data.energy_today} kWh")
@@ -1335,23 +1336,21 @@ class GrowattModbus:
                         data.energy_today = self._get_register_value(energy_today_addr) or 0.0
                         logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from reg {energy_today_addr}: {data.energy_today} kWh")
             else:
-                # No per-MPPT data (profile doesn't define those registers, or midnight register reset)
+                # Read energy_today directly from its register (all non-hybrid profiles, or
+                # hybrid profiles where per-MPPT data hasn't accumulated yet today)
                 energy_today_addr = self._find_register_by_name('energy_today_low')
                 if energy_today_addr:
                     data.energy_today = self._get_register_value(energy_today_addr) or 0.0
                     logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from reg {energy_today_addr}: {data.energy_today} kWh (cache: {self._register_cache.get(energy_today_addr)})")
 
-            # Energy Total
-            # For WIT: use total PV energy register if available (accurate DC input lifetime energy)
-            if data.pv_energy_total > 0:
-                # WIT with PV total energy register
-                data.energy_total = data.pv_energy_total
-                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy total from PV lifetime register: {data.energy_total} kWh")
-            else:
-                # Fallback to total system output for other inverters
-                energy_total_addr = self._find_register_by_name('energy_total_low')
-                if energy_total_addr:
-                    data.energy_total = self._get_register_value(energy_total_addr) or 0.0
+            # Energy Total — read directly from register; no override.
+            # pv_energy_total (Epv) is a separate entity from energy_total (Eac).
+            # On hybrids: Eac inflates with battery discharge; Epv is pure solar DC input.
+            # On pure grid-tied: Eac is the correct total; Epv is slightly higher (~7% losses).
+            # Both are exposed as distinct sensor entities — do not substitute one for the other.
+            energy_total_addr = self._find_register_by_name('energy_total_low')
+            if energy_total_addr:
+                data.energy_total = self._get_register_value(energy_total_addr) or 0.0
             
             # Energy Breakdown (if available)
             self._read_energy_breakdown(data)

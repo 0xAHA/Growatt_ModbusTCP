@@ -6,6 +6,7 @@ TL_XH_3000_10000 = {
     'name': 'TL-XH 3000-10000',
     'description': 'Single-phase hybrid inverter with battery (3-10kW)',
     'notes': 'Uses 0-124 register range. 3 PV strings, battery management, backup output.',
+    'use_mppt_energy_today': True,  # Reg 53/54 = system AC output incl. battery discharge; use per-MPPT DC sum instead
     'input_registers': {
         # System Status
         0: {'name': 'inverter_status', 'scale': 1, 'unit': '', 'desc': '0=Waiting, 1=Normal, 3=Fault'},

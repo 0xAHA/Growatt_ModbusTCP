@@ -6,6 +6,7 @@ SPH_TL3_3000_10000 = {
     'name': 'SPH-TL3 Series 3-10kW',
     'description': 'Three-phase hybrid inverter with battery storage (3-10kW)',
     'notes': 'Uses 0-124, 1000-1124 register ranges. Three-phase with battery management.',
+    'use_mppt_energy_today': True,  # Reg 53/54 = system AC output incl. battery discharge; use per-MPPT DC sum instead
     'input_registers': {
         # ============================================================================
         # BASE RANGE 0-124: PV, AC, and System Status
@@ -226,6 +227,87 @@ SPH_TL3_3000_10000 = {
         1108: {'name': 'time_period_3_enable', 'scale': 1, 'unit': '', 'access': 'RW',
                'desc': 'Enable time period 3',
                'values': {0: 'Disabled', 1: 'Enabled'}},
+
+        # -----------------------------------------------------------------------
+        # Battery First mode scheduling windows — slots 4–6 (registers 1017–1025)
+        # These control WHEN the inverter applies Battery First priority.
+        # Register naming confirmed via SPH_3000-6000TL-HUB manual:
+        #   1021 = "Bat First Stop Time 5", 1022 = "BatFirst on/off Switch 5"
+        # Note: these are HOLDING registers; input registers 1021/1022/1029/1030
+        # (power_to_user_total / power_to_grid) are in a separate address space.
+        # -----------------------------------------------------------------------
+        1017: {'name': 'batt_first_time_period_4_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Battery First slot 4 start (hex-packed: hours*256+minutes, e.g. 06:00 = 1536)'},
+        1018: {'name': 'batt_first_time_period_4_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Battery First slot 4 end (hex-packed: hours*256+minutes)'},
+        1019: {'name': 'batt_first_time_period_4_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'values': {0: 'Disabled', 1: 'Enabled'},
+               'desc': 'Enable Battery First slot 4'},
+        1020: {'name': 'batt_first_time_period_5_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Battery First slot 5 start (hex-packed: hours*256+minutes)'},
+        1021: {'name': 'batt_first_time_period_5_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Battery First slot 5 end (hex-packed: hours*256+minutes)'},
+        1022: {'name': 'batt_first_time_period_5_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'values': {0: 'Disabled', 1: 'Enabled'},
+               'desc': 'Enable Battery First slot 5'},
+        1023: {'name': 'batt_first_time_period_6_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Battery First slot 6 start (hex-packed: hours*256+minutes)'},
+        1024: {'name': 'batt_first_time_period_6_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Battery First slot 6 end (hex-packed: hours*256+minutes)'},
+        1025: {'name': 'batt_first_time_period_6_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'values': {0: 'Disabled', 1: 'Enabled'},
+               'desc': 'Enable Battery First slot 6'},
+
+        # -----------------------------------------------------------------------
+        # Grid First mode scheduling windows — slots 4–6 (registers 1026–1034)
+        # 1029 = "Grid First Start Time 5", 1030 = "Grid First Stop Time 5" (confirmed via manual)
+        # -----------------------------------------------------------------------
+        1026: {'name': 'grid_first_time_period_4_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Grid First slot 4 start (hex-packed: hours*256+minutes)'},
+        1027: {'name': 'grid_first_time_period_4_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Grid First slot 4 end (hex-packed: hours*256+minutes)'},
+        1028: {'name': 'grid_first_time_period_4_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'values': {0: 'Disabled', 1: 'Enabled'},
+               'desc': 'Enable Grid First slot 4'},
+        1029: {'name': 'grid_first_time_period_5_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Grid First slot 5 start (hex-packed: hours*256+minutes)'},
+        1030: {'name': 'grid_first_time_period_5_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Grid First slot 5 end (hex-packed: hours*256+minutes)'},
+        1031: {'name': 'grid_first_time_period_5_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'values': {0: 'Disabled', 1: 'Enabled'},
+               'desc': 'Enable Grid First slot 5'},
+        1032: {'name': 'grid_first_time_period_6_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Grid First slot 6 start (hex-packed: hours*256+minutes)'},
+        1033: {'name': 'grid_first_time_period_6_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Grid First slot 6 end (hex-packed: hours*256+minutes)'},
+        1034: {'name': 'grid_first_time_period_6_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'values': {0: 'Disabled', 1: 'Enabled'},
+               'desc': 'Enable Grid First slot 6'},
+
+        # -----------------------------------------------------------------------
+        # Grid First mode scheduling windows — slots 7–9 (registers 1080–1088)
+        # -----------------------------------------------------------------------
+        1080: {'name': 'grid_first_time_period_7_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Grid First slot 7 start (hex-packed: hours*256+minutes)'},
+        1081: {'name': 'grid_first_time_period_7_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Grid First slot 7 end (hex-packed: hours*256+minutes)'},
+        1082: {'name': 'grid_first_time_period_7_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'values': {0: 'Disabled', 1: 'Enabled'},
+               'desc': 'Enable Grid First slot 7'},
+        1083: {'name': 'grid_first_time_period_8_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Grid First slot 8 start (hex-packed: hours*256+minutes)'},
+        1084: {'name': 'grid_first_time_period_8_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Grid First slot 8 end (hex-packed: hours*256+minutes)'},
+        1085: {'name': 'grid_first_time_period_8_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'values': {0: 'Disabled', 1: 'Enabled'},
+               'desc': 'Enable Grid First slot 8'},
+        1086: {'name': 'grid_first_time_period_9_start', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Grid First slot 9 start (hex-packed: hours*256+minutes)'},
+        1087: {'name': 'grid_first_time_period_9_end', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Grid First slot 9 end (hex-packed: hours*256+minutes)'},
+        1088: {'name': 'grid_first_time_period_9_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'values': {0: 'Disabled', 1: 'Enabled'},
+               'desc': 'Enable Grid First slot 9'},
     }
 }
 
