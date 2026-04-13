@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Konfiguracja Growatt Modbus",
+        "description": "Skonfiguruj połączenie z falownikiem Growatt.",
+        "data": {
+          "name": "Nazwa integracji",
+          "inverter_series": "Seria falownika",
+          "connection_type": "Typ połączenia"
+        },
+        "data_description": {
+          "name": "Lokalna nazwa Twojego falownika",
+          "inverter_series": "Wybierz model/serię falownika",
+          "connection_type": "Sposób połączenia"
+        }
+      },
+      "tcp": {
+        "title": "Konfiguracja połączenia TCP",
+        "description": "Skonfiguruj połączenie TCP z adapterem RS485-Ethernet/WiFi (EW11, USR-W630 itp.)",
+        "data": {
+          "host": "Adres IP",
+          "port": "Port",
+          "slave_id": "ID Slave Modbus"
+        },
+        "data_description": {
+          "host": "Adres IP konwertera RS485-TCP",
+          "port": "Port TCP Modbus (zazwyczaj 502)",
+          "slave_id": "Adres Modbus falownika (zazwyczaj 1)"
+        }
+      },
+      "serial": {
+        "title": "Konfiguracja połączenia szeregowego",
+        "description": "Skonfiguruj połączenie szeregowe z adapterem USB-RS485",
+        "data": {
+          "device_path": "Ścieżka urządzenia",
+          "baudrate": "Szybkość transmisji",
+          "slave_id": "ID Slave Modbus"
+        },
+        "data_description": {
+          "device_path": "Ścieżka urządzenia szeregowego (np. /dev/ttyUSB0 lub COM3)",
+          "baudrate": "Prędkość komunikacji szeregowej (zazwyczaj 9600)",
+          "slave_id": "Adres Modbus falownika (zazwyczaj 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Sprawdzenie bezpieczeństwa falownika off-grid",
+        "description": "**KRYTYCZNE SPRAWDZENIE BEZPIECZEŃSTWA**\n\nCzy masz falownik off-grid (seria SPF)?\n\nFalowniki off-grid doświadczą RESETU ZASILANIA przy próbie automatycznego wykrywania.\n\n• Jeśli Tak: Wybierzesz model ręcznie (bezpieczne)\n• Jeśli Nie: Automatyczne wykrywanie będzie kontynuowane (bezpieczne dla modeli podłączonych do sieci)\n\nPrzykłady modeli off-grid: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Mam falownik off-grid (SPF)"
+        },
+        "data_description": {
+          "has_offgrid": "Włącz TYLKO jeśli masz falownik off-grid serii SPF. Falowniki off-grid używają innego protokołu i zresetują się jeśli rejestry VPP będą dostępne."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Połączenie z falownikiem nie powiodło się. Sprawdź ustawienia połączenia i kable.",
+      "unknown": "Wystąpił nieoczekiwany błąd podczas konfiguracji.",
+      "no_device": "Wybierz urządzenie lub wprowadź ścieżkę urządzenia ręcznie.",
+      "invalid_profile": "Wybrano nieprawidłowy profil falownika."
+    },
+    "abort": {
+      "already_configured": "Ten falownik jest już skonfigurowany."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opcje Growatt Modbus",
+        "description": "Skonfiguruj nazwę urządzenia, profile falownika, ustawienia odpytywania i opcje mocy sieci",
+        "data": {
+          "device_name": "Nazwa urządzenia",
+          "inverter_series": "Seria falownika",
+          "scan_interval": "Interwał skanowania",
+          "offline_scan_interval": "Interwał skanowania offline",
+          "timeout": "Limit czasu połączenia",
+          "invert_grid_power": "Odwróć moc sieci",
+          "invert_battery_power": "Odwróć moc baterii"
+        },
+        "data_description": {
+          "device_name": "Twoja nazwa urządzenia (będzie poprzedzać wszystkie nazwy czujników)",
+          "inverter_series": "Wybierz model/serię falownika (automatycznie wybiera wersję protokołu)",
+          "scan_interval": "Jak często odpytywać falownik gdy jest online (5-300 sekund)",
+          "offline_scan_interval": "Jak często odpytywać falownik gdy jest offline/w nocy (60-3600 sekund, domyślnie 300)",
+          "timeout": "Jak długo czekać na odpowiedź od falownika (1-60 sekund)",
+          "invert_grid_power": "Włącz jeśli kleszcze CT są zainstalowane odwrotnie (zamienia import/eksport po stronie AC)",
+          "invert_battery_power": "Włącz jeśli moc baterii pokazuje odwrócony kierunek (zamienia znak ładowania/rozładowania)"
+        }
+      }
+    }
+  }
+}

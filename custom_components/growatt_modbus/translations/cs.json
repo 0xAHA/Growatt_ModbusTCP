@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nastavení Growatt Modbus",
+        "description": "Nakonfigurujte připojení k vašemu střídači Growatt.",
+        "data": {
+          "name": "Název integrace",
+          "inverter_series": "Řada střídače",
+          "connection_type": "Typ připojení"
+        },
+        "data_description": {
+          "name": "Místní název vašeho střídače",
+          "inverter_series": "Vyberte model/řadu vašeho střídače",
+          "connection_type": "Jak se chcete připojit"
+        }
+      },
+      "tcp": {
+        "title": "Nastavení TCP připojení",
+        "description": "Nakonfigurujte TCP připojení k adaptéru RS485-Ethernet/WiFi (EW11, USR-W630 atd.)",
+        "data": {
+          "host": "IP adresa",
+          "port": "Port",
+          "slave_id": "Modbus Slave ID"
+        },
+        "data_description": {
+          "host": "IP adresa vašeho převodníku RS485-TCP",
+          "port": "Modbus TCP port (obvykle 502)",
+          "slave_id": "Modbus adresa střídače (obvykle 1)"
+        }
+      },
+      "serial": {
+        "title": "Nastavení sériového připojení",
+        "description": "Nakonfigurujte sériové připojení k adaptéru USB-RS485",
+        "data": {
+          "device_path": "Cesta k zařízení",
+          "baudrate": "Přenosová rychlost",
+          "slave_id": "Modbus Slave ID"
+        },
+        "data_description": {
+          "device_path": "Cesta k sériovému zařízení (např. /dev/ttyUSB0 nebo COM3)",
+          "baudrate": "Rychlost sériové komunikace (obvykle 9600)",
+          "slave_id": "Modbus adresa střídače (obvykle 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Bezpečnostní kontrola off-grid střídače",
+        "description": "**KRITICKÁ BEZPEČNOSTNÍ KONTROLA**\n\nMáte off-grid střídač (řada SPF)?\n\nOff-grid střídače zažijí RESET NAPÁJENÍ při pokusu o automatické rozpoznání.\n\n• Pokud Ano: Svůj model vyberete ručně (bezpečné)\n• Pokud Ne: Automatické rozpoznání bude pokračovat (bezpečné pro modely připojené k síti)\n\nPříklady off-grid modelů: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Mám off-grid (SPF) střídač"
+        },
+        "data_description": {
+          "has_offgrid": "Povolte POUZE pokud máte off-grid střídač řady SPF. Off-grid střídače používají jiný protokol a resetují se při přístupu k registrům VPP."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nepodařilo se připojit ke střídači. Zkontrolujte nastavení připojení a kabelové spoje.",
+      "unknown": "Během nastavení došlo k neočekávané chybě.",
+      "no_device": "Vyberte zařízení nebo zadejte cestu k zařízení ručně.",
+      "invalid_profile": "Byl vybrán neplatný profil střídače."
+    },
+    "abort": {
+      "already_configured": "Tento střídač je již nakonfigurován."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Možnosti Growatt Modbus",
+        "description": "Nakonfigurujte název zařízení, profily střídače, nastavení dotazování a možnosti výkonu sítě",
+        "data": {
+          "device_name": "Název zařízení",
+          "inverter_series": "Řada střídače",
+          "scan_interval": "Interval skenování",
+          "offline_scan_interval": "Offline interval skenování",
+          "timeout": "Časový limit připojení",
+          "invert_grid_power": "Invertovat výkon sítě",
+          "invert_battery_power": "Invertovat výkon baterie"
+        },
+        "data_description": {
+          "device_name": "Váš název zařízení (bude předřazen před všechny názvy senzorů)",
+          "inverter_series": "Vyberte model/řadu střídače (automaticky vybere verzi protokolu)",
+          "scan_interval": "Jak často dotazovat střídač když je online (5-300 sekund)",
+          "offline_scan_interval": "Jak často dotazovat střídač když je offline/v noci (60-3600 sekund, výchozí 300)",
+          "timeout": "Jak dlouho čekat na odpověď od střídače (1-60 sekund)",
+          "invert_grid_power": "Povolit pokud je CT svorka nainstalována obráceně (přepne import/export na AC straně)",
+          "invert_battery_power": "Povolit pokud výkon baterie zobrazuje opačný směr (přepne znaménko nabíjení/vybíjení)"
+        }
+      }
+    }
+  }
+}

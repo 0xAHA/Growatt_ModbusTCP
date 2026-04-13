@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Growatt Modbus Oppsett",
+        "description": "Konfigurer tilkoblingen til Growatt-vekselretteren din.",
+        "data": {
+          "name": "Integrasjonsnavn",
+          "inverter_series": "Vekselretterserie",
+          "connection_type": "Tilkoblingstype"
+        },
+        "data_description": {
+          "name": "Lokalt navn for vekselretteren din",
+          "inverter_series": "Velg modell/serie for vekselretteren din",
+          "connection_type": "Hvordan du vil koble til"
+        }
+      },
+      "tcp": {
+        "title": "TCP-tilkoblingsoppsett",
+        "description": "Konfigurer TCP-tilkoblingen til RS485-til-Ethernet/WiFi-adapteren (EW11, USR-W630, osv.)",
+        "data": {
+          "host": "IP-adresse",
+          "port": "Port",
+          "slave_id": "Modbus Slave-ID"
+        },
+        "data_description": {
+          "host": "IP-adresse til RS485-til-TCP-konverteren",
+          "port": "Modbus TCP-port (vanligvis 502)",
+          "slave_id": "Vekselretter Modbus-adresse (vanligvis 1)"
+        }
+      },
+      "serial": {
+        "title": "Serietilkoblingsoppsett",
+        "description": "Konfigurer serietilkoblingen til USB-til-RS485-adapteren",
+        "data": {
+          "device_path": "Enhetssti",
+          "baudrate": "Baudrate",
+          "slave_id": "Modbus Slave-ID"
+        },
+        "data_description": {
+          "device_path": "Seriell enhetssti (f.eks. /dev/ttyUSB0 eller COM3)",
+          "baudrate": "Seriell kommunikasjonshastighet (vanligvis 9600)",
+          "slave_id": "Vekselretter Modbus-adresse (vanligvis 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Sikkerhetskontroll for off-grid vekselretter",
+        "description": "**KRITISK SIKKERHETSKONTROLL**\n\nHar du en off-grid vekselretter (SPF-serie)?\n\nOff-grid vekselrettere vil oppleve en STRØMTILBAKESTILLING hvis automatisk deteksjon forsøkes.\n\n• Hvis Ja: Du velger modellen manuelt (trygt)\n• Hvis Nei: Automatisk deteksjon vil fortsette (trygt for nettilkoblede modeller)\n\nEksempler på off-grid-modeller: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Jeg har en off-grid (SPF) vekselretter"
+        },
+        "data_description": {
+          "has_offgrid": "Aktiver BARE dette hvis du har en SPF-serie off-grid vekselretter. Off-grid vekselrettere bruker en annen protokoll og vil tilbakestille seg hvis VPP-registre aksesseres."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Tilkobling til vekselretteren mislyktes. Sjekk tilkoblingsinnstillingene og kabeltilkoblingene.",
+      "unknown": "Uventet feil oppstod under oppsett.",
+      "no_device": "Velg en enhet eller skriv inn enhetsstien manuelt.",
+      "invalid_profile": "Ugyldig vekselretterprofil valgt."
+    },
+    "abort": {
+      "already_configured": "Denne vekselretteren er allerede konfigurert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Growatt Modbus Alternativer",
+        "description": "Konfigurer enhetsnavn, vekselretterprofiler, polling-oppsett og netteffektalternativer",
+        "data": {
+          "device_name": "Enhetsnavn",
+          "inverter_series": "Vekselretterserie",
+          "scan_interval": "Skanningsintervall",
+          "offline_scan_interval": "Offline skanningsintervall",
+          "timeout": "Tilkoblingstidtaker",
+          "invert_grid_power": "Inverter netteffekt",
+          "invert_battery_power": "Inverter batterieffekt"
+        },
+        "data_description": {
+          "device_name": "Ditt navn for enheten (vil stå foran alle sensornavn)",
+          "inverter_series": "Velg modell/serie for vekselretteren (velger automatisk protokollversjon)",
+          "scan_interval": "Hvor ofte vekselretteren polles når den er online (5-300 sekunder)",
+          "offline_scan_interval": "Hvor ofte vekselretteren polles når den er offline/om natten (60-3600 sekunder, standard 300)",
+          "timeout": "Hvor lenge vente på svar fra vekselretteren (1-60 sekunder)",
+          "invert_grid_power": "Aktiver hvis CT-klemmen er installert omvendt (bytter import/eksport på AC-siden)",
+          "invert_battery_power": "Aktiver hvis batterieffekten viser omvendt retning (bytter lading/utladingstegn)"
+        }
+      }
+    }
+  }
+}

@@ -527,7 +527,7 @@ WRITABLE_REGISTERS = {
 
 # Sensor offline behavior mapping
 SENSOR_OFFLINE_BEHAVIOR = {
-    'power': 0,                 # Power sensors go to 0W
+    'power': None,              # Power sensors go unavailable — inverter may be unreachable even when TCP adapter is connected (Issue #259)
     'daily_total': None,        # Unavailable when offline — avoids retaining 0.0 initial state; HA resets total_increasing baseline after unavailable
     'lifetime_total': None,     # Unavailable when offline — same reasoning; avoids total_increasing warnings from 32-bit register jitter
     'diagnostic': None,         # Diagnostic sensors go unavailable

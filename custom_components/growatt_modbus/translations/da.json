@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Growatt Modbus Opsætning",
+        "description": "Konfigurer din Growatt inverters forbindelse.",
+        "data": {
+          "name": "Integrations Navn",
+          "inverter_series": "Inverter Serie",
+          "connection_type": "Forbindelses Type"
+        },
+        "data_description": {
+          "name": "Lokalt navn for din Inverter",
+          "inverter_series": "Vælg din inverter model/serie",
+          "connection_type": "Hvordan du vil forbinde"
+        }
+      },
+      "tcp": {
+        "title": "TCP Forbindelse opsætning",
+        "description": "Konfigurer TCP forbindelse til din RS485-til-Ethernet/WiFi adapter (EW11, USR-W630, etc.)",
+        "data": {
+          "host": "IP Adresse",
+          "port": "Port",
+          "slave_id": "Modbus Slave ID"
+        },
+        "data_description": {
+          "host": "IP adresse på din RS485-to-TCP konverter",
+          "port": "Modbus TCP port (normalt 502)",
+          "slave_id": "Inverter Modbus adresse (normalt 1)"
+        }
+      },
+      "serial": {
+        "title": "Seriel Forbindelses Opsætning",
+        "description": "Konfigurer seriel forbindelse til din USB-til-RS485 adapter",
+        "data": {
+          "device_path": "Enheds Sti",
+          "baudrate": "Baud Rate",
+          "slave_id": "Modbus Slave ID"
+        },
+        "data_description": {
+          "device_path": "Serial enheds stil (f.eks., /dev/ttyUSB0 eller COM3)",
+          "baudrate": "Seriel kommunikations hastighed (normalt 9600)",
+          "slave_id": "Inverter Modbus adresse (normalt 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Off-Grid Inverter Sikkerheds Tjek",
+        "description": "**KRITISK SIKKERHEDS TJEK**\n\nHar du en Off-Grid inverter (SPF series)?\n\nOff-Grid inverterer vil opleve en POWER RESET hvis auto-detection prøves.\n\n• Hvis Ja: Du vil manuelt vælge din model (sikker)\n• Hvis Nej: Automatisk detektering vil fortsætte (sikker for grid-forbundne modeller)\n\nEksempler på Off-Grid modeller: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Jeg har en Off-Grid (SPF) inverter"
+        },
+        "data_description": {
+          "has_offgrid": "Aktiver KUN dette hvis du har en SPF serie off-grid inverter. Off-Grid inverterer bruger en anden protokol og vil resette hvis VPP registre er tilgået."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Fejlede at forbinde til til din inverter. Tjek din forbindelses indstillinger og kabel forbindelser.",
+      "unknown": "Uventet fejl skete under opsætning.",
+      "no_device": "Vælg venligst en enhed eller indtast enheds sti manuelt.",
+      "invalid_profile": "Ugyldig inverter profil valgt."
+    },
+    "abort": {
+      "already_configured": "Denne inverter er allerede konfigureret."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Growatt Modbus Optioner",
+        "description": "Konfigurer enheds navn, inverter profiler, polling opsætning, and elnet effekt optioner",
+        "data": {
+          "device_name": "Enheds Navn",
+          "inverter_series": "Inverter Serie",
+          "scan_interval": "Skannings Interval",
+          "offline_scan_interval": "Offline Skannings Interval",
+          "timeout": "Forbindelses Timeout",
+          "invert_grid_power": "Inverter Net Effekt",
+          "invert_battery_power": "Inverter Batteri Effekt"
+        },
+        "data_description": {
+          "device_name": "Dit navn for enheden (vil være før alle sensor navne)",
+          "inverter_series": "Vælg din inverter model/serie (auto-vælger protokol version)",
+          "scan_interval": "Hvor ofte polles inverteren når online (5-300 sekunder)",
+          "offline_scan_interval": "Hvor ofte polles inverteren når offline/om natten (60-3600 sekunder, standard 300)",
+          "timeout": "Hvor lang tid at vente på svar fra inverteren (1-60 sekunder)",
+          "invert_grid_power": "Aktiver hvis CT clamp er installeret omvendt (bytter import/eksport på AC siden)",
+          "invert_battery_power": "Aktiver hvis batteri effekt viser omvendt retning (bytter lade/aflade tegn)"
+        }
+      }
+    }
+  }
+}

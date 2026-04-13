@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Postavljanje Growatt Modbus",
+        "description": "Konfigurirajte vezu s vašim Growatt izmjenjivačem.",
+        "data": {
+          "name": "Naziv integracije",
+          "inverter_series": "Serija izmjenjivača",
+          "connection_type": "Vrsta veze"
+        },
+        "data_description": {
+          "name": "Lokalni naziv vašeg izmjenjivača",
+          "inverter_series": "Odaberite model/seriju vašeg izmjenjivača",
+          "connection_type": "Kako se želite spojiti"
+        }
+      },
+      "tcp": {
+        "title": "Postavljanje TCP veze",
+        "description": "Konfigurirajte TCP vezu s adapterom RS485-Ethernet/WiFi (EW11, USR-W630 itd.)",
+        "data": {
+          "host": "IP adresa",
+          "port": "Port",
+          "slave_id": "Modbus Slave ID"
+        },
+        "data_description": {
+          "host": "IP adresa vašeg RS485-TCP pretvarača",
+          "port": "Modbus TCP port (obično 502)",
+          "slave_id": "Modbus adresa izmjenjivača (obično 1)"
+        }
+      },
+      "serial": {
+        "title": "Postavljanje serijske veze",
+        "description": "Konfigurirajte serijsku vezu s adapterom USB-RS485",
+        "data": {
+          "device_path": "Put do uređaja",
+          "baudrate": "Brzina prijenosa",
+          "slave_id": "Modbus Slave ID"
+        },
+        "data_description": {
+          "device_path": "Put do serijskog uređaja (npr. /dev/ttyUSB0 ili COM3)",
+          "baudrate": "Brzina serijske komunikacije (obično 9600)",
+          "slave_id": "Modbus adresa izmjenjivača (obično 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Sigurnosna provjera off-grid izmjenjivača",
+        "description": "**KRITIČNA SIGURNOSNA PROVJERA**\n\nImate li off-grid izmjenjivač (serija SPF)?\n\nOff-grid izmjenjivači će doživjeti RESETIRANJE NAPAJANJA ako se pokuša automatsko otkrivanje.\n\n• Ako Da: Ručno ćete odabrati model (sigurno)\n• Ako Ne: Automatsko otkrivanje će se nastaviti (sigurno za modele spojene na mrežu)\n\nPrimjeri off-grid modela: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Imam off-grid (SPF) izmjenjivač"
+        },
+        "data_description": {
+          "has_offgrid": "Omogućite SAMO ako imate off-grid izmjenjivač serije SPF. Off-grid izmjenjivači koriste drugačiji protokol i resetirat će se ako se pristupa VPP registrima."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Spajanje na izmjenjivač nije uspjelo. Provjerite postavke veze i kabelske spojeve.",
+      "unknown": "Došlo je do neočekivane greške tijekom postavljanja.",
+      "no_device": "Odaberite uređaj ili unesite put do uređaja ručno.",
+      "invalid_profile": "Odabran je nevažeći profil izmjenjivača."
+    },
+    "abort": {
+      "already_configured": "Ovaj izmjenjivač je već konfiguriran."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opcije Growatt Modbus",
+        "description": "Konfigurirajte naziv uređaja, profile izmjenjivača, postavke ispitivanja i opcije mrežne snage",
+        "data": {
+          "device_name": "Naziv uređaja",
+          "inverter_series": "Serija izmjenjivača",
+          "scan_interval": "Interval skeniranja",
+          "offline_scan_interval": "Offline interval skeniranja",
+          "timeout": "Vremensko ograničenje veze",
+          "invert_grid_power": "Invertirati mrežnu snagu",
+          "invert_battery_power": "Invertirati snagu baterije"
+        },
+        "data_description": {
+          "device_name": "Vaš naziv uređaja (bit će ispred svih naziva senzora)",
+          "inverter_series": "Odaberite model/seriju izmjenjivača (automatski odabire verziju protokola)",
+          "scan_interval": "Koliko često ispitivati izmjenjivač kada je online (5-300 sekundi)",
+          "offline_scan_interval": "Koliko često ispitivati izmjenjivač kada je offline/noću (60-3600 sekundi, zadano 300)",
+          "timeout": "Koliko dugo čekati odgovor od izmjenjivača (1-60 sekundi)",
+          "invert_grid_power": "Omogućite ako je CT stezaljka instalirana obrnuto (zamjenjuje uvoz/izvoz na AC strani)",
+          "invert_battery_power": "Omogućite ako snaga baterije prikazuje obrnutu vrijednost (zamjenjuje predznak punjenja/pražnjenja)"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuration Growatt Modbus",
+        "description": "Configurez la connexion à votre onduleur Growatt.",
+        "data": {
+          "name": "Nom de l'intégration",
+          "inverter_series": "Série de l'onduleur",
+          "connection_type": "Type de connexion"
+        },
+        "data_description": {
+          "name": "Nom local de votre onduleur",
+          "inverter_series": "Sélectionnez le modèle/la série de votre onduleur",
+          "connection_type": "Comment vous souhaitez vous connecter"
+        }
+      },
+      "tcp": {
+        "title": "Configuration de la connexion TCP",
+        "description": "Configurez la connexion TCP à votre adaptateur RS485 vers Ethernet/WiFi (EW11, USR-W630, etc.)",
+        "data": {
+          "host": "Adresse IP",
+          "port": "Port",
+          "slave_id": "ID Esclave Modbus"
+        },
+        "data_description": {
+          "host": "Adresse IP de votre convertisseur RS485 vers TCP",
+          "port": "Port TCP Modbus (habituellement 502)",
+          "slave_id": "Adresse Modbus de l'onduleur (habituellement 1)"
+        }
+      },
+      "serial": {
+        "title": "Configuration de la connexion série",
+        "description": "Configurez la connexion série à votre adaptateur USB vers RS485",
+        "data": {
+          "device_path": "Chemin du périphérique",
+          "baudrate": "Débit en bauds",
+          "slave_id": "ID Esclave Modbus"
+        },
+        "data_description": {
+          "device_path": "Chemin du périphérique série (ex. /dev/ttyUSB0 ou COM3)",
+          "baudrate": "Vitesse de communication série (habituellement 9600)",
+          "slave_id": "Adresse Modbus de l'onduleur (habituellement 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Vérification de sécurité onduleur hors réseau",
+        "description": "**VÉRIFICATION DE SÉCURITÉ CRITIQUE**\n\nAvez-vous un onduleur hors réseau (série SPF) ?\n\nLes onduleurs hors réseau subiront une RÉINITIALISATION D'ALIMENTATION si la détection automatique est tentée.\n\n• Si Oui : Vous sélectionnerez votre modèle manuellement (sûr)\n• Si Non : La détection automatique se poursuivra (sûr pour les modèles connectés au réseau)\n\nExemples de modèles hors réseau : SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "J'ai un onduleur hors réseau (SPF)"
+        },
+        "data_description": {
+          "has_offgrid": "Activez ceci UNIQUEMENT si vous avez un onduleur hors réseau de série SPF. Les onduleurs hors réseau utilisent un protocole différent et se réinitialiseront si les registres VPP sont accédés."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Échec de la connexion à votre onduleur. Vérifiez vos paramètres de connexion et vos connexions de câbles.",
+      "unknown": "Une erreur inattendue s'est produite lors de la configuration.",
+      "no_device": "Veuillez sélectionner un périphérique ou saisir le chemin du périphérique manuellement.",
+      "invalid_profile": "Profil d'onduleur invalide sélectionné."
+    },
+    "abort": {
+      "already_configured": "Cet onduleur est déjà configuré."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options Growatt Modbus",
+        "description": "Configurer le nom de l'appareil, les profils d'onduleur, la configuration d'interrogation et les options de puissance réseau",
+        "data": {
+          "device_name": "Nom de l'appareil",
+          "inverter_series": "Série de l'onduleur",
+          "scan_interval": "Intervalle de balayage",
+          "offline_scan_interval": "Intervalle de balayage hors ligne",
+          "timeout": "Délai de connexion",
+          "invert_grid_power": "Inverser la puissance réseau",
+          "invert_battery_power": "Inverser la puissance batterie"
+        },
+        "data_description": {
+          "device_name": "Votre nom pour l'appareil (sera placé avant tous les noms de capteurs)",
+          "inverter_series": "Sélectionnez le modèle/la série de votre onduleur (sélectionne automatiquement la version du protocole)",
+          "scan_interval": "À quelle fréquence interroger l'onduleur en ligne (5-300 secondes)",
+          "offline_scan_interval": "À quelle fréquence interroger l'onduleur hors ligne/la nuit (60-3600 secondes, défaut 300)",
+          "timeout": "Combien de temps attendre une réponse de l'onduleur (1-60 secondes)",
+          "invert_grid_power": "Activer si la pince CT est installée à l'envers (échange import/export côté AC)",
+          "invert_battery_power": "Activer si la puissance batterie affiche une direction inversée (échange le signe charge/décharge)"
+        }
+      }
+    }
+  }
+}

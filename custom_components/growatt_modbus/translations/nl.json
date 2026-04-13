@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Growatt Modbus Installatie",
+        "description": "Configureer de verbinding met uw Growatt omvormer.",
+        "data": {
+          "name": "Integratienaam",
+          "inverter_series": "Omvormer Serie",
+          "connection_type": "Verbindingstype"
+        },
+        "data_description": {
+          "name": "Lokale naam voor uw omvormer",
+          "inverter_series": "Selecteer uw omvormermodel/-serie",
+          "connection_type": "Hoe u verbinding wilt maken"
+        }
+      },
+      "tcp": {
+        "title": "TCP-verbinding instellen",
+        "description": "Configureer de TCP-verbinding met uw RS485-naar-Ethernet/WiFi-adapter (EW11, USR-W630, enz.)",
+        "data": {
+          "host": "IP-adres",
+          "port": "Poort",
+          "slave_id": "Modbus Slave-ID"
+        },
+        "data_description": {
+          "host": "IP-adres van uw RS485-naar-TCP-converter",
+          "port": "Modbus TCP-poort (normaal 502)",
+          "slave_id": "Omvormer Modbus-adres (normaal 1)"
+        }
+      },
+      "serial": {
+        "title": "Seriële verbinding instellen",
+        "description": "Configureer de seriële verbinding met uw USB-naar-RS485-adapter",
+        "data": {
+          "device_path": "Apparaatpad",
+          "baudrate": "Baudrate",
+          "slave_id": "Modbus Slave-ID"
+        },
+        "data_description": {
+          "device_path": "Serieel apparaatpad (bijv. /dev/ttyUSB0 of COM3)",
+          "baudrate": "Seriële communicatiesnelheid (normaal 9600)",
+          "slave_id": "Omvormer Modbus-adres (normaal 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Off-Grid Omvormer Veiligheidscontrole",
+        "description": "**KRITIEKE VEILIGHEIDSCONTROLE**\n\nHeeft u een off-grid omvormer (SPF-serie)?\n\nOff-grid omvormers ondergaan een POWER RESET als automatische detectie wordt geprobeerd.\n\n• Indien Ja: U selecteert uw model handmatig (veilig)\n• Indien Nee: Automatische detectie gaat door (veilig voor netgekoppelde modellen)\n\nVoorbeelden van off-grid modellen: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Ik heb een off-grid (SPF) omvormer"
+        },
+        "data_description": {
+          "has_offgrid": "Activeer dit ALLEEN als u een SPF-serie off-grid omvormer heeft. Off-grid omvormers gebruiken een ander protocol en resetten als VPP-registers worden benaderd."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbinding met uw omvormer mislukt. Controleer uw verbindingsinstellingen en kabelverbindingen.",
+      "unknown": "Onverwachte fout opgetreden tijdens installatie.",
+      "no_device": "Selecteer een apparaat of voer het apparaatpad handmatig in.",
+      "invalid_profile": "Ongeldig omvormerprofiel geselecteerd."
+    },
+    "abort": {
+      "already_configured": "Deze omvormer is al geconfigureerd."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Growatt Modbus Opties",
+        "description": "Apparaatnaam, omvormerprofielen, polling-instellingen en netvermogenopties configureren",
+        "data": {
+          "device_name": "Apparaatnaam",
+          "inverter_series": "Omvormer Serie",
+          "scan_interval": "Scaninterval",
+          "offline_scan_interval": "Offline scaninterval",
+          "timeout": "Verbindingstimeout",
+          "invert_grid_power": "Netvermogen omkeren",
+          "invert_battery_power": "Batterijvermogen omkeren"
+        },
+        "data_description": {
+          "device_name": "Uw naam voor het apparaat (wordt voor alle sensornamen geplaatst)",
+          "inverter_series": "Selecteer uw omvormermodel/-serie (selecteert automatisch protocolversie)",
+          "scan_interval": "Hoe vaak de omvormer wordt gepolld wanneer online (5-300 seconden)",
+          "offline_scan_interval": "Hoe vaak de omvormer wordt gepolld wanneer offline/'s nachts (60-3600 seconden, standaard 300)",
+          "timeout": "Hoe lang te wachten op een reactie van de omvormer (1-60 seconden)",
+          "invert_grid_power": "Activeren als CT-klem omgekeerd is geïnstalleerd (wisselt import/export aan de AC-kant)",
+          "invert_battery_power": "Activeren als batterijvermogen omgekeerde richting toont (wisselt laad-/ontlaadteken)"
+        }
+      }
+    }
+  }
+}
