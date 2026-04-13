@@ -94,7 +94,7 @@ SENSOR_TYPES = {
 
     # Lifetime total sensors - always retain last value
     'lifetime_total': [
-        'energy_total', 'energy_to_grid_total', 'grid_import_energy_total',
+        'energy_total', 'pv_energy_total', 'energy_to_grid_total', 'grid_import_energy_total',
         'load_energy_total', 'energy_to_user_total', 'grid_energy_total',
         # Battery lifetime sensors
         'battery_charge_total', 'battery_discharge_total',
@@ -607,7 +607,7 @@ SENSOR_DEVICE_MAP = {
         'ac_power_r', 'ac_power_s', 'ac_power_t',
         'system_output_power',
         # Solar production energy
-        'energy_today', 'energy_total',
+        'energy_today', 'energy_total', 'pv_energy_total',
         # WIT: Extra/parallel inverter energy production
         'extra_energy_today', 'extra_energy_total',
         # Self-consumption percentage (related to solar utilization)

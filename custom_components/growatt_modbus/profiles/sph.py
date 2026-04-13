@@ -3,6 +3,7 @@ SPH_3000_6000 = {
     'name': 'SPH Series 3-6kW',
     'description': 'Single-phase hybrid inverter with battery storage (3-6kW)',
     'notes': 'Uses 0-124 register range. 2 PV strings, battery management, backup output.',
+    'use_mppt_energy_today': True,  # Reg 53/54 = system AC output incl. battery discharge; use per-MPPT DC sum instead
     'input_registers': {
         # System Status
         0: {'name': 'inverter_status', 'scale': 1, 'unit': '', 'desc': '0=Waiting, 1=Normal, 3=Fault'},
@@ -205,6 +206,7 @@ SPH_7000_10000 = {
     'name': 'SPH Seres 7-10KW',
     'description': 'Single-phase hybrid inverter with battery storage (7-10kW)',
     'notes': 'Uses 0-124 register range. Same registers as 3-6kW model, higher power rating.',
+    'use_mppt_energy_today': True,  # Reg 53/54 = system AC output incl. battery discharge; use per-MPPT DC sum instead
     'input_registers': {
         # System Status
         0: {'name': 'inverter_status', 'scale': 1, 'unit': '', 'desc': '0=Waiting, 1=Normal, 3=Fault'},
@@ -398,6 +400,7 @@ SPH_8000_10000_HU = {
     'name': 'SPH/SPM 8000-10000TL-HU',
     'description': 'Single-phase hybrid inverter with battery storage and 3 MPPT inputs (8-10kW). Models: SPH/SPM 8000-10000TL-HU.',
     'notes': 'Uses 0-124 and 1000-1124 register ranges. Single-phase with 3 PV strings, detailed power flow and energy tracking.',
+    'use_mppt_energy_today': True,  # Reg 53/54 = system AC output incl. battery discharge; use per-MPPT DC sum instead
     'input_registers': {
         # === BASE RANGE (0-124) - Same as SPH_7000_10000 ===
         **SPH_7000_10000['input_registers'],
@@ -513,6 +516,7 @@ SPH_3000_6000_V201 = {
     'name': 'SPH Series 3-6kW (V2.01)',
     'description': 'Single-phase hybrid inverter with battery storage (3-6kW) and VPP Protocol V2.01',
     'notes': 'Combines legacy (0-124 range) with V2.01 (30000+ range). Overlapping values served at both addresses.',
+    'use_mppt_energy_today': True,  # Reg 53/54 = system AC output incl. battery discharge; use per-MPPT DC sum instead
     'input_registers': {
         # === Legacy REGISTERS (0-124 range) ===
         **SPH_3000_6000['input_registers'],
@@ -685,6 +689,7 @@ SPH_7000_10000_V201 = {
     'name': 'SPH Series 7-10kW (V2.01)',
     'description': 'Single-phase hybrid inverter with battery storage (7-10kW) and VPP Protocol V2.01',
     'notes': 'Combines legacy (0-124 range) with V2.01 (30000+ range). Overlapping values served at both addresses.',
+    'use_mppt_energy_today': True,  # Reg 53/54 = system AC output incl. battery discharge; use per-MPPT DC sum instead
     'input_registers': {
         # === Legacy REGISTERS (0-124 range) ===
         **SPH_7000_10000['input_registers'],

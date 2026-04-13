@@ -6,9 +6,32 @@
 
 ## v0.7.3
 
-Issues: #256 · #257 · #254 · #255 · #253 · #225 · #259
+Issues: #249 · #253 · #254 · #255 · #256 · #257 · #225 · #259
 
 ---
+
+- **SPH-TL3 / SPA — Battery First & Grid First TOU scheduling (#249):** The SPA/SPH-TL3 firmware
+  has a full time-of-use schedule with separate windows for Battery First and Grid First modes,
+  beyond the 3 AC-charge slots already available. These registers were confirmed via the
+  SPH_3000-6000TL-HUB user manual and hardware register scan.
+
+  27 new control entities are now exposed for SPH-TL3 and SPA (which inherits the same register
+  map):
+
+  | Slot | Mode          | Start              | End                | Enable             |
+  | ---- | ------------- | ------------------ | ------------------ | ------------------ |
+  | 4–6  | Battery First | reg 1017/1020/1023 | reg 1018/1021/1024 | reg 1019/1022/1025 |
+  | 4–6  | Grid First    | reg 1026/1029/1032 | reg 1027/1030/1033 | reg 1028/1031/1034 |
+  | 7–9  | Grid First    | reg 1080/1083/1086 | reg 1081/1084/1087 | reg 1082/1085/1088 |
+
+  Time slots appear as `time` entities (HH:MM picker); enable toggles appear as `select` entities
+  (Enabled / Disabled).
+
+  **Background:** Writes to `priority_mode` (reg 1044) were silently rejected by the SPA firmware
+  when all Battery First and Grid First scheduling windows contained zeros. The ShinePhone
+  workaround (set all slots to 00:00–23:59) works by populating these window registers. With this
+  release, the slots can be configured directly from Home Assistant, eliminating the need for the
+  workaround.
 
 - **SPH-TL3 — Power to Load / Grid Power register fix (#257, @TomasHala):** Registers 1021/1022
   (`power_to_user_total`) and 1037/1038 (`power_to_load`) were swapped in the SPH-TL3 profile.
@@ -42,26 +65,33 @@ Issues: #256 · #257 · #254 · #255 · #253 · #225 · #259
 
   The English (`en`) file remains the authoritative reference.
 
-- **MIN — Energy Total uses wrong register on hybrid models (#253):** `sensor.energy_total` was
-  reading register 3051/3052 (`Eac_total` — total AC output including battery discharge), causing
-  it to overstate lifetime solar generation by the lifetime battery discharge amount on MIN TL-XH
-  hybrid inverters. Confirmed via direct Modbus read: `Eac_total=12574.4 kWh` vs
-  `Epv_total=7848.6 kWh` on a hybrid system.
+- **MIN / TL-XH — Eac Total and Epv Total as separate sensor entities (#253):** Two distinct
+  lifetime energy figures are now exposed independently:
 
-  Fix: registers 3053/3054 (`Epv_total` — PV DC input only) are now mapped as `pv_energy_total`
-  in both MIN profiles. The coordinator already uses `pv_energy_total` to override `energy_total`
-  when present (same pattern as SPH, MOD, WIT). Additionally added per-MPPT DC energy registers:
-  - **3055/3056** — PV1 energy today (`pv1_energy_today`)
-  - **3057/3058** — PV1 energy total (`pv1_energy_total`)
-  - **3059/3060** — PV2 energy today (`pv2_energy_today`)
-  - **3061/3062** — PV2 energy total (`pv2_energy_total`)
+  - **Energy Total** (`energy_total`, reg 3051/3052) — Eac: total AC energy the inverter has
+    ever delivered to the grid and home loads. On hybrid models this includes battery discharge.
+  - **PV Energy Total** (`pv_energy_total`, reg 3053/3054) — Epv: raw DC energy captured from
+    the solar panels, measured before the inverter conversion stage. Slightly higher than Energy
+    Total due to ~2–7% conversion losses; unaffected by battery charge/discharge cycles.
 
-  `energy_today` is now derived from `pv1_energy_today + pv2_energy_today` (correct DC-only sum)
-  rather than `Eac_today` (3049/3050) which includes battery discharge on hybrid models.
+  `pv_energy_total` is also available on TL-XH (reg 91/92), SPH, SPH-TL3/SPA, WIT, and MOD-XH
+  profiles. `energy_total` always reads the AC-output register directly on all profiles — it is
+  never replaced or overridden by the Epv figure.
 
-  Note: this fix applies to all MIN profiles including the V201 variants (which inherit the base
-  register map). Pure grid-tied MIN users will see no change since `Eac_total ≈ Epv_total` without
-  a battery. Users with a battery will see `Energy Total` decrease to the accurate solar figure.
+  Register mappings also added to both MIN profiles for PV3 DC string energy (3063/3064 today,
+  3065/3066 total) alongside the previously added PV1/PV2 string registers.
+
+  The `energy_today` per-MPPT summation (pv1 + pv2 + pv3 DC strings) is used on hybrid profiles
+  (SPH, SPH-TL3/SPA, TL-XH, WIT, MOD-XH) where the AC energy_today register includes battery
+  discharge. Pure grid-tied profiles (MIN, MIC) read `energy_today` directly.
+
+- **Sensor descriptions in More Info modal:** Ambiguous or easily confused sensor pairs now
+  display a plain-English explanation in the More Info modal (click any sensor tile in the HA
+  dashboard). Descriptions cover: Energy Today / Energy Total / PV Energy Total, Solar Total
+  Power vs System Output Power, Grid Power (signed) vs Grid Export / Import Power, Battery Power
+  (signed) vs Charge / Discharge Power, battery energy accounting (DC charge/discharge vs AC
+  charge/discharge vs operational discharge), load and grid energy breakdowns, IPM/Boost
+  temperatures, BMS voltage vs inverter-measured voltage, and WIT parallel inverter extra sensors.
 
 - **Offline at startup — integration now loads without blocking HA bootstrap (#255):** Two
   separate startup failure modes are now resolved:

@@ -14,6 +14,7 @@ WIT_4000_15000TL3 = {
     'name': 'WIT 4-15kW Hybrid',
     'description': 'Three-phase hybrid inverter with battery storage and UPS/EPS backup (4-15kW)',
     'notes': 'Uses 0-124, 125-249, 875-999, 8000-8124 and VPP (31000-31399) register ranges. Battery data mapped to 8000-8124 range; battery temperature seen at 31223 (VPP block). Features: UPS 10ms switching, time-of-use programming, VPP/demand management. CONTROL MODEL: VPP protocol with time-limited overrides - register 30476 is READ-ONLY. Use registers 30407-30409 for temporary control.',
+    'use_mppt_energy_today': True,  # Reg 53/54 = system AC output incl. battery discharge; use per-MPPT DC sum instead
     'input_registers': {
         # ============================================================================
         # BASE RANGE 0-124: PV, AC, and System Status (same as SPH-TL3)

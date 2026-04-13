@@ -143,6 +143,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self._current_date = datetime.now().date()
         self._inverter_online = False
         self._just_came_online_time = None  # Timestamp when inverter came online (for debouncing)
+        # True once the inverter has responded at least once in this HA session.
+        # Used to distinguish a cold-start recovery (preserve storage-loaded daily retention)
+        # from a normal overnight recovery (clear retention to trigger stale-value debounce).
+        self._ever_had_real_data = False
 
         # Adaptive polling for offline inverters
         self._consecutive_failures = 0
@@ -601,18 +605,27 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
             if was_offline:
                 # Inverter came back online after being offline.
-                # Always enable debouncing — the hardware may report yesterday's daily total
-                # before its midnight reset takes effect (which happens at sunrise, not midnight).
-                # Previously only triggered on date change, which missed the common case of the
-                # inverter going into night-mode and coming back online the next morning AFTER
-                # the midnight callback had already set _current_date to today.
                 if current_date > self._current_date:
                     self._current_date = current_date
                 _LOGGER.info("Inverter back online - enabling daily total debouncing to detect stale values")
                 self._just_came_online_time = current_time
-                # Clear daily retention so the debounce result isn't overridden by
-                # _protect_energy_totals which may hold yesterday's value from overnight polling.
-                self._retained_daily_totals = {}
+
+                if self._ever_had_real_data:
+                    # Normal recovery (e.g. after overnight offline): clear daily retention so
+                    # the debounce can detect and reset stale yesterday-values. _protect_energy_totals
+                    # would otherwise retain and block the hardware's own midnight reset (Issue #225).
+                    self._retained_daily_totals = {}
+                else:
+                    # Cold-start recovery: the integration just loaded. _async_load_energy_totals()
+                    # may have restored today's daily totals from storage — preserve those so sensors
+                    # don't drop to 0 while the adapter returns cached zeros. The debounce will still
+                    # detect and clear genuinely stale values once the window runs.
+                    _LOGGER.debug(
+                        "Cold-start recovery — preserving storage-loaded daily retention (%d values)",
+                        len(self._retained_daily_totals)
+                    )
+
+                self._ever_had_real_data = True
 
             # Debounce stale daily totals for a window after wake-up
             # Many inverters report yesterday's values from volatile memory before resetting

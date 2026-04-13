@@ -3,6 +3,7 @@ MOD_6000_15000TL3_XH = {
     'name': 'MOD TL3-XH Series',
     'description': 'Modular three-phase hybrid inverter with battery (6-15kW)',
     'notes': 'Uses 0-124 base range + 3000+ battery range. Validated with real hardware 2025-10-26.',
+    'use_mppt_energy_today': True,  # Reg 53/54 = system AC output incl. battery discharge; use per-MPPT DC sum instead
     'input_registers': {
         # === BASE RANGE (0-124) - Inverter Data ===
         # System Status
