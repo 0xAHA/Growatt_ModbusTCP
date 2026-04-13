@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurare Growatt Modbus",
+        "description": "Configurați conexiunea la invertorul dvs. Growatt.",
+        "data": {
+          "name": "Numele integrării",
+          "inverter_series": "Seria invertorului",
+          "connection_type": "Tipul conexiunii"
+        },
+        "data_description": {
+          "name": "Numele local al invertorului dvs.",
+          "inverter_series": "Selectați modelul/seria invertorului dvs.",
+          "connection_type": "Cum doriți să vă conectați"
+        }
+      },
+      "tcp": {
+        "title": "Configurare conexiune TCP",
+        "description": "Configurați conexiunea TCP la adaptorul RS485-Ethernet/WiFi (EW11, USR-W630 etc.)",
+        "data": {
+          "host": "Adresă IP",
+          "port": "Port",
+          "slave_id": "ID Slave Modbus"
+        },
+        "data_description": {
+          "host": "Adresa IP a convertorului RS485-TCP",
+          "port": "Portul TCP Modbus (de obicei 502)",
+          "slave_id": "Adresa Modbus a invertorului (de obicei 1)"
+        }
+      },
+      "serial": {
+        "title": "Configurare conexiune serială",
+        "description": "Configurați conexiunea serială la adaptorul USB-RS485",
+        "data": {
+          "device_path": "Calea dispozitivului",
+          "baudrate": "Rată baud",
+          "slave_id": "ID Slave Modbus"
+        },
+        "data_description": {
+          "device_path": "Calea dispozitivului serial (ex. /dev/ttyUSB0 sau COM3)",
+          "baudrate": "Viteza de comunicare serială (de obicei 9600)",
+          "slave_id": "Adresa Modbus a invertorului (de obicei 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Verificare securitate invertor off-grid",
+        "description": "**VERIFICARE CRITICĂ DE SECURITATE**\n\nAveți un invertor off-grid (seria SPF)?\n\nInvertoarele off-grid vor experimenta un RESET DE ALIMENTARE dacă se încearcă detectarea automată.\n\n• Dacă Da: Veți selecta modelul manual (sigur)\n• Dacă Nu: Detectarea automată va continua (sigur pentru modelele conectate la rețea)\n\nExemple de modele off-grid: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Am un invertor off-grid (SPF)"
+        },
+        "data_description": {
+          "has_offgrid": "Activați DOAR dacă aveți un invertor off-grid din seria SPF. Invertoarele off-grid folosesc un protocol diferit și se vor reseta dacă registrele VPP sunt accesate."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Conexiunea la invertor a eșuat. Verificați setările de conexiune și conexiunile de cabluri.",
+      "unknown": "A apărut o eroare neașteptată în timpul configurării.",
+      "no_device": "Selectați un dispozitiv sau introduceți manual calea dispozitivului.",
+      "invalid_profile": "A fost selectat un profil de invertor invalid."
+    },
+    "abort": {
+      "already_configured": "Acest invertor este deja configurat."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opțiuni Growatt Modbus",
+        "description": "Configurați numele dispozitivului, profilurile invertorului, setările de interogare și opțiunile de putere a rețelei",
+        "data": {
+          "device_name": "Numele dispozitivului",
+          "inverter_series": "Seria invertorului",
+          "scan_interval": "Interval de scanare",
+          "offline_scan_interval": "Interval de scanare offline",
+          "timeout": "Timeout conexiune",
+          "invert_grid_power": "Inversează puterea rețelei",
+          "invert_battery_power": "Inversează puterea bateriei"
+        },
+        "data_description": {
+          "device_name": "Numele dvs. pentru dispozitiv (va fi plasat înaintea tuturor numelor senzorilor)",
+          "inverter_series": "Selectați modelul/seria invertorului (selectează automat versiunea protocolului)",
+          "scan_interval": "Cât de des se interoghează invertorul când este online (5-300 secunde)",
+          "offline_scan_interval": "Cât de des se interoghează invertorul când este offline/noaptea (60-3600 secunde, implicit 300)",
+          "timeout": "Cât timp să aștepte un răspuns de la invertor (1-60 secunde)",
+          "invert_grid_power": "Activați dacă clemele CT sunt instalate invers (schimbă import/export pe partea AC)",
+          "invert_battery_power": "Activați dacă puterea bateriei arată direcție inversă (schimbă semnul de încărcare/descărcare)"
+        }
+      }
+    }
+  }
+}

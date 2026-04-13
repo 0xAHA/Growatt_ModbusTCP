@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuración de Growatt Modbus",
+        "description": "Configure la conexión con su inversor Growatt.",
+        "data": {
+          "name": "Nombre de la integración",
+          "inverter_series": "Serie del inversor",
+          "connection_type": "Tipo de conexión"
+        },
+        "data_description": {
+          "name": "Nombre local para su inversor",
+          "inverter_series": "Seleccione el modelo/serie de su inversor",
+          "connection_type": "Cómo desea conectarse"
+        }
+      },
+      "tcp": {
+        "title": "Configuración de conexión TCP",
+        "description": "Configure la conexión TCP al adaptador RS485 a Ethernet/WiFi (EW11, USR-W630, etc.)",
+        "data": {
+          "host": "Dirección IP",
+          "port": "Puerto",
+          "slave_id": "ID Esclavo Modbus"
+        },
+        "data_description": {
+          "host": "Dirección IP del convertidor RS485 a TCP",
+          "port": "Puerto TCP Modbus (normalmente 502)",
+          "slave_id": "Dirección Modbus del inversor (normalmente 1)"
+        }
+      },
+      "serial": {
+        "title": "Configuración de conexión serie",
+        "description": "Configure la conexión serie al adaptador USB a RS485",
+        "data": {
+          "device_path": "Ruta del dispositivo",
+          "baudrate": "Velocidad en baudios",
+          "slave_id": "ID Esclavo Modbus"
+        },
+        "data_description": {
+          "device_path": "Ruta del dispositivo serie (ej. /dev/ttyUSB0 o COM3)",
+          "baudrate": "Velocidad de comunicación serie (normalmente 9600)",
+          "slave_id": "Dirección Modbus del inversor (normalmente 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Verificación de seguridad del inversor fuera de red",
+        "description": "**VERIFICACIÓN DE SEGURIDAD CRÍTICA**\n\n¿Tiene un inversor fuera de red (serie SPF)?\n\nLos inversores fuera de red experimentarán un RESTABLECIMIENTO DE ENERGÍA si se intenta la detección automática.\n\n• Si Sí: Seleccionará su modelo manualmente (seguro)\n• Si No: La detección automática continuará (seguro para modelos conectados a la red)\n\nEjemplos de modelos fuera de red: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Tengo un inversor fuera de red (SPF)"
+        },
+        "data_description": {
+          "has_offgrid": "Actívelo SOLO si tiene un inversor fuera de red de serie SPF. Los inversores fuera de red usan un protocolo diferente y se restablecerán si se accede a los registros VPP."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Error al conectar con su inversor. Verifique su configuración de conexión y las conexiones de cables.",
+      "unknown": "Se produjo un error inesperado durante la configuración.",
+      "no_device": "Seleccione un dispositivo o introduzca la ruta del dispositivo manualmente.",
+      "invalid_profile": "Perfil de inversor no válido seleccionado."
+    },
+    "abort": {
+      "already_configured": "Este inversor ya está configurado."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones de Growatt Modbus",
+        "description": "Configurar nombre del dispositivo, perfiles del inversor, configuración de sondeo y opciones de potencia de red",
+        "data": {
+          "device_name": "Nombre del dispositivo",
+          "inverter_series": "Serie del inversor",
+          "scan_interval": "Intervalo de escaneo",
+          "offline_scan_interval": "Intervalo de escaneo sin conexión",
+          "timeout": "Tiempo de espera de conexión",
+          "invert_grid_power": "Invertir potencia de red",
+          "invert_battery_power": "Invertir potencia de batería"
+        },
+        "data_description": {
+          "device_name": "Su nombre para el dispositivo (se antepondrá a todos los nombres de sensores)",
+          "inverter_series": "Seleccione el modelo/serie de su inversor (selecciona automáticamente la versión del protocolo)",
+          "scan_interval": "Con qué frecuencia sondear el inversor cuando está en línea (5-300 segundos)",
+          "offline_scan_interval": "Con qué frecuencia sondear el inversor cuando está sin conexión/por la noche (60-3600 segundos, predeterminado 300)",
+          "timeout": "Cuánto tiempo esperar una respuesta del inversor (1-60 segundos)",
+          "invert_grid_power": "Activar si la pinza CT está instalada al revés (intercambia importación/exportación en el lado AC)",
+          "invert_battery_power": "Activar si la potencia de la batería muestra dirección invertida (intercambia el signo de carga/descarga)"
+        }
+      }
+    }
+  }
+}

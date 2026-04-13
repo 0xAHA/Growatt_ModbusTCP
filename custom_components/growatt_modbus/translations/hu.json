@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Growatt Modbus Beállítás",
+        "description": "Konfigurálja a Growatt inverterhez való csatlakozást.",
+        "data": {
+          "name": "Integráció neve",
+          "inverter_series": "Inverter sorozat",
+          "connection_type": "Kapcsolat típusa"
+        },
+        "data_description": {
+          "name": "Az inverter helyi neve",
+          "inverter_series": "Válassza ki az inverter modelljét/sorozatát",
+          "connection_type": "Hogyan szeretne csatlakozni"
+        }
+      },
+      "tcp": {
+        "title": "TCP kapcsolat beállítása",
+        "description": "Konfigurálja a TCP kapcsolatot az RS485-Ethernet/WiFi adapterhez (EW11, USR-W630 stb.)",
+        "data": {
+          "host": "IP-cím",
+          "port": "Port",
+          "slave_id": "Modbus Slave ID"
+        },
+        "data_description": {
+          "host": "Az RS485-TCP átalakító IP-címe",
+          "port": "Modbus TCP port (általában 502)",
+          "slave_id": "Inverter Modbus cím (általában 1)"
+        }
+      },
+      "serial": {
+        "title": "Soros kapcsolat beállítása",
+        "description": "Konfigurálja a soros kapcsolatot az USB-RS485 adapterhez",
+        "data": {
+          "device_path": "Eszközútvonal",
+          "baudrate": "Átviteli sebesség",
+          "slave_id": "Modbus Slave ID"
+        },
+        "data_description": {
+          "device_path": "Soros eszközútvonal (pl. /dev/ttyUSB0 vagy COM3)",
+          "baudrate": "Soros kommunikációs sebesség (általában 9600)",
+          "slave_id": "Inverter Modbus cím (általában 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Off-grid inverter biztonsági ellenőrzés",
+        "description": "**KRITIKUS BIZTONSÁGI ELLENŐRZÉS**\n\nVan off-grid invertere (SPF sorozat)?\n\nAz off-grid inverterek TÁPELLÁTÁS VISSZAÁLLÍTÁST tapasztalnak automatikus felismerés megkísérlése esetén.\n\n• Ha Igen: Manuálisan választja ki a modelljét (biztonságos)\n• Ha Nem: Az automatikus felismerés folytatódik (biztonságos hálózatra csatlakoztatott modelleknél)\n\nOff-grid modellek példái: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Off-grid (SPF) inverterem van"
+        },
+        "data_description": {
+          "has_offgrid": "CSAK akkor engedélyezze, ha SPF sorozatú off-grid invertere van. Az off-grid inverterek eltérő protokollt használnak és visszaállnak, ha VPP regiszterekhez férnek hozzá."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nem sikerült csatlakozni az inverterhez. Ellenőrizze a kapcsolati beállításokat és a kábelcsatlakozásokat.",
+      "unknown": "Váratlan hiba történt a beállítás során.",
+      "no_device": "Válasszon eszközt, vagy adja meg manuálisan az eszközútvonalat.",
+      "invalid_profile": "Érvénytelen inverter profil van kiválasztva."
+    },
+    "abort": {
+      "already_configured": "Ez az inverter már konfigurálva van."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Growatt Modbus Beállítások",
+        "description": "Konfigurálja az eszköznevet, inverter profilokat, lekérdezési beállításokat és hálózati teljesítmény opciókat",
+        "data": {
+          "device_name": "Eszköz neve",
+          "inverter_series": "Inverter sorozat",
+          "scan_interval": "Szkennelési intervallum",
+          "offline_scan_interval": "Offline szkennelési intervallum",
+          "timeout": "Kapcsolat időtúllépés",
+          "invert_grid_power": "Hálózati teljesítmény invertálása",
+          "invert_battery_power": "Akkumulátor teljesítmény invertálása"
+        },
+        "data_description": {
+          "device_name": "Az eszköz neve (az összes szenzornév elé kerül)",
+          "inverter_series": "Válassza ki az inverter modelljét/sorozatát (automatikusan választja ki a protokollverziót)",
+          "scan_interval": "Milyen gyakran kérdezi le az invertert online állapotban (5-300 másodperc)",
+          "offline_scan_interval": "Milyen gyakran kérdezi le az invertert offline/éjjel (60-3600 másodperc, alapértelmezett 300)",
+          "timeout": "Mennyi ideig vár az inverter válaszára (1-60 másodperc)",
+          "invert_grid_power": "Engedélyezze, ha a CT bilincs fordítva van felszerelve (felcseréli az import/export értékeket az AC oldalon)",
+          "invert_battery_power": "Engedélyezze, ha az akkumulátor teljesítmény fordított irányt mutat (felcseréli a töltés/merítés előjelét)"
+        }
+      }
+    }
+  }
+}

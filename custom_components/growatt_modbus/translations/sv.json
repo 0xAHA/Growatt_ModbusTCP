@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Growatt Modbus Inställning",
+        "description": "Konfigurera anslutningen till din Growatt-växelriktare.",
+        "data": {
+          "name": "Integrationsnamn",
+          "inverter_series": "Växelriktarserie",
+          "connection_type": "Anslutningstyp"
+        },
+        "data_description": {
+          "name": "Lokalt namn för din växelriktare",
+          "inverter_series": "Välj din växelriktarmodell/-serie",
+          "connection_type": "Hur du vill ansluta"
+        }
+      },
+      "tcp": {
+        "title": "TCP-anslutningsinställning",
+        "description": "Konfigurera TCP-anslutningen till din RS485-till-Ethernet/WiFi-adapter (EW11, USR-W630, osv.)",
+        "data": {
+          "host": "IP-adress",
+          "port": "Port",
+          "slave_id": "Modbus Slave-ID"
+        },
+        "data_description": {
+          "host": "IP-adress för din RS485-till-TCP-konverter",
+          "port": "Modbus TCP-port (vanligtvis 502)",
+          "slave_id": "Växelriktarens Modbus-adress (vanligtvis 1)"
+        }
+      },
+      "serial": {
+        "title": "Serieanslutningsinställning",
+        "description": "Konfigurera serieanslutningen till din USB-till-RS485-adapter",
+        "data": {
+          "device_path": "Enhetssökväg",
+          "baudrate": "Baudrate",
+          "slave_id": "Modbus Slave-ID"
+        },
+        "data_description": {
+          "device_path": "Seriell enhetssökväg (t.ex. /dev/ttyUSB0 eller COM3)",
+          "baudrate": "Seriell kommunikationshastighet (vanligtvis 9600)",
+          "slave_id": "Växelriktarens Modbus-adress (vanligtvis 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Säkerhetskontroll för off-grid-växelriktare",
+        "description": "**KRITISK SÄKERHETSKONTROLL**\n\nHar du en off-grid-växelriktare (SPF-serie)?\n\nOff-grid-växelriktare kommer att uppleva en STRÖMÅTERSTÄLLNING om automatisk detektering försöks.\n\n• Om Ja: Du väljer din modell manuellt (säkert)\n• Om Nej: Automatisk detektering fortsätter (säkert för nätanslutna modeller)\n\nExempel på off-grid-modeller: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Jag har en off-grid (SPF) växelriktare"
+        },
+        "data_description": {
+          "has_offgrid": "Aktivera BARA detta om du har en SPF-serie off-grid-växelriktare. Off-grid-växelriktare använder ett annat protokoll och återställs om VPP-register nås."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Misslyckades att ansluta till din växelriktare. Kontrollera dina anslutningsinställningar och kabelanslutningar.",
+      "unknown": "Oväntat fel uppstod under installationen.",
+      "no_device": "Välj en enhet eller ange enhetssökvägen manuellt.",
+      "invalid_profile": "Ogiltigt växelriktarprofil valt."
+    },
+    "abort": {
+      "already_configured": "Denna växelriktare är redan konfigurerad."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Growatt Modbus Alternativ",
+        "description": "Konfigurera enhetsnamn, växelriktarprofiler, pollinginställningar och näteffektalternativ",
+        "data": {
+          "device_name": "Enhetsnamn",
+          "inverter_series": "Växelriktarserie",
+          "scan_interval": "Skanningsintervall",
+          "offline_scan_interval": "Offline skanningsintervall",
+          "timeout": "Anslutningstimeout",
+          "invert_grid_power": "Invertera näteffekt",
+          "invert_battery_power": "Invertera batterieffekt"
+        },
+        "data_description": {
+          "device_name": "Ditt namn för enheten (placeras före alla sensornamn)",
+          "inverter_series": "Välj din växelriktarmodell/-serie (väljer automatiskt protokollversion)",
+          "scan_interval": "Hur ofta växelriktaren pollades när den är online (5-300 sekunder)",
+          "offline_scan_interval": "Hur ofta växelriktaren pollades när den är offline/på natten (60-3600 sekunder, standard 300)",
+          "timeout": "Hur länge väntar på svar från växelriktaren (1-60 sekunder)",
+          "invert_grid_power": "Aktivera om CT-klämman är installerad omvänt (byter import/export på AC-sidan)",
+          "invert_battery_power": "Aktivera om batterieffekten visar omvänd riktning (byter laddnings-/urladdningstecken)"
+        }
+      }
+    }
+  }
+}

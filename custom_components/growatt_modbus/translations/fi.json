@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Growatt Modbus Asennus",
+        "description": "Määritä yhteys Growatt-invertteriin.",
+        "data": {
+          "name": "Integraation nimi",
+          "inverter_series": "Invertterisarja",
+          "connection_type": "Yhteystyyppi"
+        },
+        "data_description": {
+          "name": "Paikallinen nimi invertterillesi",
+          "inverter_series": "Valitse invertterimalli/-sarja",
+          "connection_type": "Kuinka haluat muodostaa yhteyden"
+        }
+      },
+      "tcp": {
+        "title": "TCP-yhteyden asennus",
+        "description": "Määritä TCP-yhteys RS485-Ethernet/WiFi-sovittimeen (EW11, USR-W630 jne.)",
+        "data": {
+          "host": "IP-osoite",
+          "port": "Portti",
+          "slave_id": "Modbus Slave-ID"
+        },
+        "data_description": {
+          "host": "RS485-TCP-muuntimen IP-osoite",
+          "port": "Modbus TCP-portti (yleensä 502)",
+          "slave_id": "Invertteri Modbus-osoite (yleensä 1)"
+        }
+      },
+      "serial": {
+        "title": "Sarjayhteyden asennus",
+        "description": "Määritä sarjayhteys USB-RS485-sovittimeen",
+        "data": {
+          "device_path": "Laitteen polku",
+          "baudrate": "Baud-nopeus",
+          "slave_id": "Modbus Slave-ID"
+        },
+        "data_description": {
+          "device_path": "Sarjalaitteen polku (esim. /dev/ttyUSB0 tai COM3)",
+          "baudrate": "Sarjaliikenteen nopeus (yleensä 9600)",
+          "slave_id": "Invertteri Modbus-osoite (yleensä 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Off-grid-invertteri turvatarkistus",
+        "description": "**KRIITTINEN TURVATARKISTUS**\n\nOnko sinulla off-grid-invertteri (SPF-sarja)?\n\nOff-grid-invertterit kokevat VIRRAN NOLLAUKSEN jos automaattinen tunnistus yritetään.\n\n• Jos Kyllä: Valitset mallisi manuaalisesti (turvallinen)\n• Jos Ei: Automaattinen tunnistus jatkuu (turvallinen verkkoon kytketyille malleille)\n\nEsimerkkejä off-grid-malleista: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Minulla on off-grid (SPF) invertteri"
+        },
+        "data_description": {
+          "has_offgrid": "Ota käyttöön VAIN jos sinulla on SPF-sarjan off-grid-invertteri. Off-grid-invertterit käyttävät eri protokollaa ja nollautuvat jos VPP-rekistereihin pääsee."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Yhteyden muodostaminen invertteriin epäonnistui. Tarkista yhteysasetukset ja kaapelikytkennät.",
+      "unknown": "Odottamaton virhe asennuksen aikana.",
+      "no_device": "Valitse laite tai syötä laitteen polku manuaalisesti.",
+      "invalid_profile": "Valittiin virheellinen invertterprofiili."
+    },
+    "abort": {
+      "already_configured": "Tämä invertteri on jo määritetty."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Growatt Modbus Asetukset",
+        "description": "Määritä laitteen nimi, invertteriprofiilit, kyselyasetukset ja verkkovirtavaihtoehdot",
+        "data": {
+          "device_name": "Laitteen nimi",
+          "inverter_series": "Invertterisarja",
+          "scan_interval": "Skannausväli",
+          "offline_scan_interval": "Offline-skannausväli",
+          "timeout": "Yhteyden aikakatkaisu",
+          "invert_grid_power": "Käännä verkkovirta",
+          "invert_battery_power": "Käännä akkuteho"
+        },
+        "data_description": {
+          "device_name": "Nimesi laitteelle (asetetaan kaikkien anturinimien eteen)",
+          "inverter_series": "Valitse invertterimalli/-sarja (valitsee automaattisesti protokollaversion)",
+          "scan_interval": "Kuinka usein invertteriä kysellään kun se on verkossa (5-300 sekuntia)",
+          "offline_scan_interval": "Kuinka usein invertteriä kysellään kun se on offline/yöllä (60-3600 sekuntia, oletus 300)",
+          "timeout": "Kuinka kauan odottaa vastausta invertteriltä (1-60 sekuntia)",
+          "invert_grid_power": "Ota käyttöön jos CT-puristin on asennettu väärinpäin (vaihtaa tuonti/vienti AC-puolella)",
+          "invert_battery_power": "Ota käyttöön jos akkuteho näyttää käänteistä suuntaa (vaihtaa lataus/purkausmerkin)"
+        }
+      }
+    }
+  }
+}

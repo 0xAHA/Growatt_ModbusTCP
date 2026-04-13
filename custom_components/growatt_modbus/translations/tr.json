@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Growatt Modbus Kurulumu",
+        "description": "Growatt invertörünüze bağlantıyı yapılandırın.",
+        "data": {
+          "name": "Entegrasyon Adı",
+          "inverter_series": "İnvertör Serisi",
+          "connection_type": "Bağlantı Türü"
+        },
+        "data_description": {
+          "name": "İnvertörünüz için yerel ad",
+          "inverter_series": "İnvertör modelinizi/serinizi seçin",
+          "connection_type": "Nasıl bağlanmak istediğiniz"
+        }
+      },
+      "tcp": {
+        "title": "TCP Bağlantı Kurulumu",
+        "description": "RS485-Ethernet/WiFi adaptörünüze TCP bağlantısını yapılandırın (EW11, USR-W630 vb.)",
+        "data": {
+          "host": "IP Adresi",
+          "port": "Port",
+          "slave_id": "Modbus Slave ID"
+        },
+        "data_description": {
+          "host": "RS485-TCP dönüştürücünüzün IP adresi",
+          "port": "Modbus TCP portu (genellikle 502)",
+          "slave_id": "İnvertör Modbus adresi (genellikle 1)"
+        }
+      },
+      "serial": {
+        "title": "Seri Bağlantı Kurulumu",
+        "description": "USB-RS485 adaptörünüze seri bağlantıyı yapılandırın",
+        "data": {
+          "device_path": "Cihaz Yolu",
+          "baudrate": "Baud Hızı",
+          "slave_id": "Modbus Slave ID"
+        },
+        "data_description": {
+          "device_path": "Seri cihaz yolu (örn. /dev/ttyUSB0 veya COM3)",
+          "baudrate": "Seri iletişim hızı (genellikle 9600)",
+          "slave_id": "İnvertör Modbus adresi (genellikle 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Off-Grid İnvertör Güvenlik Kontrolü",
+        "description": "**KRİTİK GÜVENLİK KONTROLÜ**\n\nOff-grid bir invertörünüz var mı (SPF serisi)?\n\nOtomatik algılama denense off-grid invertörler GÜÇ SIFIRLAMA yaşar.\n\n• Evet ise: Modelinizi manuel seçeceksiniz (güvenli)\n• Hayır ise: Otomatik algılama devam edecek (şebekeye bağlı modeller için güvenli)\n\nOff-grid model örnekleri: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Off-grid (SPF) invertörüm var"
+        },
+        "data_description": {
+          "has_offgrid": "YALNIZCA SPF serisi off-grid invertörünüz varsa etkinleştirin. Off-grid invertörler farklı bir protokol kullanır ve VPP registerlarına erişilirse sıfırlanır."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "İnvertöre bağlanılamadı. Bağlantı ayarlarınızı ve kablo bağlantılarınızı kontrol edin.",
+      "unknown": "Kurulum sırasında beklenmeyen bir hata oluştu.",
+      "no_device": "Lütfen bir cihaz seçin veya cihaz yolunu manuel olarak girin.",
+      "invalid_profile": "Geçersiz invertör profili seçildi."
+    },
+    "abort": {
+      "already_configured": "Bu invertör zaten yapılandırılmış."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Growatt Modbus Seçenekleri",
+        "description": "Cihaz adı, invertör profilleri, yoklama kurulumu ve şebeke gücü seçeneklerini yapılandırın",
+        "data": {
+          "device_name": "Cihaz Adı",
+          "inverter_series": "İnvertör Serisi",
+          "scan_interval": "Tarama Aralığı",
+          "offline_scan_interval": "Çevrimdışı Tarama Aralığı",
+          "timeout": "Bağlantı Zaman Aşımı",
+          "invert_grid_power": "Şebeke Gücünü Ters Çevir",
+          "invert_battery_power": "Batarya Gücünü Ters Çevir"
+        },
+        "data_description": {
+          "device_name": "Cihaz için adınız (tüm sensör adlarının önüne gelecek)",
+          "inverter_series": "İnvertör modelinizi/serinizi seçin (protokol sürümünü otomatik seçer)",
+          "scan_interval": "İnvertör çevrimiçiyken ne sıklıkta yoklanacağı (5-300 saniye)",
+          "offline_scan_interval": "İnvertör çevrimdışı/gece ne sıklıkta yoklanacağı (60-3600 saniye, varsayılan 300)",
+          "timeout": "İnvertörden yanıt için ne kadar bekleneceği (1-60 saniye)",
+          "invert_grid_power": "CT kelepçe ters takılıysa etkinleştirin (AC tarafında ithalat/ihracatı değiştirir)",
+          "invert_battery_power": "Batarya gücü ters yön gösteriyorsa etkinleştirin (şarj/deşarj işaretini değiştirir)"
+        }
+      }
+    }
+  }
+}

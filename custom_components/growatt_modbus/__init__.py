@@ -154,8 +154,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await coordinator.async_config_entry_first_refresh()
 
-    # Remove stale VPP export limit entities if the inverter doesn't respond to these registers
-    if coordinator.data is not None and not coordinator.data.vpp_export_limit_available:
+    # Remove stale VPP export limit entities if the inverter doesn't respond to these registers.
+    # Guard: only remove when the inverter actually connected (serial_number non-empty) —
+    # if the inverter was offline at startup we have an empty placeholder and can't know yet
+    # whether these registers are supported (Issue #255).
+    inverter_connected = coordinator.data is not None and bool(coordinator.data.serial_number)
+    if inverter_connected and not coordinator.data.vpp_export_limit_available:
         entity_registry = er.async_get(hass)
         for control_name in ('vpp_export_limit_enable', 'vpp_export_limit_power_rate'):
             stale_uid = f"{entry.entry_id}_{control_name}"
@@ -166,7 +170,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     entity_registry.async_remove(stale_eid)
 
     # Remove stale control_authority entity if the inverter doesn't respond to register 30100
-    if coordinator.data is not None and not coordinator.data.vpp_control_authority_available:
+    if inverter_connected and not coordinator.data.vpp_control_authority_available:
         entity_registry = er.async_get(hass)
         stale_uid = f"{entry.entry_id}_control_authority"
         stale_eid = entity_registry.async_get_entity_id("select", DOMAIN, stale_uid)

@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurazione Growatt Modbus",
+        "description": "Configura la connessione al tuo inverter Growatt.",
+        "data": {
+          "name": "Nome dell'integrazione",
+          "inverter_series": "Serie dell'inverter",
+          "connection_type": "Tipo di connessione"
+        },
+        "data_description": {
+          "name": "Nome locale per il tuo inverter",
+          "inverter_series": "Seleziona il modello/serie del tuo inverter",
+          "connection_type": "Come desideri connetterti"
+        }
+      },
+      "tcp": {
+        "title": "Configurazione connessione TCP",
+        "description": "Configura la connessione TCP al tuo adattatore RS485-Ethernet/WiFi (EW11, USR-W630, ecc.)",
+        "data": {
+          "host": "Indirizzo IP",
+          "port": "Porta",
+          "slave_id": "ID Slave Modbus"
+        },
+        "data_description": {
+          "host": "Indirizzo IP del convertitore RS485-TCP",
+          "port": "Porta TCP Modbus (solitamente 502)",
+          "slave_id": "Indirizzo Modbus dell'inverter (solitamente 1)"
+        }
+      },
+      "serial": {
+        "title": "Configurazione connessione seriale",
+        "description": "Configura la connessione seriale al tuo adattatore USB-RS485",
+        "data": {
+          "device_path": "Percorso dispositivo",
+          "baudrate": "Velocità in baud",
+          "slave_id": "ID Slave Modbus"
+        },
+        "data_description": {
+          "device_path": "Percorso dispositivo seriale (es. /dev/ttyUSB0 o COM3)",
+          "baudrate": "Velocità di comunicazione seriale (solitamente 9600)",
+          "slave_id": "Indirizzo Modbus dell'inverter (solitamente 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Verifica sicurezza inverter off-grid",
+        "description": "**VERIFICA DI SICUREZZA CRITICA**\n\nHai un inverter off-grid (serie SPF)?\n\nGli inverter off-grid subiranno un RESET DI ALIMENTAZIONE se viene tentato il rilevamento automatico.\n\n• Se Sì: Selezionerai il tuo modello manualmente (sicuro)\n• Se No: Il rilevamento automatico continuerà (sicuro per i modelli collegati alla rete)\n\nEsempi di modelli off-grid: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Ho un inverter off-grid (SPF)"
+        },
+        "data_description": {
+          "has_offgrid": "Attiva SOLO se hai un inverter off-grid serie SPF. Gli inverter off-grid utilizzano un protocollo diverso e si ripristineranno se si accede ai registri VPP."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connessione all'inverter non riuscita. Verifica le impostazioni di connessione e i cavi.",
+      "unknown": "Si è verificato un errore imprevisto durante la configurazione.",
+      "no_device": "Seleziona un dispositivo o inserisci manualmente il percorso del dispositivo.",
+      "invalid_profile": "Profilo inverter non valido selezionato."
+    },
+    "abort": {
+      "already_configured": "Questo inverter è già configurato."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni Growatt Modbus",
+        "description": "Configura nome dispositivo, profili inverter, impostazioni di polling e opzioni di potenza della rete",
+        "data": {
+          "device_name": "Nome dispositivo",
+          "inverter_series": "Serie dell'inverter",
+          "scan_interval": "Intervallo di scansione",
+          "offline_scan_interval": "Intervallo di scansione offline",
+          "timeout": "Timeout connessione",
+          "invert_grid_power": "Inverti potenza di rete",
+          "invert_battery_power": "Inverti potenza batteria"
+        },
+        "data_description": {
+          "device_name": "Il tuo nome per il dispositivo (verrà anteposto a tutti i nomi dei sensori)",
+          "inverter_series": "Seleziona il modello/serie del tuo inverter (seleziona automaticamente la versione del protocollo)",
+          "scan_interval": "Con quale frequenza interrogare l'inverter quando è online (5-300 secondi)",
+          "offline_scan_interval": "Con quale frequenza interrogare l'inverter quando è offline/di notte (60-3600 secondi, predefinito 300)",
+          "timeout": "Quanto tempo attendere una risposta dall'inverter (1-60 secondi)",
+          "invert_grid_power": "Attiva se il morsetto CT è installato al contrario (scambia importazione/esportazione sul lato AC)",
+          "invert_battery_power": "Attiva se la potenza della batteria mostra direzione invertita (scambia il segno di carica/scarica)"
+        }
+      }
+    }
+  }
+}

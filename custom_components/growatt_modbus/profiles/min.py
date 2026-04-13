@@ -43,9 +43,27 @@ MIN_3000_6000TL_X = {
         3050: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'desc': 'Today energy LOW', 'pair': 3049, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         
         # Energy Total (32-bit)
+        # 3051/3052 = Eac_total (total AC output — includes battery discharge on hybrid models).
+        # On pure grid-tied MIN this equals solar generation; on hybrid MIN TL-XH it overstates.
+        # The coordinator overrides energy_total with pv_energy_total (3053/3054) when present.
         3051: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'desc': 'Total energy HIGH', 'pair': 3052},
         3052: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'desc': 'Total energy LOW', 'pair': 3051, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        
+
+        # PV DC energy (Epv_total / Epv1 / Epv2 — #253)
+        # Confirmed via Growatt RTU Protocol 2 v1.24: 3053/3054 = Epv_total (DC input only,
+        # unaffected by battery discharge). Sum of per-MPPT: Epv1=3057/3058, Epv2=3061/3062.
+        # Coordinator uses pv_energy_total to override energy_total on hybrid inverters.
+        3053: {'name': 'pv_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3054, 'desc': 'Total PV DC energy HIGH (Epv_total — solar only, unaffected by battery discharge)'},
+        3054: {'name': 'pv_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3053, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Total PV DC energy LOW'},
+        3055: {'name': 'pv1_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3056, 'desc': 'PV1 DC energy today HIGH'},
+        3056: {'name': 'pv1_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3055, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3057: {'name': 'pv1_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3058, 'desc': 'PV1 DC energy total HIGH'},
+        3058: {'name': 'pv1_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3057, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3059: {'name': 'pv2_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3060, 'desc': 'PV2 DC energy today HIGH'},
+        3060: {'name': 'pv2_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3059, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3061: {'name': 'pv2_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3062, 'desc': 'PV2 DC energy total HIGH'},
+        3062: {'name': 'pv2_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3061, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
         # Energy Breakdown
         3067: {'name': 'energy_to_user_today_high', 'scale': 1, 'unit': '', 'pair': 3068},
         3068: {'name': 'energy_to_user_today_low', 'scale': 1, 'unit': '', 'pair': 3067, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
@@ -141,9 +159,25 @@ MIN_7000_10000TL_X = {
         3050: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'desc': 'Today energy LOW', 'pair': 3049, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         
         # Energy Total (32-bit)
+        # 3051/3052 = Eac_total (total AC output — includes battery discharge on hybrid models).
+        # Coordinator overrides energy_total with pv_energy_total (3053/3054) when present.
         3051: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'desc': 'Total energy HIGH', 'pair': 3052},
         3052: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'desc': 'Total energy LOW', 'pair': 3051, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        
+
+        # PV DC energy (Epv_total / Epv1 / Epv2 — #253)
+        # 3053/3054 = Epv_total (DC solar input only, unaffected by battery discharge).
+        # Coordinator uses pv_energy_total to override energy_total on hybrid inverters.
+        3053: {'name': 'pv_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3054, 'desc': 'Total PV DC energy HIGH (Epv_total — solar only)'},
+        3054: {'name': 'pv_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3053, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Total PV DC energy LOW'},
+        3055: {'name': 'pv1_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3056, 'desc': 'PV1 DC energy today HIGH'},
+        3056: {'name': 'pv1_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3055, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3057: {'name': 'pv1_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3058, 'desc': 'PV1 DC energy total HIGH'},
+        3058: {'name': 'pv1_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3057, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3059: {'name': 'pv2_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3060, 'desc': 'PV2 DC energy today HIGH'},
+        3060: {'name': 'pv2_energy_today_low', 'scale': 1, 'unit': '', 'pair': 3059, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        3061: {'name': 'pv2_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3062, 'desc': 'PV2 DC energy total HIGH'},
+        3062: {'name': 'pv2_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3061, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
         # Energy Breakdown (32-bit pairs)
         3067: {'name': 'energy_to_user_today_high', 'scale': 1, 'unit': '', 'pair': 3068},
         3068: {'name': 'energy_to_user_today_low', 'scale': 1, 'unit': '', 'pair': 3067, 'combined_scale': 0.1, 'combined_unit': 'kWh'},

@@ -4,18 +4,114 @@
 
 ---
 
-## vNEXT
+## v0.7.3
+
+Issues: #256 · #257 · #254 · #255 · #253 · #225 · #259
 
 ---
 
-- ** SPH-TL3 - fixing the issue when Grid Power and Power to Load were indicated as swapped ** 
+- **SPH-TL3 — Power to Load / Grid Power register fix (#257, @TomasHala):** Registers 1021/1022
+  (`power_to_user_total`) and 1037/1038 (`power_to_load`) were swapped in the SPH-TL3 profile.
+  Grid import power and load consumption are now correctly separated. Hardware-tested on SPH-TL3.
 
-- ** SPH-TL3 - adding elements from SPH, which are relevant and tested working also on SPH-TL3: **
-    specifically:
-     - Max Output Power Rate
-     - Export Limit Control
-     - Load First Battery Minimum SOC
-     - Battery state of health
+- **SPH-TL3 — New control entities (#256, @TomasHala):** Four additional holding registers added,
+  hardware-tested on SPH-TL3. These are already available in the SPH profile and are now exposed
+  for SPH-TL3 (and SPA, which inherits the same register map):
+  - **Max Output Power Rate** (reg 3) — limits AC output power as % of rated capacity
+  - **Export Limit Mode** (reg 122) — enables/disables grid export limiting
+  - **Export Limit Power** (reg 123) — export power cap as % of rated capacity
+  - **Load First Battery Minimum SOC** (reg 608) — minimum SOC before switching to load-first mode
+  - **Battery State of Health** (reg 31218) — BMS-reported battery health percentage (read-only)
+
+- **Translations — 20 languages (#254):** UI config flow and options strings are now available
+  in 20 languages. Danish (`da`) was contributed by a community member; the remaining 19 were
+  added in this release:
+
+  | Code | Language | Code | Language |
+  | ---- | -------- | ---- | -------- |
+  | `de` | German | `cs` | Czech |
+  | `nl` | Dutch | `hu` | Hungarian |
+  | `fr` | French | `ro` | Romanian |
+  | `es` | Spanish | `sk` | Slovak |
+  | `it` | Italian | `bg` | Bulgarian |
+  | `pl` | Polish | `hr` | Croatian |
+  | `pt` | Portuguese | `el` | Greek |
+  | `sv` | Swedish | `tr` | Turkish |
+  | `nb` | Norwegian Bokmål | `ru` | Russian |
+  | `fi` | Finnish | `uk` | Ukrainian |
+
+  The English (`en`) file remains the authoritative reference.
+
+- **MIN — Energy Total uses wrong register on hybrid models (#253):** `sensor.energy_total` was
+  reading register 3051/3052 (`Eac_total` — total AC output including battery discharge), causing
+  it to overstate lifetime solar generation by the lifetime battery discharge amount on MIN TL-XH
+  hybrid inverters. Confirmed via direct Modbus read: `Eac_total=12574.4 kWh` vs
+  `Epv_total=7848.6 kWh` on a hybrid system.
+
+  Fix: registers 3053/3054 (`Epv_total` — PV DC input only) are now mapped as `pv_energy_total`
+  in both MIN profiles. The coordinator already uses `pv_energy_total` to override `energy_total`
+  when present (same pattern as SPH, MOD, WIT). Additionally added per-MPPT DC energy registers:
+  - **3055/3056** — PV1 energy today (`pv1_energy_today`)
+  - **3057/3058** — PV1 energy total (`pv1_energy_total`)
+  - **3059/3060** — PV2 energy today (`pv2_energy_today`)
+  - **3061/3062** — PV2 energy total (`pv2_energy_total`)
+
+  `energy_today` is now derived from `pv1_energy_today + pv2_energy_today` (correct DC-only sum)
+  rather than `Eac_today` (3049/3050) which includes battery discharge on hybrid models.
+
+  Note: this fix applies to all MIN profiles including the V201 variants (which inherit the base
+  register map). Pure grid-tied MIN users will see no change since `Eac_total ≈ Epv_total` without
+  a battery. Users with a battery will see `Energy Total` decrease to the accurate solar figure.
+
+- **Offline at startup — integration now loads without blocking HA bootstrap (#255):** Two
+  separate startup failure modes are now resolved:
+
+  - **`ConfigEntryNotReady` loop** — if `_fetch_data` returned `None` (inverter not responding),
+    the coordinator raised `UpdateFailed` → `ConfigEntryNotReady`. HA retries with exponential
+    backoff but can exhaust the retry budget before the inverter comes online (e.g. overnight).
+    Fixed: coordinator creates an empty `GrowattData()` placeholder instead of failing.
+
+  - **`CancelledError: Bootstrap stage 2 timeout`** — `async_config_entry_first_refresh` made two
+    blocking executor calls (device identification + data read, each with 3 TCP retries). On a
+    slow or offline inverter this exceeded HA's global bootstrap timeout, cancelling the setup
+    task entirely. Fixed: first refresh now only restores local persisted energy totals (no network
+    I/O). Device identification is read lazily on the first successful poll.
+
+  In both cases the integration loads immediately; all sensors show `unavailable` until the
+  inverter responds. No manual reload required.
+
+  Also guarded the VPP entity removal logic (`vpp_export_limit`, `control_authority`) against the
+  offline-startup case so entities are only pruned when the inverter has actually connected and
+  confirmed those registers are absent.
+
+- **Power sensors show `unavailable` when inverter is unreachable (#259):** Previously, power
+  sensors (PV power, battery power, grid power, load power, etc.) returned `0 W` whenever the
+  inverter was not responding. This is misleading — a TCP adapter keeps the socket open even when
+  the RS485 bus to the inverter has no signal, so `0 W` is indistinguishable from a genuine
+  zero reading at night.
+
+  Per the HA integration quality scale
+  [`entity-unavailable`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-unavailable)
+  and [`log-when-unavailable`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/log-when-unavailable)
+  rules: entities must report `unavailable` when data cannot be fetched (not a synthetic `0`),
+  and must log at `INFO` level once on the unavailable→available transition in both directions.
+  Power sensors now return `None` (→ `unavailable`) in offline state, consistent with diagnostic
+  and energy sensors. Logging now fires once per state transition at `INFO`; repeated per-poll
+  errors are demoted to `DEBUG`.
+
+- **Energy Today — stale overnight value persists until sunrise instead of resetting at midnight
+  (#225):** The midnight callback correctly cleared the daily retention store. However, if the
+  inverter stayed connected through midnight (reporting yesterday's accumulated total before its
+  hardware register reset at sunrise), overnight polling would rebuild the retention store with
+  the stale yesterday value. When the hardware finally reset to 0 at sunrise the retention
+  protection would then prevent the 0 from showing, so the sensor displayed yesterday's total all
+  morning.
+
+  Fix: when the inverter comes back online after an offline period, daily total retention is now
+  cleared unconditionally (not just on date change) and the debounce window is always enabled.
+  When the debounce detects a stale value (matches yesterday's final reading) it resets daily
+  totals to 0 and simultaneously clears the retention store so `_protect_energy_totals` cannot
+  undo the reset.
 
 ---
 

@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Growatt Modbus Einrichtung",
+        "description": "Konfigurieren Sie die Verbindung zu Ihrem Growatt Wechselrichter.",
+        "data": {
+          "name": "Integrationsname",
+          "inverter_series": "Wechselrichter-Serie",
+          "connection_type": "Verbindungstyp"
+        },
+        "data_description": {
+          "name": "Lokaler Name für Ihren Wechselrichter",
+          "inverter_series": "Wählen Sie Ihr Wechselrichtermodell/-serie",
+          "connection_type": "Wie Sie eine Verbindung herstellen möchten"
+        }
+      },
+      "tcp": {
+        "title": "TCP-Verbindungseinrichtung",
+        "description": "Konfigurieren Sie die TCP-Verbindung zu Ihrem RS485-zu-Ethernet/WiFi-Adapter (EW11, USR-W630, usw.)",
+        "data": {
+          "host": "IP-Adresse",
+          "port": "Port",
+          "slave_id": "Modbus Slave-ID"
+        },
+        "data_description": {
+          "host": "IP-Adresse Ihres RS485-zu-TCP-Konverters",
+          "port": "Modbus TCP-Port (normalerweise 502)",
+          "slave_id": "Wechselrichter Modbus-Adresse (normalerweise 1)"
+        }
+      },
+      "serial": {
+        "title": "Serielle Verbindungseinrichtung",
+        "description": "Konfigurieren Sie die serielle Verbindung zu Ihrem USB-zu-RS485-Adapter",
+        "data": {
+          "device_path": "Gerätepfad",
+          "baudrate": "Baudrate",
+          "slave_id": "Modbus Slave-ID"
+        },
+        "data_description": {
+          "device_path": "Serieller Gerätepfad (z.B. /dev/ttyUSB0 oder COM3)",
+          "baudrate": "Serielle Kommunikationsgeschwindigkeit (normalerweise 9600)",
+          "slave_id": "Wechselrichter Modbus-Adresse (normalerweise 1)"
+        }
+      },
+      "offgrid_check": {
+        "title": "⚠️ Off-Grid Wechselrichter Sicherheitsprüfung",
+        "description": "**KRITISCHE SICHERHEITSPRÜFUNG**\n\nHaben Sie einen Off-Grid Wechselrichter (SPF-Serie)?\n\nOff-Grid Wechselrichter erfahren einen POWER RESET, wenn die automatische Erkennung versucht wird.\n\n• Wenn Ja: Sie wählen Ihr Modell manuell aus (sicher)\n• Wenn Nein: Die automatische Erkennung wird fortgesetzt (sicher für netzgekoppelte Modelle)\n\nBeispiele für Off-Grid Modelle: SPF 3000-6000 ES PLUS",
+        "data": {
+          "has_offgrid": "Ich habe einen Off-Grid (SPF) Wechselrichter"
+        },
+        "data_description": {
+          "has_offgrid": "Aktivieren Sie dies NUR, wenn Sie einen SPF-Serie Off-Grid Wechselrichter haben. Off-Grid Wechselrichter verwenden ein anderes Protokoll und werden zurückgesetzt, wenn VPP-Register abgerufen werden."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zum Wechselrichter fehlgeschlagen. Überprüfen Sie Ihre Verbindungseinstellungen und Kabelverbindungen.",
+      "unknown": "Unerwarteter Fehler während der Einrichtung aufgetreten.",
+      "no_device": "Bitte wählen Sie ein Gerät aus oder geben Sie den Gerätepfad manuell ein.",
+      "invalid_profile": "Ungültiges Wechselrichterprofil ausgewählt."
+    },
+    "abort": {
+      "already_configured": "Dieser Wechselrichter ist bereits konfiguriert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Growatt Modbus Optionen",
+        "description": "Gerätename, Wechselrichterprofile, Polling-Einrichtung und Netzleistungsoptionen konfigurieren",
+        "data": {
+          "device_name": "Gerätename",
+          "inverter_series": "Wechselrichter-Serie",
+          "scan_interval": "Abtastintervall",
+          "offline_scan_interval": "Offline-Abtastintervall",
+          "timeout": "Verbindungs-Timeout",
+          "invert_grid_power": "Netzleistung invertieren",
+          "invert_battery_power": "Batterieleistung invertieren"
+        },
+        "data_description": {
+          "device_name": "Ihr Name für das Gerät (wird allen Sensornamen vorangestellt)",
+          "inverter_series": "Wählen Sie Ihr Wechselrichtermodell/-serie (wählt automatisch die Protokollversion)",
+          "scan_interval": "Wie oft der Wechselrichter im Online-Zustand abgefragt wird (5-300 Sekunden)",
+          "offline_scan_interval": "Wie oft der Wechselrichter im Offline-/Nachtbetrieb abgefragt wird (60-3600 Sekunden, Standard 300)",
+          "timeout": "Wie lange auf eine Antwort vom Wechselrichter gewartet wird (1-60 Sekunden)",
+          "invert_grid_power": "Aktivieren, wenn der CT-Klemmsensor verkehrt herum installiert ist (tauscht Import/Export auf der AC-Seite)",
+          "invert_battery_power": "Aktivieren, wenn die Batterieleistung die falsche Richtung anzeigt (tauscht Lade-/Entladezeichen)"
+        }
+      }
+    }
+  }
+}
