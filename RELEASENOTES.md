@@ -4,6 +4,34 @@
 
 ---
 
+## v0.7.4
+
+Issues: #262
+
+---
+
+- **Fix: Sensors missing after HA restart with inverter offline (#262):** When Home Assistant
+  restarts while the inverter is unreachable (e.g. overnight), the v0.7.3 fix for issue #255
+  correctly loads the integration with an empty placeholder rather than failing. However, sensor
+  entities whose creation is gated on runtime-detected hardware attributes — including
+  **State of Health** (`battery_soh`), **BMS State of Health** (`bms_soh`), **VPP export
+  limit** and **VPP control authority** controls, and a number of other optional sensors — were
+  evaluated against the empty placeholder at setup time, saw no data, and were permanently
+  skipped for that HA session.
+
+  The fix: when the inverter responds for the first time after such a cold-start, the integration
+  schedules a config entry reload. The reload fires on the next event loop tick (after the current
+  poll completes), re-runs all platform setup with real live data, and correctly registers every
+  sensor and control entity. The reload happens **at most once per HA session** and only when the
+  inverter was genuinely offline at startup.
+
+  **Affected entities (examples):** `battery_soh`, `bms_soh`, `battery_voltage_bms`,
+  `vpp_export_limit_enable`, `control_authority`, and any other sensor whose presence depends on
+  a register that only responds on certain hardware variants (generator sensors, extra buck
+  temperature sensors, WIT parallel-inverter sensors, etc.).
+
+---
+
 ## v0.7.3
 
 Issues: #249 · #253 · #254 · #255 · #256 · #257 · #225 · #259
