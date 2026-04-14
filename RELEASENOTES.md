@@ -4,6 +4,26 @@
 
 ---
 
+## v0.7.5
+
+---
+
+- **Fix: MIN TL-XH `pv_energy_total` missing on some firmware variants:** On the
+  `MIN TL-XH 3000-10000 (V2.01)` profile, the primary PV lifetime energy register
+  (`3053/3054`, Epv_total) was not present in the profile definition — meaning
+  `pv_energy_total` was always zero or absent. Additionally, some hardware/firmware
+  variants that do expose `3053/3054` report `0` there while holding the correct
+  accumulated value in the legacy register pair `91/92` (same as TL-XH 0-range layout).
+
+  **Fix:** Registers `3053/3054` are now declared as primary `pv_energy_total_high/low`
+  in the `MIN_TL_XH_3000_10000_V201` profile, matching the layout of the MIN grid-tied
+  3000-range profiles. Registers `91/92` are declared as `pv_energy_total_legacy_high/low`.
+  The reader falls back to the legacy pair only when the primary read returns exactly `0`
+  and the legacy registers contain a non-zero value — so genuinely zeroed systems are
+  unaffected while firmware variants that use `91/92` get a valid reading.
+
+---
+
 ## v0.7.4
 
 Issues: #262

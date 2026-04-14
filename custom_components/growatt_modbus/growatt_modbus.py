@@ -1146,6 +1146,17 @@ class GrowattModbus:
             if pv_energy_total_addr:
                 data.pv_energy_total = self._get_register_value(pv_energy_total_addr) or 0.0
                 logger.debug(f"[{self.register_map['name']}] PV energy total from reg {pv_energy_total_addr}: {data.pv_energy_total} kWh")
+                if data.pv_energy_total == 0.0:
+                    # Some MIN TL-XH firmware variants return 0 in the 3000-range Epv registers
+                    # (3053/3054) but report valid lifetime totals in the legacy 0-range registers
+                    # (91/92). Fall back when the primary read produces exactly zero so that a
+                    # genuinely zero value is still honoured if the legacy register is also zero.
+                    pv_energy_total_legacy_addr = self._find_register_by_name('pv_energy_total_legacy_low')
+                    if pv_energy_total_legacy_addr:
+                        legacy_value = self._get_register_value(pv_energy_total_legacy_addr) or 0.0
+                        if legacy_value > 0.0:
+                            data.pv_energy_total = legacy_value
+                            logger.debug(f"[{self.register_map['name']}] PV energy total fallback to legacy reg {pv_energy_total_legacy_addr}: {data.pv_energy_total} kWh")
 
             # AC Output (generic - will use Phase R via alias for 3-phase)
             ac_voltage_addr = self._find_register_by_name('ac_voltage')
