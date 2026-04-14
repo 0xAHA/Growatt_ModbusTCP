@@ -19,11 +19,13 @@ Issues: #262
   evaluated against the empty placeholder at setup time, saw no data, and were permanently
   skipped for that HA session.
 
-  The fix: when the inverter responds for the first time after such a cold-start, the integration
-  schedules a config entry reload. The reload fires on the next event loop tick (after the current
-  poll completes), re-runs all platform setup with real live data, and correctly registers every
-  sensor and control entity. The reload happens **at most once per HA session** and only when the
-  inverter was genuinely offline at startup.
+  The fix: the integration now tracks whether any poll failed before the first successful read. When
+  the inverter **successfully responds** for the first time after such a cold-start, a config entry
+  reload is scheduled. The reload does not fire until that successful poll has completed and returned
+  real data, then re-runs all platform setup with live data and correctly registers every sensor and
+  control entity. Because the reload is only scheduled inside the success path, it **cannot trigger
+  unless the inverter is confirmed online**. It fires **at most once per HA session** and only when
+  the inverter was genuinely offline at startup.
 
   **Affected entities (examples):** `battery_soh`, `bms_soh`, `battery_voltage_bms`,
   `vpp_export_limit_enable`, `control_authority`, and any other sensor whose presence depends on
