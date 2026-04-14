@@ -285,9 +285,21 @@ MIN_TL_XH_3000_10000_V201 = {
         3049: {'name': 'energy_today_high', 'scale': 1, 'unit': '', 'desc': 'Today energy HIGH', 'pair': 3050},
         3050: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'desc': 'Today energy LOW', 'pair': 3049, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
-        # Energy Total (32-bit)
+        # Energy Total (32-bit) — Eac: total AC output energy (includes battery discharge on hybrids)
         3051: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'desc': 'Total energy HIGH', 'pair': 3052},
         3052: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'desc': 'Total energy LOW', 'pair': 3051, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # PV Energy Total (32-bit) — Epv: pure DC solar input energy (unaffected by battery discharge)
+        # Primary source: 3053/3054 (matches MIN grid-tied 3000-range layout).
+        # Some hardware variants return 0 here and report valid data at legacy regs 91/92 instead.
+        # growatt_modbus.py falls back to pv_energy_total_legacy_low (reg 92) when this reads 0.
+        3053: {'name': 'pv_energy_total_high', 'scale': 1, 'unit': '', 'pair': 3054, 'desc': 'Total PV DC energy HIGH (Epv_total — solar only, unaffected by battery discharge)'},
+        3054: {'name': 'pv_energy_total_low', 'scale': 1, 'unit': '', 'pair': 3053, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Total PV DC energy LOW'},
+
+        # PV Energy Total legacy fallback (32-bit) — reg 91/92 (same layout as TL-XH 0-124 range)
+        # Used by growatt_modbus.py when 3053/3054 returns 0 (firmware variant difference).
+        91: {'name': 'pv_energy_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 92, 'desc': 'PV energy total legacy HIGH (fallback when 3053/3054 = 0)'},
+        92: {'name': 'pv_energy_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 91, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV energy total legacy LOW (fallback when 3053/3054 = 0)'},
 
         # Energy Breakdown
         3067: {'name': 'energy_to_user_today_high', 'scale': 1, 'unit': '', 'pair': 3068},
