@@ -5,7 +5,7 @@ from typing import Any
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import EntityCategory
@@ -124,6 +124,63 @@ async def async_setup_entry(
         entry_name = config_entry.data.get("name", config_entry.title)
         _LOGGER.info("Created %d select entities for %s", len(entities), entry_name)
         async_add_entities(entities)
+
+    # Deferred registration for VPP controls that require live hardware confirmation.
+    # vpp_export_limit_enable and control_authority are only created once the inverter
+    # has confirmed the relevant registers respond (vpp_export_limit_available /
+    # vpp_control_authority_available flags set during first real poll). Because
+    # async_config_entry_first_refresh seeds coordinator.data with an empty placeholder,
+    # these flags are always False at setup time — so the controls are always skipped.
+    # Register a coordinator listener that adds them once real data arrives. (Issue #262)
+    deferred_vpp: list[tuple[str, dict]] = []
+    for ctrl in ("vpp_export_limit_enable", "control_authority"):
+        if ctrl not in WRITABLE_REGISTERS:
+            continue
+        cfg = WRITABLE_REGISTERS[ctrl]
+        if cfg["register"] not in holding_registers:
+            continue
+        # Only defer if it was actually skipped above (flag was False at setup time)
+        already_created = any(
+            getattr(e, "_control_name", None) == ctrl for e in entities
+        )
+        if not already_created:
+            deferred_vpp.append((ctrl, cfg))
+
+    if deferred_vpp:
+        _LOGGER.debug(
+            "%d VPP select(s) deferred pending first real inverter data: %s",
+            len(deferred_vpp),
+            [ctrl for ctrl, _ in deferred_vpp],
+        )
+
+        @callback
+        def _async_check_deferred_vpp() -> None:
+            if not coordinator.has_real_data:
+                return
+            new_entities: list[SelectEntity] = []
+            still_waiting: list[tuple[str, dict]] = []
+            for ctrl_name, ctrl_cfg in deferred_vpp:
+                available = (
+                    coordinator.data.vpp_export_limit_available
+                    if ctrl_name == "vpp_export_limit_enable"
+                    else coordinator.data.vpp_control_authority_available
+                )
+                if available:
+                    new_entities.append(
+                        GrowattGenericSelect(coordinator, config_entry, ctrl_name, ctrl_cfg)
+                    )
+                    _LOGGER.debug("Deferred VPP control %s now available — adding entity", ctrl_name)
+                else:
+                    still_waiting.append((ctrl_name, ctrl_cfg))
+            deferred_vpp.clear()
+            deferred_vpp.extend(still_waiting)
+            if new_entities:
+                async_add_entities(new_entities)
+            if not deferred_vpp:
+                _remove_vpp_listener()
+
+        _remove_vpp_listener = coordinator.async_add_listener(_async_check_deferred_vpp)
+        config_entry.async_on_unload(_remove_vpp_listener)
 
 
 class GrowattGenericSelect(CoordinatorEntity, SelectEntity):

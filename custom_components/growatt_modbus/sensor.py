@@ -20,7 +20,7 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -1010,6 +1010,59 @@ async def async_setup_entry(
     
     _LOGGER.info("Created %d sensors for %s", len(entities), inverter_series)
     async_add_entities(entities)
+
+    # Deferred entity registration (Issue #262)
+    # async_config_entry_first_refresh always seeds coordinator.data with an empty
+    # GrowattData() placeholder — no inverter read occurs at setup time. Sensors
+    # whose creation is gated on a condition (e.g. hasattr(data, 'battery_soh'))
+    # therefore fail the check and are silently skipped, even when the inverter is
+    # online. This affects every startup, not just ones where the inverter is offline.
+    #
+    # Fix: collect every in-profile, condition-gated sensor that wasn't created, then
+    # register a coordinator listener that re-evaluates those conditions once real data
+    # arrives (coordinator.has_real_data becomes True). Any that now pass are added via
+    # async_add_entities. The listener removes itself when all deferred sensors are
+    # resolved or the config entry is unloaded.
+    created_keys = {e._sensor_key for e in entities}
+    deferred: list[tuple[str, dict]] = [
+        (sk, sd)
+        for sk, sd in SENSOR_DEFINITIONS.items()
+        if sk in available_sensors and "condition" in sd and sk not in created_keys
+    ]
+
+    if deferred:
+        _LOGGER.debug(
+            "%d sensor(s) deferred pending first real inverter data: %s",
+            len(deferred),
+            [sk for sk, _ in deferred],
+        )
+
+        @callback
+        def _async_check_deferred_sensors() -> None:
+            if not coordinator.has_real_data:
+                return
+            new_entities = []
+            still_waiting: list[tuple[str, dict]] = []
+            for sensor_key, sensor_def in deferred:
+                try:
+                    if sensor_def["condition"](coordinator.data):
+                        new_entities.append(
+                            GrowattModbusSensor(coordinator, config_entry, sensor_key, sensor_def)
+                        )
+                        _LOGGER.debug("Deferred sensor %s condition met — adding entity", sensor_key)
+                    else:
+                        still_waiting.append((sensor_key, sensor_def))
+                except Exception as exc:  # noqa: BLE001
+                    _LOGGER.debug("Deferred sensor %s condition error (%s) — dropping", sensor_key, exc)
+            deferred.clear()
+            deferred.extend(still_waiting)
+            if new_entities:
+                async_add_entities(new_entities)
+            if not deferred:
+                _remove_listener()
+
+        _remove_listener = coordinator.async_add_listener(_async_check_deferred_sensors)
+        config_entry.async_on_unload(_remove_listener)
 
 
 class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
