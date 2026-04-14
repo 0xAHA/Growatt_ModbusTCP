@@ -147,6 +147,12 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # Used to distinguish a cold-start recovery (preserve storage-loaded daily retention)
         # from a normal overnight recovery (clear retention to trigger stale-value debounce).
         self._ever_had_real_data = False
+        # True if at least one poll failed before the first successful read.
+        # Used to trigger a config entry reload when the inverter first responds after a
+        # cold-start with the inverter offline, so that sensors whose entity creation is
+        # gated on runtime-detected data attributes (e.g. battery_soh, VPP controls) are
+        # correctly registered now that real data is available. (Issue #262)
+        self._startup_had_offline_poll = False
 
         # Adaptive polling for offline inverters
         self._consecutive_failures = 0
@@ -555,6 +561,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     )
                     from .growatt_modbus import GrowattData
                     self.data = GrowattData()
+                    self._startup_had_offline_poll = True
 
                 _LOGGER.debug("Inverter offline - applying smart offline behavior")
 
@@ -624,6 +631,21 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         "Cold-start recovery — preserving storage-loaded daily retention (%d values)",
                         len(self._retained_daily_totals)
                     )
+
+                    # If HA started while the inverter was offline, sensor entities whose creation
+                    # is gated on runtime-detected attributes (e.g. battery_soh, VPP controls) were
+                    # skipped during setup because the placeholder GrowattData() had no real data.
+                    # Now that the inverter has responded, reload the config entry so all platforms
+                    # re-run their setup with live data and create the missing entities. (Issue #262)
+                    if self._startup_had_offline_poll:
+                        self._startup_had_offline_poll = False
+                        _LOGGER.info(
+                            "Inverter responded after offline cold-start — scheduling config entry "
+                            "reload so all sensor entities are correctly registered (Issue #262)"
+                        )
+                        self.hass.async_create_task(
+                            self.hass.config_entries.async_reload(self.entry.entry_id)
+                        )
 
                 self._ever_had_real_data = True
 
@@ -714,6 +736,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 "Sensors will be unavailable until the inverter responds."
             )
             self.data = GrowattData()
+            self._startup_had_offline_poll = True
             return self.data
 
     def _fetch_data(self) -> GrowattData | None:
