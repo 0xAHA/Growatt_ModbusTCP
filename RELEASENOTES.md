@@ -10,27 +10,31 @@ Issues: #262
 
 ---
 
-- **Fix: Sensors missing after HA restart with inverter offline (#262):** When Home Assistant
-  restarts while the inverter is unreachable (e.g. overnight), the v0.7.3 fix for issue #255
-  correctly loads the integration with an empty placeholder rather than failing. However, sensor
-  entities whose creation is gated on runtime-detected hardware attributes — including
-  **State of Health** (`battery_soh`), **BMS State of Health** (`bms_soh`), **VPP export
-  limit** and **VPP control authority** controls, and a number of other optional sensors — were
-  evaluated against the empty placeholder at setup time, saw no data, and were permanently
-  skipped for that HA session.
+- **Fix: Condition-gated sensors permanently missing after any HA restart (#262):** The v0.7.3
+  fix for issue #255 introduced `async_config_entry_first_refresh`, which seeds
+  `coordinator.data` with an empty `GrowattData()` placeholder — without ever reading the
+  inverter — so that HA's bootstrap stage completes immediately regardless of inverter
+  connectivity. However, sensor and control entity setup runs against this placeholder, so
+  any entity whose creation is gated on a runtime-detected hardware attribute (e.g.
+  `hasattr(data, 'battery_soh')`) sees no data, fails the check, and is permanently skipped
+  for the entire HA session.
 
-  The fix: the integration now tracks whether any poll failed before the first successful read. When
-  the inverter **successfully responds** for the first time after such a cold-start, a config entry
-  reload is scheduled. The reload does not fire until that successful poll has completed and returned
-  real data, then re-runs all platform setup with live data and correctly registers every sensor and
-  control entity. Because the reload is only scheduled inside the success path, it **cannot trigger
-  unless the inverter is confirmed online**. It fires **at most once per HA session** and only when
-  the inverter was genuinely offline at startup.
+  This affected **every startup**, not only ones where the inverter was offline. A fresh
+  install with the inverter fully online still produced the same result because the placeholder
+  is always seeded before the first poll.
 
   **Affected entities (examples):** `battery_soh`, `bms_soh`, `battery_voltage_bms`,
-  `vpp_export_limit_enable`, `control_authority`, and any other sensor whose presence depends on
-  a register that only responds on certain hardware variants (generator sensors, extra buck
-  temperature sensors, WIT parallel-inverter sensors, etc.).
+  `vpp_export_limit_enable`, `control_authority`, generator sensors, extra temperature
+  sensors, and any other entity whose presence depends on a register that is confirmed
+  by a live hardware read.
+
+  **Fix:** deferred entity registration. After the initial setup pass, each affected platform
+  (`sensor`, `select`) now registers a lightweight coordinator listener. The listener is a
+  no-op until `coordinator.has_real_data` becomes `True` (the inverter's first successful
+  poll). At that point it re-evaluates the skipped conditions against real data, calls
+  `async_add_entities` for any that now pass, and unsubscribes itself. Existing entities are
+  never disrupted. The listener is also cleaned up automatically if the config entry is
+  removed before the inverter ever responds.
 
 ---
 
