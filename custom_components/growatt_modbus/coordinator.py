@@ -617,23 +617,32 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 # Inverter came back online after being offline.
                 if current_date > self._current_date:
                     self._current_date = current_date
-                _LOGGER.info("Inverter back online - enabling daily total debouncing to detect stale values")
-                self._just_came_online_time = current_time
 
                 if self._ever_had_real_data:
-                    # Normal recovery (e.g. after overnight offline): clear daily retention so
-                    # the debounce can detect and reset stale yesterday-values. _protect_energy_totals
-                    # would otherwise retain and block the hardware's own midnight reset (Issue #225).
+                    # Normal overnight/transient recovery: HA has been running continuously so
+                    # _previous_day_totals holds the actual yesterday total. Clear daily retention
+                    # so the stale-value debounce can detect and reset values that the inverter
+                    # hasn't cleared yet. _protect_energy_totals would otherwise preserve them
+                    # and block the hardware's own midnight reset (Issue #225).
+                    _LOGGER.info("Inverter back online - enabling daily total debouncing to detect stale values")
                     self._retained_daily_totals = {}
+                    self._just_came_online_time = current_time
                 else:
-                    # Cold-start recovery: the integration just loaded. _async_load_energy_totals()
-                    # may have restored today's daily totals from storage — preserve those so sensors
-                    # don't drop to 0 while the adapter returns cached zeros. The debounce will still
-                    # detect and clear genuinely stale values once the window runs.
+                    # Cold-start recovery: integration just loaded (HA restart or config entry
+                    # reload). _previous_day_totals is always empty here because it is never
+                    # persisted — only populated at midnight during a live session. Stale
+                    # detection cannot work without a real yesterday reference and produces only
+                    # false-positives (e.g. small legitimate morning values < 0.1 kWh, or large
+                    # mid-day values on big systems exceeding the 2 kWh/h rate heuristic).
+                    # Storage-loaded retention in _retained_daily_totals already protects against
+                    # inverter glitches returning 0, so stale detection is both redundant and
+                    # harmful here.
                     _LOGGER.debug(
-                        "Cold-start recovery — preserving storage-loaded daily retention (%d values)",
+                        "Cold-start recovery — preserving storage-loaded daily retention (%d values), "
+                        "skipping stale-value debounce (no yesterday totals available)",
                         len(self._retained_daily_totals)
                     )
+                    # Do NOT set _just_came_online_time — leaves debounce window disabled.
 
                 self._ever_had_real_data = True
 
