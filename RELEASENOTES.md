@@ -4,6 +4,35 @@
 
 ---
 
+## v0.7.4b3
+
+---
+
+- **Fix: Today energy sensors reset to 0 on any HA restart or integration reload:** On
+  every cold-start (HA restart or config-entry reload), `_previous_day_totals` is empty
+  because it is only populated at midnight during an active session and is never persisted
+  to storage. The stale-value debounce introduced in v0.7.3 (Issue #225) always ran on
+  the first inverter connection after startup, comparing the inverter's current
+  `energy_today` against an effective "yesterday = 0". This produced two classes of false
+  positive:
+
+  1. Small legitimate morning values (0 < energy_today < 0.1 kWh) matched the
+     "within 0.1 kWh of yesterday" tolerance and were zeroed out.
+  2. Large mid-day values on higher-capacity systems (e.g. 18+ kWh by 9 AM on a 15 kW
+     system) exceeded the 2 kWh/hour rate heuristic and were also zeroed out.
+
+  In both cases the sensor showed 0 (with the inverter online and `available = True`),
+  causing HA long-term statistics to record a spurious counter reset.
+
+  **Fix:** The stale-value debounce window (`_just_came_online_time`) is now armed only
+  when `_ever_had_real_data = True` — meaning HA has been running continuously since the
+  last midnight reset and `_previous_day_totals` actually holds a real yesterday reference.
+  On cold-start, the debounce is skipped entirely; storage-loaded retention already
+  protects against glitch zeros, and without a genuine yesterday total the stale check
+  produces only false positives.
+
+---
+
 ## v0.7.4b2
 
 ---
