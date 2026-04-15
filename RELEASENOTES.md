@@ -4,6 +4,33 @@
 
 ---
 
+## v0.7.4b4
+
+---
+
+- **New: Per-string daily energy sensors (pv1/pv2/pv3_energy_today) across all compatible profiles (Issue #265):**
+  `pv1_energy_today` and `pv2_energy_today` sensors are now created for all profiles that
+  support multiple PV strings (SPH, SPH-TL3, MIN, MIC, MOD, WIT, TL-XH). `pv3_energy_today`
+  is additionally created for 3-MPPT profiles (MIN 7-10kW, SPH 7-10kW, SPH-HU, MOD, TL-XH),
+  but only exposed as an entity when the inverter actually reports non-zero PV3 data.
+
+  All three sensors are **disabled by default** — enable them individually in the Home
+  Assistant entity registry if you want to track per-string production. Total daily solar
+  energy continues to be reported by the existing `energy_today` sensor.
+
+- **Fix: VPP registers 31118–31125 in SPH-TL3 V201 profile had incorrect names and units:**
+  These registers were previously mapped as load power (W) and a generic `energy_today`,
+  causing confusion with the main energy_today sensor. They now correctly map to:
+  - 31118/31119 → `energy_to_user_today_vpp` (kWh, daily energy delivered to loads)
+  - 31120/31121 → `energy_to_user_total_vpp` (kWh, lifetime energy delivered to loads)
+  - 31122/31123 → `energy_to_grid_today_vpp` (kWh, daily energy exported to grid)
+  - 31124/31125 → `energy_to_grid_total_vpp` (kWh, lifetime energy exported to grid)
+
+  These VPP registers are suffixed (`_vpp`) so they do not interfere with the legacy
+  protocol registers which take precedence during coordinator data resolution.
+
+---
+
 ## v0.7.4b3
 
 ---

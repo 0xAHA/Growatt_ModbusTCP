@@ -352,15 +352,21 @@ SPH_TL3_3000_10000_V201 = {
         31112: {'name': 'meter_power_high', 'scale': 1, 'unit': '', 'pair': 31113, 'maps_to': 'power_to_grid'},
         31113: {'name': 'meter_power_low', 'scale': 1, 'unit': '', 'pair': 31112, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
-        # Load Power (maps to power_to_load at 1021/1022)
-        31118: {'name': 'load_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31119, 'maps_to': 'power_to_load'},
-        31119: {'name': 'load_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'W'},
-
-        # Energy Data
-        31120: {'name': 'energy_today_high_vpp', 'scale': 1, 'unit': '', 'pair': 31121, 'maps_to': 'energy_today'},
-        31121: {'name': 'energy_today_low_vpp', 'scale': 1, 'unit': '', 'pair': 31120, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31122: {'name': 'energy_total_high_vpp', 'scale': 1, 'unit': '', 'pair': 31123, 'maps_to': 'energy_total'},
-        31123: {'name': 'energy_total_low_vpp', 'scale': 1, 'unit': '', 'pair': 31122, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # Energy Data (VPP range — per Growatt VPP V2.01 register table)
+        # Row 60: Power to user daily  → energy consumed by load today (0.1 kWh)
+        # Row 61: Total power to user  → lifetime energy consumed by load (0.1 kWh)
+        # Row 62: Power to grid daily  → energy exported to grid today (0.1 kWh)
+        # Row 63: Total power to grid  → lifetime energy exported to grid (0.1 kWh)
+        # These duplicate the legacy 1044–1051 registers; legacy values are used by coordinator
+        # (found first in dict iteration). VPP copies kept for reference/future fallback.
+        31118: {'name': 'energy_to_user_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31119, 'desc': 'Power to user daily HIGH (VPP, 0.1 kWh)'},
+        31119: {'name': 'energy_to_user_today_vpp_low', 'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Power to user daily LOW'},
+        31120: {'name': 'energy_to_user_total_vpp_high', 'scale': 1, 'unit': '', 'pair': 31121, 'desc': 'Total power to user HIGH (VPP, 0.1 kWh)'},
+        31121: {'name': 'energy_to_user_total_vpp_low', 'scale': 1, 'unit': '', 'pair': 31120, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Total power to user LOW'},
+        31122: {'name': 'energy_to_grid_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31123, 'desc': 'Power to grid daily HIGH (VPP, 0.1 kWh)'},
+        31123: {'name': 'energy_to_grid_today_vpp_low', 'scale': 1, 'unit': '', 'pair': 31122, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Power to grid daily LOW'},
+        31124: {'name': 'energy_to_grid_total_vpp_high', 'scale': 1, 'unit': '', 'pair': 31125, 'desc': 'Total power to grid HIGH (VPP, 0.1 kWh)'},
+        31125: {'name': 'energy_to_grid_total_vpp_low', 'scale': 1, 'unit': '', 'pair': 31124, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Total power to grid LOW'},
 
         # Temperatures
         31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp', 'signed': True},
