@@ -63,7 +63,16 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfPower.WATT,
         "attr": "pv1_power",
     },
-    
+    "pv1_energy_today": {
+        "name": "PV1 Energy Today",
+        "icon": "mdi:solar-panel",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "pv1_energy_today",
+        "disabled_by_default": True,
+    },
+
     # Solar Input Sensors - PV2
     "pv2_voltage": {
         "name": "PV2 Voltage",
@@ -89,7 +98,16 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfPower.WATT,
         "attr": "pv2_power",
     },
-    
+    "pv2_energy_today": {
+        "name": "PV2 Energy Today",
+        "icon": "mdi:solar-panel",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "pv2_energy_today",
+        "disabled_by_default": True,
+    },
+
     # Solar Input Sensors - PV3
     "pv3_voltage": {
         "name": "PV3 Voltage",
@@ -115,7 +133,17 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfPower.WATT,
         "attr": "pv3_power",
     },
-    
+    "pv3_energy_today": {
+        "name": "PV3 Energy Today",
+        "icon": "mdi:solar-panel",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "pv3_energy_today",
+        "disabled_by_default": True,
+        "condition": lambda data: data.pv3_energy_today > 0,
+    },
+
     # Solar Total
     "pv_total_power": {
         "name": "Solar Total Power",
@@ -1103,6 +1131,8 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
             self._attr_native_unit_of_measurement = sensor_def["unit"]
         if "icon" in sensor_def:
             self._attr_icon = sensor_def["icon"]
+        if sensor_def.get("disabled_by_default"):
+            self._attr_entity_registry_enabled_default = False
 
     @property
     def device_info(self) -> dict[str, Any]:

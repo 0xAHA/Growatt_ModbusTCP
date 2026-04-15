@@ -13,6 +13,7 @@ BASIC_PV_SENSORS: Set[str] = {
 
 PV3_SENSORS: Set[str] = {
     "pv3_voltage", "pv3_current", "pv3_power",
+    "pv3_energy_today",  # disabled-by-default; condition-gated on actual non-zero data
 }
 
 BASIC_AC_SENSORS: Set[str] = {
@@ -37,6 +38,7 @@ ENERGY_SENSORS: Set[str] = {
 
 PV_DC_ENERGY_SENSORS: Set[str] = {
     "pv_energy_total",  # Epv — raw DC input from panels (separate from Eac energy_total)
+    "pv1_energy_today", "pv2_energy_today",  # Per-string DC energy today (disabled-by-default)
 }
 
 ENERGY_BREAKDOWN_SENSORS: Set[str] = {
@@ -134,6 +136,7 @@ INVERTER_PROFILES = {
             BASIC_PV_SENSORS |
             BASIC_AC_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
         ),
@@ -153,6 +156,7 @@ INVERTER_PROFILES = {
             BASIC_PV_SENSORS |
             BASIC_AC_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
         ),
@@ -728,6 +732,7 @@ INVERTER_PROFILES = {
             PV3_SENSORS |
             THREE_PHASE_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
         ),

@@ -557,7 +557,8 @@ LIFETIME_TOTAL_ATTRS = [
 
 # GrowattData attrs for daily totals — retain within day, clear at midnight
 DAILY_TOTAL_ATTRS = [
-    'energy_today', 'energy_to_grid_today', 'load_energy_today',
+    'energy_today', 'pv1_energy_today', 'pv2_energy_today', 'pv3_energy_today',
+    'energy_to_grid_today', 'load_energy_today',
     'energy_to_user_today',
     'charge_energy_today', 'discharge_energy_today',
     'ac_charge_energy_today', 'ac_discharge_energy_today',
@@ -606,8 +607,9 @@ SENSOR_DEVICE_MAP = {
         'ac_current_r', 'ac_current_s', 'ac_current_t',
         'ac_power_r', 'ac_power_s', 'ac_power_t',
         'system_output_power',
-        # Solar production energy
+        # Solar production energy (total and per-string daily)
         'energy_today', 'energy_total', 'pv_energy_total',
+        'pv1_energy_today', 'pv2_energy_today', 'pv3_energy_today',
         # WIT: Extra/parallel inverter energy production
         'extra_energy_today', 'extra_energy_total',
         # Self-consumption percentage (related to solar utilization)
