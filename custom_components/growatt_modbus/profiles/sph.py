@@ -47,12 +47,15 @@ SPH_3000_6000 = {
         57: {'name': 'time_total_high', 'scale': 1, 'unit': '', 'pair': 58},
         58: {'name': 'time_total_low', 'scale': 1, 'unit': '', 'pair': 57, 'combined_scale': 0.5, 'combined_unit': 'h'},
 
-        # Backup Output (registers 59-64 for backup/load in SPH models)
-        59: {'name': 'backup_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Backup output voltage'},
-        60: {'name': 'backup_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Backup output current'},
-        61: {'name': 'backup_power', 'scale': 1, 'unit': 'W', 'desc': 'Backup output power'},
-        62: {'name': 'backup_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'Backup output frequency'},
-        64: {'name': 'load_power', 'scale': 1, 'unit': 'W', 'desc': 'Load consumption power'},
+        # Per-string DC energy (today and lifetime totals) — confirmed via scan #131
+        59: {'name': 'pv1_energy_today_high', 'scale': 1, 'unit': '', 'pair': 60, 'desc': 'PV1 DC energy today HIGH'},
+        60: {'name': 'pv1_energy_today_low', 'scale': 1, 'unit': '', 'pair': 59, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV1 DC energy today LOW'},
+        61: {'name': 'pv1_energy_total_high', 'scale': 1, 'unit': '', 'pair': 62, 'desc': 'PV1 DC energy total HIGH'},
+        62: {'name': 'pv1_energy_total_low', 'scale': 1, 'unit': '', 'pair': 61, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV1 DC energy total LOW'},
+        63: {'name': 'pv2_energy_today_high', 'scale': 1, 'unit': '', 'pair': 64, 'desc': 'PV2 DC energy today HIGH'},
+        64: {'name': 'pv2_energy_today_low', 'scale': 1, 'unit': '', 'pair': 63, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV2 DC energy today LOW'},
+        65: {'name': 'pv2_energy_total_high', 'scale': 1, 'unit': '', 'pair': 66, 'desc': 'PV2 DC energy total HIGH'},
+        66: {'name': 'pv2_energy_total_low', 'scale': 1, 'unit': '', 'pair': 65, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV2 DC energy total LOW'},
 
         # PV energy total — raw DC-side generation, unaffected by battery cycling (#243)
         # Protocol V1.39 regs 91-92: Epv_total H/L (0.1 kWh)
@@ -250,12 +253,15 @@ SPH_7000_10000 = {
         57: {'name': 'time_total_high', 'scale': 1, 'unit': '', 'pair': 58},
         58: {'name': 'time_total_low', 'scale': 1, 'unit': '', 'pair': 57, 'combined_scale': 0.5, 'combined_unit': 'h'},
 
-        # Backup Output
-        59: {'name': 'backup_voltage', 'scale': 0.1, 'unit': 'V'},
-        60: {'name': 'backup_current', 'scale': 0.1, 'unit': 'A'},
-        61: {'name': 'backup_power', 'scale': 1, 'unit': 'W'},
-        62: {'name': 'backup_frequency', 'scale': 0.01, 'unit': 'Hz'},
-        64: {'name': 'load_power', 'scale': 1, 'unit': 'W'},
+        # Per-string DC energy (today and lifetime totals) — confirmed via scan #131
+        59: {'name': 'pv1_energy_today_high', 'scale': 1, 'unit': '', 'pair': 60, 'desc': 'PV1 DC energy today HIGH'},
+        60: {'name': 'pv1_energy_today_low', 'scale': 1, 'unit': '', 'pair': 59, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV1 DC energy today LOW'},
+        61: {'name': 'pv1_energy_total_high', 'scale': 1, 'unit': '', 'pair': 62, 'desc': 'PV1 DC energy total HIGH'},
+        62: {'name': 'pv1_energy_total_low', 'scale': 1, 'unit': '', 'pair': 61, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV1 DC energy total LOW'},
+        63: {'name': 'pv2_energy_today_high', 'scale': 1, 'unit': '', 'pair': 64, 'desc': 'PV2 DC energy today HIGH'},
+        64: {'name': 'pv2_energy_today_low', 'scale': 1, 'unit': '', 'pair': 63, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV2 DC energy today LOW'},
+        65: {'name': 'pv2_energy_total_high', 'scale': 1, 'unit': '', 'pair': 66, 'desc': 'PV2 DC energy total HIGH'},
+        66: {'name': 'pv2_energy_total_low', 'scale': 1, 'unit': '', 'pair': 65, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV2 DC energy total LOW'},
 
         # Temperatures
         93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},

@@ -72,6 +72,16 @@ SENSOR_DEFINITIONS = {
         "attr": "pv1_energy_today",
         "disabled_by_default": True,
     },
+    "pv1_energy_total": {
+        "name": "PV1 Energy Total",
+        "icon": "mdi:solar-panel",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "pv1_energy_total",
+        "disabled_by_default": True,
+        "condition": lambda data: data.pv1_energy_total > 0,
+    },
 
     # Solar Input Sensors - PV2
     "pv2_voltage": {
@@ -106,6 +116,16 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "pv2_energy_today",
         "disabled_by_default": True,
+    },
+    "pv2_energy_total": {
+        "name": "PV2 Energy Total",
+        "icon": "mdi:solar-panel",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "pv2_energy_total",
+        "disabled_by_default": True,
+        "condition": lambda data: data.pv2_energy_total > 0,
     },
 
     # Solar Input Sensors - PV3
@@ -142,6 +162,16 @@ SENSOR_DEFINITIONS = {
         "attr": "pv3_energy_today",
         "disabled_by_default": True,
         "condition": lambda data: data.pv3_energy_today > 0,
+    },
+    "pv3_energy_total": {
+        "name": "PV3 Energy Total",
+        "icon": "mdi:solar-panel",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "pv3_energy_total",
+        "disabled_by_default": True,
+        "condition": lambda data: data.pv3_energy_total > 0,
     },
 
     # Solar Total
