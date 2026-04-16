@@ -4,7 +4,7 @@
 
 ---
 
-## v0.7.4b4
+## v0.7.4
 
 ---
 
@@ -42,12 +42,6 @@
   These VPP registers are suffixed (`_vpp`) so they do not interfere with the legacy
   protocol registers which take precedence during coordinator data resolution.
 
----
-
-## v0.7.4b3
-
----
-
 - **Fix: Today energy sensors reset to 0 on any HA restart or integration reload:** On
   every cold-start (HA restart or config-entry reload), `_previous_day_totals` is empty
   because it is only populated at midnight during an active session and is never persisted
@@ -71,12 +65,6 @@
   protects against glitch zeros, and without a genuine yesterday total the stale check
   produces only false positives.
 
----
-
-## v0.7.4b2
-
----
-
 - **Fix: MIN TL-XH `pv_energy_total` missing on some firmware variants:** On the
   `MIN TL-XH 3000-10000 (V2.01)` profile, the primary PV lifetime energy register
   (`3053/3054`, Epv_total) was not present in the profile definition — meaning
@@ -90,14 +78,6 @@
   The reader falls back to the legacy pair only when the primary read returns exactly `0`
   and the legacy registers contain a non-zero value — so genuinely zeroed systems are
   unaffected while firmware variants that use `91/92` get a valid reading.
-
----
-
-## v0.7.4b1
-
-Issues: #262
-
----
 
 - **Fix: Condition-gated sensors permanently missing after any HA restart (#262):** The v0.7.3
   fix for issue #255 introduced `async_config_entry_first_refresh`, which seeds
