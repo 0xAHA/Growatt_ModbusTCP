@@ -610,6 +610,7 @@ SENSOR_DEVICE_MAP = {
         # Solar production energy (total and per-string daily)
         'energy_today', 'energy_total', 'pv_energy_total',
         'pv1_energy_today', 'pv2_energy_today', 'pv3_energy_today',
+        'pv1_energy_total', 'pv2_energy_total', 'pv3_energy_total',
         # WIT: Extra/parallel inverter energy production
         'extra_energy_today', 'extra_energy_total',
         # Self-consumption percentage (related to solar utilization)

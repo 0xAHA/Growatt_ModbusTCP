@@ -8,13 +8,26 @@
 
 ---
 
-- **New: Per-string daily energy sensors (pv1/pv2/pv3_energy_today) across all compatible profiles (Issue #265):**
+- **New: Per-string daily and lifetime energy sensors across all compatible profiles (Issue #265):**
   `pv1_energy_today` and `pv2_energy_today` sensors are now created for all profiles that
   support multiple PV strings (SPH, SPH-TL3, MIN, MIC, MOD, WIT, TL-XH). `pv3_energy_today`
   is additionally created for 3-MPPT profiles (MIN 7-10kW, SPH 7-10kW, SPH-HU, MOD, TL-XH),
   but only exposed as an entity when the inverter actually reports non-zero PV3 data.
 
-  All three sensors are **disabled by default** — enable them individually in the Home
+  `pv1_energy_total` and `pv2_energy_total` (lifetime per-MPPT totals) are now exposed for
+  all profiles with legacy registers 59–66: **SPH, SPH-TL3, TL-XH, MOD, WIT**, and **MIN TL-X**.
+  MIN TL-X also adds `pv3_energy_total` via its 3000+ range registers (3057–3066). All totals
+  are condition-gated and only appear once the inverter reports non-zero data.
+
+- **Fix: Incorrect register mapping for SPH and TL-XH legacy registers 59–62:**
+  Registers 59–62 in the SPH and TL-XH profiles were incorrectly labeled as
+  `backup_voltage/current/power/frequency`. Scan data confirmed these are actually per-MPPT
+  DC energy registers (identical to all other Growatt families): 59/60 = `pv1_energy_today`,
+  61/62 = `pv1_energy_total`. No HA entities were ever wired to the old backup names so there
+  is no user-visible regression; the fix corrects the underlying register map and enables the
+  per-MPPT energy sensors for SPH and TL-XH users.
+
+  All per-string sensors are **disabled by default** — enable them individually in the Home
   Assistant entity registry if you want to track per-string production. Total daily solar
   energy continues to be reported by the existing `energy_today` sensor.
 

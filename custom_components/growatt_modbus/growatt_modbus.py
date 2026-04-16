@@ -129,14 +129,17 @@ class GrowattData:
     pv1_current: float = 0.0          # A
     pv1_power: float = 0.0            # W
     pv1_energy_today: float = 0.0     # kWh (WIT per-MPPT energy tracking - Issue #146)
+    pv1_energy_total: float = 0.0     # kWh (MIN per-MPPT lifetime total - Issue #265)
     pv2_voltage: float = 0.0          # V
     pv2_current: float = 0.0          # A
     pv2_power: float = 0.0            # W
     pv2_energy_today: float = 0.0     # kWh (WIT per-MPPT energy tracking - Issue #146)
+    pv2_energy_total: float = 0.0     # kWh (MIN per-MPPT lifetime total - Issue #265)
     pv3_voltage: float = 0.0          # V
     pv3_current: float = 0.0          # A
     pv3_power: float = 0.0            # W
     pv3_energy_today: float = 0.0     # kWh (3-string models like SPH TL3 10000 - Issue #211)
+    pv3_energy_total: float = 0.0     # kWh (MIN 7-10kW per-MPPT lifetime total - Issue #265)
     pv_total_power: float = 0.0       # W
     pv_energy_total: float = 0.0      # kWh (WIT total PV lifetime energy - Issue #146)
     
@@ -1141,6 +1144,21 @@ class GrowattModbus:
             if pv3_energy_today_addr:
                 data.pv3_energy_today = self._get_register_value(pv3_energy_today_addr) or 0.0
                 logger.debug(f"[{self.register_map['name']}] PV3 energy today from reg {pv3_energy_today_addr}: {data.pv3_energy_today} kWh")
+
+            pv1_energy_total_addr = self._find_register_by_name('pv1_energy_total_low')
+            if pv1_energy_total_addr:
+                data.pv1_energy_total = self._get_register_value(pv1_energy_total_addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}] PV1 energy total from reg {pv1_energy_total_addr}: {data.pv1_energy_total} kWh")
+
+            pv2_energy_total_addr = self._find_register_by_name('pv2_energy_total_low')
+            if pv2_energy_total_addr:
+                data.pv2_energy_total = self._get_register_value(pv2_energy_total_addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}] PV2 energy total from reg {pv2_energy_total_addr}: {data.pv2_energy_total} kWh")
+
+            pv3_energy_total_addr = self._find_register_by_name('pv3_energy_total_low')
+            if pv3_energy_total_addr:
+                data.pv3_energy_total = self._get_register_value(pv3_energy_total_addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}] PV3 energy total from reg {pv3_energy_total_addr}: {data.pv3_energy_total} kWh")
 
             pv_energy_total_addr = self._find_register_by_name('pv_energy_total_low')
             if pv_energy_total_addr:
