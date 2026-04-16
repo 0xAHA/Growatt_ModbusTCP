@@ -4,6 +4,25 @@
 
 ---
 
+## v0.7.5
+
+- **Fix: SPH-TL3 `ac_power_s` and `ac_power_t` always showing 0 (Issue #265):**
+  On some SPH-TL3 firmware variants, per-phase power registers for phases S and T
+  (registers 44/45 and 48/49) return 0 while voltage and current registers for all
+  three phases report valid data. Only the phase R power register (40/41) was populated
+  — which on this device holds the inverter's total output power rather than a true
+  per-phase R value, making the three phase power readings inconsistent.
+
+  **Fix:** The coordinator now reads all three per-phase power registers together and
+  checks whether all return valid (non-zero) data. If any are missing or zero, it
+  falls back to calculating apparent power (V×I) for **all three phases** so the
+  values are consistent with each other. For hardware with fully-functional per-phase
+  power registers (e.g. MOD series), this path is never taken and behaviour is
+  unchanged. For SPH-TL3 users, `ac_power_s` and `ac_power_t` will now show
+  realistic per-phase apparent power values instead of 0.
+
+---
+
 ## v0.7.4
 
 ---

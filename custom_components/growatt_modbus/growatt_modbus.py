@@ -1254,38 +1254,57 @@ class GrowattModbus:
                 logger.debug("Generator discharge total register not found in profile")
 
             # Three-Phase AC Output (individual phases)
-            # Phase R
+            # Read voltages, currents, and power registers for all phases upfront so we can
+            # decide whether to use register values or fall back to V×I consistently.
             ac_voltage_r_addr = self._find_register_by_name('ac_voltage_r')
             ac_current_r_addr = self._find_register_by_name('ac_current_r')
             ac_power_r_addr = self._find_register_by_name('ac_power_r_low')
+            ac_voltage_s_addr = self._find_register_by_name('ac_voltage_s')
+            ac_current_s_addr = self._find_register_by_name('ac_current_s')
+            ac_power_s_addr = self._find_register_by_name('ac_power_s_low')
+            ac_voltage_t_addr = self._find_register_by_name('ac_voltage_t')
+            ac_current_t_addr = self._find_register_by_name('ac_current_t')
+            ac_power_t_addr = self._find_register_by_name('ac_power_t_low')
+
             if ac_voltage_r_addr:
                 data.ac_voltage_r = self._get_register_value(ac_voltage_r_addr) or 0.0
             if ac_current_r_addr:
                 data.ac_current_r = self._get_register_value(ac_current_r_addr) or 0.0
-            if ac_power_r_addr:
-                data.ac_power_r = self._get_register_value(ac_power_r_addr) or 0.0
-
-            # Phase S
-            ac_voltage_s_addr = self._find_register_by_name('ac_voltage_s')
-            ac_current_s_addr = self._find_register_by_name('ac_current_s')
-            ac_power_s_addr = self._find_register_by_name('ac_power_s_low')
             if ac_voltage_s_addr:
                 data.ac_voltage_s = self._get_register_value(ac_voltage_s_addr) or 0.0
             if ac_current_s_addr:
                 data.ac_current_s = self._get_register_value(ac_current_s_addr) or 0.0
-            if ac_power_s_addr:
-                data.ac_power_s = self._get_register_value(ac_power_s_addr) or 0.0
-
-            # Phase T
-            ac_voltage_t_addr = self._find_register_by_name('ac_voltage_t')
-            ac_current_t_addr = self._find_register_by_name('ac_current_t')
-            ac_power_t_addr = self._find_register_by_name('ac_power_t_low')
             if ac_voltage_t_addr:
                 data.ac_voltage_t = self._get_register_value(ac_voltage_t_addr) or 0.0
             if ac_current_t_addr:
                 data.ac_current_t = self._get_register_value(ac_current_t_addr) or 0.0
-            if ac_power_t_addr:
-                data.ac_power_t = self._get_register_value(ac_power_t_addr) or 0.0
+
+            power_r_reg = (self._get_register_value(ac_power_r_addr) or 0.0) if ac_power_r_addr else 0.0
+            power_s_reg = (self._get_register_value(ac_power_s_addr) or 0.0) if ac_power_s_addr else 0.0
+            power_t_reg = (self._get_register_value(ac_power_t_addr) or 0.0) if ac_power_t_addr else 0.0
+
+            # For 3-phase models, only use register values if ALL three phases return valid data.
+            # Some firmware (e.g. SPH-TL3) only populates the phase R register (which actually
+            # holds total output power, not per-phase R) while returning 0 for S and T.
+            # In that case, calculate all three phases from V×I so values are consistent.
+            is_three_phase = ac_power_s_addr is not None or ac_power_t_addr is not None
+            all_phase_powers_valid = bool(power_r_reg and power_s_reg and power_t_reg)
+
+            if is_three_phase and not all_phase_powers_valid:
+                if data.ac_voltage_r > 0 and data.ac_current_r > 0:
+                    data.ac_power_r = round(data.ac_voltage_r * data.ac_current_r, 1)
+                if data.ac_voltage_s > 0 and data.ac_current_s > 0:
+                    data.ac_power_s = round(data.ac_voltage_s * data.ac_current_s, 1)
+                if data.ac_voltage_t > 0 and data.ac_current_t > 0:
+                    data.ac_power_t = round(data.ac_voltage_t * data.ac_current_t, 1)
+                logger.debug(
+                    f"Phase power registers incomplete (R={power_r_reg}, S={power_s_reg}, T={power_t_reg}), "
+                    f"using V×I: R={data.ac_power_r}W, S={data.ac_power_s}W, T={data.ac_power_t}W"
+                )
+            else:
+                data.ac_power_r = power_r_reg
+                data.ac_power_s = power_s_reg
+                data.ac_power_t = power_t_reg
 
             # Line-to-Line Voltages
             ac_voltage_rs_addr = self._find_register_by_name('line_voltage_rs')
