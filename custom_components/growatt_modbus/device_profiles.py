@@ -114,6 +114,25 @@ SPF_OFFGRID_SENSORS: Set[str] = {
     "dcdc_temp", "buck1_temp", "buck2_temp",
 }
 
+SPE_OFFGRID_SENSORS: Set[str] = {
+    # SPF-compatible sensors confirmed working on SPE 8000-12000 ES.
+    # Subset of SPF_OFFGRID_SENSORS — excluded sensors documented below.
+    "load_percentage",           # reg 27
+    "ac_apparent_power",         # regs 11/12
+    "grid_voltage",              # reg 20
+    "grid_frequency",            # reg 21
+    "ac_discharge_energy_today", # regs 64/65 (= grid import today on SPE)
+    "mppt_fan_speed",            # reg 81
+    "inverter_fan_speed",        # reg 82
+    "dcdc_temp",                 # reg 26
+    "buck1_temp",                # reg 32
+    "buck2_temp",                # reg 33
+    # ac_input_power excluded    — regs 36/37 produce 429GW overflow on SPE
+    # ac_charge_energy_today excluded — not supported on SPE
+    # generator_* excluded       — SPE has no generator input
+    # op_discharge_* excluded    — remapped to load_energy_* in SPE profile
+}
+
 WIT_EXTRA_SENSORS: Set[str] = {
     # Extra/parallel inverter output (multi-inverter systems)
     "extra_power_to_grid",
@@ -717,22 +736,7 @@ INVERTER_PROFILES = {
             BATTERY_SENSORS |            # includes ac_discharge_energy_total (reg 66/67 = grid import total)
             TEMPERATURE_SENSORS |
             STATUS_SENSORS |
-            {
-                # SPF-compatible sensors confirmed working on SPE
-                "load_percentage",        # reg 27
-                "ac_apparent_power",      # regs 11/12
-                "grid_voltage",           # reg 20
-                "grid_frequency",         # reg 21
-                "ac_discharge_energy_today",  # regs 64/65 = grid import today on SPE
-                "mppt_fan_speed",         # reg 81
-                "inverter_fan_speed",     # reg 82
-                "dcdc_temp",              # reg 26
-                "buck1_temp",             # reg 32
-                "buck2_temp",             # reg 33
-                # ac_input_power excluded — regs 36/37 produce 429GW overflow on SPE
-                # generator_* excluded — SPE has no generator input
-                # op_discharge_energy_today/total excluded — remapped to load_energy_* in profile
-            }
+            SPE_OFFGRID_SENSORS
         ),
     },
 
