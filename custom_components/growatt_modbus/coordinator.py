@@ -360,6 +360,30 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
             _LOGGER.debug("Using register map: %s", register_map)
 
+            # Startup summary — INFO so it appears without debug logging enabled.
+            # Answers the most common support question ("why is my sensor missing?")
+            # without needing the diagnostic scanner.
+            profile = REGISTER_MAPS.get(register_map, {})
+            input_addrs = sorted(profile.get('input_registers', {}).keys())
+            profile_name = profile.get('name', register_map)
+            range_summary = self._summarise_register_ranges(input_addrs)
+
+            if connection_type == "tcp":
+                conn_summary = f"TCP {self.config[CONF_HOST]}:{self.config[CONF_PORT]}"
+            else:
+                conn_summary = f"Serial {self.config[CONF_DEVICE_PATH]}@{self.config[CONF_BAUDRATE]}"
+
+            _LOGGER.info(
+                "Growatt Modbus starting — profile: %s (%s) | connection: %s | "
+                "scan interval: %ds | polling %d input registers across %s",
+                profile_name,
+                register_map,
+                conn_summary,
+                int(scan_interval),
+                len(input_addrs),
+                range_summary,
+            )
+
         except Exception as err:
             _LOGGER.error("Failed to initialize Growatt client: %s", err)
             self._client = None
@@ -972,8 +996,39 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     _LOGGER.debug(f"Could not read protocol version (73): {e}")
                     self._protocol_version = "OffGrid Modbus"
 
+            # Consolidated identification summary — replaces scattered debug lines
+            # with one INFO-level line visible in the default HA log.
+            _LOGGER.info(
+                "Inverter identified — model: %s | serial: %s | firmware: %s | %s",
+                self._model_name or "unknown",
+                self._serial_number or "unknown",
+                self._firmware_version or "unknown",
+                self._protocol_version or "unknown",
+            )
+
         except Exception as e:
             _LOGGER.error(f"Error reading device identification: {e}")
+
+    @staticmethod
+    def _summarise_register_ranges(addresses: list) -> str:
+        """Compact string of polled register ranges, e.g. '0–124, 1000–1124, 31000–31199'.
+
+        Addresses within 100 of each other are merged into one range.
+        Used in the startup log so support questions can be answered without
+        running the diagnostic scanner.
+        """
+        if not addresses:
+            return "none"
+        sorted_addrs = sorted(addresses)
+        ranges = []
+        start = prev = sorted_addrs[0]
+        for addr in sorted_addrs[1:]:
+            if addr - prev > 100:
+                ranges.append(f"{start}–{prev}" if start != prev else str(start))
+                start = addr
+            prev = addr
+        ranges.append(f"{start}–{prev}" if start != prev else str(start))
+        return ", ".join(ranges)
 
     def _registers_to_ascii(self, registers):
         """Convert list of 16-bit registers to ASCII string."""
