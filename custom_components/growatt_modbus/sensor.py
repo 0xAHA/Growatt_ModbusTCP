@@ -261,6 +261,34 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "ac_voltage_t",
     },
+    # Three-Phase Line-to-Line Voltages
+    "ac_voltage_rs": {
+        "name": "AC Voltage RS",
+        "icon": "mdi:lightning-bolt",
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricPotential.VOLT,
+        "attr": "ac_voltage_rs",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "ac_voltage_st": {
+        "name": "AC Voltage ST",
+        "icon": "mdi:lightning-bolt",
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricPotential.VOLT,
+        "attr": "ac_voltage_st",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "ac_voltage_tr": {
+        "name": "AC Voltage TR",
+        "icon": "mdi:lightning-bolt",
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricPotential.VOLT,
+        "attr": "ac_voltage_tr",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
 
     # Three-Phase AC Currents
     "ac_current_r": {

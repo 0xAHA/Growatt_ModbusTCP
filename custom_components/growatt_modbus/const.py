@@ -661,8 +661,7 @@ SENSOR_DEVICE_MAP = {
         # SPF Off-Grid operational discharge energy
         'op_discharge_energy_today', 'op_discharge_energy_total',
         # BMS sensors (SPH HU and other models with battery management)
-        'bms_status', 'bms_status_old', 'bms_error', 'bms_error_old',
-        'bms_warn_info', 'bms_warn_info_old', 'bms_max_current',
+        'bms_status', 'bms_error', 'bms_warn_info', 'bms_max_current',
         'bms_cycle_count', 'bms_soh', 'bms_constant_volt',
         'bms_max_cell_volt', 'bms_min_cell_volt',
         'bms_module_num', 'bms_battery_count',
