@@ -141,6 +141,36 @@ WIT_EXTRA_SENSORS: Set[str] = {
 
 
 # ============================================================================
+# COMPOSITE SENSOR GROUPS
+# Convenience unions used by INVERTER_PROFILES below.
+# No new sensor keys are defined here — these only combine existing groups.
+# ============================================================================
+
+# Single-phase grid-tied base (no battery): PV + AC output + grid + energy breakdown.
+# Used by MIN string inverter profiles; serves as the no-battery 1-phase baseline.
+GRID_TIED_1P_SENSORS: Set[str] = (
+    BASIC_PV_SENSORS | BASIC_AC_SENSORS | GRID_SENSORS | POWER_FLOW_SENSORS
+    | CONSUMPTION_SENSORS | ENERGY_SENSORS | PV_DC_ENERGY_SENSORS
+    | PV_MPPT_TOTAL_SENSORS | ENERGY_BREAKDOWN_SENSORS
+    | TEMPERATURE_SENSORS | STATUS_SENSORS
+)
+
+# Single-phase hybrid: grid-tied base + battery storage.
+# Used by SPH and TL-XH hybrid profiles.
+HYBRID_1P_SENSORS: Set[str] = GRID_TIED_1P_SENSORS | BATTERY_SENSORS
+
+# Three-phase hybrid: same capability scope as HYBRID_1P_SENSORS with
+# THREE_PHASE_SENSORS replacing BASIC_AC_SENSORS.
+# Used by SPH-TL3 and MOD-XH hybrid profiles.
+HYBRID_3P_SENSORS: Set[str] = (
+    BASIC_PV_SENSORS | THREE_PHASE_SENSORS | GRID_SENSORS | POWER_FLOW_SENSORS
+    | CONSUMPTION_SENSORS | ENERGY_SENSORS | PV_DC_ENERGY_SENSORS
+    | PV_MPPT_TOTAL_SENSORS | ENERGY_BREAKDOWN_SENSORS | BATTERY_SENSORS
+    | TEMPERATURE_SENSORS | STATUS_SENSORS
+)
+
+
+# ============================================================================
 # INVERTER PROFILES
 # ============================================================================
 
@@ -221,19 +251,7 @@ INVERTER_PROFILES = {
         "has_battery": False,
         "max_power_kw": 6.0,
         "protocol_version": "v1.39",
-        "sensors": (
-            BASIC_PV_SENSORS |
-            BASIC_AC_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": GRID_TIED_1P_SENSORS,
     },
 
     "min_7000_10000_tl_x": {
@@ -245,21 +263,7 @@ INVERTER_PROFILES = {
         "has_battery": False,
         "max_power_kw": 10.0,
         "protocol_version": "v1.39",
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            BASIC_AC_SENSORS |
-            SYSTEM_OUTPUT_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": GRID_TIED_1P_SENSORS | PV3_SENSORS | SYSTEM_OUTPUT_SENSORS,
     },
 
     # MIN Series VPP Protocol V2.01 (adds 30000 range for DTC)
@@ -272,19 +276,7 @@ INVERTER_PROFILES = {
         "has_battery": False,
         "max_power_kw": 6.0,
         "protocol_version": "v2.01",
-        "sensors": (
-            BASIC_PV_SENSORS |
-            BASIC_AC_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": GRID_TIED_1P_SENSORS,
     },
 
     "min_7000_10000_tl_x_v201": {
@@ -296,21 +288,7 @@ INVERTER_PROFILES = {
         "has_battery": False,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            BASIC_AC_SENSORS |
-            SYSTEM_OUTPUT_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": GRID_TIED_1P_SENSORS | PV3_SENSORS | SYSTEM_OUTPUT_SENSORS,
     },
 
     # ========================================================================
@@ -325,21 +303,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 10.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            BASIC_AC_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS,
     },
     
     "tl_xh_us_3000_10000": {
@@ -350,21 +314,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 10.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            BASIC_AC_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS,
     },
 
     # TL-XH V2.01 VPP Protocol
@@ -377,21 +327,7 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            BASIC_AC_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS,
     },
 
     "tl_xh_us_3000_10000_v201": {
@@ -403,21 +339,7 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            BASIC_AC_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS,
     },
 
     # MIN TL-XH Hybrid - Uses MIN 3000+ range with VPP battery
@@ -501,20 +423,7 @@ INVERTER_PROFILES = {
         "has_pv3": False,
         "has_battery": True,
         "max_power_kw": 6.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            BASIC_AC_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_1P_SENSORS,
     },
     
     "sph_7000_10000": {
@@ -525,21 +434,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,  # 7-10kW models have 3 PV strings (registers 11-14)
         "has_battery": True,
         "max_power_kw": 10.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |  # 7-10kW models have 3 PV strings
-            BASIC_AC_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS,
     },
 
     "sph_8000_10000_hu": {
@@ -550,22 +445,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 10.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            BASIC_AC_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            BMS_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS | BMS_SENSORS,
     },
 
     # SPH V2.01 VPP Protocol
@@ -578,20 +458,7 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 6.0,
         "protocol_version": "v2.01",
-        "sensors": (
-            BASIC_PV_SENSORS |
-            BASIC_AC_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_1P_SENSORS,
     },
 
     "sph_7000_10000_v201": {
@@ -603,21 +470,7 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |  # 7-10kW models have 3 PV strings
-            BASIC_AC_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS,
     },
 
     # ========================================================================
@@ -632,20 +485,7 @@ INVERTER_PROFILES = {
         "has_pv3": False,
         "has_battery": True,
         "max_power_kw": 10.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            THREE_PHASE_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_3P_SENSORS,
     },
 
     # SPH-TL3 V2.01 VPP Protocol
@@ -658,20 +498,7 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
-        "sensors": (
-            BASIC_PV_SENSORS |
-            THREE_PHASE_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_3P_SENSORS,
     },
 
     # ========================================================================
@@ -772,21 +599,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            THREE_PHASE_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS,
     },
 
     "mod_6000_15000tl3_xh_v201": {
@@ -798,21 +611,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
-        "sensors": (
-            BASIC_PV_SENSORS |
-            PV3_SENSORS |
-            THREE_PHASE_SENSORS |
-            GRID_SENSORS |
-            POWER_FLOW_SENSORS |
-            CONSUMPTION_SENSORS |
-            ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
-            PV_MPPT_TOTAL_SENSORS |
-            ENERGY_BREAKDOWN_SENSORS |
-            BATTERY_SENSORS |
-            TEMPERATURE_SENSORS |
-            STATUS_SENSORS
-        ),
+        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS,
     },
 
     # ========================================================================
