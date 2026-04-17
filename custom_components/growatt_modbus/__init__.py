@@ -14,6 +14,8 @@ from homeassistant.helpers import device_registry as dr
 from .const import (
     DOMAIN,
     CONF_DEVICE_STRUCTURE_VERSION,
+    CONF_INVERTER_SERIES,
+    CONF_REGISTER_MAP,
     CURRENT_DEVICE_STRUCTURE_VERSION,
     WRITABLE_REGISTERS,
     DEVICE_TYPE_INVERTER,
@@ -140,6 +142,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "Entities will now be organized into separate devices: "
             "Inverter (with system controls), Solar, Grid, Load, and Battery (if present)"
         )
+
+    # Auto-migrate: downgrade incorrectly assigned _v201 profiles (added v0.7.8)
+    # Before v0.7.8, the setup flow used auto_detected=True as evidence of V2.01 support.
+    # That flag is True for ANY successful detection (including legacy register probing),
+    # so non-VPP inverters were silently assigned _v201 profiles and flooded logs with
+    # "Modbus Error: Illegal Function" every poll cycle.
+    # Fix: vpp_protocol_confirmed (added v0.7.8) is True only when DTC read from register
+    # 30000 confirmed V2.01. Absent/False on old installs means V2.01 was never confirmed.
+    current_series = entry.data.get(CONF_INVERTER_SERIES, "")
+    if "_v201" in current_series and not entry.data.get("vpp_protocol_confirmed", False):
+        from .auto_detection import convert_to_legacy_profile
+        from .device_profiles import get_profile as _get_profile
+        legacy_series = convert_to_legacy_profile(current_series)
+        legacy_profile = _get_profile(legacy_series)
+        if legacy_series != current_series and legacy_profile:
+            new_data = {
+                **entry.data,
+                CONF_INVERTER_SERIES: legacy_series,
+                CONF_REGISTER_MAP: legacy_profile["register_map"],
+                "vpp_protocol_confirmed": False,
+            }
+            hass.config_entries.async_update_entry(entry, data=new_data)
+            _LOGGER.warning(
+                "Growatt Modbus: auto-migrated '%s' → '%s' "
+                "(vpp_protocol_confirmed was not set — V2.01 protocol was never confirmed at setup). "
+                "If this inverter genuinely supports V2.01, reconfigure to restore it.",
+                current_series,
+                legacy_series,
+            )
 
     # Remove stale number entities for time_period start/end controls (migrated to TimeEntity in v0.6.4)
     entity_registry = er.async_get(hass)

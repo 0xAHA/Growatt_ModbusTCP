@@ -38,6 +38,28 @@
   `bms_status_old`, `bms_error_old`, `bms_warn_info_old` are superseded legacy
   BMS register variants with no active sensor definitions; removed from the map.
 
+- **Fix: V2.01 profile incorrectly assigned to non-VPP inverters:**
+  Before this release, auto-detection used `auto_detected=True` as evidence of
+  V2.01 protocol support.  That flag is set for *any* successful detection
+  (including plain register probing), so inverters that use only the legacy
+  3000-range registers (e.g. MIN 7000-10000TL-X) were silently assigned a
+  `_v201` profile and generated `Modbus Error: Illegal Function` every poll cycle.
+
+  **Root cause:** `supports_v201` in the config flow was derived from
+  `auto_detected`, not from whether a DTC code was actually read from register
+  30000.
+
+  **Fix:** A new `vpp_protocol_confirmed` flag is stored in config entry data.
+  It is `True` only when auto-detection successfully read DTC from register 30000
+  (confirmed V2.01 hardware).  The manual-selection and reconfigure flows now
+  read this flag instead of inspecting the current profile name.
+
+  **Automatic migration:** On startup, `async_setup_entry` detects the
+  `_v201`-but-unconfirmed combination and silently downgrades the profile to its
+  legacy equivalent.  Affected users will see a one-time WARNING log entry.
+  Legitimate V2.01 users (who set up under v0.7.8+) are not affected because
+  their `vpp_protocol_confirmed` flag is `True`.
+
 ---
 
 ## v0.7.7
