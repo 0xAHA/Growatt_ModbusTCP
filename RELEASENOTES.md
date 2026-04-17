@@ -4,6 +4,24 @@
 
 ---
 
+## v0.7.6
+
+---
+
+- **Refactor: Extract SPE_OFFGRID_SENSORS constant (phase 1 of architecture review):**
+  The `spe_8000_12000_es` profile previously used an anonymous inline sensor set for its
+  SPF-compatible sensors. This meant any future change to `SPF_OFFGRID_SENSORS` would
+  silently not apply to SPE, making the divergence invisible at review time. Extracted to a
+  named `SPE_OFFGRID_SENSORS` constant with comments documenting which SPF sensors are
+  excluded and why (register overflow, no generator input, remapped registers). No runtime
+  behaviour change — the resolved sensor set is identical to before.
+
+- **Audit: SPA duplicate profile key (architecture review Concern C):**
+  Confirmed `spa_3000_6000_tl_bl` has a single entry in `INVERTER_PROFILES`. Concern C
+  from the architecture review is not present in the current codebase.
+
+---
+
 ## v0.7.5
 
 - **Fix: SPH-TL3 `ac_power_s` and `ac_power_t` always showing 0 (Issue #265):**
