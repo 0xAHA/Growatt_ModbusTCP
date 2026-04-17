@@ -23,7 +23,7 @@ Choose your model from the table of contents below.
 Each inverter family uses a different control paradigm. Understanding which one applies to
 your hardware will save significant debugging time.
 
-![Control model comparison](images/control-model-comparison.svg)
+![Control model comparison](../images/control-model-comparison.svg)
 
 | Family | Control style | Persistence | Key prerequisite |
 |--------|--------------|-------------|-----------------|
@@ -48,7 +48,7 @@ The MOD GEN4 inverter uses a 9-slot time-of-use schedule stored in holding regis
 Battery First, or Grid First). The inverter switches priority automatically as the clock
 enters each window.
 
-![TOU register map](images/tou-register-map.svg)
+![TOU register map](../images/tou-register-map.svg)
 
 > **Critical:** Registers 3046–3049 are **not** TOU slots. This gap is intentional.
 > Registers 3047–3048 are EMS rate/SOC controls. Register **3049** ("Allow Grid Charge")
@@ -56,7 +56,7 @@ enters each window.
 
 ### Step-by-Step Setup
 
-![MOD TOU setup flow](images/mod-tou-setup-flow.svg)
+![MOD TOU setup flow](../images/mod-tou-setup-flow.svg)
 
 #### Step 1 — Enable Allow Grid Charge (Critical)
 
@@ -212,7 +212,7 @@ sets the global default:
 Time periods override this global default within defined windows. Periods use separate
 enable registers (not bit-packed like MOD).
 
-![SPH time period layout](images/sph-time-periods.svg)
+![SPH time period layout](../images/sph-time-periods.svg)
 
 ### Available Time Period Entities
 
@@ -671,9 +671,9 @@ Key log prefixes to look for:
 
 ## Further Reading
 
-- [Register map and profile details](../custom_components/growatt_modbus/profiles/)
-- [Supported models and protocol versions](MODELS.md)
-- [Release notes](../RELEASENOTES.md)
+- [Register map and profile details](https://github.com/0xAHA/Growatt_ModbusTCP/tree/main/custom_components/growatt_modbus/profiles/)
+- [Supported models and protocol versions](../hardware/models.md)
+- [Release notes](https://github.com/0xAHA/Growatt_ModbusTCP/blob/main/RELEASENOTES.md)
 - [Open an issue](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 
 ---

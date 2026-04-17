@@ -244,4 +244,4 @@ Detected protocol version: Protocol 2.01 (register 30099 = 201)
 
 ---
 
-[← Back to README](../README.md)
+[← Back to README](https://github.com/0xAHA/Growatt_ModbusTCP#readme)

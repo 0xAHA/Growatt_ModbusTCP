@@ -6,7 +6,7 @@
 
 When you add the integration, it attempts to identify your inverter automatically before asking you to choose a profile.
 
-![Auto-Detection Flow](images/auto-detection-flow.svg)
+![Auto-Detection Flow](../images/auto-detection-flow.svg)
 
 **Key points:**
 
@@ -194,4 +194,4 @@ The integration reads and displays identifying information about your inverter a
 
 ---
 
-*For control entity details, see [CONTROL.md](CONTROL.md)*
+*For control entity details, see [CONTROL.md](../controls/entity-reference.md)*

@@ -163,4 +163,4 @@ python3 -m py_compile custom_components/growatt_modbus/*.py
 
 **After completing all steps, copy this checklist into your commit message or PR description!**
 
-For detailed documentation, see [claude.md](claude.md)
+For detailed documentation, see the [project documentation](https://github.com/0xAHA/Growatt_ModbusTCP)
