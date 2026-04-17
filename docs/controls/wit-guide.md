@@ -347,9 +347,9 @@ Check entity: `switch.growatt_control_authority` (must be ON)
 
 ## Further Reading
 
-- [WIT Profile Documentation](../custom_components/growatt_modbus/profiles/wit.py)
-- [Supported Models](MODELS.md)
-- [VPP Protocol Overview](PROTOCOL_DATABASE_PROPOSAL.md)
+- [WIT Profile Documentation](https://github.com/0xAHA/Growatt_ModbusTCP/blob/main/custom_components/growatt_modbus/profiles/wit.py)
+- [Supported Models](../hardware/models.md)
+- [VPP Protocol Overview](../developer/protocol-database.md)
 
 ---
 

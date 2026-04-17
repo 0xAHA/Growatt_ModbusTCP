@@ -10,7 +10,7 @@ The integration exposes inverter control via standard Home Assistant **Select** 
 
 Two fundamentally different control models are used across the supported inverter families:
 
-![Control Architecture](images/control-architecture.svg)
+![Control Architecture](../images/control-architecture.svg)
 
 All writes use **read-back verification** — after writing, the integration reads the register back to confirm the value stuck. If a ShineWiFi dongle overwrites the value on the next poll cycle, a persistent notification is shown in the HA UI.
 
@@ -25,7 +25,7 @@ All writes use **read-back verification** — after writing, the integration rea
 - **How it works:** Write a command to VPP protocol registers (30xxx range) that activates a time-limited battery override. The inverter returns to its base TOU schedule when the duration expires or HA restarts.
 - **When to use:** Temporary battery force-charge (e.g., cheap tariff window), temporary discharge control.
 - **Risk level:** Medium. Requires understanding of the VPP protocol. Rate limiting and conflict detection are built in.
-- **See also:** [WIT Control Guide](WIT_CONTROL_GUIDE.md) for detailed VPP documentation.
+- **See also:** [WIT Control Guide](wit-guide.md) for detailed VPP documentation.
 
 ---
 
@@ -126,7 +126,7 @@ All writes use **read-back verification** — after writing, the integration rea
 - Rate limiting is built in to prevent command flooding.
 - Conflict detection prevents simultaneous charge + discharge commands.
 
-See [WIT Control Guide](WIT_CONTROL_GUIDE.md) for full protocol documentation.
+See [WIT Control Guide](wit-guide.md) for full protocol documentation.
 
 ---
 
