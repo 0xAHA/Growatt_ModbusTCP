@@ -4,6 +4,42 @@
 
 ---
 
+## v0.7.8
+
+---
+
+- **Feat: INFO-level startup logging in coordinator:**
+  On startup the coordinator now logs a single INFO line summarising the active
+  profile name, connection string (TCP host:port or Serial path@baud), scan
+  interval, and polled register ranges (e.g. `0–124, 1000–1124`).  A second
+  INFO line is emitted once device identification completes, showing model,
+  serial, firmware, and protocol version.  Useful for confirming the correct
+  profile was detected without enabling full debug logging.
+
+- **Feat: CI sensor integrity tests (pytest):**
+  Three automated tests in `tests/test_sensor_integrity.py` verify internal
+  consistency of the sensor configuration on every push and PR to main:
+  1. Every key in `SENSOR_DEFINITIONS` (sensor.py) is assigned to a device in
+     `SENSOR_DEVICE_MAP` (const.py).
+  2. Every key in a `*_SENSORS` group constant (device_profiles.py) exists in
+     `SENSOR_DEFINITIONS`.
+  3. `SENSOR_DEVICE_MAP` does not accumulate new undefined-sensor entries beyond
+     a tracked allowlist (`KNOWN_MAP_WITHOUT_DEF`).
+
+  A `.github/workflows/tests.yaml` workflow runs these tests on Python 3.12.
+
+- **Fix: Add missing SENSOR_DEFINITIONS for three-phase line-to-line voltages:**
+  `ac_voltage_rs`, `ac_voltage_st`, `ac_voltage_tr` were wired end-to-end
+  (GrowattData dataclass, coordinator, profiles, THREE_PHASE_SENSORS group,
+  SENSOR_DEVICE_MAP) but lacked entries in `SENSOR_DEFINITIONS`, so no sensor
+  entities were ever created.  Added as diagnostic voltage sensors.
+
+- **Chore: Remove orphaned SENSOR_DEVICE_MAP entries:**
+  `bms_status_old`, `bms_error_old`, `bms_warn_info_old` are superseded legacy
+  BMS register variants with no active sensor definitions; removed from the map.
+
+---
+
 ## v0.7.7
 
 ---
