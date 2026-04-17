@@ -379,7 +379,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 profile_name,
                 register_map,
                 conn_summary,
-                int(scan_interval),
+                int(self._normal_update_interval.total_seconds()),
                 len(input_addrs),
                 range_summary,
             )
