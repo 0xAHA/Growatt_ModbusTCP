@@ -857,11 +857,15 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # Seed coordinator state so HA considers the entry loaded
         self.data = GrowattData()
         self.last_update_success = True
-        _LOGGER.info(
-            "Growatt Modbus: integration setup complete — "
-            "first inverter read will occur at the next poll interval. "
-            "Sensors will show unavailable until the inverter responds."
+
+        # Schedule an immediate background poll so sensors populate right away
+        # instead of waiting a full scan interval.  This runs after setup returns
+        # so it cannot block HA's bootstrap stage-2 task timeout (Issue #262).
+        self.hass.async_create_task(
+            self.async_refresh(),
+            name="growatt_modbus_initial_refresh",
         )
+        _LOGGER.debug("Growatt Modbus: integration setup complete — immediate background poll scheduled.")
     
     async def _async_load_energy_totals(self) -> None:
         """Load persisted energy totals from HA storage."""
