@@ -4,6 +4,28 @@
 
 ---
 
+## v0.7.7
+
+---
+
+- **Refactor: Composite sensor group constants (phase 1 of architecture review):**
+  17 of 28 inverter profiles previously repeated identical 10–13 line sensor union
+  expressions verbatim. Three composite constants now capture the common patterns:
+
+  - `GRID_TIED_1P_SENSORS` — single-phase grid-tied base (no battery); used by MIN profiles
+  - `HYBRID_1P_SENSORS` — `GRID_TIED_1P_SENSORS | BATTERY_SENSORS`; used by SPH and TL-XH
+  - `HYBRID_3P_SENSORS` — same scope as `HYBRID_1P_SENSORS` with `THREE_PHASE_SENSORS`
+    replacing `BASIC_AC_SENSORS`; used by SPH-TL3 and MOD-XH
+
+  Profile compositions now read as single expressions, e.g. `HYBRID_1P_SENSORS | PV3_SENSORS`
+  instead of a 12-line union. Adding a sensor to a shared cluster is now one line instead of
+  up to 8. No entity IDs, sensor keys, or runtime behaviour changed — the resolved sets are
+  identical to before. 11 profiles with unique compositions are left as explicit inline blocks.
+
+  Net change: −201 lines in `device_profiles.py`.
+
+---
+
 ## v0.7.6
 
 ---
