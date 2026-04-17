@@ -409,12 +409,15 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                         # Auto-detection successful!
                         _LOGGER.info(f"✓ Auto-detected: {profile['name']}")
 
-                        # Store discovered info for confirmation step
+                        # Store discovered info for confirmation step.
+                        # vpp_protocol_confirmed is the authoritative flag used by the
+                        # reconfigure flow to decide which profile variant to resolve.
                         self._discovered_data.update({
                             CONF_INVERTER_SERIES: profile_key,
                             CONF_REGISTER_MAP: profile["register_map"],
                             "detected_profile": profile,
                             "auto_detected": True,
+                            "vpp_protocol_confirmed": "_v201" in profile_key,
                         })
 
                         # Show confirmation step
@@ -473,6 +476,7 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                     CONF_INVERTER_SERIES: self._discovered_data[CONF_INVERTER_SERIES],
                     CONF_REGISTER_MAP: self._discovered_data[CONF_REGISTER_MAP],
                     "register_map": self._discovered_data[CONF_REGISTER_MAP],
+                    "vpp_protocol_confirmed": self._discovered_data.get("vpp_protocol_confirmed", False),
                 }
 
                 # Add connection-specific parameters
@@ -628,10 +632,12 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                 # User selected a friendly name - resolve to actual profile ID
                 display_name = user_input.get(CONF_INVERTER_SERIES, "MIN (7-10kW)")
 
-                # Determine V2.01 support based on auto-detection results
-                # Default to legacy (False) unless v2.01 was explicitly detected
-                # This prevents incorrectly selecting v2.01 profiles when DTC register isn't readable
-                supports_v201 = self._discovered_data.get("auto_detected", False) and not self._discovered_data.get("auto_detection_failed", False)
+                # V2.01 support is confirmed only when auto-detection selected a _v201 profile.
+                # auto_detected=True means *any* detection method worked (including register
+                # probing which returns legacy profiles) — it is NOT evidence of V2.01 support.
+                # Using auto_detected here caused non-VPP units to be assigned _v201 profiles.
+                detected_series = self._discovered_data.get(CONF_INVERTER_SERIES, "")
+                supports_v201 = "_v201" in detected_series
 
                 # Resolve friendly name to actual profile ID
                 series = resolve_profile_selection(display_name, supports_v201=supports_v201)
@@ -654,6 +660,7 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                         CONF_INVERTER_SERIES: series,
                         CONF_REGISTER_MAP: series,
                         "register_map": profile["register_map"],
+                        "vpp_protocol_confirmed": self._discovered_data.get("vpp_protocol_confirmed", False),
                     }
 
                     # Add connection-specific parameters
@@ -843,10 +850,13 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                 selected_display_name = user_input[CONF_INVERTER_SERIES]
                 current_series = new_data.get(CONF_INVERTER_SERIES, "min_7000_10000_tl_x")
 
-                # Detect V2.01 support from current profile
-                # If currently using a v201 profile, hardware supports it
-                # Otherwise, default to legacy for safety
-                supports_v201 = '_v201' in current_series.lower()
+                # Use the stored vpp_protocol_confirmed flag set at initial setup.
+                # Falling back to '_v201' in current_series was a self-reinforcing bug:
+                # once incorrectly on a _v201 profile, the user could never reconfigure
+                # back to legacy because the flag stayed True.
+                # For existing installs without the flag: default False (legacy) — safe,
+                # and legitimate V2.01 users can re-run setup to restore it correctly.
+                supports_v201 = self.config_entry.data.get("vpp_protocol_confirmed", False)
 
                 # Resolve to actual profile ID
                 new_series = resolve_profile_selection(selected_display_name, supports_v201=supports_v201)
