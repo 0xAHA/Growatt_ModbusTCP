@@ -1,0 +1,67 @@
+site_name: Growatt Modbus Integration
+site_description: Native Home Assistant integration for Growatt solar inverters via direct Modbus TCP/RTU — no cloud required.
+site_url: https://0xaha.github.io/Growatt_ModbusTCP/
+repo_url: https://github.com/0xAHA/Growatt_ModbusTCP
+repo_name: 0xAHA/Growatt_ModbusTCP
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: orange
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: orange
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Hardware:
+    - Supported Models: hardware/models.md
+    - Auto-Detection: hardware/autodetection.md
+  - Controls:
+    - Entity Reference: controls/entity-reference.md
+    - Battery & Scheduling: controls/battery-scheduling.md
+    - WIT Inverter Guide: controls/wit-guide.md
+  - Troubleshooting:
+    - Diagnostic Service: troubleshooting/diagnostic-service.md
+    - DTC Debugging: troubleshooting/dtc-debugging.md
+  - Developer:
+    - Adding Sensors: developer/sensor-checklist.md
+    - TOU Investigation: developer/tou-investigation.md
+    - Protocol Database: developer/protocol-database.md
+  - Release Notes: release-notes.md
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.details
+  - attr_list
+  - md_in_html
