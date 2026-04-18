@@ -1,7 +1,6 @@
 # Modbus RTU Protocol II V1.39
 
 > **Source document:** Growatt WIT Modbus RTU Protocol II V1.39
-> (`Growatt_WIT-Modbus-RTU-Protocol-II-V1.39.xlsx`)
 >
 > This is the definitive Protocol II document. V1.39 is a verified superset of
 > V1.13, V1.20, and V1.24.
