@@ -51,23 +51,23 @@
 | 25 | Serial No. 3 | Serial number 3 | W |  |
 | 26 | Serial No. 2 | Serial number 2 | W |  |
 | 27 | Serial No. 1 | Serial number 1 | W |  |
-| 28 | Moudle H | Inverter Moudle (high) | W | 0: model can be modify |
-| 29 | Moudle L | Inverter Moudle (low) | W | eg: 50 for 5.0KW model |
+| 28 | Module H | Inverter Module (high) | W | 0: model can be modify |
+| 29 | Module L | Inverter Module (low) | W | eg: 50 for 5.0KW model |
 | 30 | Com Address | Communicate addr ess | W | 1~254 ， but 253 only for debug |
 | 31 | FlashStart | Update firmware | W | 0x0001: own 0X0100: control broad |
 | 32 | Reset User Info | Reset User Information | W | 0x0001 |
 | 33 | Reset to factory | Reset to factory | W | 0x0001 |
-| 34 | MaxChargeCurr | Max Charge Current | W | 0~ |
+| 34 | MaxChargeCurr | Max Charge Current | W | 0~400 |
 | 35 | BulkChargeVolt | Bulk Charge Volt | W | 500~640- |
 | 36 | FloatChargeVolt | Float Charge Volt | W | 500~560 |
 | 37 | BatLowToUtiVolt | Bat Low Volt Switch To Uti | W |  |
-| 38 | ACChargeCurr | AC Charge Current | W |  |
-| 39 | Battery Type | Battery Type | W |  |
-| 40 | Aging Mode | Aging Mode | W |  |
+| 38 | ACChargeCurr | AC Charge Current | W | 0~400 |
+| 39 | Battery Type | Battery Type | W | 0: AGM / 1: FLD / 2: USE / 3: Lithium / 4: USE2 |
+| 40 | Aging Mode | Aging Mode | W | 0: Normal Mode / 1: Aging Mode |
 | 41 | Function Mask |  | W | bit0=Etl check enable |
 | 42 | Safety Type |  | W |  |
-| 43 | DTC | Device Type Code |  | &*6 |
-| 44 | reg_44 |  |  |  |
+| 43 | DTC | Device Type Code |  | See DTC Table |
+| 44 | --- |  |  |  |
 | 45 | Sys Year | System time-year | W | Year offset is 2000 |
 | 46 | Sys Month | System time- Month | W |  |
 | 47 | Sys Day | System time- Day | W |  |
@@ -81,7 +81,7 @@
 | 55 | Var2 address |  |  |  |
 | 56 | Var1 Setting |  |  |  |
 | 57 | DebugModeEn | Debug mode enable |  | 0:disable; 1:Enable; |
-| 58 | reg_58 |  |  |  |
+| 58 | --- |  |  |  |
 | 59 | Manufacturer Info 8 | Manufacturer information (high) |  |  |
 | 60 | Manufacturer Info 7 | Manufacturer information (middle) |  |  |
 | 61 | Manufacturer Info 6 | Manufacturer information (low) |  |  |
@@ -94,10 +94,10 @@
 | 68 | FW Build No. 3 | Control FW Build No. 1 |  |  |
 | 69 | FW Build No. 2 | COM FW Build No. 2 |  |  |
 | 70 | FW Build No. 1 | COM FW Build No. 1 |  |  |
-| 71 | reg_71 |  |  |  |
+| 71 | --- |  |  |  |
 | 72 | Sys Weekly | Sys Weekly | W | 0-6 |
 | 73 | ModbusVersion | Modbus Version |  | Eg：207 is V2.07 |
-| 74 | reg_74 |  |  |  |
+| 74 | --- |  |  |  |
 | 75 | SCC_ComMode | SCC Communication Mode |  |  |
 | 76 | Rate Watt H | Rate active power(high) |  |  |
 | 77 | Rate Watt L | Rate active power(low) |  |  |
@@ -106,7 +106,7 @@
 | 80 | ComboardVer | Communicaiton board Version |  |  |
 | 81 | uwBatPieceNum |  |  |  |
 | 82 | wBatLowCutOff | Bat cutoff |  |  |
-| 83 | MaxGenChgCurr | maximum generator charge current |  |  |
+| 83 | MaxGenChgCurr | maximum generator charge current |  | 0~400 |
 | 84 | NomGridVolt |  |  |  |
 | 85 | NomGridFreq |  |  |  |
 | 86 | NomBatVolt |  |  |  |
@@ -115,10 +115,10 @@
 | 89 | NomOpVolt |  |  |  |
 | 90 | NomOpFreq |  |  |  |
 | 91 | NomOpPow |  |  |  |
-| 92 | reg_92 |  |  |  |
-| 93 | reg_93 |  |  |  |
-| 94 | reg_94 |  |  |  |
-| 95 | uwAC2BatVolt | AC switch to Battery |  |  |
+| 92 | --- |  |  |  |
+| 93 | --- |  |  |  |
+| 94 | --- |  |  |  |
+| 95 | uwAC2BatVolt | AC switch to Battery |  | 200 - 640 (non Lithium) <br> 5 - 100 (Lithium) |
 | 96 | BypEnable |  |  |  |
 | 97 | PowSavingEn |  |  |  |
 | 98 | SpowBalEn |  |  |  |
@@ -218,7 +218,7 @@
 | 307 | uwFreqSlope2 | Over frequency loading slope |  | 20~70 |
 | 308 | wHVDecWatt1 | Grid high volt load reduction Watt 1 |  | 0~100 |
 | 309 | wHVDecWatt2 | Grid high volt load reduction Watt 2 |  | -100~100 |
-| 310 | uwPfModelSet | Set PF function mode |  | 0: Reactive power generation is prohibited 1: Constant (Fixed PF mode) 2: Watt/Var (Active and reactive modes) 3: Constant Var (Fixed reactive power percentage) 4: Volt/Var (volt reactive power mode) |
+| 310 | uwPfModelSet | Set PF function mode |  | 0: Reactive power generation is prohibited<br>1: Constant (Fixed PF mode)<br>2: Watt/Var (Active and reactive modes)<br>3: Constant Var (Fixed reactive power percentage)<br>4: Volt/Var (volt reactive power mode) |
 | 311 | wPfSet | Power factor set |  | -1000~1000 (cannot be 0) |
 | 312 | wGridVoltLowStar t | Grid volt low at startup |  | 0~3000 |
 | 313 | wGridVoltHighStar t | Grid volt high at startup |  | 0~3000 |
@@ -227,11 +227,11 @@
 | 316 | uwVoltLLPercent1 | Volt Low Loss Percent1 |  | 1-130 |
 | 317 | uwVoltLLPercent2 | Volt Low Loss Percent2 |  | 1-130 |
 | 318 | uwVoltLLPercent3 | Volt Low Loss Percent3 |  | 1-130 |
-| 319 | reg_319 |  |  |  |
+| 319 | --- |  |  |  |
 | 320 | uwVoltHLPercent1 | Volt High Loss Percent1 |  | 1-130 |
 | 321 | uwVoltHLPercent2 | Volt High Loss Percent2 |  | 1-130 |
 | 322 | uwVoltHLPercent3 | Volt High Loss Percent3 |  | 1-130 |
-| 323 | reg_323 |  |  |  |
+| 323 | --- |  |  |  |
 | 324 | uwFreqLL1 | Freq Low Loss1 |  | 4500~6600 |
 | 325 | uwFreqLL2 | Freq Low Loss2 |  | 4500~6600 |
 | 326 | uwFreqLL3 | Freq Low Loss3 |  | 4500~6600 |
@@ -239,11 +239,11 @@
 | 328 | uwFreqHL1 | Freq High Loss1 |  | 4500~6600 |
 | 329 | uwFreqHL2 | Freq High Loss2 |  | 4500~6600 |
 | 330 | uwFreqHL3 | Freq High Loss3 |  | 4500~6600 |
-| 331 | reg_331 |  |  |  |
+| 331 | --- |  |  |  |
 | 332 | uwVoltLLTime1 | Volt Low Loss Time1 |  | 0~6000 |
 | 333 | uwVoltLLTime2 | Volt Low Loss Time2 |  | 0~6000 |
 | 334 | uwVoltLLTime3 | Volt Low Loss Time3 |  | 0~6000 |
-| 335 | reg_335 |  |  |  |
+| 335 | --- |  |  |  |
 | 336 | uwVoltHLTime1 | Volt High Loss Time1 |  | 0~6000 |
 | 337 | uwVoltHLTime2 | Volt High Loss Time2 |  | 0~6000 |
 | 338 | uwVoltHLTime3 | Volt High Loss Time3 |  | 0~6000 |
@@ -259,11 +259,11 @@
 | 348 | uwLVRT1 | Low volt ride through stage 1 |  | 0-3000 |
 | 349 | uwLVRT2 | Low volt ride through stage 2 |  | 0-3000 |
 | 350 | uwLVRT3 | Low volt ride through stage 3 |  | 0-3000 |
-| 351 | reg_351 |  |  |  |
+| 351 | --- |  |  |  |
 | 352 | uwHVRT1 | High volt ride through stage 1 |  | 0-3000 |
 | 353 | uwHVRT2 | High volt ride through stage 2 |  | 0-3000 |
 | 354 | uwHVRT3 | High volt ride through stage3 |  | 0-3000 |
-| 355 | reg_355 |  |  |  |
+| 355 | --- |  |  |  |
 | 356 | uwLVRTTime1 | Low volt ride through stage 1 Time |  | 0~60000 |
 | 357 | uwLVRTTime2 | Low volt ride through stage 1 Time |  | 0~60000 |
 | 358 | uwLVRTTime3 | Low volt ride through stage 1 Time |  | 0~60000 |
@@ -271,39 +271,39 @@
 | 360 | uwHVRTTime1 | High volt ride through stage 1 Time |  | 0~60000 |
 | 361 | uwHVRTTime2 | High volt ride through stage 2 Time |  | 0~60000 |
 | 362 | uwHVRTTime3 | High volt ride through stage 3 Time |  | 0~60000 |
-| 363 | reg_363 |  |  |  |
+| 363 | --- |  |  |  |
 | 364 | uwLFRT1 | Low Freq ride through stage 1 |  | 4500~6600 |
 | 365 | uwLFRT2 | Low Freq ride through stage 2 |  | 4500~6600 |
 | 366 | uwLFRT3 | Low Freq ride through stage 3 |  | 4500~6600 |
-| 367 | reg_367 |  |  |  |
+| 367 | --- |  |  |  |
 | 368 | uwHFRT1 | High Freq ride through stage 1 |  | 4500~6600 |
 | 369 | uwHFRT2 | High Freq ride through stage2 |  | 4500~6600 |
 | 370 | uwHFRT3 | High Freq ride through stage3 |  | 4500~6600 |
-| 371 | reg_371 |  |  |  |
+| 371 | --- |  |  |  |
 | 372 | uwLFRTTime1 | Low Freq ride through stage 1 Time |  | 0~60000 |
 | 373 | uwLFRTTime2 | Low Freq ride through stage 2 Time |  | 0~60000 |
 | 374 | uwLFRTTime3 | Low Freq ride through stage 3 Time |  | 0~60000 |
-| 375 | reg_375 |  |  |  |
+| 375 | --- |  |  |  |
 | 376 | uwHFRTTime1 | High Freq ride through stage 1 Time |  | 0~60000 |
 | 377 | uwHFRTTime2 | High Freq ride through stage 2 Time |  | 0~60000 |
 | 378 | uwHFRTTime3 | High Freq ride through stage 3 Time |  | 0~60000 |
-| 379 | reg_379 |  |  |  |
+| 379 | --- |  |  |  |
 | 380 | wLoadP_Out1 | Active power P1 percent |  | 0~100 |
 | 381 | wLoadP_Out2 | Active power P2 percent |  | 20~100 |
 | 382 | wLoadP_Out3 | Active power P3 percent |  | 0~20 |
-| 383 | reg_383 |  |  |  |
+| 383 | --- |  |  |  |
 | 384 | wLoadQ_Out1 | Reactive power Q1 percen |  | -60~60 |
 | 385 | wLoadQ_Out2 | Reactive power Q2 percen |  | -60~60 |
 | 386 | wLoadQ_Out3 | Reactive power Q3 percen |  | -60~60 |
-| 387 | reg_387 |  |  |  |
+| 387 | --- |  |  |  |
 | 388 | uwLoadP_Absorp 1 | Active power PP1 percent |  | 0~100 |
 | 389 | uwLoadP_Absorp 2 | Active power PP2 percent |  | 0~100 |
 | 390 | uwLoadP_Absorp 3 | Active power PP3 percent |  | 0~100 |
-| 391 | reg_391 |  |  |  |
+| 391 | --- |  |  |  |
 | 392 | wLoadQ_Absorp1 | Reactive power QP1 percen |  | -60~60 |
 | 393 | wLoadQ_Absorp2 | Reactive power QP2 percen |  | -60~60 |
 | 394 | wLoadQ_Absorp3 | Reactive power QP3 percen |  | -60~60 |
-| 395 | reg_395 |  |  |  |
+| 395 | --- |  |  |  |
 | 396 | uwReactV1 | Volt reactive mode V1 |  | 0~3000 |
 | 397 | uwReactV2 | Volt reactive mode V2 |  | 0~3000 |
 | 398 | uwReactV3 | Volt reactive mode V3 |  | 0~3000 |
@@ -321,8 +321,8 @@
 | 410 | wReconnectTime | Power-on reconnection time |  | 0~600 |
 | 411 | wDciDetect | DCI DC component detection |  | 0~600 |
 | 412 | wIslandProtectTi me | Island Protect Time |  | 0~600 |
-| 413 | reg_413 |  |  |  |
-| 414 | reg_414 |  |  |  |
+| 413 | --- |  |  |  |
+| 414 | --- |  |  |  |
 | 415 | HlvrtEn | High and low crossover enable |  | 0:disable; 1:Enable; |
 | 416 | HvDecLoadEn | High volt load reduction enable |  | 0:disable; |
 | 417 | FreqDecLoadEn | Over frequency load reduction enable |  | 0:disable; 1:Enable; |
