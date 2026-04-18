@@ -1,6 +1,7 @@
 # Modbus RTU Protocol II V1.39
 
 > **Source document:** Growatt WIT Modbus RTU Protocol II V1.39
+> (`Growatt_WIT-Modbus-RTU-Protocol-II-V1.39.xlsx`)
 >
 > This is the definitive Protocol II document. V1.39 is a verified superset of
 > V1.13, V1.20, and V1.24.
@@ -13,10 +14,10 @@
 
 | Family | Register Ranges |
 | --- | --- |
-| TL-X / TL-XH (MIN type) | 0–124, 3000–3124, 3125–3249, 3250–3374 |
-| TL3-X (MAX / MID / MAC) | 0–124, 3000–3124, 3125–3249 |
-| SPA / SPH (hybrid) | 0–124, 1000–1124, 2000–2124, 3000–3124, 3125–3249 |
-| WIT TL3 | 0–124, 875–999, 3000–3124, 3125–3249, 8000–8139 |
+| TL-X / TL-XH (MIN type) | 0-124, 3000-3124, 3125-3249, 3250-3374 |
+| TL3-X (MAX / MID / MAC) | 0-124, 3000-3124, 3125-3249 |
+| SPA / SPH (hybrid) | 0-124, 1000-1124, 2000-2124, 3000-3124, 3125-3249 |
+| WIT TL3 | 0-124, 875-999, 3000-3124, 3125-3249, 8000-8139 |
 
 ---
 
