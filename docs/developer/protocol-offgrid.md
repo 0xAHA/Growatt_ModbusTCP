@@ -547,3 +547,355 @@
 | 288 | reserve288 | Reserved | - | - |  |
 | 289 | reserve289 | Reserved | - | - |  |
 | 290 | reserve290 | Reserved | - | - |  |
+
+---
+
+## Reference Tables
+
+### *0 — System Run State (register 0)
+
+| Value | Status | Description |
+| --- | --- | --- |
+| 0 | Standby | Standby mode |
+| 1 | PV&Grid Supporting Loads | PV and grid combined load support |
+| 2 | Battery Discharging | Battery discharging |
+| 3 | Fault | Fault condition |
+| 4 | Flash | Firmware programming mode (not shown on monitor) |
+| 5 | PV Charging | PV charging |
+| 6 | Grid Charging | Grid charging |
+| 7 | PV&Grid Charging | PV and grid combined charging |
+| 8 | PV&Grid Charging+Grid Bypass | Combined charging with grid bypass load |
+| 9 | PV Charging+Grid Bypass | PV charging with grid bypass load |
+| 10 | Grid Charging+Grid Bypass | Grid charging with bypass load |
+| 11 | Grid Bypass | Grid bypass load only |
+| 12 | PV Charging+Loads Supporting | PV charging with inverter load support |
+| 13 | Export to Grid | Grid-tied export mode |
+
+---
+
+### *1 — Fault Codes (register 40, bit field — see *8 for warning bits)
+
+| Code | Description |
+| --- | --- |
+| 1 | Fan lock |
+| 2 | Over temperature |
+| 3 | Battery voltage high |
+| 4 | Battery voltage low |
+| 5 | Output short circuit |
+| 6 | Output voltage high |
+| 7 | Overload |
+| 8 | DC bus voltage high |
+| 9 | DC bus soft-start fail |
+| 11 | Main relay fault |
+| 51 | Over current |
+| 52 | DC bus voltage low |
+| 53 | Inverter soft-start fail |
+| 56 | IGBT over current |
+| 58 | Output voltage low |
+| 60 | Negative power excessive |
+| 61 | PV voltage high |
+| 62 | Internal SCI communication error |
+| 80 | CAN communication fault |
+| 81 | Master unit lost |
+
+---
+
+### *6 — DTC Code Description (register 44)
+
+| Code Range | Device Type |
+| --- | --- |
+| 03xxx | PV Storage — front 1 tracker PV Storage |
+
+---
+
+### *8 — Warning Code Bits (registers 41 and 42)
+
+**Warning bit (register 41)**
+
+| Bit mask | Bit | Description |
+| --- | --- | --- |
+| 0x0001 | 0 | Fan lock warning |
+| 0x0002 | 1 | Battery over-charge |
+| 0x0004 | 2 | Battery voltage low |
+| 0x0008 | 3 | Overload |
+| 0x0010 | 4 | Output power derating |
+| 0x0020 | 5 | Solar stopped — battery voltage too low |
+| 0x0040 | 6 | Solar stopped — PV voltage too high |
+| 0x0080 | 7 | Solar stopped — overload |
+| 0x0100 | 8 | Parallel grid input inconsistent |
+| 0x0200 | 9 | Parallel input phase sequence error |
+| 0x0400 | 10 | Parallel output phase loss |
+| 0x0800 | 11 | Over temperature |
+| 0x1000 | 12 | Buck current excessive |
+| 0x2000 | 13 | Battery disconnected |
+| 0x4000 | 14 | BMS communication error |
+| 0x8000 | 15 | PV power insufficient |
+
+**Warning bit high (register 42)**
+
+| Bit mask | Bit | Description |
+| --- | --- | --- |
+| 0x0001 | 0 | No battery — parallel disabled |
+| 0x0002 | 1 | Parallel firmware version mismatch |
+| 0x0004 | 2 | Reserved |
+| 0x0008 | 3 | Parallel unit capacity mismatch |
+| 0x0010 | 4 | Master unit lost |
+| 0x0020 | 5 | BMS cell over-voltage |
+| 0x0040 | 6 | BMS total over-voltage |
+| 0x0080 | 7 | BMS discharge over-current |
+| 0x0100 | 8 | BMS charge over-current |
+| 0x0200 | 9 | BMS over-temperature |
+| 0x0400 | 10 | Battery voltage inconsistency |
+
+---
+
+### *9 — BMS_Status Code (register 200)
+
+| Bit(s) | Content | Values |
+| --- | --- | --- |
+| 0-1 | Operating status | 00: soft-starting; 01: standby; 10: charging; 11: discharging |
+| 2 | Error byte valid flag | 0: error byte invalid; 1: error byte valid |
+| 3 | Cell balance PF status | 0: unbalanced; 1: balanced |
+| 4 | Sleep status | 0: disabled; 1: enabled |
+| 5 | Output discharge status | 0: disabled; 1: enabled |
+| 6 | Output charge status | 0: disabled; 1: enabled |
+| 7 | Battery terminal status | 0: terminal connected; 1: terminal open |
+| 8-9 | Master box operation mode | 00: stand-alone; 01: parallel; 10: parallel preparation |
+| 10-11 | SP status | 00: none; 01: standby; 10: charging; 11: discharging |
+| 12 | Force charge request | 0: disabled; 1: enabled |
+
+---
+
+### *10 — BMS_Error_old Code (register 201)
+
+| Bit | Description | Recovery |
+| --- | --- | --- |
+| 0 | OCD — over-current discharge protection | Unload AND (charging OR DG_ON command) |
+| 1 | SCD — short-circuit discharge protection | Unload AND (charging OR DG_ON command) |
+| 2 | OV — over-voltage protection | Stop charging AND discharging |
+| 3 | UV — under-voltage protection | Unload AND charging |
+| 4 | OTD — over-temperature discharge protection | Unload AND temperature drops to 60 C |
+| 5 | OTC — over-temperature charge protection | Stop charging OR temperature drops to 50 C |
+| 6 | UTD — under-temperature discharge protection | Unload AND temperature rises to -10 C |
+| 7 | UTC — under-temperature charge protection | Stop charging OR temperature rises to 0 C |
+| 8 | Soft-start fail | — |
+| 9 | Permanent fault | — |
+| 10 | Delta-V fail | — |
+| 11 | OCC — over-current charge protection | Unload AND (discharging OR DG_ON command) |
+| 12 | OT — MOS over-temperature protection | MOS temperature drops to rated max |
+| 13 | OT — environment over-temperature protection | Environment temperature drops to rated max |
+| 14 | UT — environment under-temperature protection | Environment temperature rises to rated min |
+
+---
+
+### *11 — BMS_WarnInfo_old Code (register 202)
+
+| Bit | Warning (bit=1) | Recovery condition |
+| --- | --- | --- |
+| 0 | Cell over-voltage warning | Discharging or voltage falls below cell OV alarm threshold |
+| 1 | Cell under-voltage warning | Charging or voltage rises above cell UV alarm threshold |
+| 2 | Total over-voltage warning | Discharging or voltage falls below total OV alarm threshold |
+| 3 | Total under-voltage warning | Charging or voltage rises above total UV alarm threshold |
+| 4 | Discharge over-current warning | Current falls below discharge OC alarm threshold |
+| 5 | Charge over-current warning | Current falls below charge OC alarm threshold |
+| 6 | Discharge high-temperature warning | Temperature drops below discharge high-temp alarm |
+| 7 | Discharge low-temperature warning | Temperature rises above discharge low-temp alarm |
+| 8 | Charge high-temperature warning | Temperature drops below charge high-temp alarm |
+| 9 | Charge low-temperature warning | Temperature rises above charge low-temp alarm |
+| 10 | MOS high-temperature warning | Temperature drops below MOS high-temp alarm |
+| 11 | Environment high-temperature warning | Temperature drops below environment high-temp alarm |
+| 12 | Environment low-temperature warning | Temperature rises above environment low-temp alarm |
+| 13 | System low-voltage pre-shutdown warning | Total voltage rises above shutdown/lockout threshold |
+| 14-15 | Battery type | 00: LiFePO4; 01: Ternary (NMC/NCA); 10: Lithium titanate (LTO); 11: Reserved |
+
+---
+
+### *12 — BMS_BatteryCurr Sign Convention (register 205)
+
+Signed 16-bit integer. Positive current = charging; negative current = discharging.
+
+| Range | Meaning |
+| --- | --- |
+| 0x0000 to 0x7FFF | Positive current (charging) |
+| 0x8000 to 0xFFFF | Negative current (discharging) |
+
+---
+
+### *13 — BMS_CVolt — Float Charge Voltage by Battery Type (register 208)
+
+| Battery Type | CV Voltage |
+| --- | --- |
+| LiFePO4 (lithium iron phosphate) | 57.6 V |
+| Ternary lithium (NMC/NCA) | Set by pack manufacturer |
+| Lithium titanate (LTO) | Set by pack manufacturer |
+
+---
+
+### *14 — BMS_BMSInfo Code (register 209)
+
+| Bits | Content |
+| --- | --- |
+| 0-7 | BMS manufacturer code (00000000 = unspecified; values assigned by manufacturer) |
+| 8-15 | BMS generation (00000001 = first generation; 00000010 = second generation; ...) |
+
+---
+
+### *15 — BMS_PackInfo Code (register 210)
+
+| Bits | Content |
+| --- | --- |
+| 0-7 | Pack manufacturer code (000000001 = EVE; other values assigned by manufacturer) |
+| 8-15 | Pack generation (000000001 = first generation; 000000010 = second generation; ...) |
+
+---
+
+### *16 — ModuleStatus Code (register 232)
+
+| Bit(s) | Content | Values |
+| --- | --- | --- |
+| 0-1 | Operating status | 00: soft-starting; 01: standby; 10: charging; 11: discharging |
+| 2 | Error byte valid flag | 0: error byte invalid; 1: error byte valid |
+| 3 | Cell balance status | 0: unbalanced; 1: balanced |
+| 4 | Sleep status | 0: disabled; 1: enabled |
+| 5 | Output discharge status | 0: disabled; 1: enabled |
+| 6 | Output charge status | 0: disabled; 1: enabled |
+| 7 | Battery terminal status | 0: terminal connected; 1: terminal open |
+| 8-9 | Master box operation mode | 00: stand-alone; 01: parallel; 10: parallel preparation |
+| 10 | Pre-output discharge status | 0: disabled; 1: enabled |
+| 11 | Pre-output charge status | 0: disabled; 1: enabled |
+| 12-15 | Reserved | — |
+
+---
+
+### *17 — BatProtect1_2 Code (register 233)
+
+| Bit | Description |
+| --- | --- |
+| 0 | Soft-start fail |
+| 1 | Module under-voltage |
+| 2 | Module over-voltage |
+| 3 | Cell under-voltage |
+| 4 | Cell over-voltage |
+| 5 | SCD — short-circuit discharge protection |
+| 6 | Charge over-current |
+| 7 | Discharge over-current 1 |
+| 8 | Parallel firmware version mismatch |
+| 9 | Parallel fail |
+| 10 | Delta-V fail (internal/external voltage difference too large) |
+| 11 | MOS control fail |
+| 12 | UTC — under-temperature charge protection |
+| 13 | UTD — under-temperature discharge protection |
+| 14 | OTC — over-temperature charge protection |
+| 15 | OTD — over-temperature discharge protection |
+
+---
+
+### *18 — BatWarnInfo1_2 Code (register 234)
+
+| Bit | Description |
+| --- | --- |
+| 0 | SOC low warning |
+| 1 | Module under-voltage warning |
+| 2 | Module over-voltage warning |
+| 3 | Cell under-voltage warning |
+| 4 | Cell over-voltage warning |
+| 5 | Pre-shutdown warning |
+| 6 | Charge over-current warning |
+| 7 | Discharge over-current warning 1 |
+| 8 | Internal communication fail |
+| 9 | External CAN communication fail |
+| 10 | Delta-V fail (internal/external voltage difference too large) |
+| 11 | External RS485 communication fail |
+| 12 | UTC — under-temperature charge warning |
+| 13 | UTD — under-temperature discharge warning |
+| 14 | OTC — over-temperature charge warning |
+| 15 | OTD — over-temperature discharge warning |
+
+---
+
+### *19 — BatDePowerReason Code (register 236)
+
+| Bit | Description |
+| --- | --- |
+| 0 | Cell voltage high — current limit |
+| 1 | Cell voltage low — current limit |
+| 2 | Cell temperature high — current limit |
+| 3 | Cell temperature low — current limit |
+| 4 | Total voltage high — current limit |
+| 5 | Total voltage low — current limit |
+| 6 | Cell voltage delta — current limit |
+| 7 | Temperature delta — current limit |
+| 8 | Hardware fault — current limit |
+| 9 | Fully charged — current limit |
+| 10 | MOS temperature high — current limit |
+| 11 | Environment temperature high — current limit |
+| 12 | Pre-charge fault — current limit |
+| 13 | Communication fault — current limit |
+| 14 | Bus fault — current limit |
+| 15 | Reserved |
+
+---
+
+### *20 — RequestOrBatteryType Code (register 242)
+
+| Bit(s) | Description |
+| --- | --- |
+| 0-1 | Battery type: 00=LiFePO4; 01=Ternary (NMC/NCA); 10=Lithium titanate (LTO); 11=Reserved |
+| 2-3 | Reserved |
+| 4 | Force charge request II |
+| 5 | Force charge request I |
+| 6 | Discharge enable |
+| 7 | Charge enable |
+
+---
+
+### *21 — BatProtect3_4 Code (register 256)
+
+| Bit | Description |
+| --- | --- |
+| 0 | Charge over-power |
+| 1 | Discharge over-power |
+| 2 | Parallel duplicate address fault |
+| 3 | Pre-charge fail |
+| 4 | Pre-charge short circuit |
+| 5 | AFE-MCU communication error |
+| 6 | Cell failure (FLT_CELL_LOST) |
+| 7 | Cell temperature sensor failure (FLT_CELL_TEMP_LOST) |
+| 8 | Total voltage sampling fault (FLT_SP_UMAIN) |
+| 9 | Temperature short circuit (FLT_TEMP_SC) |
+| 10 | Load-side total voltage sampling fault (FLT_SP_ULOAD) |
+| 11 | Calibration parameter load fault (FLT_EEP_PARAM) |
+| 12 | Hardware over-voltage — AFE OV (FLT_OVP) |
+| 13 | Hardware under-voltage — AFE UV (FLT_UVP) |
+| 14 | Hardware over-current protection (FLT_OCP) |
+| 15 | Hardware discharge over-current fault (FLT_DIS_OCP) |
+
+---
+
+### *22 — BatProtect5 Code (register 257)
+
+| Bit | Description |
+| --- | --- |
+| 0 | Parallel slave/master battery voltage difference too large (FLT_PRLL_UDIFF_OVER) |
+| 1 | Charge current limiting fail (FLT_CH_ILIMIT_NORSP) |
+| 2 | Discharge current limiting fail (FLT_DI_ILIMIT_NORSP) |
+| 3 | Main circuit open-circuit fault (FLT_BUS_OPEN) |
+| 4 | Discharge over-current 2 |
+| 5 | MOS temperature high |
+| 6 | Cell voltage delta too large |
+| 7 | Cell temperature delta too large |
+
+---
+
+### *23 — BatWarnInfo3 Code (register 258)
+
+| Bit | Description |
+| --- | --- |
+| 0 | Charge over-power warning |
+| 1 | Discharge over-power warning |
+| 2 | Parallel internal charge circulating current over-current warning |
+| 3 | Parallel internal discharge circulating current over-current warning |
+| 4 | MOS temperature high warning |
+| 5 | Cell voltage delta too large |
+| 6 | Cell temperature delta too large |
+| 7 | Fully charged |
