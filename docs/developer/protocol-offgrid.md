@@ -1,13 +1,14 @@
 # Off-Grid Protocol V0.26
 
 > **Source document:** Growatt OffGrid Modbus RS485/RS232 RTU Protocol V0.26
+> (`OffGrid-Modbus-RS485-RS232-RTU-Protocol-V0-26.xlsx`)
 >
 > This is the protocol used by Growatt's off-grid and AC-coupled inverter families.
-> It covers registers 0–97 only; VPP registers are never used with these models.
+> Holding registers cover settings and control; input registers cover real-time data.
 >
 > **Applicable models:**
-> - **SPF 3000-6000 ES PLUS** — off-grid with battery, no grid export
-> - **SPE 8000-12000 ES** — higher-capacity off-grid / AC-coupled storage
+> - **SPF 3000-6000 ES PLUS**  -  off-grid with battery, no grid export
+> - **SPE 8000-12000 ES**  -  higher-capacity off-grid / AC-coupled storage
 
 ---
 
@@ -15,7 +16,8 @@
 
 | Range | Purpose |
 | --- | --- |
-| 0–97 | All registers (holding and input share the same base range) |
+| 0-426 | Holding registers (settings and control) |
+| 0-111 | Input registers (real-time data) |
 
 ---
 
@@ -51,23 +53,23 @@
 | 25 | Serial No. 3 | Serial number 3 | W |  |
 | 26 | Serial No. 2 | Serial number 2 | W |  |
 | 27 | Serial No. 1 | Serial number 1 | W |  |
-| 28 | Module H | Inverter Module (high) | W | 0: model can be modify |
-| 29 | Module L | Inverter Module (low) | W | eg: 50 for 5.0KW model |
+| 28 | Moudle H | Inverter Moudle (high) | W | 0: model can be modify |
+| 29 | Moudle L | Inverter Moudle (low) | W | eg: 50 for 5.0KW model |
 | 30 | Com Address | Communicate addr ess | W | 1~254 ， but 253 only for debug |
 | 31 | FlashStart | Update firmware | W | 0x0001: own 0X0100: control broad |
 | 32 | Reset User Info | Reset User Information | W | 0x0001 |
 | 33 | Reset to factory | Reset to factory | W | 0x0001 |
-| 34 | MaxChargeCurr | Max Charge Current | W | 0~400 |
+| 34 | MaxChargeCurr | Max Charge Current | W | 0~ |
 | 35 | BulkChargeVolt | Bulk Charge Volt | W | 500~640- |
 | 36 | FloatChargeVolt | Float Charge Volt | W | 500~560 |
 | 37 | BatLowToUtiVolt | Bat Low Volt Switch To Uti | W |  |
-| 38 | ACChargeCurr | AC Charge Current | W | 0~400 |
-| 39 | Battery Type | Battery Type | W | 0: AGM / 1: FLD / 2: USE / 3: Lithium / 4: USE2 |
-| 40 | Aging Mode | Aging Mode | W | 0: Normal Mode / 1: Aging Mode |
+| 38 | ACChargeCurr | AC Charge Current | W |  |
+| 39 | Battery Type | Battery Type | W |  |
+| 40 | Aging Mode | Aging Mode | W |  |
 | 41 | Function Mask |  | W | bit0=Etl check enable |
 | 42 | Safety Type |  | W |  |
-| 43 | DTC | Device Type Code |  | See DTC Table |
-| 44 | --- |  |  |  |
+| 43 | DTC | Device Type Code |  | &*6 |
+| 44 | reg_44 |  |  |  |
 | 45 | Sys Year | System time-year | W | Year offset is 2000 |
 | 46 | Sys Month | System time- Month | W |  |
 | 47 | Sys Day | System time- Day | W |  |
@@ -81,7 +83,7 @@
 | 55 | Var2 address |  |  |  |
 | 56 | Var1 Setting |  |  |  |
 | 57 | DebugModeEn | Debug mode enable |  | 0:disable; 1:Enable; |
-| 58 | --- |  |  |  |
+| 58 | reg_58 |  |  |  |
 | 59 | Manufacturer Info 8 | Manufacturer information (high) |  |  |
 | 60 | Manufacturer Info 7 | Manufacturer information (middle) |  |  |
 | 61 | Manufacturer Info 6 | Manufacturer information (low) |  |  |
@@ -94,10 +96,10 @@
 | 68 | FW Build No. 3 | Control FW Build No. 1 |  |  |
 | 69 | FW Build No. 2 | COM FW Build No. 2 |  |  |
 | 70 | FW Build No. 1 | COM FW Build No. 1 |  |  |
-| 71 | --- |  |  |  |
+| 71 | reg_71 |  |  |  |
 | 72 | Sys Weekly | Sys Weekly | W | 0-6 |
 | 73 | ModbusVersion | Modbus Version |  | Eg：207 is V2.07 |
-| 74 | --- |  |  |  |
+| 74 | reg_74 |  |  |  |
 | 75 | SCC_ComMode | SCC Communication Mode |  |  |
 | 76 | Rate Watt H | Rate active power(high) |  |  |
 | 77 | Rate Watt L | Rate active power(low) |  |  |
@@ -106,7 +108,7 @@
 | 80 | ComboardVer | Communicaiton board Version |  |  |
 | 81 | uwBatPieceNum |  |  |  |
 | 82 | wBatLowCutOff | Bat cutoff |  |  |
-| 83 | MaxGenChgCurr | maximum generator charge current |  | 0~400 |
+| 83 | MaxGenChgCurr | maximum generator charge current |  |  |
 | 84 | NomGridVolt |  |  |  |
 | 85 | NomGridFreq |  |  |  |
 | 86 | NomBatVolt |  |  |  |
@@ -115,10 +117,10 @@
 | 89 | NomOpVolt |  |  |  |
 | 90 | NomOpFreq |  |  |  |
 | 91 | NomOpPow |  |  |  |
-| 92 | --- |  |  |  |
-| 93 | --- |  |  |  |
-| 94 | --- |  |  |  |
-| 95 | uwAC2BatVolt | AC switch to Battery |  | 200 - 640 (non Lithium) <br> 5 - 100 (Lithium) |
+| 92 | reg_92 |  |  |  |
+| 93 | reg_93 |  |  |  |
+| 94 | reg_94 |  |  |  |
+| 95 | uwAC2BatVolt | AC switch to Battery |  |  |
 | 96 | BypEnable |  |  |  |
 | 97 | PowSavingEn |  |  |  |
 | 98 | SpowBalEn |  |  |  |
@@ -218,7 +220,7 @@
 | 307 | uwFreqSlope2 | Over frequency loading slope |  | 20~70 |
 | 308 | wHVDecWatt1 | Grid high volt load reduction Watt 1 |  | 0~100 |
 | 309 | wHVDecWatt2 | Grid high volt load reduction Watt 2 |  | -100~100 |
-| 310 | uwPfModelSet | Set PF function mode |  | 0: Reactive power generation is prohibited<br>1: Constant (Fixed PF mode)<br>2: Watt/Var (Active and reactive modes)<br>3: Constant Var (Fixed reactive power percentage)<br>4: Volt/Var (volt reactive power mode) |
+| 310 | uwPfModelSet | Set PF function mode |  | 0: Reactive power generation is prohibited 1: Constant (Fixed PF mode) 2: Watt/Var (Active and reactive modes) 3: Constant Var (Fixed reactive power percentage) 4: Volt/Var (volt reactive power mode) |
 | 311 | wPfSet | Power factor set |  | -1000~1000 (cannot be 0) |
 | 312 | wGridVoltLowStar t | Grid volt low at startup |  | 0~3000 |
 | 313 | wGridVoltHighStar t | Grid volt high at startup |  | 0~3000 |
@@ -227,11 +229,11 @@
 | 316 | uwVoltLLPercent1 | Volt Low Loss Percent1 |  | 1-130 |
 | 317 | uwVoltLLPercent2 | Volt Low Loss Percent2 |  | 1-130 |
 | 318 | uwVoltLLPercent3 | Volt Low Loss Percent3 |  | 1-130 |
-| 319 | --- |  |  |  |
+| 319 | reg_319 |  |  |  |
 | 320 | uwVoltHLPercent1 | Volt High Loss Percent1 |  | 1-130 |
 | 321 | uwVoltHLPercent2 | Volt High Loss Percent2 |  | 1-130 |
 | 322 | uwVoltHLPercent3 | Volt High Loss Percent3 |  | 1-130 |
-| 323 | --- |  |  |  |
+| 323 | reg_323 |  |  |  |
 | 324 | uwFreqLL1 | Freq Low Loss1 |  | 4500~6600 |
 | 325 | uwFreqLL2 | Freq Low Loss2 |  | 4500~6600 |
 | 326 | uwFreqLL3 | Freq Low Loss3 |  | 4500~6600 |
@@ -239,11 +241,11 @@
 | 328 | uwFreqHL1 | Freq High Loss1 |  | 4500~6600 |
 | 329 | uwFreqHL2 | Freq High Loss2 |  | 4500~6600 |
 | 330 | uwFreqHL3 | Freq High Loss3 |  | 4500~6600 |
-| 331 | --- |  |  |  |
+| 331 | reg_331 |  |  |  |
 | 332 | uwVoltLLTime1 | Volt Low Loss Time1 |  | 0~6000 |
 | 333 | uwVoltLLTime2 | Volt Low Loss Time2 |  | 0~6000 |
 | 334 | uwVoltLLTime3 | Volt Low Loss Time3 |  | 0~6000 |
-| 335 | --- |  |  |  |
+| 335 | reg_335 |  |  |  |
 | 336 | uwVoltHLTime1 | Volt High Loss Time1 |  | 0~6000 |
 | 337 | uwVoltHLTime2 | Volt High Loss Time2 |  | 0~6000 |
 | 338 | uwVoltHLTime3 | Volt High Loss Time3 |  | 0~6000 |
@@ -259,11 +261,11 @@
 | 348 | uwLVRT1 | Low volt ride through stage 1 |  | 0-3000 |
 | 349 | uwLVRT2 | Low volt ride through stage 2 |  | 0-3000 |
 | 350 | uwLVRT3 | Low volt ride through stage 3 |  | 0-3000 |
-| 351 | --- |  |  |  |
+| 351 | reg_351 |  |  |  |
 | 352 | uwHVRT1 | High volt ride through stage 1 |  | 0-3000 |
 | 353 | uwHVRT2 | High volt ride through stage 2 |  | 0-3000 |
 | 354 | uwHVRT3 | High volt ride through stage3 |  | 0-3000 |
-| 355 | --- |  |  |  |
+| 355 | reg_355 |  |  |  |
 | 356 | uwLVRTTime1 | Low volt ride through stage 1 Time |  | 0~60000 |
 | 357 | uwLVRTTime2 | Low volt ride through stage 1 Time |  | 0~60000 |
 | 358 | uwLVRTTime3 | Low volt ride through stage 1 Time |  | 0~60000 |
@@ -271,39 +273,39 @@
 | 360 | uwHVRTTime1 | High volt ride through stage 1 Time |  | 0~60000 |
 | 361 | uwHVRTTime2 | High volt ride through stage 2 Time |  | 0~60000 |
 | 362 | uwHVRTTime3 | High volt ride through stage 3 Time |  | 0~60000 |
-| 363 | --- |  |  |  |
+| 363 | reg_363 |  |  |  |
 | 364 | uwLFRT1 | Low Freq ride through stage 1 |  | 4500~6600 |
 | 365 | uwLFRT2 | Low Freq ride through stage 2 |  | 4500~6600 |
 | 366 | uwLFRT3 | Low Freq ride through stage 3 |  | 4500~6600 |
-| 367 | --- |  |  |  |
+| 367 | reg_367 |  |  |  |
 | 368 | uwHFRT1 | High Freq ride through stage 1 |  | 4500~6600 |
 | 369 | uwHFRT2 | High Freq ride through stage2 |  | 4500~6600 |
 | 370 | uwHFRT3 | High Freq ride through stage3 |  | 4500~6600 |
-| 371 | --- |  |  |  |
+| 371 | reg_371 |  |  |  |
 | 372 | uwLFRTTime1 | Low Freq ride through stage 1 Time |  | 0~60000 |
 | 373 | uwLFRTTime2 | Low Freq ride through stage 2 Time |  | 0~60000 |
 | 374 | uwLFRTTime3 | Low Freq ride through stage 3 Time |  | 0~60000 |
-| 375 | --- |  |  |  |
+| 375 | reg_375 |  |  |  |
 | 376 | uwHFRTTime1 | High Freq ride through stage 1 Time |  | 0~60000 |
 | 377 | uwHFRTTime2 | High Freq ride through stage 2 Time |  | 0~60000 |
 | 378 | uwHFRTTime3 | High Freq ride through stage 3 Time |  | 0~60000 |
-| 379 | --- |  |  |  |
+| 379 | reg_379 |  |  |  |
 | 380 | wLoadP_Out1 | Active power P1 percent |  | 0~100 |
 | 381 | wLoadP_Out2 | Active power P2 percent |  | 20~100 |
 | 382 | wLoadP_Out3 | Active power P3 percent |  | 0~20 |
-| 383 | --- |  |  |  |
+| 383 | reg_383 |  |  |  |
 | 384 | wLoadQ_Out1 | Reactive power Q1 percen |  | -60~60 |
 | 385 | wLoadQ_Out2 | Reactive power Q2 percen |  | -60~60 |
 | 386 | wLoadQ_Out3 | Reactive power Q3 percen |  | -60~60 |
-| 387 | --- |  |  |  |
+| 387 | reg_387 |  |  |  |
 | 388 | uwLoadP_Absorp 1 | Active power PP1 percent |  | 0~100 |
 | 389 | uwLoadP_Absorp 2 | Active power PP2 percent |  | 0~100 |
 | 390 | uwLoadP_Absorp 3 | Active power PP3 percent |  | 0~100 |
-| 391 | --- |  |  |  |
+| 391 | reg_391 |  |  |  |
 | 392 | wLoadQ_Absorp1 | Reactive power QP1 percen |  | -60~60 |
 | 393 | wLoadQ_Absorp2 | Reactive power QP2 percen |  | -60~60 |
 | 394 | wLoadQ_Absorp3 | Reactive power QP3 percen |  | -60~60 |
-| 395 | --- |  |  |  |
+| 395 | reg_395 |  |  |  |
 | 396 | uwReactV1 | Volt reactive mode V1 |  | 0~3000 |
 | 397 | uwReactV2 | Volt reactive mode V2 |  | 0~3000 |
 | 398 | uwReactV3 | Volt reactive mode V3 |  | 0~3000 |
@@ -321,8 +323,8 @@
 | 410 | wReconnectTime | Power-on reconnection time |  | 0~600 |
 | 411 | wDciDetect | DCI DC component detection |  | 0~600 |
 | 412 | wIslandProtectTi me | Island Protect Time |  | 0~600 |
-| 413 | --- |  |  |  |
-| 414 | --- |  |  |  |
+| 413 | reg_413 |  |  |  |
+| 414 | reg_414 |  |  |  |
 | 415 | HlvrtEn | High and low crossover enable |  | 0:disable; 1:Enable; |
 | 416 | HvDecLoadEn | High volt load reduction enable |  | 0:disable; |
 | 417 | FreqDecLoadEn | Over frequency load reduction enable |  | 0:disable; 1:Enable; |
@@ -337,318 +339,211 @@
 
 ---
 
-## Input Registers (305 registers)
+## Input Registers (201 registers)
 
-| Address | Name | Description | Access | Range |
-| --- | --- | --- | --- | --- |
-| 1 | reg_1 |  |  |  |
-| 2 | reg_2 |  |  |  |
-| 3 | reg_3 |  |  |  |
-| 4 | reg_4 |  |  |  |
-| 5 | reg_5 |  |  |  |
-| 6 | reg_6 |  |  |  |
-| 7 | reg_7 |  |  |  |
-| 8 | reg_8 |  |  |  |
-| 9 | reg_9 |  |  |  |
-| 10 | reg_10 |  |  |  |
-| 11 | reg_11 |  |  |  |
-| 12 | reg_12 |  |  |  |
-| 13 | reg_13 |  |  |  |
-| 14 | reg_14 |  |  |  |
-| 15 | reg_15 |  |  |  |
-| 16 | reg_16 |  |  |  |
-| 17 | reg_17 |  |  |  |
-| 18 | reg_18 |  |  |  |
-| 19 | reg_19 |  |  |  |
-| 20 | reg_20 |  |  |  |
-| 21 | reg_21 |  |  |  |
-| 22 | reg_22 |  |  |  |
-| 23 | reg_23 |  |  |  |
-| 24 | reg_24 |  |  |  |
-| 25 | reg_25 |  |  |  |
-| 26 | reg_26 |  |  |  |
-| 27 | reg_27 |  |  |  |
-| 28 | reg_28 |  |  |  |
-| 29 | reg_29 |  |  |  |
-| 30 | reg_30 |  |  |  |
-| 31 | reg_31 |  |  |  |
-| 32 | reg_32 |  |  |  |
-| 33 | reg_33 |  |  |  |
-| 34 | reg_34 |  |  |  |
-| 35 | reg_35 |  |  |  |
-| 36 | reg_36 |  |  |  |
-| 37 | reg_37 |  |  |  |
-| 38 | reg_38 |  |  |  |
-| 39 | reg_39 |  |  |  |
-| 40 | reg_40 |  |  |  |
-| 41 | reg_41 |  |  |  |
-| 42 | reg_42 |  |  |  |
-| 43 | reg_43 |  |  |  |
-| 44 | reg_44 | Export to Grid Today Export to Grid Total H . 1 K W H Total energy feed to grid L 0 . 1 K W H PV Energy today |  |  |
-| 70 | reg_70 |  |  |  |
-| 71 | reg_71 |  |  |  |
-| 72 | reg_72 |  |  |  |
-| 73 | reg_73 |  |  |  |
-| 74 | reg_74 | Bat_DisChrVA H Bat_DisChrVA L |  |  |
-| 77 | reg_77 |  |  |  |
-| 78 | Bat_Watt L |  |  |  |
-| 79 | reg_79 |  |  |  |
-| 80 | reg_80 |  |  |  |
-| 81 | reg_81 |  |  |  |
-| 82 | reg_82 |  |  |  |
-| 83 | reg_83 |  |  |  |
-| 84 | reg_84 |  |  |  |
-| 85 | reg_85 |  |  |  |
-| 86 | reg_86 |  |  |  |
-| 87 | reg_87 | Eop_dischrTotal_L |  |  |
-| 90 | reg_90 |  |  |  |
-| 91 | reg_91 |  |  |  |
-| 92 | reg_92 |  |  |  |
-| 93 | reg_93 |  |  |  |
-| 94 | reg_94 |  |  |  |
-| 95 | reg_95 |  |  |  |
-| 96 | reg_96 |  |  |  |
-| 97 | reg_97 |  |  |  |
-| 98 | reg_98 |  |  |  |
-| 99 | reg_99 |  |  |  |
-| 100 | reg_100 |  |  |  |
-| 101 | reg_101 |  |  |  |
-| 102 | reg_102 |  |  |  |
-| 103 | reg_103 |  |  |  |
-| 104 | reg_104 |  |  |  |
-| 105 | reg_105 |  |  |  |
-| 106 | reg_106 |  |  |  |
-| 107 | reg_107 |  |  |  |
-| 108 | reg_108 |  |  |  |
-| 109 | reg_109 |  |  |  |
-| 110 | reg_110 |  |  |  |
-| 111 | reg_111 |  |  |  |
-| 209 | reg_209 |  |  |  |
-| 210 | reg_210 |  |  |  |
-| 211 | reg_211 |  |  |  |
-| 212 | reg_212 |  |  |  |
-| 213 | reg_213 |  |  |  |
-| 214 | reg_214 |  |  |  |
-| 215 | reg_215 |  |  |  |
-| 216 | reg_216 |  |  |  |
-| 217 | reg_217 |  |  |  |
-| 218 | reg_218 |  |  |  |
-| 219 | reg_219 |  |  |  |
-| 220 | reg_220 |  |  |  |
-| 221 | reg_221 |  |  |  |
-| 222 | reg_222 |  |  |  |
-| 223 | reg_223 |  |  |  |
-| 224 | reg_224 |  |  |  |
-| 225 | reg_225 |  |  |  |
-| 226 | reg_226 |  |  |  |
-| 227 | reg_227 |  |  |  |
-| 228 | reg_228 |  |  |  |
-| 229 | reg_229 |  |  |  |
-| 230 | reg_230 |  |  |  |
-| 231 | reg_231 |  |  |  |
-| 232 | reg_232 |  |  |  |
-| 233 | reg_233 |  |  |  |
-| 234 | reg_234 |  |  |  |
-| 235 | reg_235 |  |  |  |
-| 236 | reg_236 |  |  |  |
-| 237 | reg_237 |  |  |  |
-| 238 | reg_238 |  |  |  |
-| 239 | reg_239 |  |  |  |
-| 240 | reg_240 |  |  |  |
-| 241 | reg_241 |  |  |  |
-| 242 | reg_242 |  |  |  |
-| 243 | reg_243 |  |  |  |
-| 244 | reg_244 |  |  |  |
-| 245 | reg_245 |  |  |  |
-| 246 | reg_246 |  |  |  |
-| 247 | reg_247 |  |  |  |
-| 248 | reg_248 |  |  |  |
-| 249 | reg_249 |  |  |  |
-| 250 | reg_250 |  |  |  |
-| 251 | reg_251 |  |  |  |
-| 252 | reg_252 |  |  |  |
-| 253 | reg_253 |  |  |  |
-| 254 | reg_254 |  |  |  |
-| 255 | reg_255 |  |  |  |
-| 256 | reg_256 |  |  |  |
-| 257 | reg_257 |  |  |  |
-| 258 | reg_258 |  |  |  |
-| 259 | reg_259 |  |  |  |
-| 260 | reg_260 |  |  |  |
-| 261 | reg_261 |  |  |  |
-| 262 | reg_262 |  |  |  |
-| 263 | reg_263 |  |  |  |
-| 264 | reg_264 |  |  |  |
-| 265 | reg_265 |  |  |  |
-| 266 | reg_266 |  |  |  |
-| 267 | reg_267 |  |  |  |
-| 268 | reg_268 |  |  |  |
-| 269 | reg_269 |  |  |  |
-| 270 | reg_270 |  |  |  |
-| 271 | reg_271 |  |  |  |
-| 272 | reg_272 |  |  |  |
-| 273 | reg_273 |  |  |  |
-| 274 | reg_274 |  |  |  |
-| 275 | reg_275 |  |  |  |
-| 276 | reg_276 |  |  |  |
-| 277 | reg_277 |  |  |  |
-| 278 | reg_278 |  |  |  |
-| 279 | reg_279 |  |  |  |
-| 280 | reg_280 |  |  |  |
-| 281 | reg_281 |  |  |  |
-| 282 | reg_282 |  |  |  |
-| 283 | reg_283 |  |  |  |
-| 284 | reg_284 |  |  |  |
-| 285 | reg_285 |  |  |  |
-| 286 | reg_286 |  |  |  |
-| 287 | reg_287 |  |  |  |
-| 288 | reg_288 |  |  |  |
-| 289 | reg_289 |  |  |  |
-| 290 | reg_290 |  |  |  |
-| *Fault type value* |  |  |  |  |
-| 1 | reg_1 |  |  |  |
-| 2 | reg_2 |  |  |  |
-| 3 | reg_3 |  |  |  |
-| 4 | reg_4 |  |  |  |
-| 5 | reg_5 |  |  |  |
-| 6 | reg_6 |  |  |  |
-| 7 | reg_7 |  |  |  |
-| 8 | reg_8 |  |  |  |
-| 9 | reg_9 |  |  |  |
-| 11 | reg_11 |  |  |  |
-| 51 | reg_51 |  |  |  |
-| 52 | reg_52 |  |  |  |
-| 53 | reg_53 |  |  |  |
-| 56 | reg_56 |  |  |  |
-| 58 | reg_58 |  |  |  |
-| 60 | reg_60 |  |  |  |
-| 61 | reg_61 |  |  |  |
-| 62 | reg_62 |  |  |  |
-| 80 | reg_80 |  |  |  |
-| 81 | reg_81 |  |  |  |
-| *&*9: BMS_Status code* |  |  |  |  |
-| 0 | reg_0 |  |  | 00 : soft_starting |
-| 1 | reg_1 |  |  | 11 : discharging |
-| 2 | reg_2 |  |  | 1 : “Error” byte valid |
-| 3 | reg_3 |  |  | 0 : unbalance PF |
-| 4 | reg_4 |  |  | 0 : disable |
-| 5 | reg_5 |  |  | 0 : disable |
-| 6 | reg_6 |  |  | 0 : disable |
-| 7 | reg_7 |  |  | 0 : terminal |
-| 8 | reg_8 |  |  | 00:单机 |
-| 9 | reg_9 |  |  | 10:并联准备 |
-| 10 | reg_10 |  |  | 00:none |
-| 11 | reg_11 |  |  | 11 : discharging |
-| 12 | reg_12 |  |  | 0 : disable |
-| *&*14: BMS_BMSInfo code* |  |  |  |  |
-| 0 | reg_0 |  |  |  |
-| 1 | reg_1 |  |  |  |
-| 2 | reg_2 |  |  |  |
-| 3 | reg_3 |  |  |  |
-| 4 | reg_4 |  |  |  |
-| 5 | reg_5 |  |  |  |
-| 6 | reg_6 |  |  |  |
-| 7 | reg_7 |  |  |  |
-| 8 | reg_8 |  |  |  |
-| 9 | reg_9 |  |  |  |
-| 10 | reg_10 |  |  |  |
-| 11 | reg_11 |  |  |  |
-| 12 | reg_12 |  |  |  |
-| 13 | reg_13 |  |  |  |
-| 14 | reg_14 |  |  |  |
-| 15 | reg_15 |  |  |  |
-| *&*15: BMS_PackInfo code* |  |  |  |  |
-| 0 | reg_0 |  |  |  |
-| 1 | reg_1 |  |  |  |
-| 2 | reg_2 |  |  |  |
-| 3 | reg_3 |  |  |  |
-| 4 | reg_4 |  |  |  |
-| 5 | reg_5 |  |  |  |
-| 6 | reg_6 |  |  |  |
-| 7 | reg_7 |  |  |  |
-| 8 | reg_8 |  |  |  |
-| 9 | reg_9 |  |  |  |
-| 10 | reg_10 |  |  |  |
-| 11 | reg_11 |  |  |  |
-| 12 | reg_12 |  |  |  |
-| 13 | reg_13 |  |  |  |
-| 14 | reg_14 |  |  |  |
-| 15 | reg_15 |  |  |  |
-| *&*16: ModuleStatus code* |  |  |  |  |
-| 0 | reg_0 |  |  |  |
-| 1 | reg_1 |  |  |  |
-| 2 | reg_2 |  |  |  |
-| 3 | reg_3 |  |  |  |
-| 4 | reg_4 |  |  |  |
-| 5 | reg_5 |  |  |  |
-| 6 | reg_6 |  |  |  |
-| 7 | reg_7 |  |  |  |
-| 8 | reg_8 |  |  |  |
-| 9 | reg_9 |  |  |  |
-| 10 | reg_10 |  |  |  |
-| 11 | reg_11 |  |  |  |
-| 0 | reg_0 |  |  |  |
-| 1 | reg_1 |  |  |  |
-| 2 | reg_2 |  |  |  |
-| 3 | reg_3 |  |  |  |
-| 4 | reg_4 |  |  |  |
-| 5 | reg_5 |  |  |  |
-| 6 | reg_6 |  |  |  |
-| 7 | reg_7 |  |  |  |
-| 8 | reg_8 |  |  |  |
-| 9 | reg_9 |  |  |  |
-| 10 | reg_10 |  |  |  |
-| 11 | reg_11 |  |  |  |
-| 12 | reg_12 |  |  |  |
-| 13 | reg_13 |  |  |  |
-| 14 | reg_14 |  |  |  |
-| 15 | reg_15 |  |  |  |
-| 0 | reg_0 |  |  |  |
-| 1 | reg_1 |  |  |  |
-| 2 | reg_2 |  |  |  |
-| 3 | reg_3 |  |  |  |
-| 4 | reg_4 |  |  |  |
-| 5 | reg_5 |  |  |  |
-| 6 | reg_6 |  |  |  |
-| 7 | reg_7 |  |  |  |
-| 8 | reg_8 |  |  |  |
-| 9 | reg_9 |  |  |  |
-| 10 | reg_10 |  |  |  |
-| 11 | reg_11 |  |  |  |
-| 12 | reg_12 |  |  |  |
-| 13 | reg_13 |  |  |  |
-| 14 | reg_14 |  |  |  |
-| 15 | reg_15 |  |  |  |
-| *&*20: RequestOrBatteryType code* |  |  |  |  |
-| 0 | reg_0 |  | 充电过功率 |  |
-| 1 | reg_1 |  | 放电过功率 |  |
-| 2 | reg_2 |  | 并机重号故障 |  |
-| 3 | reg_3 |  | 预充失败 |  |
-| 4 | reg_4 |  | 预充短路 |  |
-| 5 | reg_5 |  | Communication error between AFE and MCU |  |
-| 6 | reg_6 |  | 单体异常故障（单体失效） |  |
-| 7 | reg_7 |  | 单体温度异常故障（单体失效） |  |
-| 8 | reg_8 |  | 总压采样故障 |  |
-| 9 | reg_9 |  | 温度短路 |  |
-| 10 | reg_10 |  | 负载侧总压采样故障 |  |
-| 11 | reg_11 |  | 载入标定参数故障 |  |
-| 12 | reg_12 |  | 硬件过压（AFE OV） |  |
-| 13 | reg_13 |  | 硬件欠压（AFE UV） |  |
-| 14 | reg_14 |  | 硬件过流（硬件保护反馈） |  |
-| 15 | reg_15 |  | 硬件放电过流故障 |  |
-| 0 | reg_0 |  | 从主机电池压差较大 |  |
-| 1 | reg_1 |  | 充电限流失败故障 |  |
-| 2 | reg_2 |  |  |  |
-| 3 | reg_3 |  |  |  |
-| 4 | reg_4 |  |  |  |
-| 5 | reg_5 |  |  |  |
-| 6 | reg_6 |  |  |  |
-| 7 | reg_7 |  |  |  |
-| 0 | reg_0 |  |  |  |
-| 1 | reg_1 |  |  |  |
-| 2 | reg_2 |  |  |  |
-| 3 | reg_3 |  |  |  |
-| 4 | reg_4 |  |  |  |
-| 5 | reg_5 |  |  |  |
-| 6 | reg_6 |  |  |  |
-| 7 | reg_7 |  |  |  |
+> Source: Off-Grid Protocol V0.26 PDF (register data extracted directly  -  the Excel
+> input register section uses an inconsistent layout with merged cells).
+
+| Address | Variable Name | Description | Scale | Unit | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 0 | System Status | System run state | - | - | 0:Standby, 1:PV&Grid Supporting Loads, 2:Battery Discharging, 3:Fault, 4:Flash, 5:PV Charging, 6:Grid Charging, 7:PV&Grid Charging, 8:PV&Grid Charging+Grid Bypass, 9:PV Charging+Grid Bypass, 10:Grid Charging+Grid Bypass, 11:Grid Bypass, 12:PV Charging+Loads Supporting, 13:PV Discharging, 14:PV&Battery Discharging, 15:Gen Charging, 16:Gen Charging+Gen Bypass, 17:PV&Gen Charging, 18:PV&Gen Charging+Gen Bypass, 19:PV Charging+Gen Bypass, 20:Gen Bypass, 21:PV Export to Grid, 22:PV Export to Grid+Loads Supporting, 23:PV Charging+Export to Grid, 24:PV Charging+Export to Grid+Loads Supporting, 25:Battery Export to Grid, 26:Battery Export to Grid+Loads Supporting, 27:Battery&PV Export to Grid, 28:Battery&PV Export to Grid+Loads Supporting |
+| 1 | Vpv1 | PV1 voltage | 0.1 | V |  |
+| 2 | Vpv2 | PV2 voltage | 0.1 | V |  |
+| 3 | Ppv1 H | PV1 charge power (high) | 0.1 | W |  |
+| 4 | Ppv1 L | PV1 charge power (low) | 0.1 | W |  |
+| 5 | Ppv2 H | PV2 charge power (high) | 0.1 | W |  |
+| 6 | Ppv2 L | PV2 charge power (low) | 0.1 | W |  |
+| 7 | Buck1Curr/Pv1Curr | Buck1 current or PV1 current | 0.1 | A |  |
+| 8 | Buck2Curr/Pv2Curr | Buck2 current or PV2 current | 0.1 | A |  |
+| 9 | OP_Watt H | Output active power (high) | 0.1 | W |  |
+| 10 | OP_Watt L | Output active power (low) | 0.1 | W |  |
+| 11 | OP_VA H | Output apparent power (high) | 0.1 | VA |  |
+| 12 | OP_VA L | Output apparent power (low) | 0.1 | VA |  |
+| 13 | ACChr_Watt H | AC charge watt (high) | 0.1 | W |  |
+| 14 | ACChr_Watt L | AC charge watt (low) | 0.1 | W |  |
+| 15 | ACChr_VA H | AC charge apparent power (high) | 0.1 | VA |  |
+| 16 | ACChr_VA L | AC charge apparent power (low) | 0.1 | VA |  |
+| 17 | Bat Volt | Battery voltage (M3) | 0.01 | V |  |
+| 18 | BatterySOC | Battery SOC | 1 | % | 0~100 |
+| 19 | Bus Volt | INV bus total voltage | 0.1 | V |  |
+| 20 | Grid Volt | AC input voltage | 0.1 | V |  |
+| 21 | Line Freq | AC input frequency | 0.01 | Hz |  |
+| 22 | OutputVolt | AC output voltage | 0.1 | V |  |
+| 23 | OutputFreq | AC output frequency | 0.01 | Hz |  |
+| 24 | Ouput DCV | Output DC voltage | 0.1 | V |  |
+| 25 | InvTemp | Inverter temperature | 0.1 | °C | -30~200.0 |
+| 26 | DcDc Temp | DC-DC temperature | 0.1 | °C | -30~200.0 |
+| 27 | LoadPercent | Load percentage | 0.1 | % | 0~1000 |
+| 28 | Bat_s_Volt | Battery-port voltage (DSP) | 0.01 | V |  |
+| 29 | Bat_Volt_DSP | Battery-bus voltage (DSP) | 0.01 | V |  |
+| 30 | Time total H | Work time total (high) | 0.5 | S |  |
+| 31 | Time total L | Work time total (low) | 0.5 | S |  |
+| 32 | Buck1_NTC | Buck1 temperature | 0.1 | °C | -30~200.0 |
+| 33 | Buck2_NTC | Buck2 temperature | 0.1 | °C | -30~200.0 |
+| 34 | OP_Curr | Output current | 0.1 | A |  |
+| 35 | Inv_Curr | Inverter current | 0.1 | A |  |
+| 36 | AC_InWatt H | AC input watt (high) | 0.1 | W | signed int32; >0: get energy from grid, <0: export to grid |
+| 37 | AC_InWatt L | AC input watt (low) | 0.1 | W |  |
+| 38 | AC_InVA H | AC input apparent power (high) | 0.1 | VA |  |
+| 39 | AC_InVA L | AC input apparent power (low) | 0.1 | VA |  |
+| 40 | Fault bit | Fault bit | - | - |  |
+| 41 | Warning bit | Warning bit | - | - |  |
+| 42 | Warning bit high | Warning bit high | - | - |  |
+| 43 | warning value | Warning value | - | - |  |
+| 44 | DTC | Device Type Code | - | - |  |
+| 45 | Export to Grid Today | Today's energy fed to grid | 0.1 | kWh |  |
+| 46 | Export to Grid Total H | Total energy fed to grid (high) | 0.1 | kWh |  |
+| 47 | Export to Grid Total L | Total energy fed to grid (low) | 0.1 | kWh |  |
+| 48 | Epv1_today H | PV1 energy today (high) | 0.1 | kWh |  |
+| 49 | Epv1_today L | PV1 energy today (low) | 0.1 | kWh |  |
+| 50 | Epv1_total H | PV1 energy total (high) | 0.1 | kWh |  |
+| 51 | Epv1_total L | PV1 energy total (low) | 0.1 | kWh |  |
+| 52 | Epv2_today H | PV2 energy today (high) | 0.1 | kWh |  |
+| 53 | Epv2_today L | PV2 energy today (low) | 0.1 | kWh |  |
+| 54 | Epv2_total H | PV2 energy total (high) | 0.1 | kWh |  |
+| 55 | Epv2_total L | PV2 energy total (low) | 0.1 | kWh |  |
+| 56 | Eac_chrToday H | AC charge energy today (high) | 0.1 | kWh |  |
+| 57 | Eac_chrToday L | AC charge energy today (low) | 0.1 | kWh |  |
+| 58 | Eac_chrTotal H | AC charge energy total (high) | 0.1 | kWh |  |
+| 59 | Eac_chrTotal L | AC charge energy total (low) | 0.1 | kWh |  |
+| 60 | Ebat_dischrToday H | Battery discharge energy today (high) | 0.1 | kWh |  |
+| 61 | Ebat_dischrToday L | Battery discharge energy today (low) | 0.1 | kWh |  |
+| 62 | Ebat_dischrTotal H | Battery discharge energy total (high) | 0.1 | kWh |  |
+| 63 | Ebat_dischrTotal L | Battery discharge energy total (low) | 0.1 | kWh |  |
+| 64 | Eac_dischrToday H | AC discharge energy today (high) | 0.1 | kWh |  |
+| 65 | Eac_dischrToday L | AC discharge energy today (low) | 0.1 | kWh |  |
+| 66 | Eac_dischrTotal H | AC discharge energy total (high) | 0.1 | kWh |  |
+| 67 | Eac_dischrTotal L | AC discharge energy total (low) | 0.1 | kWh |  |
+| 68 | ACChrCurr | AC charge battery current | 0.1 | A |  |
+| 69 | AC_DisChrWatt H | AC discharge watt (high) | 0.1 | W |  |
+| 70 | AC_DisChrWatt L | AC discharge watt (low) | 0.1 | W |  |
+| 71 | AC_DisChrVA H | AC discharge apparent power (high) | 0.1 | VA |  |
+| 72 | AC_DisChrVA L | AC discharge apparent power (low) | 0.1 | VA |  |
+| 73 | Bat_DisChrWatt H | Battery discharge watt (high) | 0.1 | W |  |
+| 74 | Bat_DisChrWatt L | Battery discharge watt (low) | 0.1 | W |  |
+| 75 | Bat_DisChrVA H | Battery discharge apparent power (high) | 0.1 | VA |  |
+| 76 | Bat_DisChrVA L | Battery discharge apparent power (low) | 0.1 | VA |  |
+| 77 | Bat_Watt H | Battery watt (high) | 0.1 | W | signed int32; positive=discharge, negative=charge |
+| 78 | Bat_Watt L | Battery watt (low) | 0.1 | W |  |
+| 79 | uwSlaveExistCnt | Number of parallel slave units | - | - |  |
+| 81 | MpptFanSpeed | MPPT charger fan speed | 1 | % | 0~100 |
+| 82 | InvFanSpeed | Inverter fan speed | 1 | % | 0~100 |
+| 83 | TotalChgCur | Total charge current | 0.1 | A |  |
+| 84 | TotalDisChgCur | Total discharge current | 0.1 | A |  |
+| 85 | Eop_dischrToday_H | Output discharge energy today (high) | 0.1 | kWh |  |
+| 86 | Eop_dischrToday_L | Output discharge energy today (low) | 0.1 | kWh |  |
+| 87 | Eop_dischrTotal_H | Output discharge energy total (high) | 0.1 | kWh |  |
+| 88 | Eop_dischrTotal_L | Output discharge energy total (low) | 0.1 | kWh |  |
+| 90 | ParaChgCurr | Parallel system charge current | 0.1 | A |  |
+| 91 | ParStatus | Parallel status | - | - | 0:New module, 1:Master, 2:Slave (single parallel), 3:Slave1 (three phase R), 4:Slave2 (three phase S), 5:Slave3 (three phase T), 6:Slave4 (two phase R), 7:Slave5 (two phase/120° S), 8:Slave6 (two phase/180° S) |
+| 92 | EGen_dischrToday_H | Generator energy today (high) | 0.1 | kWh |  |
+| 93 | EGen_dischrToday_L | Generator energy today (low) | 0.1 | kWh |  |
+| 94 | EGen_dischrTotal_H | Generator energy total (high) | 0.1 | kWh |  |
+| 95 | EGen_dischrTotal_L | Generator energy total (low) | 0.1 | kWh |  |
+| 96 | EGen_dischrPower | Generator power | 1 | W |  |
+| 97 | EGen_voltage | Generator voltage | 0.1 | V |  |
+| 98 | EBatChgToday_H | Battery charge energy today (high) | 0.1 | kWh |  |
+| 99 | EBatChgToday_L | Battery charge energy today (low) | 0.1 | kWh |  |
+| 100 | EBatChgTotal_H | Battery charge energy total (high) | 0.1 | kWh |  |
+| 101 | EBatChgTotal_L | Battery charge energy total (low) | 0.1 | kWh |  |
+| 102 | CT_InWatt H | CT input watt (high) | 0.1 | W |  |
+| 103 | CT_InWatt L | CT input watt (low) | 0.1 | W |  |
+| 104 | CtLoadWatt H | CT load active power (high) | 0.1 | W |  |
+| 105 | CtLoadWatt L | CT load active power (low) | 0.1 | W |  |
+| 106 | CtLoadPer | CT load percentage | 0.1 | % | 0~1000 |
+| 107 | TxTemp | Transformer temperature | 0.1 | °C | -30~200.0 |
+| 108 | LLCTemp | LLC temperature | 0.1 | °C | -30~200.0 |
+| 109 | LLCBusVolt | LLC bus total voltage | 0.1 | V |  |
+| 110 | LLCBatVolt | LLC battery voltage | 0.01 | V |  |
+| 111 | EnvTemp | Environment temperature | 0.1 | °C | -30~200.0 |
+| 200 | BMS_Status | BMS status | - | - | Bit field, see note *9 |
+| 201 | BMS_Error_old | BMS error (legacy) | - | - | Bit field, see note *10 |
+| 202 | BMS_WarnInfo_old | BMS warning info (legacy) | - | - | Bit field, see note *11 |
+| 203 | BMS_SOC | BMS state of charge | 1 | % | 1~100 |
+| 204 | BMS_BatteryVolt | BMS average voltage | 0.01 | V |  |
+| 205 | BMS_BatteryCurr | BMS average current | 0.1 | A | signed int16; see note *12 |
+| 206 | BMS_BatteryTemp | BMS average temperature | 0.1 | °C | signed int16 |
+| 207 | BMS_MaxCurrChg | BMS maximum charge current | 0.1 | A |  |
+| 208 | BMS_CVolt | BMS float charge voltage | 0.01 | V | see note *13 |
+| 209 | BMS_BMSInfo | BMS board info | - | - | see note *14 |
+| 210 | BMS_PackInfo | Battery module info | - | - | see note *15 |
+| 211 | BMS_UsingCap | Battery used capacity | - | - |  |
+| 212 | BMS_Cell_Volt1 | Cell voltage 1 | 0.001 | V | Individual cell data  -  identifies different battery packs under same BMS |
+| 213 | BMS_Cell_Volt2 | Cell voltage 2 | 0.001 | V |  |
+| 214 | BMS_Cell_Volt3 | Cell voltage 3 | 0.001 | V |  |
+| 215 | BMS_Cell_Volt4 | Cell voltage 4 | 0.001 | V |  |
+| 216 | BMS_Cell_Volt5 | Cell voltage 5 | 0.001 | V |  |
+| 217 | BMS_Cell_Volt6 | Cell voltage 6 | 0.001 | V |  |
+| 218 | BMS_Cell_Volt7 | Cell voltage 7 | 0.001 | V |  |
+| 219 | BMS_Cell_Volt8 | Cell voltage 8 | 0.001 | V |  |
+| 220 | BMS_Cell_Volt9 | Cell voltage 9 | 0.001 | V |  |
+| 221 | BMS_Cell_Volt10 | Cell voltage 10 | 0.001 | V |  |
+| 222 | BMS_Cell_Volt11 | Cell voltage 11 | 0.001 | V |  |
+| 223 | BMS_Cell_Volt12 | Cell voltage 12 | 0.001 | V |  |
+| 224 | BMS_Cell_Volt13 | Cell voltage 13 | 0.001 | V |  |
+| 225 | BMS_Cell_Volt14 | Cell voltage 14 | 0.001 | V |  |
+| 226 | BMS_Cell_Volt15 | Cell voltage 15 | 0.001 | V |  |
+| 227 | BMS_Cell_Volt16 | Cell voltage 16 | 0.001 | V |  |
+| 228 | ModuleID | Module ID | - | - | 1~12 |
+| 229 | ModuleTotalVolt | Module total voltage | 0.01 | V | signed int16 |
+| 230 | ModuleTotalCurrent | Module total current | 0.1 | A | signed int16 |
+| 231 | ModuleSoc | Module state of charge | 1 | % | 1~100 |
+| 232 | ModuleStatus | Module status | - | - | see note *16 |
+| 233 | BatProtect1_2 | Battery protection flags 1-2 | - | - | see note *17 |
+| 234 | BatWarnInfo1_2 | Battery warning flags 1-2 | - | - | see note *18 |
+| 235 | PackNumber | Number of parallel battery packs | - | - | 1~254 |
+| 236 | BatDePowerReason | Battery power derating reason | - | - | see note *19 |
+| 237 | SOH | Battery state of health | - | % | Bit0~Bit6: SOH value; Bit7: battery end-of-life warning flag |
+| 238 | GaugeRM | Remaining capacity | 10 | mAh |  |
+| 239 | GaugeFCC | Full charge capacity (nominal) | 10 | mAh |  |
+| 240 | DeltaV | Cell voltage delta | 1 | mV |  |
+| 241 | CycleCount | Charge/discharge cycle count | - | - |  |
+| 242 | RequestOrBatteryType | Charge request or battery type | - | - | see note *20 |
+| 243 | MaximumCellVoltage | Maximum cell voltage | 1 | mV |  |
+| 244 | MinimumCellVoltage | Minimum cell voltage | 1 | mV |  |
+| 245 | MaxMinCellVoltageNumber | Max/min cell voltage numbers | - | - | Bit0~Bit7: min voltage cell number; Bit8~Bit15: max voltage cell number |
+| 246 | ProtectPackID | Faulted battery pack address | - | - |  |
+| 247 | ManufacturerName | Manufacturer name | - | - |  |
+| 248 | HardwareVersion | Hardware version | - | - | 1~9 |
+| 249 | SoftwareVersion01 | Software version (bytes 0-1) | - | - |  |
+| 250 | ParallelHightSoftwarVer | Highest software version in parallel system | - | - |  |
+| 251 | MaxCellTemp | Maximum cell temperature | 0.1 | °C | signed int16 |
+| 252 | MinCellTemp | Minimum cell temperature | 0.1 | °C | signed int16 |
+| 253 | MaxMinCellTempSerialNum | Max/min temperature cell numbers | - | - | Bit0~Bit7: MinCellTempNum; Bit8~Bit15: MaxCellTempNum |
+| 254 | MaxMinSOC | Max/min SOC | - | % | 0~100; Bit0~Bit7: MinSOC; Bit8~Bit15: MaxSOC |
+| 255 | TotalCellNumber | Total cell count | - | - | 1~254 |
+| 256 | BatProtect3_4 | Battery protection flags 3-4 | - | - | see note *21 |
+| 257 | BatProtect5 | Battery protection flags 5 | - | - | see note *22 |
+| 258 | BatWarnInfo3 | Battery warning flags 3 | - | - | see note *23 |
+| 259 | UpdateStatus | Firmware upgrade status | - | - | Bit0~1: 0=normal, 1=programming, 2=upgrade successful |
+| 260 | SoftwareVersion23 | Software version (bytes 2-3) | - | - | ASCII encoded |
+| 261 | SoftwareVersion45 | Software version (bytes 4-5) | - | - | ASCII encoded |
+| 262 | BatSerialNumber_ID | Battery serial number ID | - | - |  |
+| 263 | BatSerialNumber0_1 | Battery serial number (chars 0-1) | - | - | ASCII encoded |
+| 264 | BatSerialNumber2_3 | Battery serial number (chars 2-3) | - | - | ASCII encoded |
+| 265 | BatSerialNumber4_5 | Battery serial number (chars 4-5) | - | - | ASCII encoded |
+| 266 | BatSerialNumber6_7 | Battery serial number (chars 6-7) | - | - | ASCII encoded |
+| 267 | BatSerialNumber8_9 | Battery serial number (chars 8-9) | - | - | ASCII encoded |
+| 268 | BatSerialNumber10_11 | Battery serial number (chars 10-11) | - | - | ASCII encoded |
+| 269 | BatSerialNumber12_13 | Battery serial number (chars 12-13) | - | - | ASCII encoded |
+| 270 | BatSerialNumber14_15 | Battery serial number (chars 14-15) | - | - | ASCII encoded |
+| 271 | BatSerialNumber16_17 | Battery serial number (chars 16-17) | - | - | ASCII encoded |
+| 272 | BatSerialNumber18_19 | Battery serial number (chars 18-19) | - | - | ASCII encoded |
+| 273 | ModuleID2 | Module ID 2 | - | - | 1~12 |
+| 274 | Module2MaxVol | Module 2 maximum cell voltage | 0.01 | V |  |
+| 275 | Module2MimVol | Module 2 minimum cell voltage | 0.01 | V |  |
+| 276 | Module2MaxTemp | Module 2 maximum temperature | 1 | °C | offset +40 |
+| 277 | Module2MimTemp | Module 2 minimum temperature | 1 | °C | offset +40 |
+| 278 | DoStatus | Output dry contact status | - | - |  |
+| 279 | DsgBatNumber | Discharge energy statistics - battery ID | 1 | kWh |  |
+| 280 | DsgEnergyKWH_H | Discharge energy (high 16 bits) | 1 | kWh |  |
+| 281 | DsgEnergyKWH_L | Discharge energy (low 16 bits) | 1 | kWh |  |
+| 282 | ChgBatNumber | Charge energy statistics - battery ID | - | - |  |
+| 283 | ChgEnergyKWH_H | Charge energy (high 16 bits) | 1 | kWh |  |
+| 284 | ChgEnergyKWH_L | Charge energy (low 16 bits) | 1 | kWh |  |
+| 285 | reserve285 | Reserved | - | - |  |
+| 286 | reserve286 | Reserved | - | - |  |
+| 287 | reserve287 | Reserved | - | - |  |
+| 288 | reserve288 | Reserved | - | - |  |
+| 289 | reserve289 | Reserved | - | - |  |
+| 290 | reserve290 | Reserved | - | - |  |

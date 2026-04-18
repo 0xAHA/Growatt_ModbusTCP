@@ -1,10 +1,12 @@
 # VPP Protocol
 
 > **Source documents:** Growatt VPP Communication Protocol of Inverter V2.01 / V2.03
+> (`GI-BK-E060_GROWATT.VPP.COMMUNICATION.PROTOCOL.OF.INVERTER_V2.03.xlsx`,
+> `growatt_vpp_protocol_v2.01_registers.csv`)
 >
 > VPP (Virtual Power Plant) is Growatt's advanced monitoring and control protocol.
 > It uses registers in the 30000+ range and is only supported by newer inverter models.
-> Multiple protocol versions (V2.01, V2.02, V2.03) are in active use — all share the
+> Multiple protocol versions (V2.01, V2.02, V2.03) are in active use  -  all share the
 > same core register layout described here.
 >
 > **Applicable models:** SPH, SPA, MIN TL-XH, MOD TL3-XH, MID TL3-XH, WIT, WIS, and others
@@ -15,9 +17,9 @@
 
 | Range | Purpose |
 | --- | --- |
-| 30000–30099 | Device identification, rated parameters, system settings |
-| 30100–30499 | Control registers (AC power, battery, TOU schedule) |
-| 31000–31499 | Real-time data (status, PV, grid, battery, load) |
+| 30000-30099 | Device identification, rated parameters, system settings |
+| 30100-30499 | Control registers (AC power, battery, TOU schedule) |
+| 31000-31499 | Real-time data (status, PV, grid, battery, load) |
 | 32000+ | Extended / model-specific |
 
 ---
