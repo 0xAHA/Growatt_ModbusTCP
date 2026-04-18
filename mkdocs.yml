@@ -50,8 +50,11 @@ nav:
     - DTC Debugging: troubleshooting/dtc-debugging.md
   - Developer:
     - Adding Sensors: developer/sensor-checklist.md
-    - TOU Investigation: developer/tou-investigation.md
-    - Protocol Database: developer/protocol-database.md
+    - Protocol Reference:
+      - Overview: developer/protocol-database.md
+      - Modbus RTU V1.39: developer/protocol-v139.md
+      - VPP Protocol: developer/protocol-vpp.md
+      - Off-Grid V0.26: developer/protocol-offgrid.md
   - Release Notes: release-notes.md
 
 markdown_extensions:
