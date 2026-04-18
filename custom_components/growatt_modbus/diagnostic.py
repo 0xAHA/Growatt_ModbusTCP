@@ -118,12 +118,12 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         vol.Optional("notify", default=True): cv.boolean,
         vol.Optional("offgrid_mode", default=False): cv.boolean,  # CRITICAL: Enable for SPF to prevent power reset
         # Range group selection (all enabled by default)
-        vol.Optional("scan_legacy",       default=True): cv.boolean,  # Base 0-249 (all models)
-        vol.Optional("scan_storage",      default=True): cv.boolean,  # Storage 1000-1124 (SPH/MIN battery)
-        vol.Optional("scan_mod_extended", default=True): cv.boolean,  # MIN/MOD 3000-3249
-        vol.Optional("scan_wit",          default=True): cv.boolean,  # WIT/WIS 8000-8124
-        vol.Optional("scan_vpp_control",  default=True): cv.boolean,  # VPP control 30100-30499
-        vol.Optional("scan_vpp_data",     default=True): cv.boolean,  # VPP data 31000-31399
+        vol.Optional("scan_legacy",       default=False): cv.boolean,  # Base 0-249 (all models)
+        vol.Optional("scan_storage",      default=False): cv.boolean,  # Storage 1000-1124 (SPH/MIN battery)
+        vol.Optional("scan_mod_extended", default=False): cv.boolean,  # MIN/MOD 3000-3249
+        vol.Optional("scan_wit",          default=False): cv.boolean,  # WIT/WIS 8000-8124
+        vol.Optional("scan_vpp_control",  default=False): cv.boolean,  # VPP control 30100-30499
+        vol.Optional("scan_vpp_data",     default=False): cv.boolean,  # VPP data 31000-31399
     }
 )
 
@@ -338,14 +338,22 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         send_notification = call.data.get("notify", True)
         offgrid_mode = call.data.get("offgrid_mode", False)
 
-        # Build enabled scan groups from boolean flags
+        # Build enabled scan groups from boolean flags.
+        # If none are explicitly checked, scan everything (full scan is the default).
+        # Check one or more to restrict the scan to those register ranges only.
+        _SCAN_FLAGS = {
+            "scan_legacy":       "legacy",
+            "scan_storage":      "storage",
+            "scan_mod_extended": "mod_extended",
+            "scan_wit":          "wit",
+            "scan_vpp_control":  "vpp_control",
+            "scan_vpp_data":     "vpp_data",
+        }
+        _any_flag_set = any(call.data.get(k) for k in _SCAN_FLAGS)
         enabled_groups = set()
-        if call.data.get("scan_legacy", True):       enabled_groups.add("legacy")
-        if call.data.get("scan_storage", True):      enabled_groups.add("storage")
-        if call.data.get("scan_mod_extended", True): enabled_groups.add("mod_extended")
-        if call.data.get("scan_wit", True):          enabled_groups.add("wit")
-        if call.data.get("scan_vpp_control", True):  enabled_groups.add("vpp_control")
-        if call.data.get("scan_vpp_data", True):     enabled_groups.add("vpp_data")
+        for flag, group in _SCAN_FLAGS.items():
+            if not _any_flag_set or call.data.get(flag):
+                enabled_groups.add(group)
 
         # --- Resolve connection parameters ---
         # If config_entry is provided, pull all connection details directly from the

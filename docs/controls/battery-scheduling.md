@@ -635,7 +635,7 @@ write succeeded but value reverted (possible cloud override)
 
 1. Check you are writing to a **holding register** (FC06/FC16), not an input register (FC04)
 2. Verify slave ID — some adapters require slave ID 1, others use the inverter's configured address
-3. Try `growatt_modbus.write_register` directly from Developer Tools to isolate the issue from the entity
+3. Try `growatt_modbus.write_register` directly from **Developer Tools → Actions** to isolate the issue from the entity
 
 ### MOD TOU slots 5–9 not appearing
 

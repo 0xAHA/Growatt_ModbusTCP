@@ -183,44 +183,44 @@ export_register_dump:
         boolean:
     scan_legacy:
       name: Scan Legacy Registers (0-249)
-      description: Scan base and extended legacy registers. Required for all models — disable only to speed up repeated scans if already captured.
+      description: "Restrict scan to: base and extended legacy registers (all models). Leave all scan options unchecked to scan every range (recommended)."
       required: false
-      default: true
+      default: false
       selector:
         boolean:
     scan_storage:
       name: Scan Storage Registers (1000-1124)
-      description: Scan battery/storage control registers. Relevant for SPH, SPM, and MIN battery models.
+      description: "Restrict scan to: battery/storage control registers (SPH, SPM, MIN battery models)."
       required: false
-      default: true
+      default: false
       selector:
         boolean:
     scan_mod_extended:
       name: Scan MIN/MOD Extended Registers (3000-3249)
-      description: Scan extended data registers used by MIN and MOD series inverters.
+      description: "Restrict scan to: extended data registers used by MIN and MOD series inverters."
       required: false
-      default: true
+      default: false
       selector:
         boolean:
     scan_wit:
       name: Scan WIT/WIS Battery Registers (8000-8124)
-      description: Scan battery registers specific to WIT and WIS commercial hybrid inverters.
+      description: "Restrict scan to: battery registers specific to WIT and WIS commercial hybrid inverters."
       required: false
-      default: true
+      default: false
       selector:
         boolean:
     scan_vpp_control:
       name: Scan VPP Control Registers (30100-30499)
-      description: Scan VPP system, AC power, and battery control set registers. Required for MOD TL3-XH, MID-XH and other VPP V2.01 inverters with TOU and battery control.
+      description: "Restrict scan to: VPP system, AC power, and battery control registers (MOD TL3-XH, MID-XH, VPP V2.01 inverters)."
       required: false
-      default: true
+      default: false
       selector:
         boolean:
     scan_vpp_data:
       name: Scan VPP Data Registers (31000-31399)
-      description: Scan VPP protocol data registers for status, PV, grid, load, and battery cluster data.
+      description: "Restrict scan to: VPP protocol data registers for status, PV, grid, load, and battery cluster data."
       required: false
-      default: true
+      default: false
       selector:
         boolean:
 

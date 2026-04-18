@@ -34,13 +34,10 @@ The diagnostic service will be available immediately!
 
 ### Step 2: Run the Diagnostic
 
-1. Go to **Developer Tools** → **Services**
+1. Go to **Developer Tools** → **Actions**
 2. Search for **"Growatt Modbus: Universal Register Scanner"**
-3. Fill in the form:
-   * **Host:** Your RS485-TCP adapter IP (e.g., `192.168.1.100`)
-   * **Port:** Usually `502`
-   * **Slave ID:** Usually `1` (check inverter display)
-4. Click **"Call Service"**
+3. Select your inverter from the **Device** dropdown (recommended), or enter connection parameters manually
+4. Click **"Perform Action"**
 
 The scanner will:
 - Automatically detect your model (if VPP 2.01 supported)

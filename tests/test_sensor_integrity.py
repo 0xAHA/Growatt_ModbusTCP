@@ -49,8 +49,25 @@ def _read(filename: str) -> str:
 
 
 def _extract_sensor_definitions(src: str) -> set:
-    """Return keys from the SENSOR_DEFINITIONS dict in sensor.py."""
-    return set(re.findall(r'^\s{4}"([a-z][a-z0-9_]+)":\s*\{', src, re.MULTILINE))
+    """Return keys from the SENSOR_DEFINITIONS dict in sensor.py.
+
+    Includes both explicit ``"key": {`` entries and keys listed in
+    ``# Grep index`` comment blocks that document template-generated sensors.
+    Those comment lines have the form::
+
+        #   key1  key2  key3
+    """
+    # Explicit dict-literal keys indented 4 spaces inside SENSOR_DEFINITIONS
+    explicit = set(re.findall(r'^\s{4}"([a-z][a-z0-9_]+)":\s*\{', src, re.MULTILINE))
+
+    # Keys listed in "Grep index" comment blocks (whitespace-separated on lines
+    # that start with "#   " — 3 spaces after the hash, as written by the helpers)
+    index_lines = re.findall(r'^#\s{3}([a-z][a-z0-9_ ]+)$', src, re.MULTILINE)
+    from_index: set = set()
+    for line in index_lines:
+        from_index |= set(re.findall(r'[a-z][a-z0-9_]+', line))
+
+    return explicit | from_index
 
 
 def _extract_device_map_keys(src: str) -> set:

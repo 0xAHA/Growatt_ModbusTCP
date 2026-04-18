@@ -13,7 +13,7 @@ When you add the integration, it attempts to identify your inverter automaticall
 - VPP-capable inverters (DTC present) are identified with high confidence
 - Legacy inverters (no DTC) use model name probing — works for MIN, MIC, SPH families
 - If auto-detection picks the wrong profile, delete and re-add the integration with manual selection
-- The Universal Register Scanner (Developer Tools → Services) shows the detection reasoning in its output
+- The Universal Register Scanner (Developer Tools → Actions) shows the detection reasoning in its output
 
 ---
 
@@ -178,6 +178,30 @@ If auto-detection fails (or you want to override), choose based on:
 | MOD 6000-15000TL3-XH | 3 | Yes | 6–15 kW | Hybrid with battery |
 | SPH-TL3 3000-10000 | 2 | Yes | 3–10 kW | Hybrid with battery |
 | WIT 4000-15000TL3 | 2 | Yes | 4–15 kW | Hybrid, advanced VPP control |
+
+---
+
+## Hardware Connection
+
+### Adapter Options
+
+| Adapter | Interface | Settings |
+| --- | --- | --- |
+| **EW11** | TCP/WiFi | TCP Server, 9600 baud, port 502 |
+| **USR-W630** | TCP/WiFi | Modbus TCP Gateway mode |
+| **USR-TCP232-410s** | TCP | TCP Server, 9600 baud, port 502 |
+| **Waveshare RS485-to-ETH** | TCP | 9600 8N1, port 502, RFC2217: On |
+| **Any RS485-to-USB** | Serial | `/dev/ttyUSB0` or `COM3`, 9600 baud |
+
+### Inverter Connector Pinout
+
+| Connector | RS485+ (A) | RS485− (B) |
+| --- | --- | --- |
+| 16-pin DRM/COM | Pin 3 | Pin 4 |
+| 4-pin COM | Pin 1 | Pin 2 |
+| RJ45 (485-3) | Pin 5 | Pin 1 |
+
+> If values look garbled or the connection is unstable, try swapping the A and B wires — adapter labelling is not always consistent with the inverter's convention.
 
 ---
 

@@ -230,6 +230,23 @@ All control entities follow standard Home Assistant naming. Examples:
 
 ---
 
+## Energy Dashboard Setup
+
+The integration pre-configures all energy sensors with the correct `state_class` and `device_class` for the HA Energy Dashboard. Recommended sensor mapping:
+
+| Dashboard slot | Sensor |
+| --- | --- |
+| Solar production | `sensor.{name}_energy_total` |
+| Return to grid | `sensor.{name}_energy_to_grid_today` *(use total variant)* |
+| Grid consumption | `sensor.{name}_energy_to_user_today` *(use total variant)* |
+| Individual consumption | `sensor.{name}_load_energy_today` *(use total variant)* |
+| Battery in | `sensor.{name}_charge_energy_today` *(use total variant)* |
+| Battery out | `sensor.{name}_discharge_energy_today` *(use total variant)* |
+
+> If grid values appear backwards in the Energy Dashboard, run the `detect_grid_orientation` service or enable **Invert Grid Power** in the integration options (Settings → Devices & Services → Growatt Modbus → Configure).
+
+---
+
 ## Contributing
 
 If you have a MOD inverter with APX battery (Issue #131) and can provide holding register scans from the 1000–1124 range, please share your findings in the issue. This will enable battery control for the MOD family.

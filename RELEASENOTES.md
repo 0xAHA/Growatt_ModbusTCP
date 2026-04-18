@@ -4,6 +4,46 @@
 
 ---
 
+## v0.7.9
+
+---
+
+- **Feat: GitHub Pages documentation site:**
+  Full documentation migrated to MkDocs at
+  [0xaha.github.io/Growatt_ModbusTCP](https://0xaha.github.io/Growatt_ModbusTCP/).
+  Covers supported models, sensor reference, power flow glossary, inverter
+  controls, energy dashboard setup, troubleshooting, and developer guides.
+  README slimmed to installation essentials with a prominent link to the docs.
+
+- **Feat: Register read and disconnect log messages promoted to INFO:**
+  The "Successfully read N registers from M" and "Disconnected successfully"
+  messages were previously DEBUG-only, so a successful poll cycle was invisible
+  at default log level. Both are now INFO, consistent with the "Successfully
+  connected" message that was already INFO. Users can now confirm polling is
+  working from the standard HA log without enabling debug mode.
+
+- **Refactor: Template-generated sensor definitions (Phase 2 architecture review):**
+  PV string (pv1/pv2/pv3 voltage, current, power) and three-phase AC sensors
+  (ac_voltage/current/power_r/s/t, ac_voltage_rs/st/tr) replaced with helper
+  functions `_pv_string_sensors()`, `_phase_sensors()`, and
+  `_line_voltage_sensors()` in `sensor.py`. Reduces ~100 lines of verbatim
+  repetition. A grep-index comment block above the helpers lists all generated
+  keys so static analysis tools (including the CI tests) can locate them.
+  CI test updated to also parse grep-index comment lines when extracting
+  sensor definitions.
+
+- **Refactor: Profile key alias mechanism (Phase 2 architecture review):**
+  `PROFILE_ALIASES: Dict[str, str]` added to `device_profiles.py`. Maps
+  retired or duplicate profile keys to their canonical replacement, allowing
+  profile consolidation without breaking existing config entries.
+  `resolve_profile_alias()` helper added; `get_profile()` resolves aliases
+  transparently at runtime. Config entries with aliased keys are silently
+  updated on startup with an INFO log entry.
+  First alias: `mod_6000_15000tl3_xh_v201` → `mod_6000_15000tl3_xh`
+  (both keys use `MOD_6000_15000TL3_XH` register map and identical sensors).
+
+---
+
 ## v0.7.8
 
 ---
