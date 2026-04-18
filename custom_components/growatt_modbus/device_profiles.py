@@ -187,11 +187,13 @@ INVERTER_PROFILES = {
         "has_pv3": False,
         "has_battery": False,
         "max_power_kw": 3.3,
+        # PV_DC_ENERGY_SENSORS intentionally excluded: MIC 600-3300 is a single-string
+        # inverter with no per-MPPT energy registers (no regs for pv1/pv2_energy_today
+        # or pv_energy_total). Only mic_2500_6000tl_x_min_range has regs 59-62.
         "sensors": (
             BASIC_PV_SENSORS |
             BASIC_AC_SENSORS |
             ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
         ),
@@ -207,11 +209,11 @@ INVERTER_PROFILES = {
         "has_battery": False,
         "max_power_kw": 3.3,
         "protocol_version": "v2.01",
+        # PV_DC_ENERGY_SENSORS intentionally excluded — see mic_600_3300tl_x comment.
         "sensors": (
             BASIC_PV_SENSORS |
             BASIC_AC_SENSORS |
             ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
         ),
@@ -650,6 +652,28 @@ INVERTER_PROFILES = {
 
 
 # ============================================================================
+# PROFILE KEY ALIASES
+#
+# Maps retired or duplicate profile keys to their canonical replacement.
+# Checked at config-entry load time so existing users are silently migrated
+# without breaking entity IDs or energy-dashboard history.
+#
+# Rules:
+#   - Add an entry here when two keys are FUNCTIONALLY IDENTICAL (same
+#     register_map, same sensors, same polling behaviour).
+#   - Do NOT alias keys that differ in register_map or sensor set — those
+#     need a versioned migration with user-visible release notes.
+#   - The canonical (right-hand) key must exist in INVERTER_PROFILES.
+# ============================================================================
+
+PROFILE_ALIASES: Dict[str, str] = {
+    # mod_6000_15000tl3_xh_v201 uses the same register map and sensor set as
+    # the base profile.  Consolidate so only one key exists in the wild.
+    "mod_6000_15000tl3_xh_v201": "mod_6000_15000tl3_xh",
+}
+
+
+# ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
@@ -742,9 +766,19 @@ PROFILE_DISPLAY_NAMES = {
 }
 
 
+def resolve_profile_alias(series: str) -> str:
+    """Return the canonical profile key for *series*, following PROFILE_ALIASES.
+
+    If *series* is not in the alias map it is returned unchanged.  Callers
+    that need the canonical key for config-entry storage should use this;
+    ``get_profile`` calls it automatically so runtime lookups are transparent.
+    """
+    return PROFILE_ALIASES.get(series, series)
+
+
 def get_profile(series: str):
-    """Get inverter profile by series name."""
-    return INVERTER_PROFILES.get(series, INVERTER_PROFILES["min_7000_10000_tl_x"])
+    """Get inverter profile by series name, resolving any alias first."""
+    return INVERTER_PROFILES.get(resolve_profile_alias(series), INVERTER_PROFILES["min_7000_10000_tl_x"])
 
 
 def get_available_profiles(legacy_only: bool = False, friendly_names: bool = True) -> Dict[str, str]:

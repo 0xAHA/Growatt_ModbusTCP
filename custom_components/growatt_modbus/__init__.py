@@ -172,6 +172,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 legacy_series,
             )
 
+    # Auto-migrate: resolve profile key aliases (added v0.7.9)
+    # PROFILE_ALIASES maps retired/duplicate keys to their canonical replacement.
+    # When two profile keys are functionally identical (same register_map, same sensors),
+    # one is designated canonical and the other added to PROFILE_ALIASES so existing
+    # config entries are silently updated without any behaviour change.
+    from .device_profiles import PROFILE_ALIASES, get_profile as _get_profile_alias
+    _current_series = entry.data.get(CONF_INVERTER_SERIES, "")
+    if _current_series in PROFILE_ALIASES:
+        _canonical = PROFILE_ALIASES[_current_series]
+        _canonical_profile = _get_profile_alias(_canonical)
+        hass.config_entries.async_update_entry(entry, data={
+            **entry.data,
+            CONF_INVERTER_SERIES: _canonical,
+            CONF_REGISTER_MAP: _canonical_profile["register_map"],
+        })
+        _LOGGER.info(
+            "Growatt Modbus: profile key alias resolved '%s' → '%s' "
+            "(both keys are functionally identical — no behaviour change).",
+            _current_series,
+            _canonical,
+        )
+
     # Remove stale number entities for time_period start/end controls (migrated to TimeEntity in v0.6.4)
     entity_registry = er.async_get(hass)
     stale_time_controls = {k for k in WRITABLE_REGISTERS if 'time_period' in k and k.endswith(('_start', '_end'))}

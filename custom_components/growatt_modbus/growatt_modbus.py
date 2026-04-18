@@ -226,7 +226,14 @@ class GrowattData:
     battery_current: float = 0.0      # A (signed: +discharge, -charge)
     battery_soc: float = 0.0          # %
     battery_temp: float = 0.0         # °C
-    # battery_soh and battery_voltage_bms are WIT-only - set dynamically if register exists
+    # battery_soh and battery_voltage_bms are NOT in the dataclass — they are added
+    # dynamically via setattr() only when the register is present in the active profile.
+    # This makes hasattr(data, 'battery_soh') a reliable profile gate.
+    # NOTE: all other fields above have float defaults, so hasattr() on them is always True.
+    # Sensor conditions that use hasattr() on dataclass fields are effectively dead code;
+    # the sensor group system (device_profiles.py) is the actual profile gate.
+    # Phase 4 plan: change profile-specific fields to Optional[float] = None and update
+    # conditions to `is not None` to restore meaningful hasattr-style gating.
     charge_power: float = 0.0         # W
     discharge_power: float = 0.0      # W
     charge_energy_today: float = 0.0  # kWh
@@ -506,7 +513,7 @@ class GrowattModbus:
         if self.client:
             try:
                 self.client.close()
-                logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Disconnected successfully")
+                logger.info(f"[{self.register_map['name']}@{self.connection_id}] Disconnected successfully")
             except Exception as e:
                 # Log disconnect errors - these can indicate resource leaks
                 logger.warning(f"[{self.register_map['name']}@{self.connection_id}] Error during disconnect: {e}")
@@ -628,7 +635,7 @@ class GrowattModbus:
                     )
                     self._track_read_failure()
                     return None
-                logger.debug("Successfully read %d registers from %d", len(registers), start_address)
+                logger.info("Successfully read %d registers from %d", len(registers), start_address)
                 self._track_read_success()
                 return registers
 
