@@ -1,7 +1,6 @@
 # Off-Grid Protocol V0.26
 
 > **Source document:** Growatt OffGrid Modbus RS485/RS232 RTU Protocol V0.26
-> (`OffGrid-Modbus-RS485-RS232-RTU-Protocol-V0-26.xlsx`)
 >
 > This is the protocol used by Growatt's off-grid and AC-coupled inverter families.
 > It covers registers 0–97 only; VPP registers are never used with these models.
