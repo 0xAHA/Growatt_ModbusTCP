@@ -1,8 +1,6 @@
 # VPP Protocol
 
 > **Source documents:** Growatt VPP Communication Protocol of Inverter V2.01 / V2.03
-> (`GI-BK-E060_GROWATT.VPP.COMMUNICATION.PROTOCOL.OF.INVERTER_V2.03.xlsx`,
-> `growatt_vpp_protocol_v2.01_registers.csv`)
 >
 > VPP (Virtual Power Plant) is Growatt's advanced monitoring and control protocol.
 > It uses registers in the 30000+ range and is only supported by newer inverter models.
