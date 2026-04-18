@@ -6,6 +6,14 @@
 
 ---
 
+## v0.8.0
+
+- **Fix (Issue #228):** MOD TL3-XH battery voltage scale corrected from `0.01` to `0.1`. Hardware operates at 600–950 V — the previous scale overflows a 16-bit register above 655 V, producing readings ~10× too low (e.g. 73 V instead of 733 V).
+- **Feat (Issue #131):** MOD TL3-XH — two new battery mode power rate controls: `grid_first_discharge_power_rate` (register 3036, 1–255) and `batt_first_charge_power_rate` (register 3047, 1–100%). Appear as number entities under the Battery device.
+- **Refactor:** VPP V2.01 shared register block extraction (Phase 3) — new `vpp_v201.py` shared block library used across SPH, MIN, TL-XH, SPH-TL3, and MID V2.01 profiles. Also fixed two previously missing SPH-TL3 registers: `ipm_temp_vpp` (31131), `boost_temp_vpp` (31132), and `active_power_rate_vpp` (30114) — all confirmed responding in hardware scans.
+
+---
+
 ## v0.7.9
 
 - **Feat:** Documentation migrated to GitHub Pages at [0xaha.github.io/Growatt_ModbusTCP](https://0xaha.github.io/Growatt_ModbusTCP/). README slimmed to installation essentials with a link to the full docs.

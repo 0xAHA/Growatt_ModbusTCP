@@ -1,3 +1,8 @@
+from .vpp_v201 import (
+    VPP_V201_STATUS, VPP_V201_PV2_INPUT, VPP_V201_PV2_TOTAL,
+    VPP_V201_TEMPERATURE_1P, VPP_V201_HOLDING_1P,
+)
+
 # MID-15000-25000TL3-X (Three-phase, 15-25kW)
 MID_15000_25000TL3_X = {
     'name': 'MID-TL3-X Series',
@@ -109,26 +114,16 @@ MID_15000_25000TL3_X_V201 = {
         **MID_15000_25000TL3_X['input_registers'],
 
         # === V2.01 REGISTERS (31000+ range) ===
-        # Status
-        31000: {'name': 'equipment_status', 'scale': 1, 'unit': '', 'desc': 'Equipment running status'},
-        31001: {'name': 'system_fault_word0', 'scale': 1, 'unit': '', 'desc': 'System fault word 0'},
-        31002: {'name': 'system_fault_word1', 'scale': 1, 'unit': '', 'desc': 'System fault word 1'},
-        31003: {'name': 'system_fault_word2', 'scale': 1, 'unit': '', 'desc': 'System fault word 2'},
-        31004: {'name': 'grid_first_connected', 'scale': 1, 'unit': '', 'desc': 'Grid first connected status'},
 
-        # PV Data
-        31010: {'name': 'pv1_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'pv1_voltage'},
-        31011: {'name': 'pv1_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'pv1_current'},
-        31012: {'name': 'pv1_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31013, 'maps_to': 'pv1_power'},
-        31013: {'name': 'pv1_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31012, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        31014: {'name': 'pv2_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'pv2_voltage'},
-        31015: {'name': 'pv2_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'pv2_current'},
-        31016: {'name': 'pv2_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31017, 'maps_to': 'pv2_power'},
-        31017: {'name': 'pv2_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31016, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Status — VPP_V201_STATUS (31000–31004)
+        **VPP_V201_STATUS,
 
-        # Total PV Power
-        31018: {'name': 'pv_total_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31019, 'maps_to': 'pv_total_power'},
-        31019: {'name': 'pv_total_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31018, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # PV strings 1 and 2 — VPP_V201_PV2_INPUT (31010–31017)
+        **VPP_V201_PV2_INPUT,
+
+        # Total PV power — VPP_V201_PV2_TOTAL (31018–31019)
+        # MID is a 2-string profile at VPP level.
+        **VPP_V201_PV2_TOTAL,
 
         # === VPP 2.01 GRID POWER REGISTERS (31100-31113) ===
         # Per VPP 2.01 protocol spec (confirmed against issue #245 scan data):
@@ -222,10 +217,8 @@ MID_15000_25000TL3_X_V201 = {
                 'maps_to': 'energy_to_grid_total_low',
                 'desc': 'Grid export energy total LOW (VPP 2.01 item 63)'},
 
-        # Temperatures
-        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp', 'signed': True},
-        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp', 'signed': True},
-        31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp', 'signed': True},
+        # Temperatures — VPP_V201_TEMPERATURE_1P (31130–31132)
+        **VPP_V201_TEMPERATURE_1P,
 
         # === BATTERY (VPP 31200+ range) — confirmed responding in issue #240 scan ===
         # Named without _vpp suffix so coordinator's fallback lookup finds them directly
@@ -259,20 +252,15 @@ MID_15000_25000TL3_X_V201 = {
         **MID_15000_25000TL3_X['holding_registers'],
 
         # === V2.01 REGISTERS (30000+ range) ===
-        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 3000 for MID', 'default': 5400},
-        30099: {'name': 'protocol_version', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'VPP Protocol version (201 = V2.01)', 'default': 201},
-        30100: {'name': 'control_authority', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30101: {'name': 'remote_onoff', 'scale': 1, 'unit': '', 'access': 'RW', 'maps_to': 'on_off'},
-        30104: {'name': 'sys_year_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30105: {'name': 'sys_month_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30106: {'name': 'sys_day_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30107: {'name': 'sys_hour_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30108: {'name': 'sys_minute_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30109: {'name': 'sys_second_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30112: {'name': 'modbus_address_vpp', 'scale': 1, 'unit': '', 'access': 'RW', 'maps_to': 'modbus_address'},
-        30114: {'name': 'active_power_rate_vpp', 'scale': 0.1, 'unit': '%', 'access': 'RW', 'maps_to': 'active_power_rate'},
-        30200: {'name': 'export_limit_enable', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30201: {'name': 'export_limit_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW'},
+        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO',
+                'desc': 'Device Type Code: 3000 for MID', 'default': 5400},
+
+        # Shared holding block — VPP_V201_HOLDING_1P (30099–30109, 30114, 30200–30201)
+        **VPP_V201_HOLDING_1P,
+
+        # MID-specific: Modbus address via VPP (between 30109 and 30114 in address space)
+        30112: {'name': 'modbus_address_vpp', 'scale': 1, 'unit': '', 'access': 'RW',
+                'maps_to': 'modbus_address'},
     }
 }
 

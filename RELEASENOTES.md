@@ -4,6 +4,49 @@
 
 ---
 
+## v0.8.0
+
+---
+
+- **Fix: MOD TL3-XH battery voltage scale corrected (Issue #228):**
+  Register 3169 (`battery_voltage`) scale changed from `0.01` to `0.1`.
+  The MOD TL3-XH hardware operates at 600–950 V — a 16-bit register with
+  0.01 V resolution overflows above 655 V, making the previous scale
+  physically impossible for any battery in this inverter's operating range.
+  Affected users saw values ~10× too low (e.g. 73 V instead of 733 V).
+  The Growatt V1.39 protocol spec lists 0.01, which applies to lower-voltage
+  hardware variants; the XH spec sheet (600–950 V) confirms 0.1 is correct
+  for this profile.
+
+- **Feat: MOD TL3-XH battery mode power rate controls (Issue #131):**
+  Two new writable holding registers added to `MOD_6000_15000TL3_XH`:
+  - `grid_first_discharge_power_rate` (register 3036, range 1–255) — sets the
+    discharge power rate when operating in Grid First priority mode.
+  - `batt_first_charge_power_rate` (register 3047, range 1–100%) — sets the
+    charge power rate when operating in Battery First priority mode.
+  Both appear as number entities in Home Assistant under the Battery device.
+  Confirmed responding on hardware via scan #228 (3036=100, 3047=80).
+
+- **Refactor: VPP V2.01 shared register block extraction (Phase 3):**
+  Introduced `profiles/vpp_v201.py` containing eight shared register block
+  dicts (`VPP_V201_STATUS`, `VPP_V201_PV2_INPUT`, `VPP_V201_PV2_TOTAL`,
+  `VPP_V201_PV3_AND_TOTAL`, `VPP_V201_ENERGY_1P`, `VPP_V201_TEMPERATURE_1P`,
+  `VPP_V201_BATTERY2`, `VPP_V201_HOLDING_1P`) covering registers 30099–30201
+  and 31000–31322. These blocks are identical across the SPH, MIN, TL-XH,
+  SPH-TL3, and MID V2.01 profiles. Each profile now unpacks shared blocks
+  with `**` and keeps only family-specific registers inline.
+  Net: −441 lines removed, +273 added (−168 net). No runtime behaviour change.
+
+  Additionally fixed two omissions in the SPH-TL3 V2.01 profile discovered
+  during scan evidence review:
+  - `ipm_temp_vpp` (31131) and `boost_temp_vpp` (31132) were absent — scans
+    251_1/251_2 confirm both registers respond (Read OK). Now included via
+    `VPP_V201_TEMPERATURE_1P`.
+  - `active_power_rate_vpp` (30114) was absent from holding registers — scan
+    confirms it responds (Read OK). Now included via `VPP_V201_HOLDING_1P`.
+
+---
+
 ## v0.7.9
 
 ---

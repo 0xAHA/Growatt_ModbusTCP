@@ -147,7 +147,7 @@ MOD_6000_15000TL3_XH = {
         # Battery State (3000 range - PRIMARY for MOD XH with ARK battery)
         # Note: VPP 31200+ range doesn't respond on MOD 10000TL3-XH, so 3000+ is primary
         3144: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'desc': '0=Load, 1=Battery, 2=Grid'},
-        3169: {'name': 'battery_voltage', 'scale': 0.01, 'unit': 'V', 'desc': 'Battery voltage (primary source for MOD XH)'},
+        3169: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery voltage (MOD TL3-XH operates at 600-950V; scale 0.1 required — 0.01 would overflow 16-bit at >655V)'},
         3170: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True, 'desc': 'Battery current (primary source for MOD XH)'},
         3171: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (primary source for MOD XH)'},
         3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature (primary source for MOD XH)'},
@@ -341,6 +341,11 @@ MOD_6000_15000TL3_XH = {
             'note': '0=0%, 1000=100.0%'
         },
 
+        # Power rate limits for Grid First and Battery First modes
+        # Scan #228 confirmed: 3036=100 (Read OK, GridFirstDischargePowerRate), 3047=80 (Read OK, BatFirstPowerRate)
+        3036: {'name': 'grid_first_discharge_power_rate', 'scale': 1, 'unit': '', 'access': 'RW',
+               'valid_range': (1, 255), 'desc': 'Discharge power rate when Grid First mode (1-255)'},
+
         # TOU (Time-of-Use) schedule (FC04 holding, registers 3038-3045)
         # Start registers: bit15=enable, bit13-14=priority(0=Load,1=Battery,2=Grid), bit8-12=hour, bit0-7=minute
         # End registers: bit8-12=hour, bit0-7=minute (same hex-packed as SPH time periods)
@@ -362,6 +367,8 @@ MOD_6000_15000TL3_XH = {
                'desc': 'TOU Period 4 end: bit8-12=hour, bit0-7=min'},
 
         # EMS / grid-charge controls (3046-3049) — NOT TOU slots
+        3047: {'name': 'batt_first_charge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (1, 100), 'desc': 'Charge power rate when Battery First mode (1-100%)'},
         3049: {'name': 'allow_grid_charge', 'scale': 1, 'unit': '', 'access': 'RW',
                'desc': 'Allow Grid Charge — must be Enabled (1) for TOU writes to persist (GEN4)'},
 

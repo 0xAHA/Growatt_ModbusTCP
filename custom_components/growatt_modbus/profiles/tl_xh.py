@@ -1,6 +1,12 @@
 # TL-XH Series - Single-Phase Hybrid Inverters with Battery Storage
 # Uses similar register layout to SPH series
 
+from .vpp_v201 import (
+    VPP_V201_STATUS, VPP_V201_PV2_INPUT, VPP_V201_PV3_AND_TOTAL,
+    VPP_V201_ENERGY_1P, VPP_V201_TEMPERATURE_1P,
+    VPP_V201_BATTERY2, VPP_V201_HOLDING_1P,
+)
+
 # TL-XH 3000-10000 (Single-phase hybrid with battery, 3-10kW)
 TL_XH_3000_10000 = {
     'name': 'TL-XH 3000-10000',
@@ -122,103 +128,83 @@ TL_XH_3000_10000_V201 = {
         **TL_XH_3000_10000['input_registers'],
 
         # === V2.01 REGISTERS (31000+ range) ===
-        # Status
-        31000: {'name': 'equipment_status', 'scale': 1, 'unit': '', 'desc': 'Equipment running status'},
-        31001: {'name': 'system_fault_word0', 'scale': 1, 'unit': '', 'desc': 'System fault word 0'},
-        31002: {'name': 'system_fault_word1', 'scale': 1, 'unit': '', 'desc': 'System fault word 1'},
-        31003: {'name': 'system_fault_word2', 'scale': 1, 'unit': '', 'desc': 'System fault word 2'},
-        31004: {'name': 'grid_first_connected', 'scale': 1, 'unit': '', 'desc': 'Grid first connected status'},
 
-        # PV Data
-        31010: {'name': 'pv1_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'pv1_voltage'},
-        31011: {'name': 'pv1_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'pv1_current'},
-        31012: {'name': 'pv1_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31013, 'maps_to': 'pv1_power'},
-        31013: {'name': 'pv1_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31012, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        31014: {'name': 'pv2_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'pv2_voltage'},
-        31015: {'name': 'pv2_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'pv2_current'},
-        31016: {'name': 'pv2_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31017, 'maps_to': 'pv2_power'},
-        31017: {'name': 'pv2_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31016, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        31018: {'name': 'pv3_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'pv3_voltage'},
-        31019: {'name': 'pv3_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'pv3_current'},
-        31020: {'name': 'pv3_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31021, 'maps_to': 'pv3_power'},
-        31021: {'name': 'pv3_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31020, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Status — VPP_V201_STATUS (31000–31004)
+        **VPP_V201_STATUS,
 
-        # Total PV Power
-        31022: {'name': 'pv_total_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31023, 'maps_to': 'pv_total_power'},
-        31023: {'name': 'pv_total_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31022, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # PV strings 1 and 2 — VPP_V201_PV2_INPUT (31010–31017)
+        **VPP_V201_PV2_INPUT,
 
-        # AC Output
-        31100: {'name': 'ac_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'ac_voltage'},
-        31101: {'name': 'ac_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'ac_current'},
-        31102: {'name': 'ac_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31103, 'maps_to': 'ac_power'},
-        31103: {'name': 'ac_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31102, 'combined_scale': 0.1, 'combined_unit': 'VA'},
-        31106: {'name': 'ac_frequency_vpp', 'scale': 0.01, 'unit': 'Hz', 'maps_to': 'ac_frequency'},
+        # PV string 3 + total PV power — VPP_V201_PV3_AND_TOTAL (31018–31023)
+        # TL-XH is a 3-string profile at VPP level.
+        **VPP_V201_PV3_AND_TOTAL,
 
-        # Grid/Meter Power
-        31112: {'name': 'meter_power_high', 'scale': 1, 'unit': '', 'pair': 31113, 'maps_to': 'power_to_grid'},
-        31113: {'name': 'meter_power_low', 'scale': 1, 'unit': '', 'pair': 31112, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        # AC Output (31100–31119) — TL-XH specific: no reactive power (31104–31105);
+        # meter_power maps to power_to_grid; load_power maps to power_to_load.
+        # SPH omits maps_to on meter_power; MIN/TL-XH both map to power_to_grid.
+        31100: {'name': 'ac_voltage_vpp',      'scale': 0.1,  'unit': 'V',  'maps_to': 'ac_voltage'},
+        31101: {'name': 'ac_current_vpp',      'scale': 0.1,  'unit': 'A',  'maps_to': 'ac_current'},
+        31102: {'name': 'ac_power_high_vpp',   'scale': 1,    'unit': '',   'pair': 31103, 'maps_to': 'ac_power'},
+        31103: {'name': 'ac_power_low_vpp',    'scale': 1,    'unit': '',   'pair': 31102,
+                'combined_scale': 0.1, 'combined_unit': 'VA'},
+        31106: {'name': 'ac_frequency_vpp',    'scale': 0.01, 'unit': 'Hz', 'maps_to': 'ac_frequency'},
+        31112: {'name': 'meter_power_high',    'scale': 1,    'unit': '',   'pair': 31113,
+                'maps_to': 'power_to_grid'},
+        31113: {'name': 'meter_power_low',     'scale': 1,    'unit': '',   'pair': 31112,
+                'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31118: {'name': 'load_power_high_vpp', 'scale': 1,    'unit': '',   'pair': 31119,
+                'maps_to': 'power_to_load'},
+        31119: {'name': 'load_power_low_vpp',  'scale': 1,    'unit': '',   'pair': 31118,
+                'combined_scale': 0.1, 'combined_unit': 'W'},
 
-        # Load Power
-        31118: {'name': 'load_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31119, 'maps_to': 'power_to_load'},
-        31119: {'name': 'load_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Energy today / total — VPP_V201_ENERGY_1P (31120–31123)
+        **VPP_V201_ENERGY_1P,
 
-        # Energy Data
-        31120: {'name': 'energy_today_high_vpp', 'scale': 1, 'unit': '', 'pair': 31121, 'maps_to': 'energy_today'},
-        31121: {'name': 'energy_today_low_vpp', 'scale': 1, 'unit': '', 'pair': 31120, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31122: {'name': 'energy_total_high_vpp', 'scale': 1, 'unit': '', 'pair': 31123, 'maps_to': 'energy_total'},
-        31123: {'name': 'energy_total_low_vpp', 'scale': 1, 'unit': '', 'pair': 31122, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # Temperatures — VPP_V201_TEMPERATURE_1P (31130–31132)
+        **VPP_V201_TEMPERATURE_1P,
 
-        # Temperatures
-        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp', 'signed': True},
-        31131: {'name': 'ipm_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'ipm_temp', 'signed': True},
-        31132: {'name': 'boost_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'boost_temp', 'signed': True},
-
-        # Battery Cluster 1 State
-        # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)
+        # Battery Cluster 1 (31200–31222) — TL-XH specific power layout.
+        # Unlike SPH (energy counters at 31202–31209), TL-XH uses charge/discharge power here.
+        # Left inline to make the family difference explicit.
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        # VPP V2.01 Battery Energy and Power registers (validated from real-world register scans)
-        31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery charge energy today HIGH'},
-        31203: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy today'},
-        31204: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 31205, 'desc': 'Battery charge power HIGH'},
-        31205: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery charge power (signed: positive=charging, negative=discharging)'},
-        31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery discharge energy today HIGH'},
-        31207: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery discharge energy today'},
-        31208: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31209, 'desc': 'Battery discharge power HIGH'},
-        31209: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery discharge power (signed: positive=discharging, negative=charging)'},
-        31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
-        31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
-        31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
-        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
+        31201: {'name': 'battery_power_low',  'scale': 1, 'unit': '', 'pair': 31200,
+                'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203,
+                'desc': 'Battery charge energy today HIGH'},
+        31203: {'name': 'charge_energy_today_low',  'scale': 1, 'unit': '', 'pair': 31202,
+                'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy today'},
+        31204: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 31205,
+                'desc': 'Battery charge power HIGH'},
+        31205: {'name': 'charge_power_low',  'scale': 1, 'unit': '', 'pair': 31204,
+                'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True,
+                'desc': 'Battery charge power (signed: positive=charging, negative=discharging)'},
+        31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207,
+                'desc': 'Battery discharge energy today HIGH'},
+        31207: {'name': 'discharge_energy_today_low',  'scale': 1, 'unit': '', 'pair': 31206,
+                'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery discharge energy today'},
+        31208: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31209,
+                'desc': 'Battery discharge power HIGH'},
+        31209: {'name': 'discharge_power_low',  'scale': 1, 'unit': '', 'pair': 31208,
+                'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True,
+                'desc': 'Battery discharge power (signed: positive=discharging, negative=charging)'},
+        31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V',  'maps_to': 'battery_voltage', 'signed': True},
+        31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A',  'maps_to': 'battery_current', 'signed': True},
+        31217: {'name': 'battery_soc_vpp',     'scale': 1,   'unit': '%',  'maps_to': 'battery_soc'},
+        31222: {'name': 'battery_temp_vpp',    'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
 
-        # Battery Cluster 2 State
-        31300: {'name': 'battery2_power_high', 'scale': 1, 'unit': '', 'pair': 31301},
-        31301: {'name': 'battery2_power', 'scale': 1, 'unit': '', 'pair': 31300, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        31302: {'name': 'battery2_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31303},
-        31303: {'name': 'battery2_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31302, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        31314: {'name': 'battery2_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery 2 voltage (0 if not present)', 'signed': True},
-        31315: {'name': 'battery2_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
-        31317: {'name': 'battery2_soc', 'scale': 1, 'unit': '%'},
-        31322: {'name': 'battery2_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        # Battery Cluster 2 — VPP_V201_BATTERY2 (31300–31303, 31314–31322)
+        **VPP_V201_BATTERY2,
     },
     'holding_registers': {
         # === Legacy REGISTERS ===
         **TL_XH_3000_10000['holding_registers'],
 
         # === V2.01 REGISTERS (30000+ range) ===
-        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 4000 for TL-XH', 'default': 5100},
-        30099: {'name': 'protocol_version', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'VPP Protocol version (201 = V2.01)', 'default': 201},
-        30100: {'name': 'control_authority', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30101: {'name': 'remote_onoff', 'scale': 1, 'unit': '', 'access': 'RW', 'maps_to': 'on_off'},
-        30104: {'name': 'sys_year_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30105: {'name': 'sys_month_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30106: {'name': 'sys_day_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30107: {'name': 'sys_hour_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30108: {'name': 'sys_minute_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30109: {'name': 'sys_second_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30114: {'name': 'active_power_rate_vpp', 'scale': 0.1, 'unit': '%', 'access': 'RW', 'maps_to': 'active_power_rate'},
-        30200: {'name': 'export_limit_enable', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30201: {'name': 'export_limit_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW'},
+        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO',
+                'desc': 'Device Type Code: 4000 for TL-XH', 'default': 5100},
+
+        # Shared holding block — VPP_V201_HOLDING_1P (30099–30109, 30114, 30200–30201)
+        **VPP_V201_HOLDING_1P,
     }
 }
 
@@ -366,43 +352,34 @@ MIN_TL_XH_3000_10000_V201 = {
         3180: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 3181, 'desc': 'Battery charge power HIGH (unsigned)'},
         3181: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 3180, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Battery charge power (unsigned, positive=charge)'},
 
-        # === VPP V2.01 BATTERY RANGE (31200+) ===
-        # Status
-        31000: {'name': 'equipment_status', 'scale': 1, 'unit': '', 'desc': 'Equipment running status'},
-        31001: {'name': 'system_fault_word0', 'scale': 1, 'unit': '', 'desc': 'System fault word 0'},
-        31002: {'name': 'system_fault_word1', 'scale': 1, 'unit': '', 'desc': 'System fault word 1'},
-        31003: {'name': 'system_fault_word2', 'scale': 1, 'unit': '', 'desc': 'System fault word 2'},
+        # === VPP V2.01 BATTERY RANGE (31000+) ===
+
+        # Status — VPP_V201_STATUS (31000–31004)
+        **VPP_V201_STATUS,
 
         # Battery Cluster 1 State
         # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
-        31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31201: {'name': 'battery_power_low',  'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         # VPP V2.01 Battery Energy and Power registers (validated from real-world register scans)
         31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery charge energy today HIGH'},
-        31203: {'name': 'charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy today'},
+        31203: {'name': 'charge_energy_today_low',  'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery charge energy today'},
         31204: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 31205, 'desc': 'Battery charge power HIGH'},
-        31205: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery charge power (signed: positive=charging, negative=discharging)'},
+        31205: {'name': 'charge_power_low',  'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery charge power (signed: positive=charging, negative=discharging)'},
         31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery discharge energy today HIGH'},
-        31207: {'name': 'discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery discharge energy today'},
+        31207: {'name': 'discharge_energy_today_low',  'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Battery discharge energy today'},
         31208: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31209, 'desc': 'Battery discharge power HIGH'},
-        31209: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery discharge power (signed: positive=discharging, negative=charging)'},
-        31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'signed': True, 'desc': 'Battery voltage (VPP range - not used on MIN TL-XH, use 3169 instead)'},
-        31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'signed': True, 'desc': 'Battery current (VPP range - not used on MIN TL-XH, use 3170 instead)'},
-        31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (VPP range - not used on MIN TL-XH, use 3171 instead)'},
-        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temp (VPP range - not used on MIN TL-XH, use 3176 instead)'},
+        31209: {'name': 'discharge_power_low',  'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Battery discharge power (signed: positive=discharging, negative=charging)'},
+        31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V',  'signed': True, 'desc': 'Battery voltage (VPP range - not used on MIN TL-XH, use 3169 instead)'},
+        31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A',  'signed': True, 'desc': 'Battery current (VPP range - not used on MIN TL-XH, use 3170 instead)'},
+        31217: {'name': 'battery_soc_vpp',     'scale': 1,   'unit': '%',  'desc': 'Battery SOC (VPP range - not used on MIN TL-XH, use 3171 instead)'},
+        31222: {'name': 'battery_temp_vpp',    'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temp (VPP range - not used on MIN TL-XH, use 3176 instead)'},
 
         # Battery power (calculated from charge/discharge)
         31220: {'name': 'battery_power', 'scale': 1, 'unit': 'W', 'desc': 'Battery power (positive=discharge, negative=charge)', 'signed': True},
 
-        # Battery Cluster 2 State (if present)
-        31300: {'name': 'battery2_power_high', 'scale': 1, 'unit': '', 'pair': 31301},
-        31301: {'name': 'battery2_power', 'scale': 1, 'unit': '', 'pair': 31300, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        31302: {'name': 'battery2_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31303},
-        31303: {'name': 'battery2_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31302, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        31314: {'name': 'battery2_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery 2 voltage (0 if not present)', 'signed': True},
-        31315: {'name': 'battery2_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
-        31317: {'name': 'battery2_soc', 'scale': 1, 'unit': '%'},
-        31322: {'name': 'battery2_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        # Battery Cluster 2 — VPP_V201_BATTERY2 (31300–31303, 31314–31322)
+        **VPP_V201_BATTERY2,
     },
     'holding_registers': {
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
@@ -410,12 +387,14 @@ MIN_TL_XH_3000_10000_V201 = {
         30: {'name': 'modbus_address', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Modbus address 1-254'},
 
         # VPP V2.01 registers
-        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 5100 for MIN TL-XH', 'default': 5100},
-        30099: {'name': 'protocol_version', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'VPP Protocol version (may be 0 or 201)', 'default': 0},
-        30100: {'name': 'control_authority', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30101: {'name': 'remote_onoff', 'scale': 1, 'unit': '', 'access': 'RW', 'maps_to': 'on_off'},
+        # protocol_version default=0: MIN TL-XH may report 0 (not 201) depending on firmware.
+        # Left inline rather than using VPP_V201_HOLDING_1P to preserve this override.
+        30000: {'name': 'dtc_code',          'scale': 1,   'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 5100 for MIN TL-XH', 'default': 5100},
+        30099: {'name': 'protocol_version',  'scale': 1,   'unit': '', 'access': 'RO', 'desc': 'VPP Protocol version (may be 0 or 201)', 'default': 0},
+        30100: {'name': 'control_authority', 'scale': 1,   'unit': '', 'access': 'RW'},
+        30101: {'name': 'remote_onoff',      'scale': 1,   'unit': '', 'access': 'RW', 'maps_to': 'on_off'},
         30114: {'name': 'active_power_rate_vpp', 'scale': 0.1, 'unit': '%', 'access': 'RW', 'maps_to': 'active_power_rate'},
-        30200: {'name': 'export_limit_enable', 'scale': 1, 'unit': '', 'access': 'RW'},
+        30200: {'name': 'export_limit_enable',     'scale': 1,   'unit': '', 'access': 'RW'},
         30201: {'name': 'export_limit_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW'},
     }
 }

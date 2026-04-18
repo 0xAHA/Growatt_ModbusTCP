@@ -2,6 +2,11 @@
 # Based on SPH-10000-TL3-BH-UP scan results
 # Register scan date: 2025-10-28
 
+from .vpp_v201 import (
+    VPP_V201_STATUS, VPP_V201_PV2_INPUT, VPP_V201_PV2_TOTAL,
+    VPP_V201_TEMPERATURE_1P, VPP_V201_BATTERY2, VPP_V201_HOLDING_1P,
+)
+
 SPH_TL3_3000_10000 = {
     'name': 'SPH-TL3 Series 3-10kW',
     'description': 'Three-phase hybrid inverter with battery storage (3-10kW)',
@@ -325,26 +330,16 @@ SPH_TL3_3000_10000_V201 = {
         **SPH_TL3_3000_10000['input_registers'],
 
         # === V2.01 REGISTERS (31000+ range) ===
-        # Status
-        31000: {'name': 'equipment_status', 'scale': 1, 'unit': '', 'desc': 'Equipment running status'},
-        31001: {'name': 'system_fault_word0', 'scale': 1, 'unit': '', 'desc': 'System fault word 0'},
-        31002: {'name': 'system_fault_word1', 'scale': 1, 'unit': '', 'desc': 'System fault word 1'},
-        31003: {'name': 'system_fault_word2', 'scale': 1, 'unit': '', 'desc': 'System fault word 2'},
-        31004: {'name': 'grid_first_connected', 'scale': 1, 'unit': '', 'desc': 'Grid first connected status'},
 
-        # PV Data
-        31010: {'name': 'pv1_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'pv1_voltage'},
-        31011: {'name': 'pv1_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'pv1_current'},
-        31012: {'name': 'pv1_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31013, 'maps_to': 'pv1_power'},
-        31013: {'name': 'pv1_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31012, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        31014: {'name': 'pv2_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'pv2_voltage'},
-        31015: {'name': 'pv2_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'pv2_current'},
-        31016: {'name': 'pv2_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31017, 'maps_to': 'pv2_power'},
-        31017: {'name': 'pv2_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31016, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Status — VPP_V201_STATUS (31000–31004)
+        **VPP_V201_STATUS,
 
-        # Total PV Power
-        31018: {'name': 'pv_total_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31019, 'maps_to': 'pv_total_power'},
-        31019: {'name': 'pv_total_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31018, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # PV strings 1 and 2 — VPP_V201_PV2_INPUT (31010–31017)
+        **VPP_V201_PV2_INPUT,
+
+        # Total PV power — VPP_V201_PV2_TOTAL (31018–31019)
+        # SPH-TL3 is a 2-string profile at VPP level.
+        **VPP_V201_PV2_TOTAL,
 
         # Three-Phase AC Output
         31100: {'name': 'ac_voltage_r_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'ac_voltage_r'},
@@ -372,8 +367,9 @@ SPH_TL3_3000_10000_V201 = {
         31124: {'name': 'energy_to_grid_total_vpp_high', 'scale': 1, 'unit': '', 'pair': 31125, 'desc': 'Total power to grid HIGH (VPP, 0.1 kWh)'},
         31125: {'name': 'energy_to_grid_total_vpp_low', 'scale': 1, 'unit': '', 'pair': 31124, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Total power to grid LOW'},
 
-        # Temperatures
-        31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'inverter_temp', 'signed': True},
+        # Temperatures — VPP_V201_TEMPERATURE_1P (31130–31132)
+        # Confirmed responding on SPH-TL3 in scans 251_1 and 251_2.
+        **VPP_V201_TEMPERATURE_1P,
 
         # Battery Cluster 1 State (31200-31223)
         # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)
@@ -387,33 +383,20 @@ SPH_TL3_3000_10000_V201 = {
         31218: {'name': 'battery_soh', 'scale': 1, 'unit': '%', 'desc': 'Battery state of health'},
         31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
 
-        # Battery Cluster 2 State (31300-31323)
-        31300: {'name': 'battery2_power_high', 'scale': 1, 'unit': '', 'pair': 31301},
-        31301: {'name': 'battery2_power', 'scale': 1, 'unit': '', 'pair': 31300, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        31302: {'name': 'battery2_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31303},
-        31303: {'name': 'battery2_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31302, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        31314: {'name': 'battery2_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery 2 voltage (0 if not present)', 'signed': True},
-        31315: {'name': 'battery2_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
-        31317: {'name': 'battery2_soc', 'scale': 1, 'unit': '%'},
-        31322: {'name': 'battery2_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        # Battery Cluster 2 — VPP_V201_BATTERY2 (31300–31303, 31314–31322)
+        **VPP_V201_BATTERY2,
     },
     'holding_registers': {
         # === Legacy REGISTERS ===
         **SPH_TL3_3000_10000['holding_registers'],
 
         # === V2.01 REGISTERS (30000+ range) ===
-        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 2000 for SPH-TL3', 'default': 3601},
-        30099: {'name': 'protocol_version', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'VPP Protocol version (201 = V2.01)', 'default': 201},
-        30100: {'name': 'control_authority', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30101: {'name': 'remote_onoff', 'scale': 1, 'unit': '', 'access': 'RW', 'maps_to': 'on_off'},
-        30104: {'name': 'sys_year_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30105: {'name': 'sys_month_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30106: {'name': 'sys_day_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30107: {'name': 'sys_hour_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30108: {'name': 'sys_minute_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30109: {'name': 'sys_second_vpp', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30200: {'name': 'export_limit_enable', 'scale': 1, 'unit': '', 'access': 'RW'},
-        30201: {'name': 'export_limit_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW'},
+        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO',
+                'desc': 'Device Type Code: 2000 for SPH-TL3', 'default': 3601},
+
+        # Shared holding block — VPP_V201_HOLDING_1P (30099–30109, 30114, 30200–30201)
+        # Confirmed: all registers including 30114 respond Read OK on SPH-TL3 (scans 251_1, 251_2).
+        **VPP_V201_HOLDING_1P,
     }
 }
 

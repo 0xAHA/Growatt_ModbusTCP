@@ -295,6 +295,9 @@ class GrowattData:
     mod_tou_9_end:   int = 0
     # MOD GEN4 prerequisite gate for TOU persistence (register 3049)
     allow_grid_charge: int = 0
+    # MOD GEN4 power rate limits per priority mode
+    grid_first_discharge_power_rate: int = 0  # 0-100% discharge rate when Grid First (register 3036)
+    batt_first_charge_power_rate: int = 0     # 0-100% charge rate when Battery First (register 3047)
 
     time_period_1_enable: int = 0     # 0=Disabled, 1=Enabled
     time_period_1_start: int = 0      # hex-packed (hours*256+minutes, e.g. 06:00 = 0x0600 = 1536)
@@ -2694,6 +2697,26 @@ class GrowattModbus:
                     logger.debug("[MOD TOU] allow_grid_charge=%s", data.allow_grid_charge)
             except Exception as e:
                 logger.debug(f"Could not read allow_grid_charge register 3049: {e}")
+
+        # MOD GEN4 Grid First discharge rate (register 3036)
+        if 3036 in holding_map:
+            try:
+                gfdr_regs = self.read_holding_registers(3036, 1)
+                if gfdr_regs is not None and len(gfdr_regs) >= 1:
+                    data.grid_first_discharge_power_rate = int(gfdr_regs[0])
+                    logger.debug("[MOD CTRL] grid_first_discharge_power_rate=%s%%", data.grid_first_discharge_power_rate)
+            except Exception as e:
+                logger.debug(f"Could not read grid_first_discharge_power_rate register 3036: {e}")
+
+        # MOD GEN4 Battery First charge rate (register 3047)
+        if 3047 in holding_map:
+            try:
+                bfcr_regs = self.read_holding_registers(3047, 1)
+                if bfcr_regs is not None and len(bfcr_regs) >= 1:
+                    data.batt_first_charge_power_rate = int(bfcr_regs[0])
+                    logger.debug("[MOD CTRL] batt_first_charge_power_rate=%s%%", data.batt_first_charge_power_rate)
+            except Exception as e:
+                logger.debug(f"Could not read batt_first_charge_power_rate register 3047: {e}")
 
         # MOD TL3-XH TOU slots 5-9 (registers 3050-3059)
         if 3050 in holding_map:

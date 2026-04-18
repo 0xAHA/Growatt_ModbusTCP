@@ -512,6 +512,23 @@ WRITABLE_REGISTERS = {
     'grid_first_time_period_9_end':   {'register': 1087, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 9 end (hex-packed: hours*256+minutes)'},
     'grid_first_time_period_9_enable': {'register': 1088, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 9'},
 
+    # MOD GEN4 power rate limits for priority modes
+    # Scan #228 confirmed: 3036=100 (GridFirstDischargePowerRate), 3047=80 (BatFirstPowerRate)
+    'grid_first_discharge_power_rate': {
+        'register': 3036,
+        'scale': 1,
+        'valid_range': (1, 255),
+        'unit': '',
+        'desc': 'Discharge power rate when Grid First mode (1-255)'
+    },
+    'batt_first_charge_power_rate': {
+        'register': 3047,
+        'scale': 1,
+        'valid_range': (1, 100),
+        'unit': '%',
+        'desc': 'Charge power rate when Battery First mode (1-100%)'
+    },
+
     # MOD GEN4 grid-charge prerequisite gate (must be Enabled for TOU writes to persist)
     'allow_grid_charge': {
         'register': 3049,
