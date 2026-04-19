@@ -794,6 +794,7 @@ ENTITY_CATEGORY_MAP = {
         'buck1_temp', 'buck2_temp',
         'fault_code', 'warning_code', 'derating_mode', 'battery_derating_mode',
         'mppt_fan_speed', 'inverter_fan_speed',
+        'ntognd_detect', 'nonstd_vac_enable', 'enable_spec_set', 'fast_mppt_enable',
     },
     'config': set(),
 }

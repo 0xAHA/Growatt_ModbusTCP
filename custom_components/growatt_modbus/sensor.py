@@ -916,30 +916,30 @@ SENSOR_DEFINITIONS = {
     "ntognd_detect": {
         "name": "NToGND Detect",
         "icon": "mdi:earth",
-        "entity_category": EntityCategory.DIAGNOSTIC,
         "attr": "ntognd_detect",
         "disabled_by_default": True,
+        "value_map": {0: "Disabled", 1: "Enabled"},
     },
     "nonstd_vac_enable": {
         "name": "Non-Standard VAC Enable",
         "icon": "mdi:transmission-tower",
-        "entity_category": EntityCategory.DIAGNOSTIC,
         "attr": "nonstd_vac_enable",
         "disabled_by_default": True,
+        "value_map": {0: "Disabled", 1: "Voltage Grade 1", 2: "Voltage Grade 2"},
     },
     "enable_spec_set": {
         "name": "Appointed Spec Setting",
         "icon": "mdi:file-certificate-outline",
-        "entity_category": EntityCategory.DIAGNOSTIC,
         "attr": "enable_spec_set",
         "disabled_by_default": True,
+        "value_map": {0: "Default", 1: "Hungary"},
     },
     "fast_mppt_enable": {
         "name": "Fast MPPT Enable",
         "icon": "mdi:solar-panel-large",
-        "entity_category": EntityCategory.DIAGNOSTIC,
         "attr": "fast_mppt_enable",
         "disabled_by_default": True,
+        "value_map": {0: "Disabled", 1: "Enabled", 2: "Mode 2"},
     },
 
     # Load Sensors (SPF Off-Grid)
@@ -1498,6 +1498,10 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
         if self._sensor_key == "derating_mode":
             from .const import get_derating_name
             return get_derating_name(int(value))
+
+        # Apply value map if defined (returns named string instead of raw integer)
+        if "value_map" in self._sensor_def:
+            return self._sensor_def["value_map"].get(int(value), f"Unknown ({value})")
 
         # Round numeric values to reasonable precision
         if isinstance(value, float):
