@@ -517,9 +517,9 @@ WRITABLE_REGISTERS = {
     'grid_first_discharge_power_rate': {
         'register': 3036,
         'scale': 1,
-        'valid_range': (1, 255),
-        'unit': '',
-        'desc': 'Discharge power rate when Grid First mode (1-255)'
+        'valid_range': (1, 100),
+        'unit': '%',
+        'desc': 'Discharge power rate when Grid First mode (1-100%)'
     },
     'batt_first_charge_power_rate': {
         'register': 3047,
@@ -606,6 +606,8 @@ SENSOR_DEVICE_MAP = {
         'battery_derating_mode',  # Battery-related status on inverter
         # SPF Off-Grid fan speeds
         'inverter_fan_speed',
+        # WIT debug/safety registers (read-only, disabled by default)
+        'ntognd_detect', 'nonstd_vac_enable', 'enable_spec_set', 'fast_mppt_enable',
     },
 
     # Solar device - PV production and AC output

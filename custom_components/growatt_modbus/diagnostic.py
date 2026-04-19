@@ -981,12 +981,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         power_percent = call.data.get("power_percent", 100)
 
         _LOGGER.info("Set battery mode service called: device=%s, mode=%s, power=%d%%", device_id, mode, power_percent)
-    async def get_register_data(call: ServiceCall):
-        """Read specific Modbus registers and return values programmatically."""
-        device_id = call.data["device_id"]
-        register_type = call.data.get("register_type", "input")
-        start_address = call.data["start_address"]
-        count = call.data["count"]
 
         # Get device registry
         device_reg = dr.async_get(hass)
@@ -1085,6 +1079,52 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         except Exception as e:
             _LOGGER.error("Failed to set battery mode: %s", e)
             raise ValueError(f"Failed to set battery mode: {e}")
+
+    async def get_register_data(call: ServiceCall):
+        """Read specific Modbus registers and return values programmatically."""
+        device_id = call.data["device_id"]
+        register_type = call.data.get("register_type", "input")
+        start_address = call.data["start_address"]
+        count = call.data["count"]
+
+        # Get device registry
+        device_reg = dr.async_get(hass)
+        device_entry = device_reg.async_get(device_id)
+
+        if not device_entry:
+            _LOGGER.error("Device %s not found", device_id)
+            raise ValueError(f"Device {device_id} not found")
+
+        # Find the config entry for this device
+        config_entry_id = None
+        for entry_id in device_entry.config_entries:
+            if entry_id in hass.data.get(DOMAIN, {}):
+                config_entry_id = entry_id
+                break
+
+        if not config_entry_id:
+            raise ValueError(f"No config entry found for device {device_id}")
+
+        coordinator = hass.data[DOMAIN][config_entry_id]
+        if not coordinator:
+            _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
+            raise ValueError(f"Coordinator not found for device {device_id}")
+
+        client = coordinator._client
+
+        def _read():
+            if register_type == "holding":
+                return client.read_holding_registers(start_address=start_address, count=count)
+            else:
+                return client.read_input_registers(start_address=start_address, count=count)
+
+        result = await hass.async_add_executor_job(_read)
+
+        if result is not None:
+            values = list(result) if not isinstance(result, list) else result
+            return {"success": True, "values": values}
+        else:
+            return {"success": False, "values": [], "error": "Register read failed"}
 
     async def sync_tou_schedule(call: ServiceCall) -> None:
         """Sync TOU schedule to inverter registers for autonomous operation.
@@ -1186,19 +1226,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         except Exception as e:
             _LOGGER.error("Failed to sync TOU schedule: %s", e)
             raise ValueError(f"Failed to sync TOU schedule: {e}")
-        def _read():
-            if register_type == "holding":
-                return client.read_holding_registers(start_address=start_address, count=count)
-            else:
-                return client.read_input_registers(start_address=start_address, count=count)
-
-        result = await hass.async_add_executor_job(_read)
-
-        if result is not None:
-            values = list(result) if not isinstance(result, list) else result
-            return {"success": True, "values": values}
-        else:
-            return {"success": False, "values": [], "error": "Register read failed"}
 
     # Register services
     hass.services.async_register(

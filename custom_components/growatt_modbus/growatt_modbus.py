@@ -246,6 +246,11 @@ class GrowattData:
     derating_mode: int = 0
     fault_code: int = 0
     warning_code: int = 0
+    # Safety/compliance diagnostic registers 235-238 (read-only, Issue #282)
+    ntognd_detect: int = 0           # reg 235 — NToGND grounding protection detection
+    nonstd_vac_enable: int = 0       # reg 236 — non-standard VAC enable
+    enable_spec_set: int = 0         # reg 237 — appointed spec / grid-code setting
+    fast_mppt_enable: int = 0        # reg 238 — fast MPPT algorithm enable
 
     # Control registers (writable holding registers)
     export_limit_mode: int = 0        # 0=Disabled, 1=RS485, 2=RS232, 3=CT
@@ -652,10 +657,16 @@ class GrowattModbus:
             return None
     
     def read_holding_registers(self, start_address: int, count: int) -> Optional[list]:
-        """Read holding registers with error handling (no unit/slave, no positional count)."""
+        """Read holding registers with error handling and slave_id compatibility fallback."""
         self._enforce_read_interval()
         try:
-            response = self.client.read_holding_registers(address=start_address, count=count)
+            try:
+                response = self.client.read_holding_registers(address=start_address, count=count, slave=self.slave_id)
+            except TypeError:
+                try:
+                    response = self.client.read_holding_registers(address=start_address, count=count, unit=self.slave_id)
+                except TypeError:
+                    response = self.client.read_holding_registers(address=start_address, count=count)
             if hasattr(response, "isError") and callable(response.isError) and response.isError():
                 logger.debug("Modbus error reading holding registers %d-%d: %r", start_address, start_address + count - 1, response)
                 self._track_read_failure()
@@ -1545,8 +1556,6 @@ class GrowattModbus:
                     )
                     return False
 
-                # Update last write time
-                self._wit_control_last_write[register] = current_time
                 logger.debug(f"[WIT CTRL] Rate limit check passed for register {register}")
 
             self._ensure_connection("[WRITE]")
@@ -1584,8 +1593,10 @@ class GrowattModbus:
 
             logger.info(f"[WRITE] Successfully wrote value {value} → register {register}")
 
-            # Check for WIT control conflicts after successful write (v0.4.6)
+            # Update WIT cooldown timestamp only after confirmed successful write (F-005)
             if register in self._wit_control_registers:
+                import time
+                self._wit_control_last_write[register] = time.time()
                 self._check_wit_control_conflicts(register, value)
 
             return True
@@ -2740,6 +2751,25 @@ class GrowattModbus:
                                  data.mod_tou_8_end, data.mod_tou_9_end)
             except Exception as e:
                 logger.debug(f"Could not read MOD TOU registers 3050-3059: {e}")
+
+        # --- Safety/compliance diagnostic registers 235-238 (read-only, Issue #282) ---
+        if any(reg in holding_map for reg in [235, 236, 237, 238]):
+            try:
+                diag_regs = self.read_holding_registers(235, 4)
+                if diag_regs is not None and len(diag_regs) >= 4:
+                    if 235 in holding_map:
+                        data.ntognd_detect = int(diag_regs[0])
+                    if 236 in holding_map:
+                        data.nonstd_vac_enable = int(diag_regs[1])
+                    if 237 in holding_map:
+                        data.enable_spec_set = int(diag_regs[2])
+                    if 238 in holding_map:
+                        data.fast_mppt_enable = int(diag_regs[3])
+                    logger.debug("[DIAG] ntognd=%s nonstd_vac=%s enable_spec=%s fast_mppt=%s",
+                                 data.ntognd_detect, data.nonstd_vac_enable,
+                                 data.enable_spec_set, data.fast_mppt_enable)
+            except Exception as e:
+                logger.debug(f"Could not read diagnostic registers 235-238: {e}")
 
         # --- WIT VPP Remote Control registers (30000+ range) ---
         # Control Authority (30100)

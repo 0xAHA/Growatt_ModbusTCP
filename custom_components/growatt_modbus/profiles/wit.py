@@ -325,8 +325,12 @@ WIT_4000_15000TL3 = {
         229: {'name': 'energy_adjust', 'scale': 0.1, 'unit': '%', 'access': 'RW', 'valid_range': (1, 1000)},
 
         # Debug Settings (230-249)
-        230: {'name': 'island_disable', 'scale': 1, 'unit': '', 'access': 'W', 'desc': '0=Enable, 1=Disable'},
-        236: {'name': 'nonstd_vac_enable', 'scale': 1, 'unit': '', 'access': 'W', 'desc': '0=Disable, 1=Grade1, 2=Grade2'},
+        # 230 island_disable is write-only (safety control); not exposed as sensor.
+        # 235-238: Read-only diagnostic sensors (Issue #282). NOT writeable — see release notes.
+        235: {'name': 'ntognd_detect',      'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND grounding protection detection'},
+        236: {'name': 'nonstd_vac_enable',  'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Grade1, 2=Grade2 — non-standard VAC enable'},
+        237: {'name': 'enable_spec_set',    'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — appointed spec / grid-code setting'},
+        238: {'name': 'fast_mppt_enable',   'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — fast MPPT algorithm'},
 
 		# Grid Phase Sequence
         871: {'name': 'grid_phase_sequence', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Positive, 1=Reverse'},

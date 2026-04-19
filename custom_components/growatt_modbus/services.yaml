@@ -1,33 +1,3 @@
-read_inverter_data:
-  name: Read Inverter Data
-  description: Manually trigger a data read from the Growatt inverter
-  fields:
-    device_id:
-      name: Device
-      description: The Growatt inverter device
-      required: true
-      selector:
-        device:
-          integration: growatt_modbus
-    force_refresh:
-      name: Force Refresh
-      description: Force a fresh read even if within minimum interval
-      default: false
-      selector:
-        boolean:
-
-test_connection:
-  name: Test Connection
-  description: Test the connection to the Growatt inverter
-  fields:
-    device_id:
-      name: Device
-      description: The Growatt inverter device
-      required: true
-      selector:
-        device:
-          integration: growatt_modbus
-
 get_register_data:
   name: Get Register Data
   description: Read specific Modbus registers for debugging
@@ -66,27 +36,6 @@ get_register_data:
           min: 1
           max: 50
           mode: box
-
-update_register_map:
-  name: Update Register Map
-  description: Change the register mapping for the inverter
-  fields:
-    device_id:
-      name: Device
-      description: The Growatt inverter device
-      required: true
-      selector:
-        device:
-          integration: growatt_modbus
-    register_map:
-      name: Register Map
-      description: Select the register mapping to use
-      default: "MIN_10000_VARIANT_A"
-      selector:
-        select:
-          options:
-            - "MIN_SERIES_STANDARD"
-            - "MIN_10000_VARIANT_A"
 
 export_register_dump:
   name: Universal Register Scanner
@@ -308,13 +257,6 @@ set_battery_mode:
     device_id:
       name: Device
       description: The Growatt inverter device (WIT/WIS series)
-write_registers:
-  name: Write Multiple Modbus Registers
-  description: Write multiple consecutive holding registers using Modbus function 0x10. Required for atomic multi-register writes such as TOU period configuration.
-  fields:
-    device_id:
-      name: Device
-      description: The Growatt inverter device
       required: true
       selector:
         device:
@@ -342,6 +284,35 @@ write_registers:
           min: 1
           max: 100
           unit_of_measurement: "%"
+
+write_registers:
+  name: Write Multiple Modbus Registers
+  description: Write multiple consecutive holding registers using Modbus function 0x10. Required for atomic multi-register writes such as TOU period configuration.
+  fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device
+      required: true
+      selector:
+        device:
+          integration: growatt_modbus
+    register:
+      name: Start Address
+      description: Starting holding register address
+      required: true
+      example: 30412
+      selector:
+        number:
+          min: 0
+          max: 65535
+          mode: box
+    values:
+      name: Values
+      description: List of values to write to consecutive registers
+      required: true
+      example: "[0, 120, 100]"
+      selector:
+        object:
 
 sync_tou_schedule:
   name: Sync TOU Schedule
@@ -375,20 +346,3 @@ sync_tou_schedule:
               value: "1"
             - label: "Grid first"
               value: "2"
-    register:
-      name: Start Address
-      description: Starting holding register address
-      required: true
-      example: 30412
-      selector:
-        number:
-          min: 0
-          max: 65535
-          mode: box
-    values:
-      name: Values
-      description: List of values to write to consecutive registers
-      required: true
-      example: "[0, 120, 100]"
-      selector:
-        object:

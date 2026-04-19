@@ -6,6 +6,19 @@
 
 ---
 
+## v0.8.2
+
+- **Fix: Critical `set_battery_mode` service was non-functional (F-001/F-002):** The VPP write logic had been spliced into `get_register_data`, leaving `set_battery_mode` as a registered no-op. `sync_tou_schedule` had an orphaned `_read()` closure referencing undefined variables — a latent NameError on the success path. All three function bodies restructured.
+- **Fix: `services.yaml` field mismatches (F-006/F-007):** Removed three phantom services never registered in Python. Fixed `set_battery_mode`, `write_registers`, and `sync_tou_schedule` field definitions — each now matches the Python schema exactly.
+- **Fix: Holding register reads omitted slave ID (F-003):** `read_holding_registers()` now passes `slave_id` with a pymodbus compatibility fallback. Five `auto_detection.py` raw client calls switched to the wrapper.
+- **Fix: WIT cooldown timestamp now set after successful write (F-005):** Previously a failed write would block subsequent writes for the full 30-second cooldown unnecessarily.
+- **Fix: Binary sensor `is_on` uses `coordinator.is_online` (F-018), duplicate coordinator property removed (F-021), explicit `disconnect()` on entry unload added (F-022).**
+- **Docs: `battery-scheduling.md` `read_register` examples corrected** — wrong field names (`register_address`, `count`) replaced with the actual schema field (`register`).
+- **Feat (Issue #282): WIT registers 235–238 exposed as read-only diagnostic sensors** — `ntognd_detect`, `nonstd_vac_enable`, `enable_spec_set`, `fast_mppt_enable` visible on the Inverter device. **Intentionally read-only:** these registers control safety-critical grid-protection behaviour; incorrect writes risk grid-code violations or hardware damage. All four are disabled by default and require explicit opt-in.
+- **Fix (Issue #131): `grid_first_discharge_power_rate` range corrected to 1–100%** — register 3036 on MOD TL3-XH is a percentage value; values above 100 cause an unknown inverter error. Number entity clamped accordingly.
+
+---
+
 ## v0.8.1
 
 - **Fix (Issue #228):** Daily energy spike at inverter startup eliminated. The midnight 32-bit register reset briefly produced garbage readings (e.g. 79 kWh) that were stored as the day's retained total. A 20 kWh/poll spike guard now rejects these with a WARNING log entry.

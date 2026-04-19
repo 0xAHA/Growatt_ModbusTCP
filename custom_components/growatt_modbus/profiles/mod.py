@@ -343,8 +343,8 @@ MOD_6000_15000TL3_XH = {
 
         # Power rate limits for Grid First and Battery First modes
         # Scan #228 confirmed: 3036=100 (Read OK, GridFirstDischargePowerRate), 3047=80 (Read OK, BatFirstPowerRate)
-        3036: {'name': 'grid_first_discharge_power_rate', 'scale': 1, 'unit': '', 'access': 'RW',
-               'valid_range': (1, 255), 'desc': 'Discharge power rate when Grid First mode (1-255)'},
+        3036: {'name': 'grid_first_discharge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (1, 100), 'desc': 'Discharge power rate when Grid First mode (1-100%)'},
 
         # TOU (Time-of-Use) schedule (FC04 holding, registers 3038-3045)
         # Start registers: bit15=enable, bit13-14=priority(0=Load,1=Battery,2=Grid), bit8-12=hour, bit0-7=minute

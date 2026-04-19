@@ -75,11 +75,9 @@ To verify via raw register (optional — requires the diagnostic service):
 ```yaml
 service: growatt_modbus.read_register
 data:
-  register_type: holding
-  register_address: 3049
-  count: 1
-target:
   device_id: YOUR_DEVICE_ID
+  register_type: holding
+  register: 3049
 # Expected response: 1 (Enabled)
 ```
 
@@ -643,11 +641,9 @@ Slots 5–9 use registers 3050–3059. These must be present in the holding_regi
 ```yaml
 service: growatt_modbus.read_register
 data:
-  register_type: holding
-  register_address: 3050
-  count: 10
-target:
   device_id: YOUR_DEVICE_ID
+  register_type: holding
+  register: 3050
 ```
 If the inverter responds with data (not a Modbus exception), the slots are supported and should appear after an HA restart with v0.6.8b1.
 
@@ -678,4 +674,4 @@ Key log prefixes to look for:
 
 ---
 
-*Last updated: v0.6.8b1 · 2026-04-04*
+Last updated: v0.8.2 · 2026-04-19

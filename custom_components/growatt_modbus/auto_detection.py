@@ -149,16 +149,16 @@ async def async_read_serial_number(
     try:
         # Read 10 registers starting at address 23
         result = await hass.async_add_executor_job(
-            lambda: client.client.read_holding_registers(address=23, count=10)
+            client.read_holding_registers, 23, 10
         )
-        
-        if result.isError():
-            _LOGGER.debug(f"Error reading serial number: {result}")
+
+        if result is None:
+            _LOGGER.debug("Error reading serial number: no response")
             return None
-        
+
         # Convert registers to string
         serial_bytes = []
-        for register in result.registers:
+        for register in result:
             high_byte = (register >> 8) & 0xFF
             low_byte = register & 0xFF
             serial_bytes.extend([high_byte, low_byte])
@@ -196,16 +196,16 @@ async def async_read_model_name(
     try:
         # Read 5 registers starting at address 0
         result = await hass.async_add_executor_job(
-            lambda: client.client.read_holding_registers(address=0, count=5)
+            client.read_holding_registers, 0, 5
         )
-        
-        if result.isError():
-            _LOGGER.debug(f"Error reading model name: {result}")
+
+        if result is None:
+            _LOGGER.debug("Error reading model name: no response")
             return None
-        
+
         # Convert registers to string
         model_bytes = []
-        for register in result.registers:
+        for register in result:
             high_byte = (register >> 8) & 0xFF
             low_byte = register & 0xFF
             model_bytes.extend([high_byte, low_byte])
@@ -266,11 +266,11 @@ async def async_read_dtc_code_offgrid(
     # Fallback to holding register 43
     try:
         result = await hass.async_add_executor_job(
-            lambda: client.client.read_holding_registers(address=43, count=1)
+            client.read_holding_registers, 43, 1
         )
 
-        if not result.isError():
-            dtc_code = result.registers[0]
+        if result is not None:
+            dtc_code = result[0]
             if dtc_code and dtc_code > 0:
                 _LOGGER.info(f"✓ OffGrid DTC Detection - Read DTC code: {dtc_code} from holding register 43")
                 return dtc_code
@@ -321,14 +321,14 @@ async def async_read_dtc_code(
     try:
         # Read DTC from holding register 30000
         result = await hass.async_add_executor_job(
-            lambda: client.client.read_holding_registers(address=30000, count=1)
+            client.read_holding_registers, 30000, 1
         )
 
-        if result.isError():
-            _LOGGER.warning(f"Failed to read DTC code from register 30000: {result}")
+        if result is None:
+            _LOGGER.warning("Failed to read DTC code from register 30000: no response")
             return None
 
-        dtc_code = result.registers[0]
+        dtc_code = result[0]
         if dtc_code and dtc_code > 0:
             _LOGGER.info(f"✓ VPP DTC Detection - Read DTC code: {dtc_code} from holding register 30000")
             return dtc_code
@@ -366,14 +366,14 @@ async def async_read_protocol_version(
     try:
         # Read protocol version from holding register 30099
         result = await hass.async_add_executor_job(
-            lambda: client.client.read_holding_registers(address=30099, count=1)
+            client.read_holding_registers, 30099, 1
         )
 
-        if result.isError():
-            _LOGGER.debug(f"Protocol version register 30099 not readable (legacy inverter)")
+        if result is None:
+            _LOGGER.debug("Protocol version register 30099 not readable (legacy inverter)")
             return None
 
-        protocol_version = result.registers[0]
+        protocol_version = result[0]
 
         if protocol_version == 0:
             _LOGGER.info(f"✓ Protocol version check - Register 30099 = 0 (Legacy protocol, no V2.01 support)")

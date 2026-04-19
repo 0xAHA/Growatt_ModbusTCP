@@ -910,6 +910,38 @@ SENSOR_DEFINITIONS = {
         "attr": "warning_code",
     },
 
+    # Safety/compliance read-only diagnostic registers 235-238 (Issue #282).
+    # These are installer/grid-compliance controls. Writing them is intentionally
+    # blocked by the integration — see release notes for safety rationale.
+    "ntognd_detect": {
+        "name": "NToGND Detect",
+        "icon": "mdi:earth",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "attr": "ntognd_detect",
+        "disabled_by_default": True,
+    },
+    "nonstd_vac_enable": {
+        "name": "Non-Standard VAC Enable",
+        "icon": "mdi:transmission-tower",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "attr": "nonstd_vac_enable",
+        "disabled_by_default": True,
+    },
+    "enable_spec_set": {
+        "name": "Appointed Spec Setting",
+        "icon": "mdi:file-certificate-outline",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "attr": "enable_spec_set",
+        "disabled_by_default": True,
+    },
+    "fast_mppt_enable": {
+        "name": "Fast MPPT Enable",
+        "icon": "mdi:solar-panel-large",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "attr": "fast_mppt_enable",
+        "disabled_by_default": True,
+    },
+
     # Load Sensors (SPF Off-Grid)
     "load_percentage": {
         "name": "Load Percentage",

@@ -1213,8 +1213,3 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
         # Default to inverter for unknown device types
         return self.get_device_info(DEVICE_TYPE_INVERTER)
-
-    @property
-    def modbus_client(self):
-        """Expose the modbus client for write operations."""
-        return self._client

@@ -4,6 +4,73 @@
 
 ---
 
+## v0.8.2
+
+---
+
+- **Fix: `set_battery_mode` service was a registered no-op (F-001/F-002):**
+  The VPP battery-mode write logic had been spliced into `get_register_data` by
+  mistake, leaving `set_battery_mode` as a function that only logged one line and
+  returned. The `_read()` closure and return payload belonging to `get_register_data`
+  had been appended to `sync_tou_schedule`, causing a runtime NameError on the
+  success path. All three function bodies restructured so each contains only its
+  own logic.
+
+- **Fix: `services.yaml` field mismatches corrected (F-006/F-007):**
+  Three phantom services (`read_inverter_data`, `test_connection`,
+  `update_register_map`) removed — they were documented but never registered.
+  `set_battery_mode` fields restored (`device_id` selector + `mode` + `power_percent`).
+  `write_registers` fields corrected (`register` + `values`).
+  `sync_tou_schedule` no longer has orphaned `write_registers` fields at the end.
+
+- **Fix: Holding register reads omitted slave/unit ID (F-003):**
+  `read_holding_registers()` now passes `slave_id` using the same try/except
+  compatibility fallback (`slave=`, `unit=`, positional) already used by
+  `read_input_registers`. Five direct `client.client.read_holding_registers()`
+  calls in `auto_detection.py` switched to the wrapper method.
+
+- **Fix: WIT cooldown timestamp set before write (F-005):**
+  `_wit_control_last_write[register]` is now updated only after a confirmed
+  successful write. Previously a failed write would still block subsequent
+  writes for the full 30-second cooldown.
+
+- **Fix: Binary sensor online state now uses `coordinator.is_online` (F-018):**
+  Replaced the 5-minute `timedelta` heuristic with the coordinator's authoritative
+  `is_online` property, keeping inverter connection state consistent across all
+  platform entities.
+
+- **Fix: Duplicate `modbus_client` property removed from coordinator (F-021):**
+  The property was defined twice in `GrowattModbusCoordinator`; the second
+  definition shadowed the first silently.
+
+- **Fix: Explicit `disconnect()` added to entry unload path (F-022):**
+  `async_unload_entry` now calls `coordinator.modbus_client.disconnect()` via
+  executor before removing the coordinator from `hass.data`. Prevents file
+  descriptor leaks on integration reload.
+
+- **Docs: `battery-scheduling.md` service examples corrected (F-008):**
+  Two `read_register` YAML examples used `register_address` and `count` which
+  are not part of the service schema. Fixed to `register`; `count` removed;
+  `device_id` moved into `data` block.
+
+- **Feat (Issue #282): WIT holding registers 235–238 exposed as read-only diagnostic sensors:**
+  `ntognd_detect` (235), `nonstd_vac_enable` (236), `enable_spec_set` (237), and
+  `fast_mppt_enable` (238) are now readable as diagnostic sensors on the Inverter device.
+  All four are **read-only** in this integration regardless of the hardware's write
+  capability. Registers 235–238 control safety-critical grid-protection and inverter
+  behaviour (N-to-GND detection, non-standard grid voltage thresholds, regional spec
+  flags, and MPPT aggressiveness). Writing incorrect values can cause grid-code
+  violations, hardware damage, or void certification. All four entities are
+  `disabled_by_default` and require explicit opt-in to surface in the UI.
+
+- **Fix (Issue #131): `grid_first_discharge_power_rate` range corrected to 1–100%:**
+  Register 3036 (Grid First discharge power rate on MOD TL3-XH) was documented
+  as 1–255 in the protocol sheet but user-confirmed to be a percentage — values
+  above 100 produce an unknown error response from the inverter. The number entity
+  range is now clamped to 1–100% to prevent out-of-range writes.
+
+---
+
 ## v0.8.1
 
 ---
