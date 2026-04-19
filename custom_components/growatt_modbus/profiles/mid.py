@@ -101,6 +101,12 @@ MID_15000_25000TL3_X = {
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW'},
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW'},
         30: {'name': 'modbus_address', 'scale': 1, 'unit': '', 'access': 'RW'},
+
+        # Safety/compliance diagnostic registers (read-only, Issue #282)
+        235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},
+        236: {'name': 'nonstd_vac_enable', 'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Grade1, 2=Grade2 — non-standard VAC'},
+        237: {'name': 'enable_spec_set',   'scale': 1, 'unit': '', 'access': 'R', 'desc': 'Regional spec bitmask (Bit0=Hungary)'},
+        238: {'name': 'fast_mppt_enable',  'scale': 1, 'unit': '', 'access': 'R', 'desc': '0-2 — fast MPPT (Reserved)'},
     }
 }
 

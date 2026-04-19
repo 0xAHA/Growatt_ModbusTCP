@@ -393,6 +393,12 @@ MOD_6000_15000TL3_XH = {
                'desc': 'TOU Period 9 start: bit15=enable, bit13-14=priority, bit8-12=hour, bit0-7=min'},
         3059: {'name': 'mod_tou_9_end',   'scale': 1, 'unit': '', 'access': 'RW',
                'desc': 'TOU Period 9 end: bit8-12=hour, bit0-7=min'},
+
+        # Safety/compliance diagnostic registers (read-only, Issue #282)
+        235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},
+        236: {'name': 'nonstd_vac_enable', 'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Grade1, 2=Grade2 — non-standard VAC'},
+        237: {'name': 'enable_spec_set',   'scale': 1, 'unit': '', 'access': 'R', 'desc': 'Regional spec bitmask (Bit0=Hungary)'},
+        238: {'name': 'fast_mppt_enable',  'scale': 1, 'unit': '', 'access': 'R', 'desc': '0-2 — fast MPPT (Reserved)'},
     }
 }
 
@@ -508,6 +514,12 @@ MOD_6000_15000TL3_X = {
             'valid_range': (0, 1000),
             'note': '0=0%, 1000=100.0%'
         },
+
+        # Safety/compliance diagnostic registers (read-only, Issue #282)
+        235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},
+        236: {'name': 'nonstd_vac_enable', 'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Grade1, 2=Grade2 — non-standard VAC'},
+        237: {'name': 'enable_spec_set',   'scale': 1, 'unit': '', 'access': 'R', 'desc': 'Regional spec bitmask (Bit0=Hungary)'},
+        238: {'name': 'fast_mppt_enable',  'scale': 1, 'unit': '', 'access': 'R', 'desc': '0-2 — fast MPPT (Reserved)'},
     }
 }
 
