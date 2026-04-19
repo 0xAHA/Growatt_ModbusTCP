@@ -6,6 +6,12 @@
 
 ---
 
+## v0.8.1
+
+- **Fix (Issue #228):** Daily energy spike at inverter startup eliminated. The midnight 32-bit register reset briefly produced garbage readings (e.g. 79 kWh) that were stored as the day's retained total. A 20 kWh/poll spike guard now rejects these with a WARNING log entry.
+
+---
+
 ## v0.8.0
 
 - **Fix (Issue #228):** MOD TL3-XH battery voltage scale corrected from `0.01` to `0.1`. Hardware operates at 600–950 V — the previous scale overflows a 16-bit register above 655 V, producing readings ~10× too low (e.g. 73 V instead of 733 V).

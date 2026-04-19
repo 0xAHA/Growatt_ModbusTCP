@@ -4,6 +4,23 @@
 
 ---
 
+## v0.8.1
+
+---
+
+- **Fix: Daily energy spike at inverter startup eliminated (Issue #228):**
+  Some inverters write 32-bit register pairs as two separate 16-bit writes.
+  During the midnight daily counter reset, reading the pair mid-write produces
+  a transient garbage value (e.g. 79 kWh when the true value should be ~0 kWh).
+  The coordinator's `_protect_energy_totals` function previously accepted any
+  positive reading unconditionally, so the garbage value was stored as the
+  day's retained total, causing the sensor to stay at that spike value.
+  Added a rate-of-change guard: any daily counter jump larger than 20 kWh in
+  a single poll is rejected with a WARNING log entry. The 20 kWh threshold
+  is safe for any poll interval and any residential or commercial system size.
+
+---
+
 ## v0.8.0
 
 ---

@@ -245,7 +245,7 @@
 | 236 | NonStdVac Enable | Enable/Disable Nonstandard Grid voltage range | W |
 | 237 | EnableSpe cSet | Disablse/enable appointed spec setting | W |
 | 238 | Fast MPPT enable | About Fast mppt |  |
-| 239 | reg_239 |  |  |
+| 239 | --- | --- | --- | --- |
 | 240 | Check Step |  | W |
 | 241 | INV-Lng | Inverter Longitude | W |
 | 242 | INV-Lat | Inverter Latitude | W |
@@ -445,7 +445,7 @@
 | 1033 | Grid First Stop Time 6 | High eight:hours Low eight: minutes |  |
 | 1034 | Grid First Stop Switch 6 | Enable:1 Disable:0 |  |
 | 1035 | Bat First Start Time 4 | High eight:hours Low eight: minutes |  |
-| 1036 | reg_1036 |  |  |
+| 1036 | --- | --- | --- | --- |
 | 1037 | bCTMode | Use the CTMode to Choose RFCT \ Cable CT\METER | W |
 | 1038 | CTAdjust | CTAdjust enable | W |
 | 1044 | Priority | ForceChrEn/ForceD ischrEn Load first/bat first /grid first | R |
@@ -468,7 +468,7 @@
 | 1086 | Grid First Start Time 3 | High eight bit:hour Low eight bit:minute |  |
 | 1087 | Grid First Stop Time 3 | High eight bit:hour Low eight bit:minute |  |
 | 1088 | Grid First Stop Switch 3 | Enable :1 Disable:0 |  |
-| 1089 | reg_1089 |  |  |
+| 1089 | --- | --- | --- | --- |
 | 1090 | BatFirstPo werRate | Charge Power Rate when Bat First |  |
 | 1091 | wBatFirst stop SOC | Stop Charge soc when Bat First |  |
 | 1092 | AC charge Switch | When Bat First Enable:1 Disable:0 |  |
@@ -481,7 +481,7 @@
 | 1106 | Bat First Start Time 3 | High eight bit:hour Low eight bit:minute |  |
 | 1107 | Bat First Stop Time 3 | High eight bit:hour Low eight bit:minute |  |
 | 1108 | BatFirston /off Switch 3 | Enable :1 Disable:0 |  |
-| 1109 | reg_1109 |  |  |
+| 1109 | --- | --- | --- | --- |
 | 1110 | Load First Start Time 1 | High eight bit:hour Low eight bit:minute |  |
 | 1111 | Load First Stop Time 1 | High eight bit:hour Low eight bit:minute |  |
 | 1112 | Load First Switch 1 | Enable :1 Disable:0 |  |
@@ -548,27 +548,27 @@
 | 3036 | GridFirstDi schargePo werRate | Discharge Power Rate when Grid First |  |
 | 3037 | GridFirstSt opSOC | Stop Discharge soc when Grid First |  |
 | 3038 | Time 1(xh) | Period 1: [Start Time ~ End Time], [Charge/Discharge], [Disable/Enable] 3038 enable, charge and discharge, start time, end time 3039 |  |
-| 3039 | reg_3039 |  |  |
+| 3039 | --- | --- | --- | --- |
 | 3040 | Time 2(xh) | Time period 2: [start time ~ end time], [charge / discharge], [disable / enable] 3040 enable, charge and discharge, start time, 3041 end time |  |
-| 3041 | reg_3041 |  |  |
+| 3041 | --- | --- | --- | --- |
 | 3042 | Time 3(xh) | With Time1 |  |
-| 3043 | reg_3043 |  |  |
+| 3043 | --- | --- | --- | --- |
 | 3044 | Time 4(xh) | With Time1 |  |
-| 3045 | reg_3045 |  |  |
+| 3045 | --- | --- | --- | --- |
 | 3046 | INVHWVer sion | US inverter hardware version |  |
 | 3047 | BatFirstPo werRate | Charge Power Rate when Bat First |  |
 | 3048 | wBatFirst stop SOC | Stop Charge soc when Bat First |  |
 | 3049 | AcChargeE nable | AcChargeEnable |  |
 | 3050 | Time 5(xh) | With Time1 |  |
-| 3051 | reg_3051 |  |  |
+| 3051 | --- | --- | --- | --- |
 | 3052 | Time 6(xh) | With Time1 |  |
-| 3053 | reg_3053 |  |  |
+| 3053 | --- | --- | --- | --- |
 | 3054 | Time 7(xh) | With Time1 |  |
-| 3055 | reg_3055 |  |  |
+| 3055 | --- | --- | --- | --- |
 | 3056 | Time 8(xh) | With Time1 |  |
-| 3057 | reg_3057 |  |  |
+| 3057 | --- | --- | --- | --- |
 | 3058 | Time 9(xh) | With Time1 |  |
-| 3059 | reg_3059 | Reserve |  |
+| 3059 | --- | --- | --- | --- |
 | 3067 | OnGridGri dFirstStop SOC | Stop Discharge soc when Grid First and on-grid Reserve |  |
 | 3070 | BatteryTyp e | Battery type choose of buck-boost input |  |
 | 3071 | BatMdlSer ia/ParalNu m | BatMdlSeria/ParalNum The upper 8 bits indicate the number of series segments; The lower 8 bits indicate the number of parallel sections; |  |
@@ -596,10 +596,10 @@
 | 3094 | Serial No. 8 | Serial Number 15-16 |  |
 | 3095 | BdcResetC md | BDC Reset command |  |
 | 3096 | ARKM3 Code | BDCMonitoring software code |  |
-| 3097 | reg_3097 |  |  |
+| 3097 | --- | --- | --- | --- |
 | 3098 | DTC | DTC |  |
 | 3099 | FW Code | DSP software code |  |
-| 3100 | reg_3100 |  |  |
+| 3100 | --- | --- | --- | --- |
 | 3101 | Processor1 FW Vision | DSP Software Version |  |
 | 3102 | BusVoltRef | Minimum BUS voltage for charging and discharging batteries |  |
 | 3103 | ARKM3Ver | BDC monitoring software version |  |
@@ -616,7 +616,7 @@
 | 3114 | uwCertific ationVer | BDC CertificationVer |  |
 | 3115 | BDCHardw areVersion | BDC hardware version number |  |
 | 3116 | BCUSoftw areVer | BCU software code |  |
-| 3117 | reg_3117 |  |  |
+| 3117 | --- | --- | --- | --- |
 | 3118 | HistoricalF aultNum | Historical fault number |  |
 | 3119 | RatedCellC apacity | Cell rated capacity |  |
 | 3120 | BDCNumA ndBatNum | BDC number and number of battery modules in parallel Bit15 to bit13: indicates the number of the BDC in the range [1-4]. Bit12 to bit10: reserved Bit7~bit0: Parallel number of battery modules range[1,25] |  |
@@ -627,13 +627,13 @@
 | 3127 | Time Month3 | Use with Time19-27（us） ,Add month time |  |
 | 3128 | Time Month4 | Use with Time28-36（us） ,Add month time |  |
 | 3129 | Time 1 （us） | time1:[starttime~endtime] |  |
-| 3130 | reg_3130 | Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above |  |
+| 3130 | --- | --- | --- | --- |
 | 3201 | SpecialDay 1 | SpecialDay1（month,Day） |  |
 | 3202 | SpecialDay 1_Time1 | Start time |  |
-| 3203 | reg_3203 | endtime Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above |  |
+| 3203 | --- | --- | --- | --- |
 | 3220 | SpecialDay 2 | SpecialDay2（month,Day） |  |
 | 3221 | SpecialDay 2_Time1 | Start time |  |
-| 3222 | reg_3222 | endtime Same as above Same as above Same as above Same as above Same as above Same as above Same as above Same as above Reserve |  |
+| 3222 | --- | --- | --- | --- |
 | 3250 | bBoxData UploadFla g | Backup box Data Upload Flag |  |
 | 3251 | uwFirmwa reCode_H | Backup box firmware code |  |
 | 3252 | uwFirmwa reCode_L |  |  |
@@ -670,10 +670,10 @@
 | 5406 | Serial No. 7 |  |  |
 | 5407 | Serial No. 8 |  |  |
 | 5408 | BatDSPCode |  |  |
-| 5409 | reg_5409 |  |  |
+| 5409 | --- | --- | --- | --- |
 | 5410 | BatDSPVersio n |  |  |
 | 5411 | BatMCUCode |  |  |
-| 5412 | reg_5412 |  |  |
+| 5412 | --- | --- | --- | --- |
 | 5413 | BatMCUVersi on |  |  |
 | 5414 | BatManufact urerInfor |  |  |
 | 5415 | BatNumber |  |  |
@@ -703,1119 +703,1000 @@
 | 8564 | uwSerialNum4 |  |  |
 | 8565 | uwSerialNum5 |  |  |
 | 8566 | uwSerialNum6 |  |  |
-| 8567 | reg_8567 |  |  |
-| 8568 | reg_8568 |  |  |
-| 8569 | reg_8569 |  |  |
-| 8570 | reg_8570 |  |  |
-| 8571 | reg_8571 |  |  |
-| 8572 | reg_8572 |  |  |
-| 8573 | reg_8573 |  |  |
-| 8574 | reg_8574 |  |  |
+| 8567 | --- | --- | --- | --- |
+| 8568 | --- | --- | --- | --- |
+| 8569 | --- | --- | --- | --- |
+| 8570 | --- | --- | --- | --- |
+| 8571 | --- | --- | --- | --- |
+| 8572 | --- | --- | --- | --- |
+| 8573 | --- | --- | --- | --- |
+| 8574 | --- | --- | --- | --- |
 
 ---
 
-## Input Registers (1092 registers)
+## Input Registers
 
-| Address | Name | Description | Access |
-| --- | --- | --- | --- |
-| *First group* |  |  |  |
-| 0 | reg_0 |  |  |
-| 1 | reg_1 |  |  |
-| 2 | reg_2 |  |  |
-| 3 | reg_3 |  |  |
-| 4 | reg_4 |  |  |
-| 5 | reg_5 |  |  |
-| 6 | reg_6 |  |  |
-| 7 | reg_7 |  |  |
-| 8 | reg_8 |  |  |
-| 9 | reg_9 |  |  |
-| 10 | reg_10 |  |  |
-| 11 | reg_11 |  |  |
-| 12 | reg_12 |  |  |
-| 13 | reg_13 |  |  |
-| 14 | reg_14 |  |  |
-| 15 | reg_15 |  |  |
-| 16 | reg_16 |  |  |
-| 17 | reg_17 |  |  |
-| 18 | reg_18 |  |  |
-| 19 | reg_19 |  |  |
-| 20 | reg_20 |  |  |
-| 21 | reg_21 |  |  |
-| 22 | reg_22 |  |  |
-| 23 | reg_23 |  |  |
-| 24 | reg_24 |  |  |
-| 25 | reg_25 |  |  |
-| 26 | reg_26 |  |  |
-| 27 | reg_27 |  |  |
-| 28 | reg_28 |  |  |
-| 29 | reg_29 |  |  |
-| 30 | reg_30 |  |  |
-| 31 | reg_31 |  |  |
-| 32 | reg_32 |  |  |
-| 33 | reg_33 |  |  |
-| 34 | reg_34 |  |  |
-| 35 | reg_35 |  |  |
-| 36 | reg_36 |  |  |
-| 37 | reg_37 |  |  |
-| 38 | reg_38 |  |  |
-| 39 | reg_39 |  |  |
-| 40 | reg_40 |  |  |
-| 41 | reg_41 |  |  |
-| 42 | reg_42 |  |  |
-| 43 | reg_43 |  |  |
-| 44 | reg_44 |  |  |
-| 45 | reg_45 |  |  |
-| 46 | reg_46 |  |  |
-| 47 | reg_47 |  |  |
-| 48 | reg_48 |  |  |
-| 49 | reg_49 |  |  |
-| 50 | reg_50 |  |  |
-| 51 | reg_51 |  |  |
-| 52 | reg_52 |  |  |
-| 53 | reg_53 |  |  |
-| 54 | reg_54 |  |  |
-| 55 | reg_55 |  |  |
-| 56 | reg_56 |  |  |
-| 57 | reg_57 |  |  |
-| 58 | reg_58 |  |  |
-| 59 | reg_59 |  |  |
-| 60 | reg_60 |  |  |
-| 61 | reg_61 |  |  |
-| 62 | reg_62 |  |  |
-| 63 | reg_63 |  |  |
-| 64 | reg_64 |  |  |
-| 65 | reg_65 |  |  |
-| 66 | reg_66 |  |  |
-| 67 | reg_67 |  |  |
-| 68 | reg_68 |  |  |
-| 69 | reg_69 |  |  |
-| 70 | reg_70 |  |  |
-| 71 | reg_71 |  |  |
-| 72 | reg_72 |  |  |
-| 73 | reg_73 |  |  |
-| 74 | reg_74 |  |  |
-| 75 | reg_75 |  |  |
-| 76 | reg_76 |  |  |
-| 77 | reg_77 |  |  |
-| 78 | reg_78 |  |  |
-| 79 | reg_79 |  |  |
-| 80 | reg_80 |  |  |
-| 81 | reg_81 |  |  |
-| 82 | reg_82 |  |  |
-| 83 | reg_83 |  |  |
-| 84 | reg_84 |  |  |
-| 85 | reg_85 |  |  |
-| 86 | reg_86 |  |  |
-| 87 | reg_87 |  |  |
-| 88 | reg_88 |  |  |
-| 89 | reg_89 |  |  |
-| 90 | reg_90 |  |  |
-| 91 | reg_91 |  |  |
-| 92 | reg_92 |  |  |
-| 93 | reg_93 |  |  |
-| 94 | reg_94 |  |  |
-| 95 | reg_95 |  |  |
-| 96 | reg_96 |  |  |
-| 97 | reg_97 |  |  |
-| 98 | reg_98 |  |  |
-| 99 | reg_99 |  |  |
-| 100 | reg_100 |  |  |
-| 101 | reg_101 |  |  |
-| 102 | reg_102 |  |  |
-| 103 | reg_103 |  |  |
-| 104 | reg_104 |  |  |
-| 105 | reg_105 |  |  |
-| 106 | reg_106 |  |  |
-| 107 | reg_107 |  |  |
-| 108 | reg_108 |  |  |
-| 109 | reg_109 |  |  |
-| 110 | reg_110 |  |  |
-| 111 | reg_111 |  |  |
-| 112 | reg_112 |  |  |
-| 113 | reg_113 |  |  |
-| 114 | reg_114 |  |  |
-| 115 | reg_115 |  |  |
-| 116 | reg_116 |  |  |
-| 117 | reg_117 |  |  |
-| 118 | reg_118 |  |  |
-| 119 | reg_119 |  |  |
-| 120 | reg_120 |  |  |
-| 124 | reg_124 |  |  |
-| *Second group* |  |  |  |
-| 125 | reg_125 |  |  |
-| 126 | reg_126 |  |  |
-| 127 | reg_127 |  |  |
-| 128 | reg_128 |  |  |
-| 129 | reg_129 |  |  |
-| 130 | reg_130 |  |  |
-| 131 | reg_131 |  |  |
-| 132 | reg_132 |  |  |
-| 133 | reg_133 |  |  |
-| 134 | reg_134 |  |  |
-| 135 | reg_135 |  |  |
-| 136 | reg_136 |  |  |
-| 137 | reg_137 |  |  |
-| 138 | reg_138 |  |  |
-| 139 | reg_139 |  |  |
-| 140 | reg_140 |  |  |
-| 141 | reg_141 |  |  |
-| 142 | reg_142 |  |  |
-| 143 | reg_143 |  |  |
-| 144 | reg_144 |  |  |
-| 145 | reg_145 |  |  |
-| 146 | reg_146 |  |  |
-| 147 | reg_147 |  |  |
-| 148 | reg_148 |  |  |
-| 149 | reg_149 |  |  |
-| 150 | reg_150 |  |  |
-| 151 | reg_151 |  |  |
-| 152 | reg_152 |  |  |
-| 153 | reg_153 |  |  |
-| 154 | reg_154 |  |  |
-| 155 | reg_155 |  |  |
-| 156 | reg_156 |  |  |
-| 157 | reg_157 |  |  |
-| 158 | reg_158 |  |  |
-| 159 | reg_159 |  |  |
-| 160 | reg_160 |  |  |
-| 161 | reg_161 |  |  |
-| 162 | reg_162 |  |  |
-| 163 | reg_163 |  |  |
-| 164 | reg_164 |  |  |
-| 165 | reg_165 |  |  |
-| 166 | reg_166 |  |  |
-| 167 | reg_167 |  |  |
-| 168 | reg_168 |  |  |
-| 169 | reg_169 |  |  |
-| 170 | reg_170 |  |  |
-| 171 | reg_171 |  |  |
-| 172 | reg_172 |  |  |
-| 173 | reg_173 |  |  |
-| 174 | reg_174 |  |  |
-| 175 | reg_175 |  |  |
-| 176 | reg_176 |  |  |
-| 177 | reg_177 |  |  |
-| 178 | reg_178 |  |  |
-| 179 | reg_179 |  |  |
-| 180 | reg_180 |  |  |
-| 181 | reg_181 |  |  |
-| 182 | reg_182 |  |  |
-| 183 | reg_183 |  |  |
-| 184 | reg_184 |  |  |
-| 185 | reg_185 |  |  |
-| 186 | reg_186 |  |  |
-| 187 | reg_187 |  |  |
-| 188 | reg_188 |  |  |
-| 189 | reg_189 |  |  |
-| 190 | reg_190 |  |  |
-| 191 | reg_191 |  |  |
-| 192 | reg_192 |  |  |
-| 193 | reg_193 |  |  |
-| 194 | reg_194 |  |  |
-| 195 | reg_195 |  |  |
-| 196 | reg_196 |  |  |
-| 197 | reg_197 |  |  |
-| 198 | reg_198 |  |  |
-| 199 | reg_199 |  |  |
-| 200 | reg_200 |  |  |
-| 201 | reg_201 |  |  |
-| 202 | reg_202 |  |  |
-| 203 | reg_203 |  |  |
-| 204 | reg_204 |  |  |
-| 205 | reg_205 |  |  |
-| 206 | reg_206 |  |  |
-| 207 | reg_207 |  |  |
-| 208 | reg_208 |  |  |
-| 209 | reg_209 |  |  |
-| 210 | reg_210 |  |  |
-| 211 | reg_211 |  |  |
-| 212 | reg_212 |  |  |
-| 213 | reg_213 |  |  |
-| 214 | reg_214 |  |  |
-| 215 | reg_215 |  |  |
-| 216 | reg_216 |  |  |
-| 217 | reg_217 |  |  |
-| 218 | reg_218 |  |  |
-| 219 | reg_219 |  |  |
-| 220 | reg_220 |  |  |
-| 221 | reg_221 |  |  |
-| 222 | reg_222 |  |  |
-| 223 | reg_223 |  |  |
-| 224 | reg_224 |  |  |
-| 225 | reg_225 |  |  |
-| 226 | reg_226 |  |  |
-| 227 | reg_227 |  |  |
-| 228 | reg_228 |  |  |
-| 229 | reg_229 |  |  |
-| 230 | reg_230 |  |  |
-| 231 | reg_231 |  |  |
-| 232 | reg_232 |  |  |
-| 233 | reg_233 |  |  |
-| 234 | reg_234 |  |  |
-| 235 | reg_235 |  |  |
-| 236 | reg_236 |  |  |
-| 237 | reg_237 |  |  |
-| 238 | reg_238 |  |  |
-| 239 | reg_239 |  |  |
-| 240 | reg_240 |  |  |
-| 241 | reg_241 |  |  |
-| 242 | reg_242 |  |  |
-| 243 | reg_243 |  |  |
-| 244 | reg_244 |  |  |
-| 245 | reg_245 |  |  |
-| 246 | reg_246 |  |  |
-| 247 | reg_247 |  |  |
-| 248 | reg_248 |  |  |
-| 249 | reg_249 |  |  |
-| *The eighth group for PV9-PV16 information* |  |  |  |
-| 875 | reg_875 |  |  |
-| 876 | reg_876 |  |  |
-| 877 | reg_877 |  |  |
-| 878 | reg_878 |  |  |
-| 879 | reg_879 |  |  |
-| 880 | reg_880 |  |  |
-| 881 | reg_881 |  |  |
-| 882 | reg_882 |  |  |
-| 883 | reg_883 |  |  |
-| 884 | reg_884 |  |  |
-| 885 | reg_885 |  |  |
-| 886 | reg_886 |  |  |
-| 887 | reg_887 |  |  |
-| 888 | reg_888 |  |  |
-| 889 | reg_889 |  |  |
-| 890 | reg_890 |  |  |
-| 891 | reg_891 |  |  |
-| 892 | reg_892 |  |  |
-| 893 | reg_893 |  |  |
-| 894 | reg_894 |  |  |
-| 895 | reg_895 |  |  |
-| 896 | reg_896 |  |  |
-| 897 | reg_897 |  |  |
-| 898 | reg_898 |  |  |
-| 899 | reg_899 |  |  |
-| 900 | reg_900 |  |  |
-| 901 | reg_901 |  |  |
-| 902 | reg_902 |  |  |
-| 903 | reg_903 |  |  |
-| 904 | reg_904 |  |  |
-| 905 | reg_905 |  |  |
-| 906 | reg_906 |  |  |
-| 907 | reg_907 |  |  |
-| 908 | reg_908 |  |  |
-| 909 | reg_909 |  |  |
-| 910 | reg_910 |  |  |
-| 911 | reg_911 |  |  |
-| 912 | reg_912 |  |  |
-| 913 | reg_913 |  |  |
-| 914 | reg_914 |  |  |
-| 915 | reg_915 |  |  |
-| 916 | reg_916 |  |  |
-| 917 | reg_917 |  |  |
-| 918 | reg_918 |  |  |
-| 919 | reg_919 |  |  |
-| 920 | reg_920 |  |  |
-| 921 | reg_921 |  |  |
-| 922 | reg_922 |  |  |
-| 923 | reg_923 |  |  |
-| 924 | reg_924 |  |  |
-| 925 | reg_925 |  |  |
-| 926 | reg_926 |  |  |
-| 927 | reg_927 |  |  |
-| 928 | reg_928 |  |  |
-| 929 | reg_929 |  |  |
-| 930 | reg_930 |  |  |
-| 931 | reg_931 |  |  |
-| 932 | reg_932 |  |  |
-| 933 | reg_933 |  |  |
-| 934 | reg_934 |  |  |
-| 935 | reg_935 |  |  |
-| 936 | reg_936 |  |  |
-| 937 | reg_937 |  |  |
-| 938 | reg_938 |  |  |
-| 939 | reg_939 |  |  |
-| 940 | reg_940 |  |  |
-| 941 | reg_941 |  |  |
-| 942 | reg_942 |  |  |
-| 943 | reg_943 |  |  |
-| 944 | reg_944 |  |  |
-| 945 | reg_945 |  |  |
-| 946 | reg_946 |  |  |
-| 947 | reg_947 |  |  |
-| 948 | reg_948 |  |  |
-| 949 | reg_949 |  |  |
-| 950 | reg_950 |  |  |
-| 951 | reg_951 |  |  |
-| 952 | reg_952 |  |  |
-| 953 | reg_953 |  |  |
-| 954 | reg_954 |  |  |
-| 955 | reg_955 |  |  |
-| 956 | reg_956 |  |  |
-| 957 | reg_957 |  |  |
-| 958 | reg_958 |  |  |
-| 959 | reg_959 |  |  |
-| 960 | reg_960 |  |  |
-| 961 | reg_961 |  |  |
-| 962 | reg_962 |  |  |
-| 963 | reg_963 |  |  |
-| 964 | reg_964 |  |  |
-| 965 | reg_965 |  |  |
-| 966 | reg_966 |  |  |
-| 967 | reg_967 |  |  |
-| 968 | reg_968 |  |  |
-| 969 | reg_969 |  |  |
-| 970 | reg_970 |  |  |
-| 971 | reg_971 |  |  |
-| 972 | reg_972 |  |  |
-| 973 | reg_973 |  |  |
-| 974 | reg_974 |  |  |
-| 975 | reg_975 |  |  |
-| 976 | reg_976 |  |  |
-| 977 | reg_977 |  |  |
-| 978 | reg_978 |  |  |
-| 979 | reg_979 |  |  |
-| 980 | reg_980 |  |  |
-| 981 | reg_981 |  |  |
-| 982 | reg_982 |  |  |
-| 983 | reg_983 |  |  |
-| 984 | reg_984 |  |  |
-| 985 | reg_985 |  |  |
-| 986 | reg_986 |  |  |
-| 987 | reg_987 |  |  |
-| 988 | reg_988 |  |  |
-| 989 | reg_989 |  |  |
-| 990 | reg_990 |  |  |
-| 991 | reg_991 |  |  |
-| 992 | reg_992 |  |  |
-| 999 | reg_999 |  |  |
-| *Ninth group for Storage power* |  |  |  |
-| 1000 | reg_1000 |  |  |
-| 1001 | reg_1001 |  |  |
-| 1002 | reg_1002 |  |  |
-| 1003 | reg_1003 |  |  |
-| 1004 | reg_1004 |  |  |
-| 1005 | reg_1005 |  |  |
-| 1006 | reg_1006 |  |  |
-| 1007 | reg_1007 |  |  |
-| 1008 | reg_1008 |  |  |
-| 1009 | reg_1009 |  |  |
-| 1010 | reg_1010 |  |  |
-| 1011 | reg_1011 |  |  |
-| 1012 | reg_1012 |  |  |
-| 1013 | reg_1013 |  |  |
-| 1014 | reg_1014 |  |  |
-| 1015 | reg_1015 |  |  |
-| 1016 | reg_1016 |  |  |
-| 1017 | reg_1017 |  |  |
-| 1018 | reg_1018 |  |  |
-| 1019 | reg_1019 |  |  |
-| 1020 | reg_1020 |  |  |
-| 1021 | reg_1021 |  |  |
-| 1022 | reg_1022 |  |  |
-| 1023 | reg_1023 |  |  |
-| 1024 | reg_1024 |  |  |
-| 1025 | reg_1025 |  |  |
-| 1026 | reg_1026 |  |  |
-| 1027 | reg_1027 |  |  |
-| 1028 | reg_1028 |  |  |
-| 1029 | reg_1029 |  |  |
-| 1030 | reg_1030 |  |  |
-| 1031 | reg_1031 |  |  |
-| 1032 | reg_1032 |  |  |
-| 1033 | reg_1033 |  |  |
-| 1034 | reg_1034 |  |  |
-| 1035 | reg_1035 |  |  |
-| 1036 | reg_1036 |  |  |
-| 1037 | reg_1037 |  |  |
-| 1038 | reg_1038 |  |  |
-| 1039 | reg_1039 |  |  |
-| 1040 | reg_1040 |  |  |
-| 1041 | reg_1041 |  |  |
-| 1042 | reg_1042 |  |  |
-| 1043 | reg_1043 |  |  |
-| 1044 | reg_1044 |  |  |
-| 1045 | reg_1045 |  |  |
-| 1046 | reg_1046 |  |  |
-| 1047 | reg_1047 |  |  |
-| 1048 | reg_1048 |  |  |
-| 1049 | reg_1049 |  |  |
-| 1050 | reg_1050 |  |  |
-| 1051 | reg_1051 |  |  |
-| 1052 | reg_1052 |  |  |
-| 1053 | reg_1053 |  |  |
-| 1054 | reg_1054 |  |  |
-| 1055 | reg_1055 |  |  |
-| 1056 | reg_1056 |  |  |
-| 1057 | reg_1057 |  |  |
-| 1058 | reg_1058 |  |  |
-| 1059 | reg_1059 |  |  |
-| 1060 | reg_1060 |  |  |
-| 1061 | reg_1061 |  |  |
-| 1062 | reg_1062 |  |  |
-| 1063 | reg_1063 |  |  |
-| 1064 | reg_1064 |  |  |
-| 1065 | reg_1065 |  |  |
-| 1066 | reg_1066 |  |  |
-| 1067 | reg_1067 |  |  |
-| 1068 | reg_1068 |  |  |
-| 1069 | reg_1069 |  |  |
-| 1070 | reg_1070 |  |  |
-| 1071 | reg_1071 |  |  |
-| 1072 | reg_1072 |  |  |
-| 1073 | reg_1073 |  |  |
-| 1074 | reg_1074 |  |  |
-| 1075 | reg_1075 |  |  |
-| 1076 | reg_1076 |  |  |
-| 1077 | reg_1077 |  |  |
-| 1078 | reg_1078 |  |  |
-| 1079 | reg_1079 |  |  |
-| 1080 | reg_1080 |  |  |
-| 1081 | reg_1081 |  |  |
-| *BMS Infomation* |  |  |  |
-| 1082 | reg_1082 |  |  |
-| 1083 | reg_1083 |  |  |
-| 1084 | reg_1084 |  |  |
-| 1085 | reg_1085 |  |  |
-| 1086 | reg_1086 |  |  |
-| 1087 | reg_1087 |  |  |
-| 1088 | reg_1088 |  |  |
-| 1089 | reg_1089 |  |  |
-| 1090 | reg_1090 |  |  |
-| 1091 | reg_1091 |  |  |
-| 1092 | reg_1092 |  |  |
-| 1093 | reg_1093 |  |  |
-| 1094 | reg_1094 |  |  |
-| 1095 | reg_1095 |  |  |
-| 1096 | reg_1096 |  |  |
-| 1097 | reg_1097 |  |  |
-| 1098 | reg_1098 |  |  |
-| 1099 | reg_1099 |  |  |
-| 1100 | reg_1100 |  |  |
-| 1101 | reg_1101 |  |  |
-| 1102 | reg_1102 |  |  |
-| 1103 | reg_1103 |  |  |
-| 1104 | reg_1104 |  |  |
-| 1105 | reg_1105 |  |  |
-| 1106 | reg_1106 |  |  |
-| 1107 | reg_1107 |  |  |
-| 1108 | reg_1108 |  |  |
-| 1109 | reg_1109 |  |  |
-| 1110 | reg_1110 |  |  |
-| 1111 | reg_1111 |  |  |
-| 1112 | reg_1112 |  |  |
-| 1113 | reg_1113 |  |  |
-| 1114 | reg_1114 |  |  |
-| 1115 | reg_1115 |  |  |
-| 1116 | reg_1116 |  |  |
-| 1117 | reg_1117 |  |  |
-| 1118 | reg_1118 |  |  |
-| 1119 | reg_1119 |  |  |
-| 1120 | reg_1120 |  |  |
-| 1121 | reg_1121 |  |  |
-| 1122 | reg_1122 |  |  |
-| 1123 | reg_1123 |  |  |
-| 1124 | reg_1124 |  |  |
-| *Ninth group reserved for storage power* |  |  |  |
-| 1125 | reg_1125 |  |  |
-| 1126 | reg_1126 |  |  |
-| 1127 | reg_1127 |  |  |
-| 1128 | reg_1128 |  |  |
-| 1129 | reg_1129 |  |  |
-| 1130 | reg_1130 |  |  |
-| 1131 | reg_1131 |  |  |
-| 1132 | reg_1132 |  |  |
-| 1133 | reg_1133 |  |  |
-| 1134 | reg_1134 |  |  |
-| 1135 | reg_1135 |  |  |
-| 1136 | reg_1136 |  |  |
-| 1137 | reg_1137 |  |  |
-| 1138 | reg_1138 |  |  |
-| 1139 | reg_1139 |  |  |
-| 1140 | reg_1140 |  |  |
-| 1141 | reg_1141 |  |  |
-| 1142 | reg_1142 |  |  |
-| 1143 | reg_1143 |  |  |
-| 1144 | reg_1144 |  |  |
-| 1145 | reg_1145 |  |  |
-| 1146 | reg_1146 |  |  |
-| 1147 | reg_1147 |  |  |
-| 1148 | reg_1148 |  |  |
-| 1149 | reg_1149 |  |  |
-| 1150 | reg_1150 |  |  |
-| 1151 | reg_1151 |  |  |
-| 1152 | reg_1152 |  |  |
-| 1153 | reg_1153 |  |  |
-| 1154 | reg_1154 |  |  |
-| 1155 | reg_1155 |  |  |
-| 1156 | reg_1156 |  |  |
-| 1157 | reg_1157 |  |  |
-| 1158 | reg_1158 |  |  |
-| 1159 | reg_1159 |  |  |
-| 1160 | reg_1160 |  |  |
-| 1161 | reg_1161 |  |  |
-| 1162 | reg_1162 |  |  |
-| 1163 | reg_1163 |  |  |
-| 1164 | reg_1164 |  |  |
-| 1165 | reg_1165 |  |  |
-| 1166 | reg_1166 |  |  |
-| 1167 | reg_1167 |  |  |
-| 1168 | reg_1168 |  |  |
-| 1169 | reg_1169 |  |  |
-| 1170 | reg_1170 |  |  |
-| 1199 | reg_1199 |  |  |
-| 1200 | reg_1200 |  |  |
-| 1201 | reg_1201 |  |  |
-| 1202 | reg_1202 |  |  |
-| 1203 | reg_1203 |  |  |
-| 1204 | reg_1204 |  |  |
-| 1205 | reg_1205 |  |  |
-| 1206 | reg_1206 |  |  |
-| 1207 | reg_1207 |  |  |
-| 1208 | reg_1208 |  |  |
-| 1209 | reg_1209 |  |  |
-| 1210 | reg_1210 |  |  |
-| 1211 | reg_1211 |  |  |
-| 1212 | reg_1212 |  |  |
-| 1213 | reg_1213 |  |  |
-| 1214 | reg_1214 |  |  |
-| 1215 | reg_1215 |  |  |
-| 1216 | reg_1216 |  |  |
-| 1217 | reg_1217 |  |  |
-| 1218 | reg_1218 |  |  |
-| 1248 | reg_1248 |  |  |
-| 1249 | reg_1249 |  |  |
-| *thirteen group for Storage power’s SPA* |  |  |  |
-| 2000 | reg_2000 |  |  |
-| 2035 | reg_2035 |  |  |
-| 2036 | reg_2036 |  |  |
-| 2037 | reg_2037 |  |  |
-| 2038 | reg_2038 |  |  |
-| 2039 | reg_2039 |  |  |
-| 2040 | reg_2040 |  |  |
-| 2041 | reg_2041 |  |  |
-| 2053 | reg_2053 |  |  |
-| 2054 | reg_2054 |  |  |
-| 2055 | reg_2055 |  |  |
-| 2056 | reg_2056 |  |  |
-| 2057 | reg_2057 |  |  |
-| 2058 | reg_2058 |  |  |
-| 2093 | reg_2093 |  |  |
-| 2094 | reg_2094 |  |  |
-| 2095 | reg_2095 |  |  |
-| 2096 | reg_2096 |  |  |
-| 2097 | reg_2097 |  |  |
-| 2098 | reg_2098 |  |  |
-| 2099 | reg_2099 |  |  |
-| 2100 | reg_2100 |  |  |
-| 2101 | reg_2101 |  |  |
-| 2102 | reg_2102 |  |  |
-| 2103 | reg_2103 |  |  |
-| 2104 | reg_2104 |  |  |
-| 2105 | reg_2105 |  |  |
-| 2106 | reg_2106 |  |  |
-| 2107 | reg_2107 |  |  |
-| 2108 | reg_2108 |  |  |
-| 2109 | reg_2109 |  |  |
-| 2110 | reg_2110 |  |  |
-| 2111 | reg_2111 |  |  |
-| 2112 | reg_2112 |  |  |
-| 2113 | reg_2113 |  |  |
-| 2114 | reg_2114 |  |  |
-| 2115 | reg_2115 |  |  |
-| 2116 | reg_2116 |  |  |
-| 2117 | reg_2117 |  |  |
-| 2118 | reg_2118 |  |  |
-| 2119 | reg_2119 |  |  |
-| 2120 | reg_2120 |  |  |
-| 2124 | reg_2124 |  |  |
-| *Use for TL-X and TL-XH* |  |  |  |
-| 3000 | reg_3000 |  |  |
-| 3001 | reg_3001 |  |  |
-| 3002 | reg_3002 |  |  |
-| 3003 | reg_3003 |  |  |
-| 3004 | reg_3004 |  |  |
-| 3005 | reg_3005 |  |  |
-| 3006 | reg_3006 |  |  |
-| 3007 | reg_3007 |  |  |
-| 3008 | reg_3008 |  |  |
-| 3009 | reg_3009 |  |  |
-| 3010 | reg_3010 |  |  |
-| 3011 | reg_3011 |  |  |
-| 3012 | reg_3012 |  |  |
-| 3013 | reg_3013 |  |  |
-| 3014 | reg_3014 |  |  |
-| 3015 | reg_3015 |  |  |
-| 3016 | reg_3016 |  |  |
-| 3017 | reg_3017 |  |  |
-| 3018 | reg_3018 |  |  |
-| 3019 | reg_3019 |  |  |
-| 3020 | reg_3020 |  |  |
-| 3021 | reg_3021 |  |  |
-| 3022 | reg_3022 |  |  |
-| 3023 | reg_3023 |  |  |
-| 3024 | reg_3024 |  |  |
-| 3025 | reg_3025 |  |  |
-| 3026 | reg_3026 |  |  |
-| 3027 | reg_3027 |  |  |
-| 3028 | reg_3028 |  |  |
-| 3029 | reg_3029 |  |  |
-| 3030 | reg_3030 |  |  |
-| 3031 | reg_3031 |  |  |
-| 3032 | reg_3032 |  |  |
-| 3033 | reg_3033 |  |  |
-| 3034 | reg_3034 |  |  |
-| 3035 | reg_3035 |  |  |
-| 3036 | reg_3036 |  |  |
-| 3037 | reg_3037 |  |  |
-| 3038 | reg_3038 |  |  |
-| 3039 | reg_3039 |  |  |
-| 3040 | reg_3040 |  |  |
-| 3041 | reg_3041 |  |  |
-| 3042 | reg_3042 |  |  |
-| 3043 | reg_3043 |  |  |
-| 3044 | reg_3044 |  |  |
-| 3045 | reg_3045 |  |  |
-| 3046 | reg_3046 |  |  |
-| 3047 | reg_3047 |  |  |
-| 3048 | reg_3048 |  |  |
-| 3049 | reg_3049 |  |  |
-| 3050 | reg_3050 |  |  |
-| 3051 | reg_3051 |  |  |
-| 3052 | reg_3052 |  |  |
-| 3053 | reg_3053 |  |  |
-| 3054 | reg_3054 |  |  |
-| 3055 | reg_3055 |  |  |
-| 3056 | reg_3056 |  |  |
-| 3057 | reg_3057 |  |  |
-| 3058 | reg_3058 |  |  |
-| 3059 | reg_3059 |  |  |
-| 3060 | reg_3060 |  |  |
-| 3061 | reg_3061 |  |  |
-| 3062 | reg_3062 |  |  |
-| 3063 | reg_3063 |  |  |
-| 3064 | reg_3064 |  |  |
-| 3065 | reg_3065 |  |  |
-| 3066 | reg_3066 |  |  |
-| 3067 | reg_3067 |  |  |
-| 3068 | reg_3068 |  |  |
-| 3069 | reg_3069 |  |  |
-| 3070 | reg_3070 |  |  |
-| 3071 | reg_3071 |  |  |
-| 3072 | reg_3072 |  |  |
-| 3073 | reg_3073 |  |  |
-| 3074 | reg_3074 |  |  |
-| 3075 | reg_3075 |  |  |
-| 3076 | reg_3076 |  |  |
-| 3077 | reg_3077 |  |  |
-| 3078 | reg_3078 |  |  |
-| 3079 | reg_3079 |  |  |
-| 3080 | reg_3080 |  |  |
-| 3081 | reg_3081 |  |  |
-| 3082 | reg_3082 |  |  |
-| 3083 | reg_3083 |  |  |
-| 3084 | reg_3084 |  |  |
-| 3085 | reg_3085 |  |  |
-| 3086 | reg_3086 |  |  |
-| 3087 | reg_3087 |  |  |
-| 3088 | reg_3088 |  |  |
-| 3089 | reg_3089 |  |  |
-| 3090 | reg_3090 |  |  |
-| 3091 | reg_3091 |  |  |
-| 3092 | reg_3092 |  |  |
-| 3093 | reg_3093 |  |  |
-| 3094 | reg_3094 |  |  |
-| 3095 | reg_3095 |  |  |
-| 3096 | reg_3096 |  |  |
-| 3097 | reg_3097 |  |  |
-| 3098 | reg_3098 |  |  |
-| 3099 | reg_3099 |  |  |
-| 3100 | reg_3100 |  |  |
-| 3101 | reg_3101 |  |  |
-| 3102 | reg_3102 |  |  |
-| 3103 | reg_3103 |  |  |
-| 3104 | reg_3104 |  |  |
-| 3105 | reg_3105 |  |  |
-| 3106 | reg_3106 |  |  |
-| 3107 | reg_3107 |  |  |
-| 3108 | reg_3108 |  |  |
-| 3109 | reg_3109 |  |  |
-| 3110 | reg_3110 |  |  |
-| 3111 | reg_3111 |  |  |
-| 3112 | reg_3112 |  |  |
-| 3113 | reg_3113 |  |  |
-| 3114 | reg_3114 |  |  |
-| 3115 | reg_3115 |  |  |
-| 3116 | reg_3116 |  |  |
-| 3117 | reg_3117 |  |  |
-| 3118 | reg_3118 |  |  |
-| 3119 | reg_3119 |  |  |
-| 3120 | reg_3120 |  |  |
-| 3121 | reg_3121 |  |  |
-| 3122 | reg_3122 |  |  |
-| 3123 | reg_3123 |  |  |
-| 3124 | reg_3124 |  |  |
-| 3125 | reg_3125 |  |  |
-| 3126 | reg_3126 |  |  |
-| 3127 | reg_3127 |  |  |
-| 3128 | reg_3128 |  |  |
-| 3129 | reg_3129 |  |  |
-| 3130 | reg_3130 |  |  |
-| 3131 | reg_3131 |  |  |
-| 3132 | reg_3132 |  |  |
-| 3133 | reg_3133 |  |  |
-| 3134 | reg_3134 |  |  |
-| 3135 | reg_3135 |  |  |
-| 3136 | reg_3136 |  |  |
-| 3137 | reg_3137 |  |  |
-| 3138 | reg_3138 |  |  |
-| 3139 | reg_3139 |  |  |
-| 3140 | reg_3140 |  |  |
-| 3141 | reg_3141 |  |  |
-| 3142 | reg_3142 |  |  |
-| 3143 | reg_3143 |  |  |
-| 3144 | reg_3144 |  |  |
-| 3145 | reg_3145 |  |  |
-| 3146 | reg_3146 |  |  |
-| 3147 | reg_3147 |  |  |
-| 3148 | reg_3148 |  |  |
-| 3149 | reg_3149 |  |  |
-| 3150 | reg_3150 |  |  |
-| 3151 | reg_3151 |  |  |
-| 3152 | reg_3152 |  |  |
-| 3153 | reg_3153 |  |  |
-| 3154 | reg_3154 |  |  |
-| 3155 | reg_3155 |  |  |
-| 3156 | reg_3156 |  |  |
-| 3157 | reg_3157 |  |  |
-| 3158 | reg_3158 |  |  |
-| 3159 | reg_3159 |  |  |
-| 3160 | reg_3160 |  |  |
-| 3161 | reg_3161 |  |  |
-| 3162 | reg_3162 |  |  |
-| 3163 | reg_3163 |  |  |
-| 3164 | reg_3164 |  |  |
-| 3165 | reg_3165 |  |  |
-| 3166 | reg_3166 |  |  |
-| 3167 | reg_3167 |  |  |
-| 3168 | reg_3168 |  |  |
-| 3169 | reg_3169 |  |  |
-| 3170 | reg_3170 |  |  |
-| 3171 | reg_3171 |  |  |
-| 3172 | reg_3172 |  |  |
-| 3173 | reg_3173 |  |  |
-| 3174 | reg_3174 |  |  |
-| 3175 | reg_3175 |  |  |
-| 3176 | reg_3176 |  |  |
-| 3177 | reg_3177 |  |  |
-| 3178 | reg_3178 |  |  |
-| 3179 | reg_3179 |  |  |
-| 3180 | reg_3180 |  |  |
-| 3181 | reg_3181 |  |  |
-| 3182 | reg_3182 |  |  |
-| 3183 | reg_3183 |  |  |
-| 3184 | reg_3184 |  |  |
-| 3185 | reg_3185 |  |  |
-| 3186 | reg_3186 |  |  |
-| 3187 | reg_3187 |  |  |
-| 3188 | reg_3188 |  |  |
-| 3189 | reg_3189 |  |  |
-| 3190 | reg_3190 |  |  |
-| 3191 | reg_3191 |  |  |
-| 3192 | reg_3192 |  |  |
-| 3193 | reg_3193 |  |  |
-| 3194 | reg_3194 |  |  |
-| 3195 | reg_3195 |  |  |
-| 3196 | reg_3196 |  |  |
-| 3197 | reg_3197 |  |  |
-| 3198 | reg_3198 |  |  |
-| 3199 | reg_3199 |  |  |
-| 3200 | reg_3200 |  |  |
-| 3201 | reg_3201 |  |  |
-| 3202 | reg_3202 |  |  |
-| 3203 | reg_3203 |  |  |
-| 3204 | reg_3204 |  |  |
-| 3205 | reg_3205 |  |  |
-| 3206 | reg_3206 |  |  |
-| 3207 | reg_3207 |  |  |
-| 3208 | reg_3208 |  |  |
-| 3209 | reg_3209 |  |  |
-| 3210 | reg_3210 |  |  |
-| 3211 | reg_3211 |  |  |
-| 3212 | reg_3212 |  |  |
-| 3213 | reg_3213 |  |  |
-| 3214 | reg_3214 |  |  |
-| 3215 | reg_3215 |  |  |
-| 3216 | reg_3216 |  |  |
-| 3217 | reg_3217 |  |  |
-| 3218 | reg_3218 |  |  |
-| 3219 | reg_3219 |  |  |
-| 3220 | reg_3220 |  |  |
-| 3221 | reg_3221 |  |  |
-| 3222 | reg_3222 |  |  |
-| 3223 | reg_3223 |  |  |
-| 3224 | reg_3224 |  |  |
-| 3225 | reg_3225 |  |  |
-| 3226 | reg_3226 |  |  |
-| 3227 | reg_3227 |  |  |
-| 3228 | reg_3228 |  |  |
-| 3229 | reg_3229 |  |  |
-| 3230 | reg_3230 |  |  |
-| 3231 | reg_3231 |  |  |
-| 3232 | reg_3232 |  |  |
-| 3233 | reg_3233 |  |  |
-| 3234 | reg_3234 |  |  |
-| 3235 | reg_3235 |  |  |
-| 3236 | reg_3236 |  |  |
-| 3237 | reg_3237 |  |  |
-| 3238 | reg_3238 |  |  |
-| 3239 | reg_3239 |  |  |
-| 3240 | reg_3240 |  |  |
-| 3241 | reg_3241 |  |  |
-| 3242 | reg_3242 |  |  |
-| 3243 | reg_3243 |  |  |
-| 3244 | reg_3244 |  |  |
-| 3245 | reg_3245 |  |  |
-| 3246 | reg_3246 |  |  |
-| 3247 | reg_3247 |  |  |
-| 3248 | reg_3248 |  |  |
-| 3249 | reg_3249 |  |  |
-| 3250 | reg_3250 |  |  |
-| 3251 | reg_3251 |  |  |
-| 3252 | reg_3252 |  |  |
-| 3253 | reg_3253 |  |  |
-| 3254 | reg_3254 |  |  |
-| 3255 | reg_3255 |  |  |
-| 3256 | reg_3256 |  |  |
-| 3257 | reg_3257 |  |  |
-| 3258 | reg_3258 |  |  |
-| 3259 | reg_3259 |  |  |
-| 3260 | reg_3260 |  |  |
-| 3261 | reg_3261 |  |  |
-| 3262 | reg_3262 |  |  |
-| 3263 | reg_3263 |  |  |
-| 3264 | reg_3264 |  |  |
-| 3265 | reg_3265 |  |  |
-| 3266 | reg_3266 |  |  |
-| 3267 | reg_3267 |  |  |
-| 3268 | reg_3268 |  |  |
-| 3269 | reg_3269 |  |  |
-| 3270 | reg_3270 |  |  |
-| 3277 | reg_3277 |  |  |
-| 3278 | reg_3278 |  |  |
-| 3279 | reg_3279 |  |  |
-| 3280 | reg_3280 |  |  |
-| 3281 | reg_3281 |  |  |
-| 3282 | reg_3282 |  |  |
-| 3283 | reg_3283 |  |  |
-| 3284 | reg_3284 |  |  |
-| 3285 | reg_3285 |  |  |
-| 3286 | reg_3286 |  |  |
-| 3287 | reg_3287 |  |  |
-| 3288 | reg_3288 |  |  |
-| 3289 | reg_3289 |  |  |
-| 3290 | reg_3290 |  |  |
-| 3291 | reg_3291 |  |  |
-| 3292 | reg_3292 |  |  |
-| 3293 | reg_3293 |  |  |
-| 3294 | reg_3294 |  |  |
-| 3295 | reg_3295 |  |  |
-| 3296 | reg_3296 |  |  |
-| 3297 | reg_3297 |  |  |
-| 3298 | reg_3298 |  |  |
-| 3299 | reg_3299 |  |  |
-| 3300 | reg_3300 |  |  |
-| 3301 | reg_3301 |  |  |
-| 3302 | reg_3302 |  |  |
-| 3303 | reg_3303 |  |  |
-| 3304 | reg_3304 |  |  |
-| 3305 | reg_3305 |  |  |
-| 3306 | reg_3306 |  |  |
-| 3307 | reg_3307 |  |  |
-| 3308 | reg_3308 |  |  |
-| 3309 | reg_3309 |  |  |
-| 3310 | reg_3310 |  |  |
-| 3311 | reg_3311 |  |  |
-| 3312 | reg_3312 |  |  |
-| 3313 | reg_3313 |  |  |
-| 3314 | reg_3314 |  |  |
-| 3315 | reg_3315 |  |  |
-| 3316 | reg_3316 |  |  |
-| 3317 | reg_3317 |  |  |
-| 3318 | reg_3318 |  |  |
-| 3319 | reg_3319 |  |  |
-| 3320 | reg_3320 |  |  |
-| 3321 | reg_3321 |  |  |
-| 3322 | reg_3322 |  |  |
-| 3323 | reg_3323 |  |  |
-| 3324 | reg_3324 |  |  |
-| 3342 | reg_3342 |  |  |
-| 3343 | reg_3343 |  |  |
-| 3410 | reg_3410 |  |  |
-| 3411 | reg_3411 |  |  |
-| 3412 | reg_3412 |  |  |
-| 3413 | reg_3413 |  |  |
-| 3414 | reg_3414 |  |  |
-| 3415 | reg_3415 |  |  |
-| 3416 | reg_3416 |  |  |
-| 3417 | reg_3417 |  |  |
-| *Battery module information (support up to 64 parallel BDC)（Special for APX）* |  |  |  |
-| 5080 | reg_5080 |  |  |
-| 5081 | reg_5081 |  |  |
-| 5082 | reg_5082 |  |  |
-| 5083 | reg_5083 |  |  |
-| 5084 | reg_5084 |  |  |
-| 5085 | reg_5085 |  |  |
-| 5086 | reg_5086 |  |  |
-| 5087 | reg_5087 |  |  |
-| 5088 | reg_5088 |  |  |
-| 5089 | reg_5089 |  |  |
-| 5090 | reg_5090 |  |  |
-| 5091 | reg_5091 |  |  |
-| 5092 | reg_5092 |  |  |
-| 5093 | reg_5093 |  |  |
-| 5094 | reg_5094 |  |  |
-| 5095 | reg_5095 |  |  |
-| 5096 | reg_5096 |  |  |
-| 5097 | reg_5097 |  |  |
-| 5098 | reg_5098 |  |  |
-| 5099 | reg_5099 |  |  |
-| 5100 | reg_5100 |  |  |
-| 5101 | reg_5101 |  |  |
-| 5102 | reg_5102 |  |  |
-| 5103 | reg_5103 |  |  |
-| 5104 | reg_5104 |  |  |
-| 5105 | reg_5105 |  |  |
-| 5106 | reg_5106 |  |  |
-| 5107 | reg_5107 |  |  |
-| 5108 | reg_5108 |  |  |
-| 5109 | reg_5109 |  |  |
-| 5110 | reg_5110 |  |  |
-| 8000 | reg_8000 |  |  |
-| 8001 | reg_8001 |  |  |
-| 8002 | reg_8002 |  |  |
-| 8003 | reg_8003 |  |  |
-| 8004 | reg_8004 |  |  |
-| 8005 | reg_8005 |  |  |
-| 8006 | reg_8006 |  |  |
-| 8007 | reg_8007 |  |  |
-| 8008 | reg_8008 |  |  |
-| 8009 | reg_8009 |  |  |
-| 8010 | reg_8010 |  |  |
-| 8011 | reg_8011 |  |  |
-| 8012 | reg_8012 |  |  |
-| 8013 | reg_8013 |  |  |
-| 8014 | reg_8014 |  |  |
-| 8015 | reg_8015 |  |  |
-| 8016 | reg_8016 |  |  |
-| 8017 | reg_8017 |  |  |
-| 8015 | reg_8015 |  |  |
-| 8016 | reg_8016 |  |  |
-| 8017 | reg_8017 |  |  |
-| 8018 | reg_8018 |  |  |
-| 8019 | reg_8019 |  |  |
-| 8020 | reg_8020 |  |  |
-| 8021 | reg_8021 |  |  |
-| 8022 | reg_8022 |  |  |
-| 8023 | reg_8023 |  |  |
-| 8024 | reg_8024 |  |  |
-| 8028 | reg_8028 |  |  |
-| 8029 | reg_8029 |  |  |
-| 8030 | reg_8030 |  |  |
-| 8031 | reg_8031 |  |  |
-| 8032 | reg_8032 |  |  |
-| 8033 | reg_8033 |  |  |
-| 8034 | reg_8034 |  |  |
-| 8035 | reg_8035 |  |  |
-| 8036 | reg_8036 |  |  |
-| 8037 | reg_8037 |  |  |
-| 8038 | reg_8038 |  |  |
-| 8039 | reg_8039 |  |  |
-| 8040 | reg_8040 |  |  |
-| 8041 | reg_8041 |  |  |
-| 8042 | reg_8042 |  |  |
-| 8043 | reg_8043 |  |  |
-| 8044 | reg_8044 |  |  |
-| 8045 | reg_8045 |  |  |
-| 8046 | reg_8046 |  |  |
-| 8047 | reg_8047 |  |  |
-| 8048 | reg_8048 |  |  |
-| 8049 | reg_8049 |  |  |
-| 8050 | reg_8050 |  |  |
-| 8051 | reg_8051 |  |  |
-| 8052 | reg_8052 |  |  |
-| 8053 | reg_8053 |  |  |
-| 8054 | reg_8054 |  |  |
-| 8055 | reg_8055 |  |  |
-| 8056 | reg_8056 |  |  |
-| 8057 | reg_8057 |  |  |
-| 8058 | reg_8058 |  |  |
-| 8059 | reg_8059 |  |  |
-| 8060 | reg_8060 |  |  |
-| 8061 | reg_8061 |  |  |
-| 8062 | reg_8062 |  |  |
-| 8063 | reg_8063 |  |  |
-| 8064 | reg_8064 |  |  |
-| 8065 | reg_8065 |  |  |
-| 8066 | reg_8066 |  |  |
-| 8067 | reg_8067 |  |  |
-| 8068 | reg_8068 |  |  |
-| 8069 | reg_8069 |  |  |
-| 8070 | reg_8070 |  |  |
-| 8071 | reg_8071 |  |  |
-| 8072 | reg_8072 |  |  |
-| 8073 | reg_8073 |  |  |
-| 8074 | reg_8074 |  |  |
-| 8075 | reg_8075 |  |  |
-| 8076 | reg_8076 |  |  |
-| 8077 | reg_8077 |  |  |
-| 8078 | reg_8078 |  |  |
-| 8079 | reg_8079 |  |  |
-| 8080 | reg_8080 |  |  |
-| 8081 | reg_8081 |  |  |
-| 8082 | reg_8082 |  |  |
-| 8083 | reg_8083 |  |  |
-| 8084 | reg_8084 |  |  |
-| 8085 | reg_8085 |  |  |
-| 8086 | reg_8086 |  |  |
-| 8087 | reg_8087 |  |  |
-| 8088 | reg_8088 |  |  |
-| 8089 | reg_8089 |  |  |
-| 8090 | reg_8090 |  |  |
-| 8091 | reg_8091 |  |  |
-| 8092 | reg_8092 |  |  |
-| 8093 | reg_8093 |  |  |
-| 8094 | reg_8094 |  |  |
-| 8095 | reg_8095 |  |  |
-| 8096 | reg_8096 |  |  |
-| 8097 | reg_8097 |  |  |
-| 8098 | reg_8098 |  |  |
-| 8099 | reg_8099 |  |  |
-| 8100 | reg_8100 |  |  |
-| 8101 | reg_8101 |  |  |
-| 8102 | reg_8102 |  |  |
-| 8103 | reg_8103 |  |  |
-| 8104 | reg_8104 |  |  |
-| 8105 | reg_8105 |  |  |
-| 8106 | reg_8106 |  |  |
-| 8107 | reg_8107 |  |  |
-| 8108 | reg_8108 |  |  |
-| 8109 | reg_8109 |  |  |
-| 8110 | reg_8110 |  |  |
-| 1 | reg_1 |  |  |
-| 2 | reg_2 |  |  |
-| 3 | reg_3 |  |  |
-| 4 | reg_4 |  |  |
-| 5 | reg_5 |  |  |
-| 6 | reg_6 |  |  |
-| 7 | reg_7 |  |  |
-| 8 | reg_8 |  |  |
-| 9 | reg_9 |  |  |
-| 10 | reg_10 |  |  |
-| 11 | reg_11 |  |  |
-| 12 | reg_12 |  |  |
-| 13 | reg_13 |  |  |
-| 14 | reg_14 |  |  |
-| 15 | reg_15 |  |  |
-| 16 | reg_16 |  |  |
-| 17 | reg_17 |  |  |
-| 38 | reg_38 |  |  |
-| 39 | reg_39 |  |  |
+> All input registers are read-only (R) unless noted. Unit values are resolution (e.g. 0.1V means 1 LSB = 0.1 V).
+
+| Address | Name | Description | Unit | Note |
+| --- | --- | --- | --- | --- |
+| *First group (0–124)* | | | | |
+| 0 | Inverter Status | Inverter run state | — | 0=Waiting, 1=Normal, 3=Fault |
+| 1 | Ppv H | Input power (high) | 0.1W | 32-bit pair with reg 2 |
+| 2 | Ppv L | Input power (low) | 0.1W | Combined: total PV input power |
+| 3 | Vpv1 | PV1 voltage | 0.1V | |
+| 4 | PV1Curr | PV1 input current | 0.1A | |
+| 5 | Ppv1 H | PV1 input power (high) | 0.1W | 32-bit pair with reg 6 |
+| 6 | Ppv1 L | PV1 input power (low) | 0.1W | |
+| 7 | Vpv2 | PV2 voltage | 0.1V | |
+| 8 | PV2Curr | PV2 input current | 0.1A | |
+| 9 | Ppv2 H | PV2 input power (high) | 0.1W | 32-bit pair with reg 10 |
+| 10 | Ppv2 L | PV2 input power (low) | 0.1W | |
+| 11 | Vpv3 | PV3 voltage | 0.1V | |
+| 12 | PV3Curr | PV3 input current | 0.1A | |
+| 13 | Ppv3 H | PV3 input power (high) | 0.1W | 32-bit pair with reg 14 |
+| 14 | Ppv3 L | PV3 input power (low) | 0.1W | |
+| 15 | Vpv4 | PV4 voltage | 0.1V | |
+| 16 | PV4Curr | PV4 input current | 0.1A | |
+| 17 | Ppv4 H | PV4 input power (high) | 0.1W | 32-bit pair with reg 18 |
+| 18 | Ppv4 L | PV4 input power (low) | 0.1W | |
+| 19 | Vpv5 | PV5 voltage | 0.1V | |
+| 20 | PV5Curr | PV5 input current | 0.1A | |
+| 21 | Ppv5 H | PV5 input power (high) | 0.1W | 32-bit pair with reg 22 |
+| 22 | Ppv5 L | PV5 input power (low) | 0.1W | |
+| 23 | Vpv6 | PV6 voltage | 0.1V | |
+| 24 | PV6Curr | PV6 input current | 0.1A | |
+| 25 | Ppv6 H | PV6 input power (high) | 0.1W | 32-bit pair with reg 26 |
+| 26 | Ppv6 L | PV6 input power (low) | 0.1W | |
+| 27 | Vpv7 | PV7 voltage | 0.1V | |
+| 28 | PV7Curr | PV7 input current | 0.1A | |
+| 29 | Ppv7 H | PV7 input power (high) | 0.1W | 32-bit pair with reg 30 |
+| 30 | Ppv7 L | PV7 input power (low) | 0.1W | |
+| 31 | Vpv8 | PV8 voltage | 0.1V | |
+| 32 | PV8Curr | PV8 input current | 0.1A | |
+| 33 | Ppv8 H | PV8 input power (high) | 0.1W | 32-bit pair with reg 34 |
+| 34 | Ppv8 L | PV8 input power (low) | 0.1W | |
+| 35 | Pac H | AC output power (high) | 0.1W | 32-bit pair with reg 36 |
+| 36 | Pac L | AC output power (low) | 0.1W | |
+| 37 | Fac | Grid frequency | 0.01Hz | |
+| 38 | Vac1 | R-phase / single-phase grid voltage | 0.1V | |
+| 39 | Iac1 | R-phase / single-phase grid output current | 0.1A | |
+| 40 | Pac1 H | R-phase grid output apparent power (high) | 0.1VA | 32-bit pair with reg 41 |
+| 41 | Pac1 L | R-phase grid output apparent power (low) | 0.1VA | |
+| 42 | Vac2 | S-phase grid voltage | 0.1V | Three-phase only |
+| 43 | Iac2 | S-phase grid output current | 0.1A | Three-phase only |
+| 44 | Pac2 H | S-phase grid output power (high) | 0.1VA | 32-bit pair with reg 45 |
+| 45 | Pac2 L | S-phase grid output power (low) | 0.1VA | |
+| 46 | Vac3 | T-phase grid voltage | 0.1V | Three-phase only |
+| 47 | Iac3 | T-phase grid output current | 0.1A | Three-phase only |
+| 48 | Pac3 H | T-phase grid output power (high) | 0.1VA | 32-bit pair with reg 49 |
+| 49 | Pac3 L | T-phase grid output power (low) | 0.1VA | |
+| 50 | Vac_RS | R-S line voltage | 0.1V | Three-phase only |
+| 51 | Vac_ST | S-T line voltage | 0.1V | Three-phase only |
+| 52 | Vac_TR | T-R line voltage | 0.1V | Three-phase only |
+| 53 | Eac today H | Today generate energy (high) | 0.1kWh | 32-bit pair with reg 54 |
+| 54 | Eac today L | Today generate energy (low) | 0.1kWh | |
+| 55 | Eac total H | Total generate energy (high) | 0.1kWh | 32-bit pair with reg 56 |
+| 56 | Eac total L | Total generate energy (low) | 0.1kWh | |
+| 57 | Time total H | Work time total (high) | 0.5s | 32-bit pair with reg 58 |
+| 58 | Time total L | Work time total (low) | 0.5s | |
+| 59 | Epv1_today H | PV1 energy today (high) | 0.1kWh | 32-bit pair with reg 60 |
+| 60 | Epv1_today L | PV1 energy today (low) | 0.1kWh | |
+| 61 | Epv1_total H | PV1 energy total (high) | 0.1kWh | 32-bit pair with reg 62 |
+| 62 | Epv1_total L | PV1 energy total (low) | 0.1kWh | |
+| 63 | Epv2_today H | PV2 energy today (high) | 0.1kWh | 32-bit pair with reg 64 |
+| 64 | Epv2_today L | PV2 energy today (low) | 0.1kWh | |
+| 65 | Epv2_total H | PV2 energy total (high) | 0.1kWh | 32-bit pair with reg 66 |
+| 66 | Epv2_total L | PV2 energy total (low) | 0.1kWh | |
+| 67 | Epv3_today H | PV3 energy today (high) | 0.1kWh | 32-bit pair with reg 68 |
+| 68 | Epv3_today L | PV3 energy today (low) | 0.1kWh | |
+| 69 | Epv3_total H | PV3 energy total (high) | 0.1kWh | 32-bit pair with reg 70 |
+| 70 | Epv3_total L | PV3 energy total (low) | 0.1kWh | |
+| 71 | Epv4_today H | PV4 energy today (high) | 0.1kWh | 32-bit pair with reg 72 |
+| 72 | Epv4_today L | PV4 energy today (low) | 0.1kWh | |
+| 73 | Epv4_total H | PV4 energy total (high) | 0.1kWh | 32-bit pair with reg 74 |
+| 74 | Epv4_total L | PV4 energy total (low) | 0.1kWh | |
+| 75 | Epv5_today H | PV5 energy today (high) | 0.1kWh | 32-bit pair with reg 76 |
+| 76 | Epv5_today L | PV5 energy today (low) | 0.1kWh | |
+| 77 | Epv5_total H | PV5 energy total (high) | 0.1kWh | 32-bit pair with reg 78 |
+| 78 | Epv5_total L | PV5 energy total (low) | 0.1kWh | |
+| 79 | Epv6_today H | PV6 energy today (high) | 0.1kWh | 32-bit pair with reg 80 |
+| 80 | Epv6_today L | PV6 energy today (low) | 0.1kWh | |
+| 81 | Epv6_total H | PV6 energy total (high) | 0.1kWh | 32-bit pair with reg 82 |
+| 82 | Epv6_total L | PV6 energy total (low) | 0.1kWh | |
+| 83 | Epv7_today H | PV7 energy today (high) | 0.1kWh | 32-bit pair with reg 84 |
+| 84 | Epv7_today L | PV7 energy today (low) | 0.1kWh | |
+| 85 | Epv7_total H | PV7 energy total (high) | 0.1kWh | 32-bit pair with reg 86 |
+| 86 | Epv7_total L | PV7 energy total (low) | 0.1kWh | |
+| 87 | Epv8_today H | PV8 energy today (high) | 0.1kWh | 32-bit pair with reg 88 |
+| 88 | Epv8_today L | PV8 energy today (low) | 0.1kWh | |
+| 89 | Epv8_total H | PV8 energy total (high) | 0.1kWh | 32-bit pair with reg 90 |
+| 90 | Epv8_total L | PV8 energy total (low) | 0.1kWh | |
+| 91 | Epv_total H | PV energy total (high) | 0.1kWh | 32-bit pair with reg 92 |
+| 92 | Epv_total L | PV energy total (low) | 0.1kWh | |
+| 93 | Temp1 | Inverter temperature | 0.1C | |
+| 94 | Temp2 | IPM temperature | 0.1C | |
+| 95 | Temp3 | Boost temperature | 0.1C | |
+| 96 | Temp4 | Reserved | — | |
+| 97 | uwBatVolt_DSP | Battery voltage (DSP) | 0.1V | |
+| 98 | P Bus Voltage | P-Bus inside voltage | 0.1V | |
+| 99 | N Bus Voltage | N-Bus inside voltage | 0.1V | |
+| 100 | IPF | Inverter output power factor | — | 0–20000 |
+| 101 | RealOPPercent | Real output power percent | 1% | |
+| 102 | OPFullwatt H | Output max power limit (high) | 0.1W | 32-bit pair with reg 103 |
+| 103 | OPFullwatt L | Output max power limit (low) | 0.1W | |
+| 104 | DeratingMode | Derating mode | — | 0=None,1=PV,3=Vac,4=Fac,5=Tboost,6=Tinv,7=Control,9=OverBackByTime |
+| 105 | Fault Maincode | Inverter fault main code | — | |
+| 106 | Reserved | — | — | |
+| 107 | Fault Subcode | Inverter fault sub code | — | |
+| 108 | RemoteCtrlEn | Remote control enable | — | 0=Load First,1=Bat First,2=Grid Storage Power (SPA) |
+| 109 | RemoteCtrlPower | Remote control power | — | Storage Power (SPA) |
+| 110 | Warning bit H | Warning bit H | — | |
+| 111 | Warn Subcode | Inverter warn sub code | — | |
+| 112 | Warn Maincode / EACharge_Today_H | Warn main code / AC charge energy today H | — / 0.1kWh | MAX uses warn code; Storage Power uses energy |
+| 113 | real Power Percent / EACharge_Today_L | Real power percent / AC charge energy today L | 0–100% / 0.1kWh | |
+| 114 | inv start delay / EACharge_Total_H | Inverter start delay / AC charge energy total H | — / 0.1kWh | |
+| 115 | bINVAllFaultCode / EACharge_Total_L | All fault code / AC charge energy total L | — / 0.1kWh | |
+| 116 | AC charge Power_H | Grid power to local load (high) | 0.1kWh | Storage Power |
+| 117 | AC charge Power_L | Grid power to local load (low) | 0.1kWh | Storage Power |
+| 118 | Priority | Charge/discharge priority | — | 0=Load First,1=Battery First,2=Grid First |
+| 119 | Battery Type | Battery type | — | 0=Lead-acid,1=Lithium |
+| 120 | AutoProofreadCMD | Aging mode auto-calibration command | — | Storage Power |
+| 121 | Reserved | Reserved | — | |
+| 122 | Reserved | Reserved | — | |
+| 123 | Reserved | Reserved | — | |
+| 124 | Reserved | Reserved | — | |
+| *Second group (125–249)* | | | | |
+| 125 | PID PV1+ Voltage | PID PV1PE volt / flyspan voltage (MAX HV) | 0.1V | 0–1000V |
+| 126 | PID PV1+ Current | PID PV1PE current | 0.1mA | -10–10mA |
+| 127 | PID PV2+ Voltage | PID PV2PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 128 | PID PV2+ Current | PID PV2PE current | 0.1mA | |
+| 129 | PID PV3+ Voltage | PID PV3PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 130 | PID PV3+ Current | PID PV3PE current | 0.1mA | |
+| 131 | PID PV4+ Voltage | PID PV4PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 132 | PID PV4+ Current | PID PV4PE current | 0.1mA | |
+| 133 | PID PV5+ Voltage | PID PV5PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 134 | PID PV5+ Current | PID PV5PE current | 0.1mA | |
+| 135 | PID PV6+ Voltage | PID PV6PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 136 | PID PV6+ Current | PID PV6PE current | 0.1mA | |
+| 137 | PID PV7+ Voltage | PID PV7PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 138 | PID PV7+ Current | PID PV7PE current | 0.1mA | |
+| 139 | PID PV8+ Voltage | PID PV8PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 140 | PID PV8+ Current | PID PV8PE current | 0.1mA | |
+| 141 | PID Status | PID working status | — | Bit0–7: 1=Wait,2=Normal,3=Fault; Bit8–15: Reserved |
+| 142 | V_String1 | PV string 1 voltage | 0.1V | |
+| 143 | Curr_String1 | PV string 1 current | 0.1A | -15–15A |
+| 144 | V_String2 | PV string 2 voltage | 0.1V | |
+| 145 | Curr_String2 | PV string 2 current | 0.1A | |
+| 146 | V_String3 | PV string 3 voltage | 0.1V | |
+| 147 | Curr_String3 | PV string 3 current | 0.1A | |
+| 148 | V_String4 | PV string 4 voltage | 0.1V | |
+| 149 | Curr_String4 | PV string 4 current | 0.1A | |
+| 150 | V_String5 | PV string 5 voltage | 0.1V | |
+| 151 | Curr_String5 | PV string 5 current | 0.1A | |
+| 152 | V_String6 | PV string 6 voltage | 0.1V | |
+| 153 | Curr_String6 | PV string 6 current | 0.1A | |
+| 154 | V_String7 | PV string 7 voltage | 0.1V | |
+| 155 | Curr_String7 | PV string 7 current | 0.1A | |
+| 156 | V_String8 | PV string 8 voltage | 0.1V | |
+| 157 | Curr_String8 | PV string 8 current | 0.1A | |
+| 158 | V_String9 | PV string 9 voltage | 0.1V | |
+| 159 | Curr_String9 | PV string 9 current | 0.1A | |
+| 160 | V_String10 | PV string 10 voltage | 0.1V | |
+| 161 | Curr_String10 | PV string 10 current | 0.1A | |
+| 162 | V_String11 | PV string 11 voltage | 0.1V | |
+| 163 | Curr_String11 | PV string 11 current | 0.1A | |
+| 164 | V_String12 | PV string 12 voltage | 0.1V | |
+| 165 | Curr_String12 | PV string 12 current | 0.1A | |
+| 166 | V_String13 | PV string 13 voltage | 0.1V | |
+| 167 | Curr_String13 | PV string 13 current | 0.1A | |
+| 168 | V_String14 | PV string 14 voltage | 0.1V | |
+| 169 | Curr_String14 | PV string 14 current | 0.1A | |
+| 170 | V_String15 | PV string 15 voltage | 0.1V | |
+| 171 | Curr_String15 | PV string 15 current | 0.1A | |
+| 172 | V_String16 | PV string 16 voltage | 0.1V | |
+| 173 | Curr_String16 | PV string 16 current | 0.1A | |
+| 174 | StrUnmatch | String 1–16 unmatch flags | — | Bit0–15: String1–16 suggestive |
+| 175 | StrCurrentUnblance | String 1–16 current unbalance | — | Bit0–15: suggestive |
+| 176 | StrDisconnect | String 1–16 disconnect flags | — | Bit0–15: suggestive |
+| 177 | PIDFaultCode | PID fault code | — | Bit0=Output OV, Bit1=ISO, Bit2=BUS abnormal |
+| 178 | String Prompt | String prompt flags | — | Bit0=Unmatch, Bit1=Disconnect, Bit2=CurrentUnblance |
+| 179 | PVWarningValue | PV warning value | — | |
+| 180 | DSP075 Warning Value | DSP075 warning value | — | |
+| 181 | DSP075 Fault Value | DSP075 fault value | — | |
+| 182 | DSP067 Debug Data1 | DSP067 debug data 1 | — | |
+| 183 | DSP067 Debug Data2 | DSP067 debug data 2 | — | |
+| 184 | DSP067 Debug Data3 | DSP067 debug data 3 | — | |
+| 185 | DSP067 Debug Data4 | DSP067 debug data 4 | — | |
+| 186 | DSP067 Debug Data5 | DSP067 debug data 5 | — | |
+| 187 | DSP067 Debug Data6 | DSP067 debug data 6 | — | |
+| 188 | DSP067 Debug Data7 | DSP067 debug data 7 | — | |
+| 189 | DSP067 Debug Data8 | DSP067 debug data 8 | — | |
+| 190 | DSP075 Debug Data1 | DSP075 debug data 1 | — | |
+| 191 | DSP075 Debug Data2 | DSP075 debug data 2 | — | |
+| 192 | DSP075 Debug Data3 | DSP075 debug data 3 | — | |
+| 193 | DSP075 Debug Data4 | DSP075 debug data 4 | — | |
+| 194 | DSP075 Debug Data5 | DSP075 debug data 5 | — | |
+| 195 | DSP075 Debug Data6 | DSP075 debug data 6 | — | |
+| 196 | DSP075 Debug Data7 | DSP075 debug data 7 | — | |
+| 197 | DSP075 Debug Data8 | DSP075 debug data 8 | — | |
+| 198 | bUSBAgingTestOkFlag | USB aging test OK flag | — | 0–1 |
+| 199 | bFlashEraseAgingOkFlag | Flash erase aging OK flag | — | 0–1 |
+| 200 | PVISO | PV ISO value | — | KOhm |
+| 201 | R_DCI | R-phase DCI current | 0.1mA | |
+| 202 | S_DCI | S-phase DCI current | 0.1mA | |
+| 203 | T_DCI | T-phase DCI current | 0.1mA | |
+| 204 | PID_Bus | PID bus voltage | 0.1V | |
+| 205 | GFCI | GFCI current | mA | |
+| 206 | SVG/APF Status | SVG/APF status + equal ratio | — | High 8-bit=EqualRatio; Low 8-bit: 0=None,1=SVG run,2=APF run,3=Both |
+| 207 | CT_I_R | R-phase load side current for SVG | 0.1A | |
+| 208 | CT_I_S | S-phase load side current for SVG | 0.1A | |
+| 209 | CT_I_T | T-phase load side current for SVG | 0.1A | |
+| 210 | CT_Q_R H | R-phase load side reactive power for SVG (high) | 0.1Var | |
+| 211 | CT_Q_R L | R-phase load side reactive power for SVG (low) | 0.1Var | |
+| 212 | CT_Q_S H | S-phase load side reactive power for SVG (high) | 0.1Var | |
+| 213 | CT_Q_S L | S-phase load side reactive power for SVG (low) | 0.1Var | |
+| 214 | CT_Q_T H | T-phase load side reactive power for SVG (high) | 0.1Var | |
+| 215 | CT_Q_T L | T-phase load side reactive power for SVG (low) | 0.1Var | |
+| 216 | CT HAR_I_R | R-phase load side harmonic current | 0.1A | |
+| 217 | CT HAR_I_S | S-phase load side harmonic current | 0.1A | |
+| 218 | CT HAR_I_T | T-phase load side harmonic current | 0.1A | |
+| 219 | COMP_Q_R H | R-phase compensate reactive power for SVG (high) | 0.1Var | |
+| 220 | COMP_Q_R L | R-phase compensate reactive power for SVG (low) | 0.1Var | |
+| 221 | COMP_Q_S H | S-phase compensate reactive power for SVG (high) | 0.1Var | |
+| 222 | COMP_Q_S L | S-phase compensate reactive power for SVG (low) | 0.1Var | |
+| 223 | COMP_Q_T H | T-phase compensate reactive power for SVG (high) | 0.1Var | |
+| 224 | COMP_Q_T L | T-phase compensate reactive power for SVG (low) | 0.1Var | |
+| 225 | COMP HAR_I_R | R-phase compensate harmonic for SVG | 0.1A | |
+| 226 | COMP HAR_I_S | S-phase compensate harmonic for SVG | 0.1A | |
+| 227 | COMP HAR_I_T | T-phase compensate harmonic for SVG | 0.1A | |
+| 228 | bRS232AgingTestOkFlag | RS232 aging test OK flag | — | 0–1 |
+| 229 | bFanFaultBit | Fan fault bits | — | Bit0=Fan1,Bit1=Fan2,Bit2=Fan3,Bit3=Fan4 |
+| 230 | Sac H | Output apparent power (high) | 0.1VA | 32-bit pair with reg 231 |
+| 231 | Sac L | Output apparent power (low) | 0.1VA | |
+| 232 | ReActPower H | Real output reactive power (high) | 0.1Var | Int32, 32-bit pair with reg 233 |
+| 233 | ReActPower L | Real output reactive power (low) | 0.1Var | |
+| 234 | ReActPowerMax H | Nominal output reactive power (high) | 0.1Var | 32-bit pair with reg 235 |
+| 235 | ReActPowerMax L | Nominal output reactive power (low) | 0.1Var | |
+| 236 | ReActPower_Total H | Reactive power generation (high) | 0.1kWh | 32-bit pair with reg 237 |
+| 237 | ReActPower_Total L | Reactive power generation (low) | 0.1kWh | |
+| 238 | bAfciStatus | AFCI status | — | 0=Waiting,1=Self-check,2=Detect arc,3=Fault,4=Update |
+| 239 | uwPresentFFTValue [CHANNEL_A] | AFCI present FFT value channel A | — | |
+| 240 | uwPresentFFTValue [CHANNEL_B] | AFCI present FFT value channel B | — | |
+| 241 | DSP067 Debug Data1 | DSP067 debug data 1 (second group) | — | |
+| 242 | DSP067 Debug Data2 | DSP067 debug data 2 | — | |
+| 243 | DSP067 Debug Data3 | DSP067 debug data 3 | — | |
+| 244 | DSP067 Debug Data4 | DSP067 debug data 4 | — | |
+| 245 | DSP067 Debug Data5 | DSP067 debug data 5 | — | |
+| 246 | DSP067 Debug Data6 | DSP067 debug data 6 | — | |
+| 247 | DSP067 Debug Data7 | DSP067 debug data 7 | — | |
+| 248 | DSP067 Debug Data8 | DSP067 debug data 8 | — | |
+| 249 | Reserved | Reserved | — | |
+| *Eighth group — PV9–PV16 (875–999)* | | | | |
+| 875 | Vpv9 | PV9 voltage | 0.1V | |
+| 876 | PV9Curr | PV9 input current | 0.1A | |
+| 877 | Ppv9 H | PV9 input power (high) | 0.1W | 32-bit pair with reg 878 |
+| 878 | Ppv9 L | PV9 input power (low) | 0.1W | |
+| 879 | Vpv10 | PV10 voltage | 0.1V | |
+| 880 | PV10Curr | PV10 input current | 0.1A | |
+| 881 | Ppv10 H | PV10 input power (high) | 0.1W | 32-bit pair with reg 882 |
+| 882 | Ppv10 L | PV10 input power (low) | 0.1W | |
+| 883 | Vpv11 | PV11 voltage | 0.1V | |
+| 884 | PV11Curr | PV11 input current | 0.1A | |
+| 885 | Ppv11 H | PV11 input power (high) | 0.1W | 32-bit pair with reg 886 |
+| 886 | Ppv11 L | PV11 input power (low) | 0.1W | |
+| 887 | Vpv12 | PV12 voltage | 0.1V | |
+| 888 | PV12Curr | PV12 input current | 0.1A | |
+| 889 | Ppv12 H | PV12 input power (high) | 0.1W | 32-bit pair with reg 890 |
+| 890 | Ppv12 L | PV12 input power (low) | 0.1W | |
+| 891 | Vpv13 | PV13 voltage | 0.1V | |
+| 892 | PV13Curr | PV13 input current | 0.1A | |
+| 893 | Ppv13 H | PV13 input power (high) | 0.1W | 32-bit pair with reg 894 |
+| 894 | Ppv13 L | PV13 input power (low) | 0.1W | |
+| 895 | Vpv14 | PV14 voltage | 0.1V | |
+| 896 | PV14Curr | PV14 input current | 0.1A | |
+| 897 | Ppv14 H | PV14 input power (high) | 0.1W | 32-bit pair with reg 898 |
+| 898 | Ppv14 L | PV14 input power (low) | 0.1W | |
+| 899 | Vpv15 | PV15 voltage | 0.1V | |
+| 900 | PV15Curr | PV15 input current | 0.1A | |
+| 901 | Ppv15 H | PV15 input power (high) | 0.1W | 32-bit pair with reg 902 |
+| 902 | Ppv15 L | PV15 input power (low) | 0.1W | |
+| 903 | Vpv16 | PV16 voltage | 0.1V | |
+| 904 | PV16Curr | PV16 input current | 0.1A | |
+| 905 | Ppv16 H | PV16 input power (high) | 0.1W | 32-bit pair with reg 906 |
+| 906 | Ppv16 L | PV16 input power (low) | 0.1W | |
+| 907 | Epv9_today H | PV9 energy today (high) | 0.1kWh | |
+| 908 | Epv9_today L | PV9 energy today (low) | 0.1kWh | |
+| 909 | Epv9_total H | PV9 energy total (high) | 0.1kWh | |
+| 910 | Epv9_total L | PV9 energy total (low) | 0.1kWh | |
+| 911 | Epv10_today H | PV10 energy today (high) | 0.1kWh | |
+| 912 | Epv10_today L | PV10 energy today (low) | 0.1kWh | |
+| 913 | Epv10_total H | PV10 energy total (high) | 0.1kWh | |
+| 914 | Epv10_total L | PV10 energy total (low) | 0.1kWh | |
+| 915 | Epv11_today H | PV11 energy today (high) | 0.1kWh | |
+| 916 | Epv11_today L | PV11 energy today (low) | 0.1kWh | |
+| 917 | Epv11_total H | PV11 energy total (high) | 0.1kWh | |
+| 918 | Epv11_total L | PV11 energy total (low) | 0.1kWh | |
+| 919 | Epv12_today H | PV12 energy today (high) | 0.1kWh | |
+| 920 | Epv12_today L | PV12 energy today (low) | 0.1kWh | |
+| 921 | Epv12_total H | PV12 energy total (high) | 0.1kWh | |
+| 922 | Epv12_total L | PV12 energy total (low) | 0.1kWh | |
+| 923 | Epv13_today H | PV13 energy today (high) | 0.1kWh | |
+| 924 | Epv13_today L | PV13 energy today (low) | 0.1kWh | |
+| 925 | Epv13_total H | PV13 energy total (high) | 0.1kWh | |
+| 926 | Epv13_total L | PV13 energy total (low) | 0.1kWh | |
+| 927 | Epv14_today H | PV14 energy today (high) | 0.1kWh | |
+| 928 | Epv14_today L | PV14 energy today (low) | 0.1kWh | |
+| 929 | Epv14_total H | PV14 energy total (high) | 0.1kWh | |
+| 930 | Epv14_total L | PV14 energy total (low) | 0.1kWh | |
+| 931 | Epv15_today H | PV15 energy today (high) | 0.1kWh | |
+| 932 | Epv15_today L | PV15 energy today (low) | 0.1kWh | |
+| 933 | Epv15_total H | PV15 energy total (high) | 0.1kWh | |
+| 934 | Epv15_total L | PV15 energy total (low) | 0.1kWh | |
+| 935 | Epv16_today H | PV16 energy today (high) | 0.1kWh | |
+| 936 | Epv16_today L | PV16 energy today (low) | 0.1kWh | |
+| 937 | Epv16_total H | PV16 energy total (high) | 0.1kWh | |
+| 938 | Epv16_total L | PV16 energy total (low) | 0.1kWh | |
+| 939 | PID PV9+ Voltage | PID PV9PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 940 | PID PV9+ Current | PID PV9PE current | 0.1mA | |
+| 941 | PID PV10+ Voltage | PID PV10PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 942 | PID PV10+ Current | PID PV10PE current | 0.1mA | |
+| 943 | PID PV11+ Voltage | PID PV11PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 944 | PID PV11+ Current | PID PV11PE current | 0.1mA | |
+| 945 | PID PV12+ Voltage | PID PV12PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 946 | PID PV12+ Current | PID PV12PE current | 0.1mA | |
+| 947 | PID PV13+ Voltage | PID PV13PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 948 | PID PV13+ Current | PID PV13PE current | 0.1mA | |
+| 949 | PID PV14+ Voltage | PID PV14PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 950 | PID PV14+ Current | PID PV14PE current | 0.1mA | |
+| 951 | PID PV15+ Voltage | PID PV15PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 952 | PID PV15+ Current | PID PV15PE current | 0.1mA | |
+| 953 | PID PV16+ Voltage | PID PV16PE volt / flyspan voltage (MAX HV) | 0.1V | |
+| 954 | PID PV16+ Current | PID PV16PE current | 0.1mA | |
+| 955 | V_String17 | PV string 17 voltage | 0.1V | |
+| 956 | Curr_String17 | PV string 17 current | 0.1A | |
+| 957 | V_String18 | PV string 18 voltage | 0.1V | |
+| 958 | Curr_String18 | PV string 18 current | 0.1A | |
+| 959 | V_String19 | PV string 19 voltage | 0.1V | |
+| 960 | Curr_String19 | PV string 19 current | 0.1A | |
+| 961 | V_String20 | PV string 20 voltage | 0.1V | |
+| 962 | Curr_String20 | PV string 20 current | 0.1A | |
+| 963 | V_String21 | PV string 21 voltage | 0.1V | |
+| 964 | Curr_String21 | PV string 21 current | 0.1A | |
+| 965 | V_String22 | PV string 22 voltage | 0.1V | |
+| 966 | Curr_String22 | PV string 22 current | 0.1A | |
+| 967 | V_String23 | PV string 23 voltage | 0.1V | |
+| 968 | Curr_String23 | PV string 23 current | 0.1A | |
+| 969 | V_String24 | PV string 24 voltage | 0.1V | |
+| 970 | Curr_String24 | PV string 24 current | 0.1A | |
+| 971 | V_String25 | PV string 25 voltage | 0.1V | |
+| 972 | Curr_String25 | PV string 25 current | 0.1A | |
+| 973 | V_String26 | PV string 26 voltage | 0.1V | |
+| 974 | Curr_String26 | PV string 26 current | 0.1A | |
+| 975 | V_String27 | PV string 27 voltage | 0.1V | |
+| 976 | Curr_String27 | PV string 27 current | 0.1A | |
+| 977 | V_String28 | PV string 28 voltage | 0.1V | |
+| 978 | Curr_String28 | PV string 28 current | 0.1A | |
+| 979 | V_String29 | PV string 29 voltage | 0.1V | |
+| 980 | Curr_String29 | PV string 29 current | 0.1A | |
+| 981 | V_String30 | PV string 30 voltage | 0.1V | |
+| 982 | Curr_String30 | PV string 30 current | 0.1A | |
+| 983 | V_String31 | PV string 31 voltage | 0.1V | |
+| 984 | Curr_String31 | PV string 31 current | 0.1A | |
+| 985 | V_String32 | PV string 32 voltage | 0.1V | |
+| 986 | Curr_String32 | PV string 32 current | 0.1A | |
+| 987 | StrUnmatch2 | String 17–32 unmatch flags | — | Bit0–15 |
+| 988 | StrCurrentUnblance2 | String 17–32 current unbalance | — | Bit0–15 |
+| 989 | StrDisconnect2 | String 17–32 disconnect flags | — | Bit0–15 |
+| 990 | PV Warning Value | PV warning value (PV9–PV16) | — | |
+| 991 | StrWaringvalue1 | String 1–16 abnormal | — | |
+| 992 | StrWaringvalue2 | String 17–32 abnormal | — | |
+| 993–998 | Reserved | Reserved | — | |
+| 999 | SystemCmd | M3 to DSP system command | — | |
+| *Ninth group — Storage power (1000–1249)* | | | | |
+| 1000 | uwSysWorkMode | System work mode | — | 0x00=Waiting, 0x01=Self-test, 0x03=Fault, 0x04=Flash, 0x05-0x08=Normal |
+| 1001 | Systemfault word0 | System fault word 0 | — | See Hybrid fault table |
+| 1002 | Systemfault word1 | System fault word 1 | — | |
+| 1003 | Systemfault word2 | System fault word 2 | — | |
+| 1004 | Systemfault word3 | System fault word 3 | — | |
+| 1005 | Systemfault word4 | System fault word 4 | — | |
+| 1006 | Systemfault word5 | System fault word 5 | — | |
+| 1007 | Systemfault word6 | System fault word 6 | — | |
+| 1008 | Systemfault word7 | System fault word 7 | — | |
+| 1009 | Pdischarge1 H | Discharge power (high) | 0.1W | 32-bit pair with reg 1010 |
+| 1010 | Pdischarge1 L | Discharge power (low) | 0.1W | |
+| 1011 | Pcharge1 H | Charge power (high) | 0.1W | 32-bit pair with reg 1012 |
+| 1012 | Pcharge1 L | Charge power (low) | 0.1W | |
+| 1013 | Vbat | Battery voltage | 0.1V | |
+| 1014 | SOC | State of charge | 1% | 0–100; lithium / lead-acid |
+| 1015 | Pactouser R H | AC power to user R-phase (high) | 0.1W | |
+| 1016 | Pactouser R L | AC power to user R-phase (low) | 0.1W | |
+| 1017 | Pactouser S H | AC power to user S-phase (high) | 0.1W | |
+| 1018 | Pactouser S L | AC power to user S-phase (low) | 0.1W | |
+| 1019 | Pactouser T H | AC power to user T-phase (high) | 0.1W | |
+| 1020 | Pactouser T L | AC power to user T-phase (low) | 0.1W | |
+| 1021 | PactouserTotal H | AC power to user total (high) | 0.1W | |
+| 1022 | PactouserTotal L | AC power to user total (low) | 0.1W | |
+| 1023 | Pac to grid R H | AC power to grid R-phase (high) | 0.1W | |
+| 1024 | Pac to grid R L | AC power to grid R-phase (low) | 0.1W | |
+| 1025 | Pactogrid S H | AC power to grid S-phase (high) | 0.1W | |
+| 1026 | Pactogrid S L | AC power to grid S-phase (low) | 0.1W | |
+| 1027 | Pactogrid T H | AC power to grid T-phase (high) | 0.1W | |
+| 1028 | Pactogrid T L | AC power to grid T-phase (low) | 0.1W | |
+| 1029 | Pactogrid total H | AC power to grid total (high) | 0.1W | |
+| 1030 | Pactogrid total L | AC power to grid total (low) | 0.1W | |
+| 1031 | PLocalLoad R H | INV power to local load R-phase (high) | 0.1W | |
+| 1032 | PLocalLoad R L | INV power to local load R-phase (low) | 0.1W | |
+| 1033 | PLocalLoad S H | INV power to local load S-phase (high) | 0.1W | |
+| 1034 | PLocalLoad S L | INV power to local load S-phase (low) | 0.1W | |
+| 1035 | PLocalLoad T H | INV power to local load T-phase (high) | 0.1W | |
+| 1036 | PLocalLoad T L | INV power to local load T-phase (low) | 0.1W | |
+| 1037 | PLocalLoad total H | INV power to local load total (high) | 0.1W | |
+| 1038 | PLocalLoad total L | INV power to local load total (low) | 0.1W | |
+| 1039 | IP2M Temperature | REC temperature | 0.1C | Not used |
+| 1040 | Battery Temperature | Battery temperature | 0.1C | Lead-acid / lithium |
+| 1041 | SP DSP Status | SP state | — | CHG / DisCHG |
+| 1042 | SP Bus Volt | SP BUS2 voltage | 0.1V | |
+| 1043 | Reserved | Power generation data section start | — | |
+| 1044 | Etouser_today H | Energy to user today (high) | 0.1kWh | |
+| 1045 | Etouser_today L | Energy to user today (low) | 0.1kWh | |
+| 1046 | Etouser_total H | Energy to user total (high) | 0.1kWh | |
+| 1047 | Etouser_total L | Energy to user total (low) | 0.1kWh | |
+| 1048 | Etogrid_today H | Energy to grid today (high) | 0.1kWh | |
+| 1049 | Etogrid_today L | Energy to grid today (low) | 0.1kWh | |
+| 1050 | Etogrid_total H | Energy to grid total (high) | 0.1kWh | |
+| 1051 | Etogrid_total L | Energy to grid total (low) | 0.1kWh | |
+| 1052 | Edischarge1_today H | Discharge energy 1 today (high) | 0.1kWh | |
+| 1053 | Edischarge1_today L | Discharge energy 1 today (low) | 0.1kWh | |
+| 1054 | Edischarge1_total H | Total discharge energy 1 (high) | 0.1kWh | |
+| 1055 | Edischarge1_total L | Total discharge energy 1 (low) | 0.1kWh | |
+| 1056 | Echarge1_today H | Charge energy 1 today (high) | 0.1kWh | |
+| 1057 | Echarge1_today L | Charge energy 1 today (low) | 0.1kWh | |
+| 1058 | Echarge1_total H | Charge energy 1 total (high) | 0.1kWh | |
+| 1059 | Echarge1_total L | Charge energy 1 total (low) | 0.1kWh | |
+| 1060 | ELocalLoad_Today H | Local load energy today (high) | 0.1kWh | |
+| 1061 | ELocalLoad_Today L | Local load energy today (low) | 0.1kWh | |
+| 1062 | ELocalLoad_Total H | Local load energy total (high) | 0.1kWh | |
+| 1063 | ELocalLoad_Total L | Local load energy total (low) | 0.1kWh | |
+| 1064 | dwExportLimitApparentPower H | Export limit apparent power (high) | 0.1VA | |
+| 1065 | dwExportLimitApparentPower L | Export limit apparent power (low) | 0.1VA | |
+| 1066 | Reserved | Reserved | — | |
+| *UPS / EPS information (offline) — 1067–1081* | | | | |
+| 1067 | EPS Fac | UPS frequency | 0.01Hz | 5000/6000 |
+| 1068 | EPS Vac1 | UPS phase R output voltage | 0.1V | 2300 |
+| 1069 | EPS Iac1 | UPS phase R output current | 0.1A | |
+| 1070 | EPS Pac1 H | UPS phase R output power (high) | 0.1VA | |
+| 1071 | EPS Pac1 L | UPS phase R output power (low) | 0.1VA | |
+| 1072 | EPS Vac2 | UPS phase S output voltage | 0.1V | |
+| 1073 | EPS Iac2 | UPS phase S output current | 0.1A | Not used |
+| 1074 | EPS Pac2 H | UPS phase S output power (high) | 0.1VA | |
+| 1075 | EPS Pac2 L | UPS phase S output power (low) | 0.1VA | |
+| 1076 | EPS Vac3 | UPS phase T output voltage | 0.1V | |
+| 1077 | EPS Iac3 | UPS phase T output current | 0.1A | Not used |
+| 1078 | EPS Pac3 H | UPS phase T output power (high) | 0.1VA | |
+| 1079 | EPS Pac3 L | UPS phase T output power (low) | 0.1VA | |
+| 1080 | loadpercent | Load percent of UPS output | 1% | 0–100 |
+| 1081 | PF | Power factor | 0.1 | Primary value + 1 |
+| *BMS information — 1082–1124* | | | | |
+| 1082 | BMS_StatusOld | Status old from BMS | — | |
+| 1083 | BMS_Status | Status from BMS | — | W/R |
+| 1084 | BMS_ErrorOld | Error info old from BMS | — | |
+| 1085 | BMS_Error | Error info from BMS | — | |
+| 1086 | BMS_SOC | SOC from BMS | — | R; SPH6K |
+| 1087 | BMS_BatteryVolt | Battery voltage from BMS | — | R; SPH6K |
+| 1088 | BMS_BatteryCurr | Battery current from BMS | — | |
+| 1089 | BMS_BatteryTemp | Battery temperature from BMS | — | |
+| 1090 | BMS_MaxCurr | Max charge/discharge current from BMS (Pylontech) | — | |
+| 1091 | BMS_GaugeRM | Gauge RM from BMS | — | |
+| 1092 | BMS_GaugeFCC | Gauge FCC from BMS | — | |
+| 1093 | BMS_FW | BMS firmware version | — | |
+| 1094 | BMS_DeltaVolt | Delta V from BMS | — | |
+| 1095 | BMS_CycleCnt | Cycle count from BMS | — | |
+| 1096 | BMS_SOH | SOH from BMS | — | |
+| 1097 | BMS_ConstantVolt | CV voltage from BMS | — | |
+| 1098 | BMS_WarnInfoOld | Warning info old from BMS | — | |
+| 1099 | BMS_WarnInfo | Warning info from BMS | — | |
+| 1100 | BMS_GaugeICCurr | Gauge IC current from BMS | — | |
+| 1101 | BMS_MCUVersion | MCU software version from BMS | — | |
+| 1102 | BMS_GaugeVersion | Gauge version from BMS | — | |
+| 1103 | BMS_wGaugeFRVersion_L | Gauge FR version L16 from BMS | — | |
+| 1104 | BMS_wGaugeFRVersion_H | Gauge FR version H16 from BMS | — | |
+| 1105 | BMS_BMSInfo | BMS information from BMS | — | |
+| 1106 | BMS_PackInfo | Pack information from BMS | — | |
+| 1107 | BMS_UsingCap | Using cap from BMS | — | |
+| 1108 | uwMaxCellVolt | Maximum single battery voltage | 0.001V | |
+| 1109 | uwMinCellVolt | Minimum single battery voltage | 0.001V | |
+| 1110 | bModuleNum | Battery parallel number | 1 | |
+| 1111 | bBatNum | Number of batteries | 1 | |
+| 1112 | uwMaxVoltCellNo | Max voltage cell number | 1 | |
+| 1113 | uwMinVoltCellNo | Min voltage cell number | 1 | |
+| 1114 | uwMaxTemprCell_10T | Max temperature cell (x10) | 0.1C | |
+| 1115 | uwMinTemprCell_10T | Min temperature cell (x10) | 0.1C | |
+| 1116 | uwMaxTemprCellNo | Max temperature cell number | 1 | |
+| 1117 | uwMinTemprCellNo | Min temperature cell number | 1 | |
+| 1118 | Protect pack ID | Faulty battery address | 1 | |
+| 1119 | MaxSOC | Parallel maximum SOC | 1% | |
+| 1120 | MinSOC | Parallel minimum SOC | 1% | |
+| 1121 | BMS_Error2 | Battery protection 2 — CAN ID:0x323 Byte4-5 | — | |
+| 1122 | BMS_Error3 | Battery protection 3 — CAN ID:0x323 Byte6 | — | |
+| 1123 | BMS_WarnInfo2 | Battery warning 2 — CAN ID:0x323 Byte7 | — | |
+| 1124 | AC Charge Energy Today H | AC charge energy today (high) | 0.1kWh | |
+| 1125 | ACCharge Energy Today L | AC charge energy today (low) | 0.1kWh | |
+| 1126 | ACCharge Energy Total H | AC charge energy total (high) | 0.1kWh | |
+| 1127 | ACCharge Energy Total L | AC charge energy total (low) | 0.1kWh | |
+| 1128 | AC Charge Power H | AC charge power (high) | W | |
+| 1129 | AC Charge Power L | AC charge power (low) | W | |
+| 1130 | 70% INV Power adjust | Grid power 70% adjust | W | uwGridPower_70_AdjEE_SP |
+| 1131 | ExtraACPower to grid H | Extra inverter AC power to grid (high) | — | SPA only |
+| 1132 | ExtraACPower to grid L | Extra inverter AC power to grid (low) | — | SPA only |
+| 1133 | Eextra_today H | Extra inverter power to user today (high) | 0.1kWh | SPA only |
+| 1134 | Eextra_today L | Extra inverter power to user today (low) | 0.1kWh | SPA only |
+| 1135 | Eextra_total H | Extra inverter power to user total (high) | 0.1kWh | SPA only |
+| 1136 | Eextra_total L | Extra inverter power to user total (low) | 0.1kWh | SPA only |
+| 1137 | Esystem_today H | System electric energy today (high) | 0.1kWh | SPA only |
+| 1138 | Esystem_today L | System electric energy today (low) | 0.1kWh | SPA only |
+| 1139 | Esystem_total H | System electric energy total (high) | 0.1kWh | SPA only |
+| 1140 | Esystem_total L | System electric energy total (low) | 0.1kWh | SPA only |
+| 1141 | Eself_today H | Self electric energy today (high) | 0.1kWh | |
+| 1142 | Eself_today L | Self electric energy today (low) | 0.1kWh | |
+| 1143 | Eself_total H | Self electric energy total (high) | 0.1kWh | |
+| 1144 | Eself_total L | Self electric energy total (low) | 0.1kWh | |
+| 1145 | PSystem H | System power (high) | 0.1W | |
+| 1146 | PSystem L | System power (low) | 0.1W | |
+| 1147 | PSelf H | Self power (high) | 0.1W | |
+| 1148 | PSelf L | Self power (low) | 0.1W | |
+| 1149 | EPVAll_Today H | PV electric energy today (high) | 0.1kWh | |
+| 1150 | EPVAll_Today L | PV electric energy today (low) | 0.1kWh | |
+| 1151 | AcDischargePackSn | Discharge power pack serial number | — | R |
+| 1152 | Acdischarge power H | Cumulative discharge power high 16-bit | 0.1kWh | R |
+| 1153 | Acdischarge power L | Cumulative discharge power low 16-bit | 0.1kWh | R |
+| 1154 | AcChargePackSn | Charge power pack serial number | — | R |
+| 1155 | AcCharge power H | Cumulative charge power high 16-bit | 0.1kWh | R |
+| 1156 | AcCharge power L | Cumulative charge power low 16-bit | 0.1kWh | R |
+| 1157 | First Batt Fault Sn | First battery fault serial number | — | R |
+| 1158 | Second Batt Fault Sn | Second battery fault serial number | — | R |
+| 1159 | Third Batt Fault Sn | Third battery fault serial number | — | R |
+| 1160 | Fourth Batt Fault Sn | Fourth battery fault serial number | — | R |
+| 1161 | Battery history fault code 1 | Battery history fault code 1 | — | R |
+| 1162 | Battery history fault code 2 | Battery history fault code 2 | — | R |
+| 1163 | Battery history fault code 3 | Battery history fault code 3 | — | R |
+| 1164 | Battery history fault code 4 | Battery history fault code 4 | — | R |
+| 1165 | Battery history fault code 5 | Battery history fault code 5 | — | R |
+| 1166 | Battery history fault code 6 | Battery history fault code 6 | — | R |
+| 1167 | Battery history fault code 7 | Battery history fault code 7 | — | R |
+| 1168 | Battery history fault code 8 | Battery history fault code 8 | — | R |
+| 1169 | Number of battery codes | Battery fault code count (PACK + BIC) | — | R |
+| 1170–1198 | Reserved | Reserved | — | |
+| 1199 | NewEPowerCalcFlag | Energy calculation mode flag | — | 0=Old, 1=New |
+| 1200 | MaxCellVolt | Maximum cell voltage | 0.001V | R |
+| 1201 | MinCellVolt | Minimum cell voltage | 0.001V | R |
+| 1202 | ModuleNum | Number of battery modules | — | R |
+| 1203 | TotalCellNum | Total number of cells | — | R |
+| 1204 | MaxVoltCellNo | Max voltage cell number | — | R |
+| 1205 | MinVoltCellNo | Min voltage cell number | — | R |
+| 1206 | MaxTemprCell_10T | Max temperature cell (x10) | 0.1C | R |
+| 1207 | MinTemprCell_10T | Min temperature cell (x10) | 0.1C | R |
+| 1208 | MaxTemprCellNo | Max temperature cell number | — | R |
+| 1209 | MinTemprCellNo | Min temperature cell number | — | R |
+| 1210 | ProtectPackID | Fault pack ID | — | R |
+| 1211 | MaxSOC | Parallel maximum SOC | 1% | R |
+| 1212 | MinSOC | Parallel minimum SOC | 1% | R |
+| 1213 | BatProtect1Add | BatProtect1Add | — | R |
+| 1214 | BatProtect2Add | BatProtect2Add | — | R |
+| 1215 | BatWarn1Add | BatWarn1Add | — | R |
+| 1216 | BMS_HighestSoftVersion | BMS highest software version | — | R |
+| 1217 | BMS_HardwareVersion | BMS hardware version | — | R |
+| 1218 | BMS_RequestType | BMS request type | — | R |
+| 1219–1247 | Reserved | Reserved | — | |
+| 1248 | bKeyAgingTestOkFlag | Key detection success flag | — | 0=Not completed, 1=Finished |
+| 1249 | Reserved | Reserved | — | |
+| *Thirteenth group — SPA storage (2000–2124)* | | | | |
+| 2000 | Inverter Status | SPA inverter run state | — | 0=Waiting, 1=Normal, 3=Fault |
+| 2001–2034 | Reserved | Reserved | — | |
+| 2035 | Pac H | SPA output power (high) | 0.1W | |
+| 2036 | Pac L | SPA output power (low) | 0.1W | |
+| 2037 | Fac | SPA grid frequency | 0.01Hz | |
+| 2038 | Vac1 | SPA R-phase grid voltage | 0.1V | |
+| 2039 | Iac1 | SPA R-phase grid output current | 0.1A | |
+| 2040 | Pac1 H | SPA R-phase grid output apparent power (high) | 0.1VA | |
+| 2041 | Pac1 L | SPA R-phase grid output apparent power (low) | 0.1VA | |
+| 2042–2052 | Reserved | Reserved | — | |
+| 2053 | Eac today H | SPA today generate energy (high) | 0.1kWh | |
+| 2054 | Eac today L | SPA today generate energy (low) | 0.1kWh | |
+| 2055 | Eac total H | SPA total generate energy (high) | 0.1kWh | |
+| 2056 | Eac total L | SPA total generate energy (low) | 0.1kWh | |
+| 2057 | Time total H | SPA work time total (high) | 0.5s | |
+| 2058 | Time total L | SPA work time total (low) | 0.5s | |
+| 2059–2092 | Reserved | Reserved | — | |
+| 2093 | Temp1 | SPA inverter temperature | 0.1C | |
+| 2094 | Temp2 | SPA IPM temperature | 0.1C | |
+| 2095 | Temp3 | SPA boost temperature | 0.1C | |
+| 2096 | Temp4 | Reserved | — | |
+| 2097 | uwBatVolt_DSP | BatVolt_DSP | 0.1V | |
+| 2098 | P Bus Voltage | SPA P-Bus inside voltage | 0.1V | |
+| 2099 | N Bus Voltage | SPA N-Bus inside voltage | 0.1V | |
+| 2100 | RemoteCtrlEn | Remote control enable | — | 0=Load First, 1=Bat First, 2=Grid |
+| 2101 | RemoteCtrlPower | Remotely set power | — | |
+| 2102 | Extra AC Power to grid H | Extra inverter AC power to grid (high) | — | SPA |
+| 2103 | Extra AC Power to grid L | Extra inverter AC power to grid (low) | — | SPA |
+| 2104 | Eextra_today H | Extra inverter power to user today (high) | 0.1kWh | SPA |
+| 2105 | Eextra_today L | Extra inverter power to user today (low) | 0.1kWh | SPA |
+| 2106 | Eextra_total H | Extra inverter power to user total (high) | 0.1kWh | SPA |
+| 2107 | Eextra_total L | Extra inverter power to user total (low) | 0.1kWh | SPA |
+| 2108 | Esystem_today H | System electric energy today (high) | 0.1kWh | SPA |
+| 2109 | Esystem_today L | System electric energy today (low) | 0.1kWh | SPA |
+| 2110 | Esystem_total H | System electric energy total (high) | 0.1kWh | SPA |
+| 2111 | Esystem_total L | System electric energy total (low) | 0.1kWh | SPA |
+| 2112 | EACharge_Today_H | AC charge energy today (high) | 0.1kWh | Storage Power |
+| 2113 | EACharge_Today_L | AC charge energy today (low) | 0.1kWh | Storage Power |
+| 2114 | EACharge_Total_H | AC charge energy total (high) | 0.1kWh | Storage Power |
+| 2115 | EACharge_Total_L | AC charge energy total (low) | 0.1kWh | Storage Power |
+| 2116 | AC charge Power H | Grid power to local load (high) | 0.1kWh | Storage Power |
+| 2117 | AC charge Power L | Grid power to local load (low) | 0.1kWh | Storage Power |
+| 2118 | Priority | Charge/discharge priority | — | 0=Load First, 1=Battery First, 2=Grid First |
+| 2119 | Battery Type | Battery type | — | 0=Lead-acid, 1=Lithium |
+| 2120 | AutoProofreadCMD | Aging mode auto-calibration | — | Storage Power |
+| 2121–2124 | Reserved | Reserved | — | |
+| *TL-X and TL-XH group (3000–3417)* | | | | |
+| 3000 | Inverter Status | Inverter run state | — | High 8-bit=mode (0=Wait,1=Self-test,3=Fault,4=Flash,5-8=Normal); Low 8-bit=display (0=Standby,1=Ongrid,2=Offgrid,3=Fault,4=Flash) |
+| 3001 | Ppv H | PV total power (high) | 0.1W | |
+| 3002 | Ppv L | PV total power (low) | 0.1W | |
+| 3003 | Vpv1 | PV1 voltage | 0.1V | |
+| 3004 | Ipv1 | PV1 input current | 0.1A | |
+| 3005 | Ppv1 H | PV1 power (high) | 0.1W | |
+| 3006 | Ppv1 L | PV1 power (low) | 0.1W | |
+| 3007 | Vpv2 | PV2 voltage | 0.1V | |
+| 3008 | Ipv2 | PV2 input current | 0.1A | |
+| 3009 | Ppv2 H | PV2 power (high) | 0.1W | |
+| 3010 | Ppv2 L | PV2 power (low) | 0.1W | |
+| 3011 | Vpv3 | PV3 voltage | 0.1V | |
+| 3012 | Ipv3 | PV3 input current | 0.1A | |
+| 3013 | Ppv3 H | PV3 power (high) | 0.1W | |
+| 3014 | Ppv3 L | PV3 power (low) | 0.1W | |
+| 3015 | Vpv4 | PV4 voltage | 0.1V | |
+| 3016 | Ipv4 | PV4 input current | 0.1A | |
+| 3017 | Ppv4 H | PV4 power (high) | 0.1W | |
+| 3018 | Ppv4 L | PV4 power (low) | 0.1W | |
+| 3019 | Psys H | System output power (high) | 0.1W | |
+| 3020 | Psys L | System output power (low) | 0.1W | |
+| 3021 | Qac H | Reactive power (high) | 0.1Var | |
+| 3022 | Qac L | Reactive power (low) | 0.1Var | |
+| 3023 | Pac H | AC output power (high) | 0.1W | |
+| 3024 | Pac L | AC output power (low) | 0.1W | |
+| 3025 | Fac | Grid frequency | 0.01Hz | |
+| 3026 | Vac1 | R-phase / single-phase grid voltage | 0.1V | |
+| 3027 | Iac1 | R-phase / single-phase grid output current | 0.1A | |
+| 3028 | Pac1 H | R-phase grid output apparent power (high) | 0.1VA | |
+| 3029 | Pac1 L | R-phase grid output apparent power (low) | 0.1VA | |
+| 3030 | Vac2 | S-phase grid voltage | 0.1V | |
+| 3031 | Iac2 | S-phase grid output current | 0.1A | |
+| 3032 | Pac2 H | S-phase grid output power (high) | 0.1VA | |
+| 3033 | Pac2 L | S-phase grid output power (low) | 0.1VA | |
+| 3034 | Vac3 | T-phase grid voltage | 0.1V | |
+| 3035 | Iac3 | T-phase grid output current | 0.1A | |
+| 3036 | Pac3 H | T-phase grid output power (high) | 0.1VA | |
+| 3037 | Pac3 L | T-phase grid output power (low) | 0.1VA | |
+| 3038 | Vac_RS | R-S line voltage | 0.1V | |
+| 3039 | Vac_ST | S-T line voltage | 0.1V | |
+| 3040 | Vac_TR | T-R line voltage | 0.1V | |
+| 3041 | Ptouser total H | Total forward power (high) | 0.1W | |
+| 3042 | Ptouser total L | Total forward power (low) | 0.1W | |
+| 3043 | Ptogrid total H | Total reverse power (high) | 0.1W | |
+| 3044 | Ptogrid total L | Total reverse power (low) | 0.1W | |
+| 3045 | Ptoload total H | Total load power (high) | 0.1W | |
+| 3046 | Ptoload total L | Total load power (low) | 0.1W | |
+| 3047 | Time total H | Work time total (high) | 0.5s | |
+| 3048 | Time total L | Work time total (low) | 0.5s | |
+| 3049 | Eac today H | Today generate energy (high) | 0.1kWh | |
+| 3050 | Eac today L | Today generate energy (low) | 0.1kWh | |
+| 3051 | Eac total H | Total generate energy (high) | 0.1kWh | |
+| 3052 | Eac total L | Total generate energy (low) | 0.1kWh | |
+| 3053 | Epv_total H | PV energy total (high) | 0.1kWh | |
+| 3054 | Epv_total L | PV energy total (low) | 0.1kWh | |
+| 3055 | Epv1_today H | PV1 energy today (high) | 0.1kWh | |
+| 3056 | Epv1_today L | PV1 energy today (low) | 0.1kWh | |
+| 3057 | Epv1_total H | PV1 energy total (high) | 0.1kWh | |
+| 3058 | Epv1_total L | PV1 energy total (low) | 0.1kWh | |
+| 3059 | Epv2_today H | PV2 energy today (high) | 0.1kWh | |
+| 3060 | Epv2_today L | PV2 energy today (low) | 0.1kWh | |
+| 3061 | Epv2_total H | PV2 energy total (high) | 0.1kWh | |
+| 3062 | Epv2_total L | PV2 energy total (low) | 0.1kWh | |
+| 3063 | Epv3_today H | PV3 energy today (high) | 0.1kWh | |
+| 3064 | Epv3_today L | PV3 energy today (low) | 0.1kWh | |
+| 3065 | Epv3_total H | PV3 energy total (high) | 0.1kWh | |
+| 3066 | Epv3_total L | PV3 energy total (low) | 0.1kWh | |
+| 3067 | Etouser_today H | Today energy to user (high) | 0.1kWh | |
+| 3068 | Etouser_today L | Today energy to user (low) | 0.1kWh | |
+| 3069 | Etouser_total H | Total energy to user (high) | 0.1kWh | |
+| 3070 | Etouser_total L | Total energy to user (low) | 0.1kWh | |
+| 3071 | Etogrid_today H | Today energy to grid (high) | 0.1kWh | |
+| 3072 | Etogrid_today L | Today energy to grid (low) | 0.1kWh | |
+| 3073 | Etogrid_total H | Total energy to grid (high) | 0.1kWh | |
+| 3074 | Etogrid_total L | Total energy to grid (low) | 0.1kWh | |
+| 3075 | Eload_today H | Today energy of user load (high) | 0.1kWh | |
+| 3076 | Eload_today L | Today energy of user load (low) | 0.1kWh | |
+| 3077 | Eload_total H | Total energy of user load (high) | 0.1kWh | |
+| 3078 | Eload_total L | Total energy of user load (low) | 0.1kWh | |
+| 3079 | Epv4_today H | PV4 energy today (high) | 0.1kWh | |
+| 3080 | Epv4_today L | PV4 energy today (low) | 0.1kWh | |
+| 3081 | Epv4_total H | PV4 energy total (high) | 0.1kWh | |
+| 3082 | Epv4_total L | PV4 energy total (low) | 0.1kWh | |
+| 3083 | Epv_today H | PV energy today (high) | 0.1kWh | |
+| 3084 | Epv_today L | PV energy today (low) | 0.1kWh | |
+| 3085 | Reserved | Reserved | — | |
+| 3086 | DeratingMode | Inverter derating mode | — | See appendix table 1 |
+| 3087 | ISO | PV ISO value | 1kOhm | |
+| 3088 | DCI_R | R-phase DCI current | 0.1mA | |
+| 3089 | DCI_S | S-phase DCI current | 0.1mA | |
+| 3090 | DCI_T | T-phase DCI current | 0.1mA | |
+| 3091 | GFCI | GFCI current | 1mA | |
+| 3092 | Bus Voltage | Total bus voltage | 0.1V | |
+| 3093 | Temp1 | Inverter temperature | 0.1C | |
+| 3094 | Temp2 | IPM temperature | 0.1C | |
+| 3095 | Temp3 | Boost temperature | 0.1C | |
+| 3096 | Temp4 | Reserved | 0.1C | |
+| 3097 | Temp5 | Communication board temperature | 0.1C | |
+| 3098 | P Bus Voltage | P-Bus inside voltage | 0.1V | |
+| 3099 | N Bus Voltage | N-Bus inside voltage | 0.1V | |
+| 3100 | IPF | Inverter output power factor | — | 0–20000 |
+| 3101 | RealOPPercent | Real output power percent | 1% | 1–100 |
+| 3102 | OPFullwatt H | Output max power limit (high) | 0.1W | |
+| 3103 | OPFullwatt L | Output max power limit (low) | 0.1W | |
+| 3104 | StandbyFlag | Inverter standby flag | — | Bit0=TurnOffOrder,Bit1=PVLow,Bit2=AC V/F out of scope |
+| 3105 | Fault Maincode | Inverter fault main code | — | |
+| 3106 | Warn Maincode | Inverter warning main code | — | |
+| 3107 | Fault Subcode | Inverter fault sub code | — | bitfield |
+| 3108 | Warn Subcode | Inverter warning sub code | — | bitfield |
+| 3109 | Reserved | Reserved | — | bitfield |
+| 3110 | Reserved | Reserved | — | bitfield |
+| 3111 | uwPresentFFTValue [CHANNEL_A] | AFCI present FFT value channel A | — | bitfield |
+| 3112 | bAfciStatus | AFCI status | — | 0=Waiting,1=Self-check,2=Detection,3=Fault,4=Update |
+| 3113 | uwStrength [CHANNEL_A] | AFCI strength channel A | — | |
+| 3114 | uwSelfCheckValue [CHANNEL_A] | AFCI self-check value channel A | — | |
+| 3115 | inv start delay time | Inverter start delay time | 1s | |
+| 3116 | Time total H | Work time total (high) | 0.5s | |
+| 3117 | Time total L | Work time total (low) | 0.5s | |
+| 3118 | BDC_OnOffState | BDC connection state | — | 0=No BDC, 1=BDC1, 2=BDC2, 3=BDC1+BDC2 |
+| 3119 | DryContactState | Dry contact current status | — | 0=Off, 1=On |
+| 3120 | Reserved | Reserved | — | |
+| 3121 | Pself H | Self-use power (high) | 0.1W | |
+| 3122 | Pself L | Self-use power (low) | 0.1W | |
+| 3123 | Esys_today H | System energy today (high) | 0.1kWh | |
+| 3124 | Esys_today L | System energy today (low) | 0.1kWh | |
+| 3125 | Edischr_today H | Today discharge energy (high) | 0.1kWh | |
+| 3126 | Edischr_today L | Today discharge energy (low) | 0.1kWh | |
+| 3127 | Edischr_total H | Total discharge energy (high) | 0.1kWh | |
+| 3128 | Edischr_total L | Total discharge energy (low) | 0.1kWh | |
+| 3129 | Echr_today H | Charge energy today (high) | 0.1kWh | |
+| 3130 | Echr_today L | Charge energy today (low) | 0.1kWh | |
+| 3131 | Echr_total H | Charge energy total (high) | 0.1kWh | |
+| 3132 | Echr_total L | Charge energy total (low) | 0.1kWh | |
+| 3133 | Eacchr_today H | Today energy of AC charge (high) | 0.1kWh | |
+| 3134 | Eacchr_today L | Today energy of AC charge (low) | 0.1kWh | |
+| 3135 | Eacchr_total H | Total energy of AC charge (high) | 0.1kWh | |
+| 3136 | Eacchr_total L | Total energy of AC charge (low) | 0.1kWh | |
+| 3137 | Esys_total H | Total energy of system output (high) | 0.1kWh | |
+| 3138 | Esys_total L | Total energy of system output (low) | 0.1kWh | |
+| 3139 | Eself_today H | Today energy of self output (high) | 0.1kWh | |
+| 3140 | Eself_today L | Today energy of self output (low) | 0.1kWh | |
+| 3141 | Eself_total H | Total energy of self output (high) | 0.1kWh | |
+| 3142 | Eself_total L | Total energy of self output (low) | 0.1kWh | |
+| 3143 | Reserved | Reserved | — | |
+| 3144 | Priority Word | Mode priority | — | 0=LoadFirst, 1=BatteryFirst, 2=GridFirst |
+| 3145 | EPS Fac | UPS frequency | 0.01Hz | |
+| 3146 | EPS Vac1 | UPS phase R output voltage | 0.1V | |
+| 3147 | EPS Iac1 | UPS phase R output current | 0.1A | |
+| 3148 | EPS Pac1 H | UPS phase R output power (high) | 0.1VA | |
+| 3149 | EPS Pac1 L | UPS phase R output power (low) | 0.1VA | |
+| 3150 | EPS Vac2 | UPS phase S output voltage | 0.1V | |
+| 3151 | EPS Iac2 | UPS phase S output current | 0.1A | |
+| 3152 | EPS Pac2 H | UPS phase S output power (high) | 0.1VA | |
+| 3153 | EPS Pac2 L | UPS phase S output power (low) | 0.1VA | |
+| 3154 | EPS Vac3 | UPS phase T output voltage | 0.1V | |
+| 3155 | EPS Iac3 | UPS phase T output current | 0.1A | |
+| 3156 | EPS Pac3 H | UPS phase T output power (high) | 0.1VA | |
+| 3157 | EPS Pac3 L | UPS phase T output power (low) | 0.1VA | |
+| 3158 | EPS Pac H | UPS total output power (high) | 0.1VA | |
+| 3159 | EPS Pac L | UPS total output power (low) | 0.1VA | |
+| 3160 | Loadpercent | Load percent of UPS output | 0.1% | |
+| 3161 | PF | Power factor | 0.1 | |
+| 3162 | DCV | DC voltage | 1mV | |
+| 3163 | Reserved | Reserved | — | |
+| 3164 | NewBdcFlag | Whether to parse BDC data separately | — | 0=No, 1=Yes |
+| 3165 | BDCDeratingMode | Battery derating mode | — | See appendix table 2 |
+| 3166 | SysState_Mode | System work state and mode | — | High 8-bit=mode (0=No CHG/DISCHG,1=Charge,2=Discharge); Low 8-bit=status (0=Standby,1=Normal,2=Fault,3=Flash) |
+| *BDC1 battery data — 3167–3232* | | | | |
+| 3167 | FaultCode | Storage device fault code | — | |
+| 3168 | WarnCode | Storage device warning code | — | |
+| 3169 | Vbat | Battery voltage | 0.01V | **Note:** spec says 0.01V; MOD TL3-XH hardware uses 0.1V scale (corrected in v0.8.0) |
+| 3170 | Ibat | Battery current | 0.1A | |
+| 3171 | SOC | State of charge | 1% | |
+| 3172 | Vbus1 | Total BUS voltage | 0.1V | |
+| 3173 | Vbus2 | Upper BUS voltage | 0.1V | |
+| 3174 | Ibb | BUCK-BOOST current | 0.1A | |
+| 3175 | Illc | LLC current | 0.1A | |
+| 3176 | TempA | Temperature A | 0.1C | |
+| 3177 | TempB | Temperature B | 0.1C | |
+| 3178 | Pdischr H | Discharge power (high) | 0.1W | |
+| 3179 | Pdischr L | Discharge power (low) | 0.1W | |
+| 3180 | Pchr H | Charge power (high) | 0.1W | |
+| 3181 | Pchr L | Charge power (low) | 0.1W | |
+| 3182 | Edischr_total H | Discharge total energy of storage device (high) | 0.1kWh | |
+| 3183 | Edischr_total L | Discharge total energy of storage device (low) | 0.1kWh | |
+| 3184 | Echr_total H | Charge total energy of storage device (high) | 0.1kWh | |
+| 3185 | Echr_total L | Charge total energy of storage device (low) | 0.1kWh | |
+| 3186 | Reserved | Reserved | — | |
+| 3187 | BDC1_Flag | BDC mark (charge/discharge/fault/alarm) | — | Bit0=ChargeEn, Bit1=DischargeEn, Bit8-11=WarnSubCode, Bit12-15=FaultSubCode |
+| 3188 | Vbus2 | Lower BUS voltage | 0.1V | |
+| 3189 | BmsMaxVoltCellNo | BMS max voltage cell number | — | |
+| 3190 | BmsMinVoltCellNo | BMS min voltage cell number | — | |
+| 3191 | BmsBatteryAvgTemp | BMS battery average temperature | — | |
+| 3192 | BmsMaxCellTemp | BMS max cell temperature | 0.1C | |
+| 3193 | BmsBatteryAvgTemp2 | BMS battery average temperature (2) | 0.1C | |
+| 3194 | BmsMaxCellTemp2 | BMS max cell temperature (2) | — | |
+| 3195 | BmsBatteryAvgTemp3 | BMS battery average temperature (3) | — | |
+| 3196 | BmsMaxSOC | BMS max SOC | 1% | |
+| 3197 | BmsMinSOC | BMS min SOC | 1% | |
+| 3198 | ParallelBatteryNum | Parallel battery number | — | |
+| 3199 | BmsDerateReason | BMS derate reason | — | |
+| 3200 | BmsGaugeFCC | BMS gauge FCC (Ah) | — | |
+| 3201 | BmsGaugeRM | BMS gauge RM (Ah) | — | |
+| 3202 | BmsError | BMS protect 1 | — | |
+| 3203 | BmsWarn | BMS warning 1 | — | |
+| 3204 | BmsFault | BMS fault 1 | — | |
+| 3205 | BmsFault2 | BMS fault 2 | — | |
+| 3206 | Reserved | Reserved | — | |
+| 3207 | Reserved | Reserved | — | |
+| 3208 | Reserved | Reserved | — | |
+| 3209 | Reserved | Reserved | — | |
+| 3210 | BatIsoStatus | Battery ISO detection status | — | 0=Not detected, 1=Detection completed |
+| 3211 | BattNeedChargeRequestFlag | Battery work request | — | Bit0=ProhibitCharging, Bit1=StrongCharge, Bit2=StrongCharge2, Bit8=ProhibitDischarge, Bit9=PowerReduction |
+| 3212 | BMS_Status | Battery working status | — | 0=Dormancy,1=Charge,2=Discharge,3=Free,4=Standby,5=SoftStart,6=Fault,7=Update |
+| 3213 | BmsError2 | BMS protect 2 | — | R |
+| 3214 | BmsWarn2 | BMS warning 2 | — | R |
+| 3215 | BMS_SOC | BMS SOC | 1% | R |
+| 3216 | BMS_BatteryVolt | BMS battery voltage | 0.01V | R |
+| 3217 | BMS_BatteryCurr | BMS battery current | 0.01A | R |
+| 3218 | BMS_BatteryTemp | Battery cell maximum temperature | 0.1C | R |
+| 3219 | BMS_MaxCurr | Maximum charging current | 0.01A | R |
+| 3220 | BMS_MaxDischrCurr | Maximum discharge current | 0.01A | R |
+| 3221 | BMS_CycleCnt | BMS cycle count | 1 | R |
+| 3222 | BMS_SOH | BMS state of health | 1 | R |
+| 3223 | BMS_ChargeVoltLimit | Battery charging voltage limit | 0.01V | R |
+| 3224 | BMS_DischargeVoltLimit | Battery discharge voltage limit | 0.01V | R |
+| 3225 | Bms Warn3 | BMS warning 3 | 1 | R |
+| 3226 | Bms Error3 | BMS protect 3 | 1 | R |
+| 3227 | Reserved | Reserved | — | |
+| 3228 | Reserved | Reserved | — | |
+| 3229 | Reserved | Reserved | — | |
+| 3230 | BMSSingleVoltMax | BMS battery single volt max | 0.001V | R |
+| 3231 | BMSSingleVoltMin | BMS battery single volt min | 0.001V | R |
+| 3232 | BatLoadVolt | Battery load voltage | 0.01V | R; [0, 650.00V] |
+| 3233 | Reserved | Reserved | — | |
+| *Debug data — 3234–3249* | | | | |
+| 3234 | Debug data1 | Debug data 1 | — | R |
+| 3235 | Debug data2 | Debug data 2 | — | R |
+| 3236 | Debug data3 | Debug data 3 | — | R |
+| 3237 | Debug data4 | Debug data 4 | — | R |
+| 3238 | Debug data5 | Debug data 5 | — | R |
+| 3239 | Debug data6 | Debug data 6 | — | R |
+| 3240 | Debug data7 | Debug data 7 | — | R |
+| 3241 | Debug data8 | Debug data 8 | — | R |
+| 3242 | Debug data9 | Debug data 9 | — | R |
+| 3243 | Debug data10 | Debug data 10 | — | R |
+| 3244 | Debug data11 | Debug data 11 | — | R |
+| 3245 | Debug data12 | Debug data 12 | — | R |
+| 3246 | Debug data13 | Debug data 13 | — | R |
+| 3247 | Debug data14 | Debug data 14 | — | R |
+| 3248 | Debug data15 | Debug data 15 | — | R |
+| 3249 | Debug data16 | Debug data 16 | — | R |
+| *Backup box / external inverter data — 3250–3342* | | | | |
+| 3250 | Pex1H | PV inverter 1 output power (high) | 0.1W | R |
+| 3251 | Pex1L | PV inverter 1 output power (low) | 0.1W | R |
+| 3252 | Pex2H | PV inverter 2 output power (high) | 0.1W | R |
+| 3253 | Pex2L | PV inverter 2 output power (low) | 0.1W | R |
+| 3254 | Eex1TodayH | PV inverter 1 energy today (high) | 0.1kWh | R |
+| 3255 | Eex1TodayL | PV inverter 1 energy today (low) | 0.1kWh | R |
+| 3256 | Eex2TodayH | PV inverter 2 energy today (high) | 0.1kWh | R |
+| 3257 | Eex2TodayL | PV inverter 2 energy today (low) | 0.1kWh | R |
+| 3258 | Eex1TotalH | PV inverter 1 energy total (high) | 0.1kWh | R |
+| 3259 | Eex1TotalL | PV inverter 1 energy total (low) | 0.1kWh | R |
+| 3260 | Eex2TotalH | PV inverter 2 energy total (high) | 0.1kWh | R |
+| 3261 | Eex2TotalL | PV inverter 2 energy total (low) | 0.1kWh | R |
+| 3262 | uwBatNo | Battery pack number | — | R; updates every 15 min |
+| 3263 | BatSerialNum1 | Battery pack serial SN[0]SN[1] | — | R |
+| 3264 | BatSerialNum2 | Battery pack serial SN[2]SN[3] | — | R |
+| 3265 | BatSerialNum3 | Battery pack serial SN[4]SN[5] | — | R |
+| 3266 | BatSerialNum4 | Battery pack serial SN[6]SN[7] | — | R |
+| 3267 | BatSerialNum5 | Battery pack serial SN[8]SN[9] | — | R |
+| 3268 | BatSerialNum6 | Battery pack serial SN[10]SN[11] | — | R |
+| 3269 | BatSerialNum7 | Battery pack serial SN[12]SN[13] | — | R |
+| 3270 | BatSerialNum8 | Battery pack serial SN[14]SN[15] | — | R |
+| 3271–3276 | Reserved | Reserved | — | |
+| 3277 | bInvSnNumberFlag | Inverter SN number flag | — | R; 0=Other,1=10-bit,2=16-bit,3=21-bit |
+| 3278 | bBatterySnNumberFlag | Battery SN number flag | — | R; Bit0-7=BDC1 type, Bit8-15=BDC2 type |
+| 3279 | bBoxSnNumberFlag | Backup box SN number flag | — | R; 0=Other,1=10-bit,2=16-bit,3=21-bit |
+| 3280 | bClrTodayDataFlag | Clear day data flag | — | R; 0=Not cleared, 1=Cleared |
+| 3281 | ubBypassStatus | Backup box bypass switch status | — | R; 0=Off, 1=On |
+| 3282 | ubWorkMode | Backup box work mode | — | R; 0=Offgrid, 1=Ongrid, 2=Generator |
+| 3283 | ubFanStatus | Backup box fan status | — | R; 0=Off, 1=On |
+| 3284 | uwErrorCode | Backup box error code | — | R; 700–800 range |
+| 3285 | uwWarnCode | Backup box warning code | — | R; 700–800 range |
+| 3286 | bNtcTemp | Backup box temperature | 1C | R; Int8; -40 to 100 |
+| 3287 | uwGridVolt | Backup box grid voltage | 0.1V | R |
+| 3288 | uwGridCurr | Backup box grid current | 0.1A | R |
+| 3289 | dGridWatt_H | Backup box grid power (high) | 0.1W | R; Int32 |
+| 3290 | dGridWatt_L | Backup box grid power (low) | 0.1W | R |
+| 3291 | uwGridFreq | Backup box grid frequency | 0.01Hz | R |
+| 3292 | uwGenVolt | Backup box generator voltage | 0.1V | R |
+| 3293 | uwGenCurr | Backup box generator current | 0.1A | R |
+| 3294 | DGenWatt_H | Backup box generator power (high) | 0.1W | R; Int32 |
+| 3295 | DGenWatt_L | Backup box generator power (low) | 0.1W | R |
+| 3296 | uwGenFreq | Backup box generator frequency | 0.01Hz | R |
+| 3297 | dLoadWatt_H | Backup box load power (high) | 0.1W | R; Uint32 |
+| 3298 | dLoadWatt_L | Backup box load power (low) | 0.1W | R |
+| 3299 | uwFirmwareCode_H | Backup box firmware code (high) | — | R; 4 ASCII chars |
+| 3300 | uwFirmwareCode_L | Backup box firmware code (low) | — | R |
+| 3301 | ubFirmwareVersion | Backup box firmware version | — | R; Uint8 |
+| 3302 | uwSerialNum0 | Backup box serial number word 0 | — | R; 30 ASCII chars total |
+| 3303 | uwSerialNum1 | Backup box serial number word 1 | — | R |
+| 3304 | uwSerialNum2 | Backup box serial number word 2 | — | R |
+| 3305 | uwSerialNum3 | Backup box serial number word 3 | — | R |
+| 3306 | uwSerialNum4 | Backup box serial number word 4 | — | R |
+| 3307 | uwSerialNum5 | Backup box serial number word 5 | — | R |
+| 3308 | uwSerialNum6 | Backup box serial number word 6 | — | R |
+| 3309 | uwSerialNum7 | Backup box serial number word 7 | — | R |
+| 3310 | uwSerialNum8 | Backup box serial number word 8 | — | R |
+| 3311 | uwSerialNum9 | Backup box serial number word 9 | — | R |
+| 3312 | uwSerialNum10 | Backup box serial number word 10 | — | R |
+| 3313 | uwSerialNum11 | Backup box serial number word 11 | — | R |
+| 3314 | uwSerialNum12 | Backup box serial number word 12 | — | R |
+| 3315 | uwSerialNum13 | Backup box serial number word 13 | — | R |
+| 3316 | uwSerialNum14 | Backup box serial number word 14 | — | R |
+| 3317 | uwGridVoltS | Backup box S-phase grid voltage (XH models) | 0.1V | R |
+| 3318 | uwGridVoltT | Backup box T-phase grid voltage (XH models) | 0.1V | R |
+| 3319 | uwGridFreqS | Backup box S-phase grid frequency (XH models) | 0.01Hz | R |
+| 3320 | bBoxConnectFlag | Backup box communication status | — | R; 0=Abnormal, 1=Normal |
+| 3321 | bBoxDataUploadFlag | Backup box upload flag | — | R; 0=No, 1=Yes |
+| 3322 | MeterConnectFlag | Ankeri meter connection status | — | R; 0=Invalid, 1=Normal |
+| 3323 | SYNInstalledFlag | Backup box installation flag | — | R; 0=Not installed, 1=Installed |
+| 3324 | BoxUnbalanceCurrent | Backup box unbalance current | 0.1A | R |
+| 3325–3341 | Reserved | Reserved | — | |
+| 3342 | InvRelayStatus | Backup box inv relay status | — | R; 0=Not supported/comm error, 1=Open, 2=Close |
+| 3343 | GenvRelayStatus | Generator relay status | — | R; 0=Not supported/comm error, 1=Open, 2=Close |
+| 3344–3409 | Reserved | Reserved | — | |
+| *Error/warning bits — 3410–3417* | | | | |
+| 3410 | ErrorBit1 | Error bit 1 | — | |
+| 3411 | ErrorBit2 | Error bit 2 | — | |
+| 3412 | ErrorBit3 | Error bit 3 | — | |
+| 3413 | ErrorBit4 | Error bit 4 | — | |
+| 3414 | WarningBit1 | Warning bit 1 | — | |
+| 3415 | WarningBit2 | Warning bit 2 | — | |
+| 3416 | WarningBit3 | Warning bit 3 | — | |
+| 3417 | WarningBit4 | Warning bit 4 | — | |
+| *BDC parallel — 10 BDCs (4000–5079)* | | | | |
+| 4000–4107 | BDC1 | BDC1 data block | — | 8 regs SN + 69 regs same layout as 3165–3233 + 31 reserved |
+| 4108–4215 | BDC2 | BDC2 data block | — | Same structure as BDC1 |
+| 4216–4323 | BDC3 | BDC3 data block | — | Same structure |
+| 4324–4431 | BDC4 | BDC4 data block | — | Same structure |
+| 4432–4539 | BDC5 | BDC5 data block | — | Same structure |
+| 4540–4647 | BDC6 | BDC6 data block | — | Same structure |
+| 4648–4755 | BDC7 | BDC7 data block | — | Same structure |
+| 4756–4863 | BDC8 | BDC8 data block | — | Same structure |
+| 4864–4971 | BDC9 | BDC9 data block | — | Same structure |
+| 4972–5079 | BDC10 | BDC10 data block | — | Same structure |
+| *APX battery module — up to 64 parallel BDCs (5080+)* | | | | |
+| 5080 | BatSysState | System working state | — | 0=Initialize,1=Standby,2=Charge,3=Discharge,4=Shutdown,5=Fault,6=Update |
+| 5081 | BatSOC | Battery state of charge | 1% | Bit15-8=Mapping SOC[0,100]; Bit7-0=SOC[0,100] |
+| 5082 | BatSOH | Battery state of health | 1% | Bit7=1:NeedScrap; Bit6-0=SOH[0,100] |
+| 5083 | BatVolt | Total internal voltage of battery system | 0.1V | [0, 1500.0V] |
+| 5084 | BatCurrent | Battery system current | 0.1A | [-1000.0, 1000.0A] |
+| 5085 | BatPower | Charge and discharge power | 1W | [-32000, 32000W] |
+| 5086 | BatTotalDischargeElectric H | Cumulative discharge energy (high) | 0.1kWh | [0, 2000000.0 kWh] |
+| 5087 | BatTotalDischargeElectric L | Cumulative discharge energy (low) | 0.1kWh | |
+| 5088 | BatMaxCellVolt | Maximum cell voltage | 0.001V | [0, 6.000V] |
+| 5089 | BatMinCellVolt | Minimum cell voltage | 0.001V | [0, 6.000V] |
+| 5090 | BatMaxTemp | Maximum battery temperature | 0.1C | [-40.0, 125.0C] |
+| 5091 | BatMinTemp | Minimum battery temperature | 0.1C | [-40.0, 125.0C] |
+| 5092 | BatMaxLimitChargeCurrent | Maximum allowable charging current | 0.1A | [0, 1000.0A] |
+| 5093 | BatMaxLimitDischargeCurrent | Maximum allowable discharge current | 0.1A | (truncated in source) |

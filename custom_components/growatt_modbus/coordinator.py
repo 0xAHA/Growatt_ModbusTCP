@@ -520,15 +520,46 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 )
                 setattr(data, attr, retained)
 
-        # Daily totals: same logic, but retention clears at midnight
+        # Daily totals: same logic, but retention clears at midnight.
+        # Spike guard: the inverter writes 32-bit register pairs (high word, then low
+        # word) separately.  During the midnight daily-counter reset, the two words
+        # can be read in an inconsistent state, producing a transient garbage value
+        # (e.g. 79 kWh when the real value should be near 0).  Any daily-counter jump
+        # larger than _SPIKE_THRESHOLD_KWH in a single poll is rejected as a glitch.
+        _SPIKE_THRESHOLD_KWH = 20.0  # safe upper bound for any poll interval / system size
+
         for attr in DAILY_TOTAL_ATTRS:
             value = getattr(data, attr, 0)
             retained = self._retained_daily_totals.get(attr)
 
             if value > 0:
-                if self._retained_daily_totals.get(attr) != value:
-                    self._retained_daily_totals[attr] = value
-                    _updated = True
+                # Spike guard — reject implausible jumps
+                _spike = False
+                if retained is None:
+                    # First reading after midnight clear (or inverter just came online).
+                    # A legitimate morning start reading should be near 0.
+                    if value > _SPIKE_THRESHOLD_KWH:
+                        _spike = True
+                elif value - retained > _SPIKE_THRESHOLD_KWH:
+                    # Value jumped far more than any real system can accumulate in one poll.
+                    _spike = True
+
+                if _spike:
+                    _LOGGER.warning(
+                        "Daily total spike rejected for %s: %.2f kWh "
+                        "(retained=%.2f kWh, threshold=%.1f kWh) — "
+                        "likely register glitch during startup or midnight reset",
+                        attr, value,
+                        retained if retained is not None else 0.0,
+                        _SPIKE_THRESHOLD_KWH,
+                    )
+                    # Leave retention unchanged — do not persist the garbage value.
+                    # The next legitimate reading (near 0 after the inverter settles)
+                    # will be accepted normally.
+                else:
+                    if self._retained_daily_totals.get(attr) != value:
+                        self._retained_daily_totals[attr] = value
+                        _updated = True
             elif retained is not None and retained > 0:
                 _LOGGER.debug(
                     "Retaining %s=%.2f (hardware reported 0, likely dormant)",
