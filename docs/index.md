@@ -25,7 +25,8 @@ The integration polls your inverter directly over Modbus — the same protocol t
 - **[WIT Inverter Guide](controls/wit-guide.md)** — VPP protocol control for WIT models
 - **[Diagnostic Service](troubleshooting/diagnostic-service.md)** — Universal Register Scanner
 - **[DTC Debugging](troubleshooting/dtc-debugging.md)** — device type code reference
-- **[Adding Sensors](developer/sensor-checklist.md)** — contributor guide
+- **[Adding Sensors](developer/adding-sensors.md)** — add registers and sensors to an existing profile
+- **[New Profile](developer/new-profile.md)** — support a new or unsupported inverter model
 - **[Release Notes](release-notes.md)** — changelog
 
 ---
