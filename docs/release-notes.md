@@ -6,6 +6,12 @@
 
 ---
 
+## v0.8.3
+
+- **Fix (Issue #283): SPH 3–6kW and 7–10kW battery registers corrected:** Input registers 13–19 in the 0–124 range were mislabelled as battery registers. Per V1.39 protocol they are PV3–PV5 channel registers. Battery data moved to the correct storage-range registers: discharge power (1009–1010), charge power (1011–1012), battery voltage (1013), SOC (1014), battery temperature (1040). Fixes wrong `battery_power`, `battery_soc`, and `battery_voltage` readings on SPH 3600 TL-UP and similar models.
+
+---
+
 ## v0.8.2
 
 - **Fix: Critical `set_battery_mode` service was non-functional (F-001/F-002):** The VPP write logic had been spliced into `get_register_data`, leaving `set_battery_mode` as a registered no-op. `sync_tou_schedule` had an orphaned `_read()` closure referencing undefined variables — a latent NameError on the success path. All three function bodies restructured.

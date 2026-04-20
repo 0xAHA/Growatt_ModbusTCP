@@ -7,16 +7,19 @@ edit_uri: edit/main/docs/
 
 theme:
   name: material
+  font:
+    text: Inter
+    code: Roboto Mono
   palette:
     - scheme: default
-      primary: orange
-      accent: amber
+      primary: light-blue
+      accent: light-blue
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: orange
-      accent: amber
+      primary: light-blue
+      accent: light-blue
       toggle:
         icon: material/brightness-4
         name: Switch to light mode

@@ -4,6 +4,22 @@
 
 ---
 
+## v0.8.3
+
+---
+
+- **Fix (Issue #283): SPH 3–6kW and 7–10kW battery registers corrected:**
+  Input registers 13–19 in the 0–124 base range were incorrectly named as battery
+  registers (`battery_voltage`, `battery_current`, `battery_power`, `battery_soc`,
+  `battery_temp`, `bms_type`). Per V1.39 protocol those addresses are PV3–PV5 channel
+  registers (power H/L words for additional PV strings). Battery data is exclusively in
+  the storage range: discharge power (1009–1010), charge power (1011–1012), battery
+  voltage (1013), SOC (1014), battery temperature (1040). All six wrong definitions
+  removed; registers 1013 and 1040 added. V201 override that shadowed the old spurious
+  `battery_soc` at register 17 also removed.
+
+---
+
 ## v0.8.2
 
 ---

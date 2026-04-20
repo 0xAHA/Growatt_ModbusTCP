@@ -30,13 +30,20 @@ SPH_3000_6000 = {
         9: {'name': 'pv2_power_high', 'scale': 1, 'unit': '', 'pair': 10},
         10: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
-        # Battery (registers 13-18 for battery in SPH models)
-        13: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery pack voltage'},
-        14: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Battery current (+ charging, - discharging)', 'signed': True},
-        15: {'name': 'battery_power', 'scale': 1, 'unit': 'W', 'desc': 'Battery power (+ charging, - discharging)', 'signed': True},
-        17: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery state of charge'},
-        18: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Battery temperature', 'signed': True},
-        19: {'name': 'bms_type', 'scale': 1, 'unit': '', 'desc': 'BMS type identifier'},
+        # Per V1.39: regs 13-22 are PV3-PV5 channel registers (voltage, current, power H/L).
+        # Standard SPH 3-6kW has only 2 MPPT strings — PV3+ registers return 0 or are unused.
+        # Battery data is in the storage range (1000+) — see below.
+        17: {'name': 'ppv4_power_high', 'scale': 1, 'unit': '', 'pair': 18, 'desc': 'PV4 power HIGH word (0 if no PV4 string)'},
+        18: {'name': 'ppv4_power_low', 'scale': 1, 'unit': '', 'pair': 17, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'PV4 power LOW word (0 if no PV4 string)'},
+
+        # Battery — storage range (V1.39 correct registers — Issue #283)
+        1009: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 1010},
+        1010: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 1009, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1011: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 1012},
+        1012: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 1011, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1013: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery voltage (Vbat)'},
+        1014: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery state of charge'},
+        1040: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature'},
 
         # AC Output
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
@@ -242,13 +249,20 @@ SPH_7000_10000 = {
         9: {'name': 'pv2_power_high', 'scale': 1, 'unit': '', 'pair': 10},
         10: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
-        # Battery
-        13: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V'},
-        14: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True},
-        15: {'name': 'battery_power', 'scale': 1, 'unit': 'W', 'signed': True},
-        17: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
-        18: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
-        19: {'name': 'bms_type', 'scale': 1, 'unit': ''},
+        # Per V1.39: regs 13-22 are PV3-PV5 channel registers (voltage, current, power H/L).
+        # Standard SPH 7-10kW has 2 MPPT strings — PV3+ registers return 0 or are unused.
+        # Battery data is in the storage range (1000+) — see below.
+        17: {'name': 'ppv4_power_high', 'scale': 1, 'unit': '', 'pair': 18, 'desc': 'PV4 power HIGH word (0 if no PV4 string)'},
+        18: {'name': 'ppv4_power_low', 'scale': 1, 'unit': '', 'pair': 17, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'PV4 power LOW word (0 if no PV4 string)'},
+
+        # Battery — storage range (V1.39 correct registers — Issue #283)
+        1009: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 1010},
+        1010: {'name': 'discharge_power_low', 'scale': 1, 'unit': '', 'pair': 1009, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1011: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 1012},
+        1012: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 1011, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1013: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery voltage (Vbat)'},
+        1014: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery state of charge'},
+        1040: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature'},
 
         # AC Output
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
@@ -429,19 +443,18 @@ SPH_8000_10000_HU = {
         # === BASE RANGE (0-124) - Same as SPH_7000_10000 ===
         **SPH_7000_10000['input_registers'],
 
-        # PV String 3 (optional - present on HU models with 3 MPPT inputs)
-        # Note: These override inherited battery registers at 13-14 since battery is in storage range (1000+)
+        # PV String 3 (3rd MPPT on HU models)
+        # Per V1.39: regs 13-14 = Ppv3 H/L (PV3 power). Base profile leaves these undefined for
+        # standard 2-string models; HU defines them explicitly for its 3rd MPPT string.
         11: {'name': 'pv3_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'PV3 voltage (0 if not connected)'},
         12: {'name': 'pv3_current', 'scale': 0.1, 'unit': 'A', 'desc': 'PV3 current (0 if not connected)'},
         13: {'name': 'pv3_power_high', 'scale': 1, 'unit': '', 'pair': 14, 'desc': 'PV3 power HIGH (0 if not connected)'},
         14: {'name': 'pv3_power_low', 'scale': 1, 'unit': '', 'pair': 13, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'PV3 power LOW (0 if not connected)'},
 
-        # Override inherited battery registers (15, 17, 18, 19) - HU models use BMS registers (1086-1089) instead
-        # Rename base registers to prevent sensor name conflicts with BMS registers
+        # Per V1.39: reg 15 = Vpv4 (PV4 voltage); reg 19 = Vpv5 (PV5 voltage). Named to avoid spurious
+        # sensor creation — HU battery data comes from BMS registers (1086-1089), not base 1013/1040.
         15: {'name': 'battery_power_calc', 'scale': 1, 'unit': 'W', 'signed': True, 'desc': 'Calculated battery power (use with caution, BMS data more accurate)'},
-        17: {'name': 'battery_soc_legacy', 'scale': 1, 'unit': '%', 'desc': 'Legacy SOC register (ignore - use BMS SOC at 1086)'},
-        18: {'name': 'battery_temp_legacy', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Legacy temp register (ignore - use BMS temp at 1089)'},
-        19: {'name': 'bms_type_legacy', 'scale': 1, 'unit': '', 'desc': 'Legacy BMS type (ignore - use BMS info at 1082+)'},
+        19: {'name': 'bms_type_legacy', 'scale': 1, 'unit': '', 'desc': 'Legacy BMS type (use BMS info at 1082+)'},
 
         # === STORAGE RANGE (1000-1124) - Power Flow and Energy Breakdown ===
 
@@ -544,9 +557,6 @@ SPH_3000_6000_V201 = {
     'input_registers': {
         # === Legacy REGISTERS (0-124 range) ===
         **SPH_3000_6000['input_registers'],
-
-        # Disable inherited register 17 - use VPP register 31217 instead (standard SPH models)
-        17: {'name': 'battery_soc_legacy', 'scale': 1, 'unit': '%', 'desc': 'Legacy SOC register (shows 0 - use VPP register 31217)'},
 
         # === STORAGE RANGE REGISTERS (1000-1124) ===
         # Power Flow (storage range — Modbus RTU V1.20, issue #207)
@@ -669,9 +679,6 @@ SPH_7000_10000_V201 = {
     'input_registers': {
         # === Legacy REGISTERS (0-124 range) ===
         **SPH_7000_10000['input_registers'],
-
-        # Disable inherited register 17 - use VPP register 31217 instead (standard SPH models)
-        17: {'name': 'battery_soc_legacy', 'scale': 1, 'unit': '%', 'desc': 'Legacy SOC register (shows 0 - use VPP register 31217)'},
 
         # === STORAGE RANGE REGISTERS (1000-1124) ===
         # Power Flow (storage range — Modbus RTU V1.20, issue #207)
