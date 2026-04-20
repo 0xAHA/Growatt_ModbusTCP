@@ -546,11 +546,12 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
                 if _spike:
                     _LOGGER.warning(
-                        "Daily total spike rejected for %s: %.2f kWh "
-                        "(retained=%.2f kWh, threshold=%.1f kWh) — "
+                        "[ENERGY_GUARD] Daily total spike rejected for %s: %.3f kWh "
+                        "(retained=%.3f kWh, delta=%.3f kWh, threshold=%.1f kWh) — "
                         "likely register glitch during startup or midnight reset",
                         attr, value,
                         retained if retained is not None else 0.0,
+                        value - (retained if retained is not None else 0.0),
                         _SPIKE_THRESHOLD_KWH,
                     )
                     # Leave retention unchanged — do not persist the garbage value.
@@ -558,14 +559,27 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     # will be accepted normally.
                 else:
                     if self._retained_daily_totals.get(attr) != value:
+                        _LOGGER.debug(
+                            "[ENERGY_GUARD] Accepted %s: %.3f kWh (was retained=%.3f kWh, delta=%.3f kWh)",
+                            attr, value,
+                            retained if retained is not None else 0.0,
+                            value - (retained if retained is not None else 0.0),
+                        )
                         self._retained_daily_totals[attr] = value
                         _updated = True
             elif retained is not None and retained > 0:
                 _LOGGER.debug(
-                    "Retaining %s=%.2f (hardware reported 0, likely dormant)",
-                    attr, retained
+                    "[ENERGY_GUARD] Retaining %s=%.3f kWh (hardware reported 0 — dormant or startup reset)",
+                    attr, retained,
                 )
                 setattr(data, attr, retained)
+            else:
+                # value=0, no retention — log only for the key grid import sensor to avoid noise
+                if attr == 'energy_to_user_today':
+                    _LOGGER.debug(
+                        "[ENERGY_GUARD] %s: hardware=0, no retention — sensor will read 0",
+                        attr,
+                    )
 
         # Persist updated retention values (only when something changed, to avoid unnecessary I/O)
         if _updated:
@@ -626,7 +640,11 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 # Check if we crossed midnight while offline
                 current_date = datetime.now().date()
                 if current_date > self._current_date:
-                    _LOGGER.debug("Date changed while inverter offline - resetting daily totals")
+                    _LOGGER.debug(
+                        "[ENERGY_GUARD] Date changed while inverter offline (%s → %s) — "
+                        "resetting daily totals and clearing retention",
+                        self._current_date, current_date,
+                    )
                     # Reset daily totals to 0
                     self.data.energy_today = 0
                     self.data.energy_to_grid_today = 0
@@ -680,6 +698,15 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     # hasn't cleared yet. _protect_energy_totals would otherwise preserve them
                     # and block the hardware's own midnight reset (Issue #225).
                     _LOGGER.info("Inverter back online - enabling daily total debouncing to detect stale values")
+                    if self._retained_daily_totals:
+                        _LOGGER.debug(
+                            "[ENERGY_GUARD] Clearing daily retention on wake-up (%d values). "
+                            "energy_to_user_today was %.3f kWh, energy_today was %.3f kWh. "
+                            "Hardware will now determine new values; spike guard remains active.",
+                            len(self._retained_daily_totals),
+                            self._retained_daily_totals.get('energy_to_user_today', 0.0),
+                            self._retained_daily_totals.get('energy_today', 0.0),
+                        )
                     self._retained_daily_totals = {}
                     self._just_came_online_time = current_time
                 else:
@@ -718,12 +745,15 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 is_stale = (abs(energy_today - yesterday_energy) < tolerance and energy_today > 0) or \
                           (energy_today > max_expected_early and energy_today > 1.0)
 
+                _mins_since_wake = (current_time - self._just_came_online_time).total_seconds() / 60
                 if is_stale:
                     _LOGGER.warning(
-                        "Detected stale daily total in debounce window (%.1f min since wake-up): "
-                        "energy_today=%.2f kWh (yesterday: %.2f kWh, max expected: %.2f kWh) - resetting to 0",
-                        (current_time - self._just_came_online_time).total_seconds() / 60,
-                        energy_today, yesterday_energy, max_expected_early
+                        "[ENERGY_GUARD] Stale daily totals detected in debounce window "
+                        "(%.1f min since wake-up): energy_today=%.3f kWh "
+                        "(yesterday=%.3f kWh, max_expected=%.3f kWh, hours_since_midnight=%.2f) — "
+                        "resetting all daily totals to 0",
+                        _mins_since_wake,
+                        energy_today, yesterday_energy, max_expected_early, hours_since_midnight,
                     )
                     # Reset stale daily totals to zero
                     data.energy_today = 0
@@ -738,8 +768,13 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     self._retained_daily_totals = {}
                 else:
                     _LOGGER.debug(
-                        "Daily totals look valid: energy_today=%.2f kWh (yesterday: %.2f kWh, hours since midnight: %.1f)",
-                        energy_today, yesterday_energy, hours_since_midnight
+                        "[ENERGY_GUARD] Debounce window active (%.1f min since wake-up): "
+                        "energy_today=%.3f kWh (yesterday=%.3f kWh, max_expected=%.3f kWh, "
+                        "hours_since_midnight=%.2f) — energy_to_user_today=%.3f kWh — "
+                        "values accepted as valid",
+                        _mins_since_wake,
+                        energy_today, yesterday_energy, max_expected_early, hours_since_midnight,
+                        getattr(data, 'energy_to_user_today', 0.0),
                     )
             elif self._just_came_online_time:
                 # Debounce window expired

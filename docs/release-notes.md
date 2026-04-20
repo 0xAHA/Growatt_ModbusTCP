@@ -6,6 +6,12 @@
 
 ---
 
+## v0.8.4
+
+- **Debug: `[ENERGY_GUARD]` diagnostic logging for energy counter protection (Issue #228):** Searchable log entries now trace every accept/retain/spike-reject decision in the daily energy protection logic, plus the wake-up retention-clear event and stale-value debounce window. Helps diagnose inverters (e.g. MOD12-KTL3-HU) that accumulate overnight import values which then drop to zero at morning startup. Enable with `custom_components.growatt_modbus: debug` and search logs for `ENERGY_GUARD`.
+
+---
+
 ## v0.8.3
 
 - **Fix (Issue #283): SPH 3–6kW and 7–10kW battery registers corrected:** Input registers 13–19 in the 0–124 range were mislabelled as battery registers. Per V1.39 protocol they are PV3–PV5 channel registers. Battery data moved to the correct storage-range registers: discharge power (1009–1010), charge power (1011–1012), battery voltage (1013), SOC (1014), battery temperature (1040). Fixes wrong `battery_power`, `battery_soc`, and `battery_voltage` readings on SPH 3600 TL-UP and similar models.

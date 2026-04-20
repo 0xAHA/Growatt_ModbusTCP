@@ -4,6 +4,23 @@
 
 ---
 
+## v0.8.4
+
+---
+
+- **Debug: `[ENERGY_GUARD]` diagnostic logging added to energy protection (Issue #228):**
+  The daily energy counter protection logic now emits searchable `[ENERGY_GUARD]`
+  log entries at DEBUG level. Each poll logs whether a daily total was accepted,
+  retained (hardware reported 0), or spike-rejected. The wake-up retention-clear
+  event logs the discarded values before wiping them. The stale-value debounce
+  window now logs `energy_to_user_today` alongside `energy_today`. Enables root-cause
+  diagnosis of gradual overnight accumulation followed by a morning drop-to-zero on
+  inverters that stay partially online at night (e.g. MOD12-KTL3-HU). To enable,
+  set `custom_components.growatt_modbus: debug` in your HA logger config and
+  search logs for `ENERGY_GUARD`.
+
+---
+
 ## v0.8.3
 
 ---
