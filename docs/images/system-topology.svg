@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg viewBox="0 0 960 280" xmlns="http://www.w3.org/2000/svg"
+<svg viewBox="0 0 960 350" xmlns="http://www.w3.org/2000/svg"
      font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
 
   <!-- Background -->
-  <rect width="960" height="280" fill="#F8FAFC" rx="10"/>
+  <rect width="960" height="350" fill="#F8FAFC" rx="10"/>
 
   <!-- ══════════════════════════════════════════════════════════
        TOP ROW — hardware / software chain
@@ -17,7 +17,18 @@
   <text x="107" y="97" text-anchor="middle" font-size="10" fill="#78350F">MOD · WIT · TL-XH · SPE</text>
   <text x="107" y="118" text-anchor="middle" font-size="9" fill="#B45309" font-style="italic">RS485 COM port</text>
 
-  <!-- Arrow 1 -->
+  <!-- RS485 fork: vertical line from inverter COM port down to both the adapter and the CT Meter -->
+  <!-- Stub down from inverter bottom -->
+  <line x1="107" y1="130" x2="107" y2="138" stroke="#94A3B8" stroke-width="1.5"/>
+
+  <!-- Box 1b: CT Meter (optional — dashed amber) -->
+  <rect x="20" y="138" width="175" height="62" rx="7" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <text x="107" y="158" text-anchor="middle" font-size="11" font-weight="700" fill="#92400E">CT Meter</text>
+  <line x1="25" y1="164" x2="190" y2="164" stroke="#FDE68A" stroke-width="1"/>
+  <text x="107" y="177" text-anchor="middle" font-size="10" fill="#78350F">GOSS-W / SPM-S</text>
+  <text x="107" y="191" text-anchor="middle" font-size="8" fill="#B45309" font-style="italic">grid-tied models only</text>
+
+  <!-- Arrow 1: Inverter → RS485 Adapter (horizontal) -->
   <line x1="196" y1="85" x2="237" y2="85" stroke="#94A3B8" stroke-width="1.5"/>
   <polygon points="233,81 242,85 233,89" fill="#94A3B8"/>
   <text x="216" y="78" text-anchor="middle" font-size="9" fill="#64748B">RS485</text>
@@ -60,53 +71,53 @@
   <text x="813" y="111" text-anchor="middle" font-size="10" fill="#4338CA">Write verification · Cloud override detection</text>
 
   <!-- "Creates HA devices" label -->
-  <text x="480" y="152" text-anchor="middle" font-size="9" fill="#94A3B8" letter-spacing="1">CREATES HA DEVICES</text>
-  <line x1="20" y1="157" x2="940" y2="157" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="480" y="212" text-anchor="middle" font-size="9" fill="#94A3B8" letter-spacing="1">CREATES HA DEVICES</text>
+  <line x1="20" y1="217" x2="940" y2="217" stroke="#E2E8F0" stroke-width="1"/>
 
   <!-- ══════════════════════════════════════════════════════════
        BOTTOM ROW — HA device chips
        ══════════════════════════════════════════════════════════ -->
 
   <!-- Inverter Device -->
-  <rect x="20" y="163" width="164" height="98" rx="6" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5"/>
-  <text x="102" y="182" text-anchor="middle" font-size="11" font-weight="700" fill="#0F172A">Inverter</text>
-  <line x1="25" y1="188" x2="179" y2="188" stroke="#E2E8F0" stroke-width="1"/>
-  <text x="102" y="203" text-anchor="middle" font-size="9" fill="#475569">Status · temperatures</text>
-  <text x="102" y="217" text-anchor="middle" font-size="9" fill="#475569">Fault codes · firmware</text>
-  <text x="102" y="231" text-anchor="middle" font-size="9" fill="#475569">Control entities</text>
-  <text x="102" y="252" text-anchor="middle" font-size="8" fill="#94A3B8" font-style="italic">parent device</text>
+  <rect x="20" y="223" width="164" height="98" rx="6" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5"/>
+  <text x="102" y="242" text-anchor="middle" font-size="11" font-weight="700" fill="#0F172A">Inverter</text>
+  <line x1="25" y1="248" x2="179" y2="248" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="102" y="263" text-anchor="middle" font-size="9" fill="#475569">Status · temperatures</text>
+  <text x="102" y="277" text-anchor="middle" font-size="9" fill="#475569">Fault codes · firmware</text>
+  <text x="102" y="291" text-anchor="middle" font-size="9" fill="#475569">Control entities</text>
+  <text x="102" y="312" text-anchor="middle" font-size="8" fill="#94A3B8" font-style="italic">parent device</text>
 
   <!-- Solar Device -->
-  <rect x="198" y="163" width="164" height="98" rx="6" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.5"/>
-  <text x="280" y="182" text-anchor="middle" font-size="11" font-weight="700" fill="#92400E">Solar</text>
-  <line x1="203" y1="188" x2="357" y2="188" stroke="#FDE68A" stroke-width="1"/>
-  <text x="280" y="203" text-anchor="middle" font-size="9" fill="#78350F">PV1 · PV2 · PV3 power</text>
-  <text x="280" y="217" text-anchor="middle" font-size="9" fill="#78350F">AC output · frequency</text>
-  <text x="280" y="231" text-anchor="middle" font-size="9" fill="#78350F">Energy today / total</text>
+  <rect x="198" y="223" width="164" height="98" rx="6" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="280" y="242" text-anchor="middle" font-size="11" font-weight="700" fill="#92400E">Solar</text>
+  <line x1="203" y1="248" x2="357" y2="248" stroke="#FDE68A" stroke-width="1"/>
+  <text x="280" y="263" text-anchor="middle" font-size="9" fill="#78350F">PV1 · PV2 · PV3 power</text>
+  <text x="280" y="277" text-anchor="middle" font-size="9" fill="#78350F">AC output · frequency</text>
+  <text x="280" y="291" text-anchor="middle" font-size="9" fill="#78350F">Energy today / total</text>
 
   <!-- Grid Device -->
-  <rect x="376" y="163" width="164" height="98" rx="6" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5"/>
-  <text x="458" y="182" text-anchor="middle" font-size="11" font-weight="700" fill="#1D4ED8">Grid</text>
-  <line x1="381" y1="188" x2="535" y2="188" stroke="#BFDBFE" stroke-width="1"/>
-  <text x="458" y="203" text-anchor="middle" font-size="9" fill="#1E40AF">Import · export power</text>
-  <text x="458" y="217" text-anchor="middle" font-size="9" fill="#1E40AF">Grid voltage · frequency</text>
-  <text x="458" y="231" text-anchor="middle" font-size="9" fill="#1E40AF">Energy to / from grid</text>
+  <rect x="376" y="223" width="164" height="98" rx="6" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="458" y="242" text-anchor="middle" font-size="11" font-weight="700" fill="#1D4ED8">Grid</text>
+  <line x1="381" y1="248" x2="535" y2="248" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="458" y="263" text-anchor="middle" font-size="9" fill="#1E40AF">Import · export power</text>
+  <text x="458" y="277" text-anchor="middle" font-size="9" fill="#1E40AF">Grid voltage · frequency</text>
+  <text x="458" y="291" text-anchor="middle" font-size="9" fill="#1E40AF">Energy to / from grid</text>
 
   <!-- Load Device -->
-  <rect x="554" y="163" width="164" height="98" rx="6" fill="#F5F3FF" stroke="#8B5CF6" stroke-width="1.5"/>
-  <text x="636" y="182" text-anchor="middle" font-size="11" font-weight="700" fill="#5B21B6">Load</text>
-  <line x1="559" y1="188" x2="713" y2="188" stroke="#DDD6FE" stroke-width="1"/>
-  <text x="636" y="203" text-anchor="middle" font-size="9" fill="#4C1D95">House consumption</text>
-  <text x="636" y="217" text-anchor="middle" font-size="9" fill="#4C1D95">Load power</text>
-  <text x="636" y="231" text-anchor="middle" font-size="9" fill="#4C1D95">Load energy today</text>
+  <rect x="554" y="223" width="164" height="98" rx="6" fill="#F5F3FF" stroke="#8B5CF6" stroke-width="1.5"/>
+  <text x="636" y="242" text-anchor="middle" font-size="11" font-weight="700" fill="#5B21B6">Load</text>
+  <line x1="559" y1="248" x2="713" y2="248" stroke="#DDD6FE" stroke-width="1"/>
+  <text x="636" y="263" text-anchor="middle" font-size="9" fill="#4C1D95">House consumption</text>
+  <text x="636" y="277" text-anchor="middle" font-size="9" fill="#4C1D95">Load power</text>
+  <text x="636" y="291" text-anchor="middle" font-size="9" fill="#4C1D95">Load energy today</text>
 
   <!-- Battery Device -->
-  <rect x="732" y="163" width="208" height="98" rx="6" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5"/>
-  <text x="836" y="182" text-anchor="middle" font-size="11" font-weight="700" fill="#15803D">Battery</text>
-  <line x1="737" y1="188" x2="935" y2="188" stroke="#BBF7D0" stroke-width="1"/>
-  <text x="836" y="203" text-anchor="middle" font-size="9" fill="#166534">SOC · voltage · power</text>
-  <text x="836" y="217" text-anchor="middle" font-size="9" fill="#166534">Charge / discharge energy</text>
-  <text x="836" y="231" text-anchor="middle" font-size="9" fill="#166534">Temperature</text>
-  <text x="836" y="252" text-anchor="middle" font-size="8" fill="#16A34A" font-style="italic">hybrid models only</text>
+  <rect x="732" y="223" width="208" height="98" rx="6" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="836" y="242" text-anchor="middle" font-size="11" font-weight="700" fill="#15803D">Battery</text>
+  <line x1="737" y1="248" x2="935" y2="248" stroke="#BBF7D0" stroke-width="1"/>
+  <text x="836" y="263" text-anchor="middle" font-size="9" fill="#166534">SOC · voltage · power</text>
+  <text x="836" y="277" text-anchor="middle" font-size="9" fill="#166534">Charge / discharge energy</text>
+  <text x="836" y="291" text-anchor="middle" font-size="9" fill="#166534">Temperature</text>
+  <text x="836" y="312" text-anchor="middle" font-size="8" fill="#16A34A" font-style="italic">hybrid models only</text>
 
 </svg>

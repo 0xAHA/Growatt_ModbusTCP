@@ -24,19 +24,21 @@
         font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
         text-anchor="middle">solar_total_power</text>
 
-  <!-- Inverter -> Grid (export): horizontal right, upper lane y=55 -->
-  <line x1="381" y1="55" x2="579" y2="55"
+  <!-- Inverter -> CT Meter (export): upper lane y=55 -->
+  <line x1="381" y1="55" x2="421" y2="55"
         stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arr)"/>
-  <text x="480" y="48" font-size="9" fill="#64748B"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-        text-anchor="middle">grid_export_power</text>
 
-  <!-- Grid -> Inverter (import): horizontal left, lower lane y=70 -->
-  <line x1="579" y1="70" x2="381" y2="70"
+  <!-- CT Meter -> Grid (export): upper lane y=55 -->
+  <line x1="539" y1="55" x2="579" y2="55"
         stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arr)"/>
-  <text x="480" y="82" font-size="9" fill="#64748B"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-        text-anchor="middle">grid_import_power</text>
+
+  <!-- Grid -> CT Meter (import): lower lane y=70 -->
+  <line x1="579" y1="70" x2="539" y2="70"
+        stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- CT Meter -> Inverter (import): lower lane y=70 -->
+  <line x1="421" y1="70" x2="381" y2="70"
+        stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arr)"/>
 
   <!-- Grid -> House (right edge of Grid to left edge of House) -->
   <line x1="741" y1="62" x2="779" y2="62"
@@ -108,7 +110,30 @@
         text-anchor="middle">status · temperature</text>
 
   <!-- ================================================================
-       NODE 3: Grid — blue theme
+       NODE 3: CT Meter — amber dashed border (optional hardware)
+       ================================================================ -->
+  <rect x="422" y="30" width="116" height="80" rx="6"
+        fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <!-- Title bar -->
+  <rect x="422" y="30" width="116" height="22" rx="6" fill="#FEF3C7"/>
+  <rect x="422" y="44" width="116" height="8" fill="#FEF3C7"/>
+  <text x="480" y="46" font-size="10" font-weight="600" fill="#92400E"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        text-anchor="middle">CT Meter</text>
+  <!-- Body lines -->
+  <text x="480" y="63" font-size="8" fill="#78350F"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        text-anchor="middle">GOSS-W / SPM-S</text>
+  <text x="480" y="75" font-size="8" fill="#78350F"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        text-anchor="middle">RS485 to inverter</text>
+  <!-- Footer italic -->
+  <text x="480" y="101" font-size="7" fill="#B45309" font-style="italic"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        text-anchor="middle">grid-tied models only</text>
+
+  <!-- ================================================================
+       NODE 4: Grid — blue theme
        ================================================================ -->
   <rect x="580" y="30" width="160" height="80" rx="6"
         fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5"/>
@@ -132,7 +157,7 @@
         text-anchor="middle">power_to_grid (plus/minus)</text>
 
   <!-- ================================================================
-       NODE 4: House Load — purple theme
+       NODE 5: House Load — purple theme
        ================================================================ -->
   <rect x="780" y="30" width="160" height="80" rx="6"
         fill="#F5F3FF" stroke="#8B5CF6" stroke-width="1.5"/>
@@ -156,7 +181,7 @@
         text-anchor="middle">load_energy_today</text>
 
   <!-- ================================================================
-       NODE 5: Battery — green theme
+       NODE 6: Battery — green theme
        ================================================================ -->
   <rect x="220" y="200" width="160" height="80" rx="6"
         fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5"/>
@@ -194,20 +219,28 @@
   </text>
 
   <!-- Legend: dashed line sample -->
-  <line x1="180" y1="306" x2="204" y2="306"
+  <line x1="178" y1="306" x2="202" y2="306"
         stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arr)"/>
-  <text x="210" y="309" font-size="9" fill="#64748B"
+  <text x="208" y="309" font-size="9" fill="#64748B"
         font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
-    Calculated flow (solar + import - export)
+    Calculated flow (solar + import − export)
   </text>
 
   <!-- Legend: bidirectional sample -->
-  <line x1="420" y1="306" x2="444" y2="306"
+  <line x1="410" y1="306" x2="434" y2="306"
         stroke="#94A3B8" stroke-width="1.5"
         marker-start="url(#arr-start)" marker-end="url(#arr)"/>
-  <text x="450" y="309" font-size="9" fill="#64748B"
+  <text x="440" y="309" font-size="9" fill="#64748B"
         font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
     Bidirectional (charge / discharge)
+  </text>
+
+  <!-- Legend: dashed amber border = optional hardware -->
+  <rect x="590" y="299" width="34" height="14" rx="3"
+        fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="4 2"/>
+  <text x="630" y="309" font-size="9" fill="#64748B"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    Optional hardware (grid-tied models)
   </text>
 
   <!-- Legend: sign convention note -->
