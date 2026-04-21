@@ -49,6 +49,7 @@ When you add the integration, it attempts to identify your inverter automaticall
 | Model | Range | PV Strings | Battery | VPP Support | Auto-detect | Tested | Notes |
 |-------|-------|-----------|---------|-------------|-------------|--------|-------|
 | **MID 15000-25000TL3-X** | 15–25 kW | 2 | No | VPP + Legacy | Model name | ⚠️ | Grid-tied |
+| **MOD 6000-15000TL3-X** | 6–15 kW | 3 | No | VPP + Legacy | DTC 5400 | ⚠️ | Grid-tied; grid flow sensors require Growatt smart meter (GOSS-W / SPM-S) |
 | **MOD 6000-15000TL3-XH** | 6–15 kW | 3 | Yes | VPP + Legacy | DTC 5400 | ✅ | Battery monitoring only (control pending) |
 | **SPH-TL3 3000-10000** | 3–10 kW | 2 | Yes | VPP + Legacy | DTC | ✅ | Tested: SPH 8000TL3 BH-UP |
 | **WIT 4000-15000TL3** | 4–15 kW | 2 | Yes | VPP v2.02 | DTC 5603 | ✅ | Advanced VPP control |
@@ -65,7 +66,9 @@ When you add the integration, it attempts to identify your inverter automaticall
 
 ## Sensor Availability by Model
 
-| Sensor | MIC | MIN 3-6k | MIN 7-10k | MIN TL-XH | SPA | SPH 3-6k | SPH 7-10k | SPF | SPH-TL3 | MID | MOD | WIT |
+The **MOD** column below represents the **MOD TL3-XH** (hybrid, with battery). The grid-tied **MOD TL3-X** (no battery) is architecturally identical in the solar register range but its grid flow registers require a Growatt smart meter — see [Smart Meter Requirement](#smart-meter-requirement) below.
+
+| Sensor | MIC | MIN 3-6k | MIN 7-10k | MIN TL-XH | SPA | SPH 3-6k | SPH 7-10k | SPF | SPH-TL3 | MID | MOD XH | WIT |
 | -------- | :---: | :--------: | :---------: | :---------: | :---: | :--------: | :---------: | :---: | :-------: | :---: | :---: | :---: |
 | **Solar Input** | | | | | | | | | | | | |
 | PV1 Voltage/Current/Power | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -102,6 +105,44 @@ When you add the integration, it attempts to identify your inverter automaticall
 
 *HU variants only (SPH/SPM 8000-10000TL3-BH-HU)
 †AC voltage only (reg 1105, scale ×0.01); AC current/power and frequency not confirmed for SPA
+
+---
+
+## Smart Meter Requirement
+
+Several sensors only populate if a **Growatt smart meter** (GOSS-W or SPM-S CT clamp) is physically installed between the inverter and the grid connection. Without a meter the inverter has no way to measure AC import/export directly — the sensors appear in Home Assistant but always read zero.
+
+### Which sensors are affected
+
+| Sensor group | Without meter | With meter |
+| --- | --- | --- |
+| Grid Export / Import Power | Always 0 W | Live reading |
+| Power to Grid / Power to User (registers) | Always 0 W | Live reading |
+| Energy to Grid Today / Total | Always 0 kWh | Accumulating |
+| Load Energy Today / Total (register-based) | Always 0 kWh | Accumulating |
+
+> **`house_consumption` is never affected.** It is a calculated sensor (`solar_total_power + grid_import_power − grid_export_power`) and always reflects actual consumption regardless of meter presence — it just falls back to being solar-only when grid readings are zero.
+
+### Which models are affected
+
+| Model | Meter required? |
+| --- | --- |
+| **MOD 6000-15000TL3-X** (grid-tied, no battery) | **Yes** — 3000+ register range returns all zeros without meter |
+| **MOD 6000-15000TL3-XH** (hybrid) | Yes, for accurate grid registers; battery-side sensors unaffected |
+| **SPH-TL3, SPH, MIN TL-XH, WIT** (hybrid) | Yes, for meter-based grid registers; calculated `house_consumption` always works |
+| **MIC, MIN TL-X, MID** (grid-tied, no battery) | No — grid power is inferred from the inverter's own AC measurement |
+| **SPF** (off-grid) | N/A — grid connection is AC input only, no export |
+
+### What hardware to get
+
+Growatt sell two compatible meters:
+
+- **GOSS-W** — DIN-rail energy meter with RS485, suited for residential panels
+- **SPM-S** — split-core CT clamp version, easier retrofitting without rewiring
+
+The meter connects to the inverter's RS485 COM port (same bus as the Modbus adapter, or daisy-chained). Configuration is done via the Growatt inverter display or ShinePhone app — the integration does not configure the meter.
+
+> If you are unsure whether a meter is installed, check the **Energy to Grid Today** sensor at a time when you know the inverter is actively exporting. If it remains at 0 kWh while solar generation is high and house consumption is low, a meter is not present or not configured.
 
 ---
 
@@ -175,6 +216,7 @@ If auto-detection fails (or you want to override), choose based on:
 | Select this | PV Strings | Battery | Power | When |
 |-------------|-----------|---------|-------|------|
 | MID 15000-25000TL3-X | 2 | No | 15–25 kW | Grid-tied only |
+| MOD 6000-15000TL3-X | 3 | No | 6–15 kW | Grid-tied only; grid flow sensors require smart meter |
 | MOD 6000-15000TL3-XH | 3 | Yes | 6–15 kW | Hybrid with battery |
 | SPH-TL3 3000-10000 | 2 | Yes | 3–10 kW | Hybrid with battery |
 | WIT 4000-15000TL3 | 2 | Yes | 4–15 kW | Hybrid, advanced VPP control |
