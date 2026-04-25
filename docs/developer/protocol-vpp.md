@@ -32,15 +32,25 @@ the inverter model. The integration reads this at startup for automatic model de
 | DTC Code | Model |
 | --- | --- |
 | 3502 | SPH 3000-6000TL BL |
+| 3503 | SPH 3000-6000TL HU |
+| 3504 | SPH 3000-6000TL HUB |
 | 3601 | SPH 4000-10000TL3 BH-UP |
+| 3701 | SPA 1000-3000TL BL |
+| 3715 | SPA 3000-6000TL AU |
+| 3716 | SPA 3000-6000TL AUB |
 | 3725 | SPA 4000-10000TL3 BH-UP |
 | 3735 | SPA 3000-6000TL BL |
+| 5001 | MID 17–25KTL3-X / MID 20–30KTL3-X2 |
+| 5002 | MID 33–36KTL3-X(Pro.E) / MOD 3–15KTL3-X |
+| 5003 | MAC 30–70KTL3-X |
 | 5100 | MIN 2500-6000TL-XH/XH(P) |
 | 5200 | MIC/MIN 2500-6000TL-X/X2 |
 | 5201 | MIN 7000-10000TL-X/X2 |
-| 5400 | MOD-XH\MID-XH |
+| 5400 | MOD-XH / MID-XH |
+| 5600 | WIS 100K-AM / WIT 50–100K-H/HE/HU |
 | 5601 | WIT 100KTL3-H |
 | 5800 | WIS 215KTL3 |
+| 5801 | WIS 215K-AM |
 
 ---
 
@@ -86,7 +96,7 @@ the inverter model. The integration reads this at startup for automatic model de
 | 30084 | Reserved | RO | UINT16 | - | 1 | Reserved |
 | 30099 | VPP Protocol Version | RO | UINT16 | - | 15 | 200 represents V2.00, 201 represents V2.01 |
 | 30100 | Control authority | RW | UINT16 | - | 1 | 0: not enabled, 1: Enable, Default: 0 |
-| 30101 | On off command | RW | UINT16 | - | 1 | 0: power off, 1: power on, Default: 1, Not storage |
+| 30101 | On off command | RW | UINT16 | - | 1 | 0: power off, 1: power on, 9: bypass (V2.03), Default: 1, Not storage |
 | 30102 | Country / region number | RO | UINT16 | - | 1 | See Table 3-5 |
 | 30103 | Reserve | RW | UINT16 | - | 1 | - |
 | 30104 | System time | RW | UINT16 | - | 6 | See table 3-6 |
@@ -102,9 +112,9 @@ the inverter model. The integration reads this at startup for automatic model de
 | 30154 | Static active power limitation | RW | UINT16 | % | 1 | Power limit percent: [0,100], Default: 100, Actual active power is the less one, Not storage |
 | 30155 | EPS offline enable | RW | UINT16 | - | 1 | 0: not enabled, 1: enable, Default: 0 |
 | 30156 | EPS offline frequency | RW | UINT16 | 0.01Hz | 1 | 0:50Hz, 1:60Hz, Default: 0 |
-| 30157 | EPS offline voltage | RW | UINT16 | - | 1 | Default: 0 |
+| 30157 | EPS offline voltage | RW | UINT16 | - | 1 | Default: 0 — WIT/WIS: 0:230V 1:208V 2:240V 3:220V 4:127V 5:277V 6:254V; MOD-XH/MID-XH/MOD/MID-HU: 0:230V 1:208V 2:240V 3:220V; SPH/SPA: 0:230V 1:208V 2:240V; other models: not used |
 | 30158 | Reserve | RW | UINT16 | - | 2 | - |
-| 30160 | Fix Q | RW | UINT16 | % | 1 | Power limit percentage: [0,60], Default: 60 |
+| 30160 | Fix Q | RW | UINT16 | % | 1 | Power limit percentage: [0,70], Default: 60 |
 | 30161 | Reactive power mode | RW | UINT16 | - | 1 | 0: PF=1, 1: Pf value setting, 4: Lagging reactive power (+), 5: Leading reactive power (-), Default: 0 |
 | 30162 | Power factor | RW | UINT16 | - | 1 | [0,2000] ∪ [18000,20000], Default: 20000, Actual PF = (set value - 10000) * 0.0001 |
 | 30163 | Reserve | RW | INT16 | % | 1 | - |
@@ -118,23 +128,44 @@ the inverter model. The integration reads this at startup for automatic model de
 | 30206 | Export Limitation change slope | RW | UINT16 | *0.01%Pn/s | 1 | [1,20000], Default: 27 |
 | 30207 | Export Limitation single phase control enable | RW | UINT16 | - | 1 | 0: not enabled, 1: enable, Default: 0 |
 | 30208 | Export Limitation protection mode | RW | UINT16 | - | 1 | 0: Default mode, 1: Combine control, 2: software control, 3: hardware control, Default: 0 |
-| 30209 | Reserve | RW | UINT16 | - | 91 | - |
+| 30209 | Automatic on/off-grid switch enable (V2.03) | RW | UINT16 | - | 1 | 0: Automatic, 1: Manual, Default: 0 |
+| 30210 | On/off-grid set (V2.03) | RW | UINT16 | - | 1 | 0: on-grid, 1: off-grid, 2: diesel engine mode, Default: 0 — settable only when 30209=1 (Manual) |
+| 30211 | Active power R (V2.03) | RW | UINT16 | 0.1kW | 1 | [0, rated power/3] |
+| 30212 | Active power S (V2.03) | RW | UINT16 | 0.1kW | 1 | [0, rated power/3] |
+| 30213 | Active power T (V2.03) | RW | UINT16 | 0.1kW | 1 | [0, rated power/3] |
+| 30214 | Single phase active power control enable (V2.03) | RW | UINT16 | - | 1 | 0: not enabled, 1: enable, Default: 0 |
+| 30215 | AC charge power max limitation (V2.03) | RW | UINT16 | 0.1kW | 1 | [0, rated power], Default: no limit — active only when 30410 is enabled |
+| 30216 | Reserve | RW | UINT16 | - | 34 | - |
+| 30250 | Diesel engine rated power (V2.03) | RW | UINT16 | 0.1kW | 1 | [0,10000], Default: inverter rated power |
+| 30251 | Diesel engine charge power (V2.03) | RW | UINT16 | 0.1kW | 1 | [0,10000], Default: inverter rated power |
+| 30252 | Diesel engine enable (V2.03) | RW | BOOL | - | 1 | 0: not enabled, 1: enable, Default: 0 |
+| 30253 | Off-grid diesel engine start SOC (V2.03) | RW | UINT16 | % | 1 | [0,100], Default: 20 |
+| 30254 | Off-grid diesel engine stop SOC (V2.03) | RW | UINT16 | % | 1 | [0,100], Default: 50 |
+| 30255 | Diesel engine preheat time (V2.03) | RW | UINT16 | s | 1 | [0,3600], Default: 60 |
+| 30256 | Reserve | RW | UINT16 | - | 44 | - |
 | 30300 | Battery cluster index | RW | UINT16 | - | 1 | [0,3], Default: 0 |
-| 30301 | Reserve | RW | UINT16 | - | 99 | - |
+| 30301 | Demand management enable (V2.03) | RW | UINT16 | - | 1 | 0: not enabled, 1: enable, Default: 0 |
+| 30302 | Demand management export power limitation (V2.03) | RW | UINT16 | 0.1kW | 1 | [0, rated power], Default: no limit |
+| 30303 | Demand management import power limitation (V2.03) | RW | UINT16 | 0.1kW | 1 | [0, rated power], Default: no limit |
+| 30304 | Peak-shaving backup power SOC (V2.03) | RW | UINT16 | % | 1 | [0,100], Default: 50 |
+| 30305 | Peak-shaving enable (V2.03) | RW | UINT16 | - | 1 | 0: not enabled, 1: enable, Default: 0 |
+| 30306 | Reserve | RW | UINT16 | - | 94 | - |
 | 30400 | Reserve (Battery max charging power) | RW | UINT32 | 0.1W | 2 | Not used |
 | 30402 | Reserve (Battery max discharging power) | RW | UINT32 | 0.1W | 2 | Not used |
-| 30404 | Charging cut off SOC | RW | UINT8 | % | 1 | [70,100], Default: 100 |
-| 30405 | Online discharge cut off SOC | RW | UINT8 | % | 1 | [10,30], Default: 10 |
-| 30406 | Load priority discharge cut off SOC | RW | UINT8 | % | 1 | [10,20], Default: 10 |
+| 30404 | Charging cut off SOC | RW | UINT8 | % | 1 | [10,100], Default: 100 |
+| 30405 | Online discharge cut off SOC | RW | UINT8 | % | 1 | [10,100], Default: 10 |
+| 30406 | Load priority discharge cut off SOC | RW | UINT8 | % | 1 | [10,100], Default: 10 |
 | 30407 | Remote power control enable | RW | UINT8 | - | 1 | 0: not enabled, 1: Enable, Default: 0, Not storage |
 | 30408 | Remote power control charging time | RW | UINT16 | min | 1 | 0: unlimited, 1~1440min, Default: 0, Not storage |
 | 30409 | Remote charge and discharge power | RW | INT16 | - | 1 | [-100,100], Positive=charging, Negative=discharge, Default: 0, Not storage |
-| 30410 | AC charging enable | RW | UINT8 | - | 1 | 0: not enabled, 1: Enable, Default: 0 |
+| 30410 | AC charging enable | RW | UINT8 | - | 1 | 0: not enabled, 1: Enable AC charge (PV charging first), 2: Enable AC charge (AC charging first) (V2.03), Default: 0 |
 | 30411 | Charging and discharging in different periods (20 sections) | RW | UINT16 | - | 61 | See Table 3-2, 30412~30471 default: 0 |
 | 30472 | Reserve | RO | UINT16 | - | 2 | - |
 | 30474 | Actual control value of charging and discharging power | RO | UINT16 | - | 1 | [-100,100], Positive=charging, Negative=discharge |
-| 30475 | Offline discharge cut off SOC | RW | UINT16 | % | 1 | [10,30], Default: 10 |
-| 30476 | Reserve | RW | UINT16 | - | 20 | - |
+| 30475 | Offline discharge cut off SOC | RW | UINT16 | % | 1 | [10,100], Default: 10 |
+| 30476 | TOU default mode (V2.03) | RW | UINT8 | - | 1 | Mode outside configured TOU periods: 0: load first, 1: battery first, 2: grid first, Default: 0 |
+| 30477 | TOU reset enable (V2.03) | RW | UINT8 | - | 1 | [0,1] — when enabled, all existing TOU period data is cleared on next period write, Default: 0 |
+| 30478 | Reserve | RW | UINT16 | - | 18 | - |
 | 30496 | Battery charge stop voltage | RW | UINT16 | 0.1V | 1 | Lead-acid only, [0,15000] |
 | 30497 | Battery discharge stop voltage | RW | UINT16 | 0.1V | 1 | Lead-acid only, [0,15000] |
 | 30498 | Battery max charge current | RW | UINT16 | 0.1A | 1 | Lead-acid only, [0,2000], Default: 1500 |
@@ -148,7 +179,7 @@ the inverter model. The integration reads this at startup for automatic model de
 
 | Address | Parameter Name | R/W | Type | Unit | Count | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| 31000 | Working state of energy storage machine | RO | UINT16 | 1 | 1 | 0:standby,1:self-test,2:reserved,3:fault,4:upgrade,5:PV online&battery offline,6:battery online&PV online(or offline),7:PV&cell online off-grid,8:Battery online PV offline,9:bypass |
+| 31000 | Working state of inverter | RO | UINT16 | 1 | 1 | 0:standby, 1:self-test, 2:reserved, 3:fault, 4:upgrade, 5:PV online & battery offline & on-grid, 6:PV online (or offline) & battery online & on-grid, 7:PV online & battery online & off-grid, 8:PV offline & battery online & off-grid, 9:bypass |
 | 31001 | Battery working status | RO | UINT16 | 1 | 1 | 0:standby,1:disconnected,2:charging,3:discharge,4:fault,5:upgrade |
 | 31002 | Priority of work | RO | UINT16 | 1 | 1 | 0:load first,1:Battery first,2:grid first |
 | 31003 | Reserve | RO | UINT16 | - | 2 | - |
@@ -192,8 +223,8 @@ the inverter model. The integration reads this at startup for automatic model de
 | 31042 | Reserve | RO | INT16 | - | 16 | - |
 | 31058 | PV input power | RO | INT32 | 0.1W | 2 | - |
 | 31060 | Reserve | RO | UINT32 | - | 40 | - |
-| 31100 | Active power | RO | INT32 | 0.1W | 2 | Positive:export to grid, Negative:import from grid |
-| 31102 | Reactive power | RO | INT32 | 0.1VA | 2 | - |
+| 31100 | Active power | RO | INT32 | 0.1W | 2 | Positive:export to grid, Negative:import from grid — **grid-tied MID models:** this is inverter AC output only; use Meter Power (31112) for actual grid exchange |
+| 31102 | Reactive power | RO | INT32 | 0.1VAR | 2 | - |
 | 31104 | Reserve | RO | INT16 | - | 1 | - |
 | 31105 | Grid frequency | RO | UINT16 | 0.01Hz | 1 | - |
 | 31106 | Grid voltage / line AB voltage | RO | UINT16 | 0.1V | 1 | When output mode is L/N |

@@ -132,59 +132,76 @@ MID_15000_25000TL3_X_V201 = {
         **VPP_V201_PV2_TOTAL,
 
         # === VPP 2.01 GRID POWER REGISTERS (31100-31113) ===
-        # Per VPP 2.01 protocol spec (confirmed against issue #245 scan data):
+        # Per VPP 2.01/2.03 protocol spec (confirmed against issue #245/#242 scan data):
+        #
+        # DESIGN NOTE — MID grid-tied vs hybrid distinction:
+        #   Hybrid inverters (SPH, MOD-XH): Active Power (31100/31101) = net grid exchange.
+        #     The hybrid firmware subtracts battery and load to compute what truly flows to/from
+        #     the grid, so Active Power IS the correct source for grid_export/import_power.
+        #   MID grid-tied (DTC 5001/5002, no battery, no built-in CT):
+        #     Active Power (31100/31101) = inverter's own 3-phase AC output only.
+        #     Meter Power (31112/31113) = actual grid exchange, read from an external smart meter
+        #     or computed by connected datalogger. This is the correct source for grid direction.
+        #   Confirmed in issue #242 scan: 31100/31101 = 14,220 W (total output); 31112/31113 =
+        #   −10,687 W (10.7 kW export) — difference is ~3.5 kW consumed by local loads.
 
-        # Active power (INT32 signed, 0.1W) — spec item 45
-        # Positive = export to grid, Negative = import from grid
-        # maps_to power_to_grid_low so coordinator uses this for grid export fallback.
-        # Confirmed: -32876 raw = -3287.6W → 328.9W import during #245 battery-charging scan.
+        # Active power (INT32 signed, 0.1W) — VPP 2.03 spec item 45
+        # Positive = export, Negative = import (inverter's own 3-phase output for MID grid-tied).
+        # NOT mapped to power_to_grid — Meter Power (31112/31113) is the correct grid direction
+        # source for MID. Active Power here is the raw inverter output (use ac_power entities).
         31100: {'name': 'ac_active_power_high', 'scale': 1, 'unit': '', 'pair': 31101,
-                'desc': 'Active power HIGH (INT32 signed, positive=export)'},
+                'desc': 'Active power HIGH (INT32 signed — inverter 3-phase output, not net grid)'},
         31101: {'name': 'ac_active_power_low', 'scale': 1, 'unit': '', 'pair': 31100,
                 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True,
-                'maps_to': 'power_to_grid_low',
-                'desc': 'Active power LOW — maps_to power_to_grid (positive=export per VPP 2.01 item 45)'},
+                'desc': 'Active power LOW (VPP 2.03 item 45 — inverter output, not net grid exchange)'},
 
-        # Reactive power (INT32 signed, 0.1VA) — spec item 46
+        # Reactive power (INT32 signed, 0.1VAR) — VPP 2.03 spec item 46
         31102: {'name': 'ac_reactive_power_high', 'scale': 1, 'unit': '', 'pair': 31103,
                 'desc': 'Reactive power HIGH (INT32)'},
         31103: {'name': 'ac_reactive_power_low', 'scale': 1, 'unit': '', 'pair': 31102,
-                'combined_scale': 0.1, 'combined_unit': 'VA', 'signed': True,
-                'desc': 'Reactive power LOW (VPP 2.01 item 46)'},
+                'combined_scale': 0.1, 'combined_unit': 'VAR', 'signed': True,
+                'desc': 'Reactive power LOW (VPP 2.03 item 46, 0.1 VAR)'},
 
         # Register 31104 = Reserve (1 reg, skip) — spec item 47
 
-        # Grid frequency (UINT16, 0.01 Hz) — spec item 48
+        # Grid frequency (UINT16, 0.01 Hz) — VPP 2.03 spec item 48
         31105: {'name': 'ac_frequency_vpp', 'scale': 0.01, 'unit': 'Hz', 'maps_to': 'grid_frequency',
-                'desc': 'Grid frequency (VPP 2.01 item 48, 0.01Hz)'},
+                'desc': 'Grid frequency (VPP 2.03 item 48, 0.01Hz)'},
 
-        # Line voltages (UINT16, 0.1V) — spec items 49-51
+        # Line voltages (UINT16, 0.1V) — VPP 2.03 spec items 49-51
         # Coordinator looks for register names 'line_voltage_rs/st/tr' to populate ac_voltage_rs/st/tr.
         31106: {'name': 'line_voltage_rs', 'scale': 0.1, 'unit': 'V',
-                'desc': 'AB line voltage (VPP 2.01 item 49)'},
+                'desc': 'AB line voltage (VPP 2.03 item 49)'},
         31107: {'name': 'line_voltage_st', 'scale': 0.1, 'unit': 'V',
-                'desc': 'BC line voltage (VPP 2.01 item 50)'},
+                'desc': 'BC line voltage (VPP 2.03 item 50)'},
         31108: {'name': 'line_voltage_tr', 'scale': 0.1, 'unit': 'V',
-                'desc': 'CA line voltage (VPP 2.01 item 51)'},
+                'desc': 'CA line voltage (VPP 2.03 item 51)'},
 
-        # Grid phase currents (INT16 signed, 0.1A) — spec items 52-54
+        # Grid phase currents (INT16 signed, 0.1A) — VPP 2.03 spec items 52-54
         # Coordinator looks for register names 'ac_current_r/s/t' to populate those sensors.
         31109: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'signed': True,
-                'desc': 'Phase A current (VPP 2.01 item 52)'},
+                'desc': 'Phase A current (VPP 2.03 item 52)'},
         31110: {'name': 'ac_current_s', 'scale': 0.1, 'unit': 'A', 'signed': True,
-                'desc': 'Phase B current (VPP 2.01 item 53)'},
+                'desc': 'Phase B current (VPP 2.03 item 53)'},
         31111: {'name': 'ac_current_t', 'scale': 0.1, 'unit': 'A', 'signed': True,
-                'desc': 'Phase C current (VPP 2.01 item 54)'},
+                'desc': 'Phase C current (VPP 2.03 item 54)'},
 
-        # Meter power (INT32 signed, 0.1W) — spec item 55
-        # NOTE: sign convention is OPPOSITE to active power — positive = IMPORT from grid.
-        # maps_to power_to_user_low so coordinator uses this for grid import.
+        # Meter power (INT32 signed, 0.1W) — VPP 2.03 spec item 55
+        # VPP sign convention: positive = IMPORT from grid, negative = EXPORT to grid.
+        # combined_scale is NEGATIVE (-0.1) to flip to power_to_grid convention (positive=export).
+        # This is the correct source for grid_export_power / grid_import_power on MID grid-tied:
+        #   - With a connected Growatt smart meter or datalogger: reflects true metered grid exchange.
+        #   - Without a smart meter: these registers read 0, so grid_export/import_power will be 0.
+        #     Use ac_power / solar_total_power for inverter output monitoring instead.
+        # BREAKING CHANGE (v0.8.6): was mapped to power_to_user_low; now maps to power_to_grid_low
+        # with sign inversion. grid_export/import_power now reflects metered grid exchange, not
+        # raw inverter output. Users without a smart meter: see release notes.
         31112: {'name': 'meter_power_high', 'scale': 1, 'unit': '', 'pair': 31113,
-                'desc': 'Meter power HIGH (INT32, positive=import)'},
+                'desc': 'Meter power HIGH (INT32, VPP positive=import — sign inverted on combine)'},
         31113: {'name': 'meter_power_low', 'scale': 1, 'unit': '', 'pair': 31112,
-                'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True,
-                'maps_to': 'power_to_user_low',
-                'desc': 'Meter power LOW — maps_to power_to_user (positive=import per VPP 2.01 item 55)'},
+                'combined_scale': -0.1, 'combined_unit': 'W', 'signed': True,
+                'maps_to': 'power_to_grid_low',
+                'desc': 'Meter power LOW (VPP 2.03 item 55) — combined_scale negated to flip to export-positive'},
 
         # === VPP 2.01 GRID ENERGY COUNTERS (31118-31125) — spec items 60-63 ===
         # NOTE: registers 31114-31117 (spec items 56-59) are unknown/not mapped.

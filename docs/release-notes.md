@@ -6,6 +6,24 @@
 
 ---
 
+## v0.8.5
+
+- **Fix: MOD TL3-X and TL3-XH `ac_power` reported Phase R only:** Both profiles had the total-power alias on the Phase R register instead of the three-phase total register (35/36). `ac_power` now correctly reflects full three-phase output.
+
+- **Fix: Midnight ENERGY_GUARD retained previous-day small daily totals until morning:** Daily totals under the 20 kWh spike threshold (e.g. `charge_energy_today`) were accepted into retention from the pre-reset inverter poll, then held as stale values until sunrise caused a backward step and HA recorder warnings. A 10-minute midnight grace window now suppresses all non-zero daily totals until the inverter has reset its own counters.
+
+- **Feature: Inverter clock drift notification:** On first connection each session the coordinator compares the inverter's system time registers to HA time. If drift exceeds 5 minutes a persistent HA notification is raised, explaining the impact on daily energy counters and how to fix it.
+
+- **Breaking change: MID TL3-X grid export/import source corrected (Issue #242):** `grid_export_power` and `grid_import_power` on MID grid-tied models (DTC 5001/5002 — MID 15–50KTL3-X, MID 20–30KTL3-X2) now read from VPP Meter Power (31112/31113) rather than Active Power (31100/31101). Active Power is the inverter's own AC output; Meter Power is the actual metered grid exchange. With a connected Growatt smart meter, export/import values will now be correct. Without a smart meter, these entities will read 0 — use `ac_power` / `solar_total_power` for inverter output monitoring. Hybrid models (SPH, MOD-XH, WIT) are unaffected.
+
+- **Fix: Daily energy totals drop to 0 and show backward steps after mid-day inverter reconnect (Issue #284):** When the inverter briefly goes offline mid-day and comes back online, ENERGY_GUARD retention was unconditionally cleared, leaving daily counters unprotected against the transient 0-reads that occur while the inverter repopulates its registers. Sensors dropped to 0 then recovered to a value slightly below the pre-offline reading, causing `total_increasing` recorder warnings in HA. Fixed by only clearing retention on morning wakeups (before 10:00) where stale-value detection is needed. Mid-day wakeups now preserve retention. The morning stale-detection path (Issue #225) is unaffected.
+
+- **Fix: DTC 5001 misdetected as MIC (Issue #242):** MID 17–25KTL3-X and related grid-tied MID/MOD-X models were falling through to MIC micro-inverter detection because DTC 5001 was not in the detection map. All missing DTC codes from Growatt VPP 2.03 Table 3-1 have been added: 5001/5002/5003 (MID/MOD/MAC-X grid-tied), 5600/5801 (large commercial WIT/WIS), 3503/3504 (SPH HU/HUB), 3701/3715/3716 (SPA AU/AUB/BL).
+
+- **Fix: Lifetime energy totals show brief backward step after HA restart (Issue #285):** `energy_total` and other lifetime counters are now written to HA storage immediately after each poll where their retained value changes, rather than via a background task that could be lost if HA restarted between polls. Eliminates the transient `total_increasing` backward-step warning seen on restart.
+
+---
+
 ## v0.8.4
 
 - **Debug: `[ENERGY_GUARD]` diagnostic logging for energy counter protection (Issue #228):** Searchable log entries now trace every accept/retain/spike-reject decision in the daily energy protection logic, plus the wake-up retention-clear event and stale-value debounce window. Helps diagnose inverters (e.g. MOD12-KTL3-HU) that accumulate overnight import values which then drop to zero at morning startup. Enable with `custom_components.growatt_modbus: debug` and search logs for `ENERGY_GUARD`.

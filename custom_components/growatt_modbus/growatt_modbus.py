@@ -1305,9 +1305,11 @@ class GrowattModbus:
             power_t_reg = (self._get_register_value(ac_power_t_addr) or 0.0) if ac_power_t_addr else 0.0
 
             # For 3-phase models, only use register values if ALL three phases return valid data.
-            # Some firmware (e.g. SPH-TL3) only populates the phase R register (which actually
-            # holds total output power, not per-phase R) while returning 0 for S and T.
-            # In that case, calculate all three phases from V×I so values are consistent.
+            # Some firmware (e.g. SPH-TL3, MOD TL3-X) only populates the phase R register
+            # (which holds total output power, not a true per-phase R value) while returning 0
+            # for S and T. In that case, calculate all three phases from V×I so values are
+            # consistent with each other. Models with fully-functional per-phase registers
+            # (e.g. MOD TL3-XH, WIT) never take this path.
             is_three_phase = ac_power_s_addr is not None or ac_power_t_addr is not None
             all_phase_powers_valid = bool(power_r_reg and power_s_reg and power_t_reg)
 

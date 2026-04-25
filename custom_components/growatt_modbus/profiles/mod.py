@@ -31,21 +31,23 @@ MOD_6000_15000TL3_XH = {
         13: {'name': 'pv3_power_high', 'scale': 1, 'unit': '', 'pair': 14},
         14: {'name': 'pv3_power_low', 'scale': 1, 'unit': '', 'pair': 13, 'combined_scale': 0.1, 'combined_unit': 'W'},
         
-        # Output Power Total (32-bit)
-        35: {'name': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36},
-        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        
+        # Output Power Total (32-bit) — true three-phase inverter output total.
+        # Aliased to ac_power so the generic ac_power sensor reflects the correct total.
+        # Do NOT alias ac_power_r (reg 40/41) — that is Phase R only, not total.
+        35: {'name': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36, 'alias': 'ac_power_high'},
+        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W', 'alias': 'ac_power_low'},
+
         # === AC OUTPUT - THREE PHASE ===
         # Grid Frequency (shared across all phases)
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'AC output frequency'},
 
-        # Generic AC aliases (point to Phase R for compatibility with generic code)
-        # These allow the standard ac_voltage/current/power fields to work
+        # Phase R (L1) — ac_voltage/ac_current aliased for generic code; ac_power NOT aliased here
+        # (ac_power comes from output_power reg 35/36 which holds the true three-phase total)
         38: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R AC voltage', 'alias': 'ac_voltage'},
         39: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R AC current', 'alias': 'ac_current'},
-        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41, 'alias': 'ac_power_high'},
-        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'VA', 'alias': 'ac_power_low'},
-        
+        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41},
+        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'VA'},
+
         # Phase S (L2) - AC Output
         42: {'name': 'ac_voltage_s', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase S AC voltage'},
         43: {'name': 'ac_current_s', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase S AC current'},
@@ -434,19 +436,22 @@ MOD_6000_15000TL3_X = {
         13: {'name': 'pv3_power_high', 'scale': 1, 'unit': '', 'pair': 14},
         14: {'name': 'pv3_power_low', 'scale': 1, 'unit': '', 'pair': 13, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
-        # Output Power Total (32-bit)
-        35: {'name': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36},
-        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Output Power Total (32-bit) — true three-phase inverter output total.
+        # Aliased to ac_power so the generic ac_power sensor reflects the correct total.
+        # Do NOT alias ac_power_r (reg 40/41) — that is Phase R only, not total.
+        35: {'name': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36, 'alias': 'ac_power_high'},
+        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W', 'alias': 'ac_power_low'},
 
         # === AC OUTPUT - THREE PHASE ===
         # Grid Frequency (shared across all phases)
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'AC output frequency'},
 
-        # Generic AC aliases (point to Phase R for compatibility)
+        # Phase R (L1) — ac_voltage/ac_current aliased for generic code; ac_power NOT aliased here
+        # (ac_power comes from output_power reg 35/36 which holds the true three-phase total)
         38: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R AC voltage', 'alias': 'ac_voltage'},
         39: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R AC current', 'alias': 'ac_current'},
-        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41, 'alias': 'ac_power_high'},
-        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'VA', 'alias': 'ac_power_low'},
+        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41},
+        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'VA'},
 
         # Phase S (L2) - AC Output
         42: {'name': 'ac_voltage_s', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase S AC voltage'},

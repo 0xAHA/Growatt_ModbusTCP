@@ -424,27 +424,30 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
     Returns:
         Profile key or None if no match
     """
-    # Only official DTC codes from Growatt VPP 2.01 Protocol documentation Table 3-1
+    # Official DTC codes from Growatt VPP 2.03 Protocol documentation Table 3-1
     # Note: Some legacy models use DTC register but don't support full V2.01 protocol
     dtc_map = {
-        # SPH series - Official Growatt DTCs
-        3501: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL (legacy/pre-UP, may need protocol check)
-        3502: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL -UP (upgraded model)
+        # SPH series - Official Growatt DTCs (VPP 2.03 Table 3-1)
+        3501: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL
+        3502: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL-UP
+        3503: 'sph_3000_6000_v201',       # SPH 3000-6000TL HU
+        3504: 'sph_3000_6000_v201',       # SPH 3000-6000TL HUB
+        3601: 'sph_tl3_3000_10000_v201',  # SPH 4-10KTL3 BH-UP (confirmed DTC)
+
+        # SPA series - Official Growatt DTCs (VPP 2.03 Table 3-1)
+        # SPA variants share the sph_3000_6000_v201 register layout for VPP.
+        # Non-VPP SPA (firmware RH1.0) is caught by async_detect_inverter_series()
+        # battery voltage check before DTC lookup and never reaches this map.
+        3701: 'sph_3000_6000_v201',       # SPA 1000-3000TL BL
+        3715: 'sph_3000_6000_v201',       # SPA 3000-6000TL AU
+        3716: 'sph_3000_6000_v201',       # SPA 3000-6000TL AUB
+        3725: 'sph_tl3_3000_10000_v201',  # SPA 4-10KTL3 BH-UP (confirmed DTC)
         3735: 'sph_3000_6000_v201',       # SPA 3000-6000TL BL (VPP-capable variant, confirmed DTC)
-        # TODO #249: DTC 3735 maps to sph_3000_6000_v201 (VPP-capable SPA variant with full
-        # 31000+ register support). The non-VPP SPA (firmware RH1.0) is detected via
-        # async_detect_inverter_series() battery/AC voltage check before DTC lookup,
-        # so it never reaches this map. If a user has firmware that reports DTC 3735 AND
-        # supports VPP, sph_3000_6000_v201 is correct. Consider a dedicated
-        # spa_3000_6000_tl_bl_v201 once VPP register layout is confirmed for SPA.
-        #
-        # VPP Register Applicability Notes for SPA/SPH DTC family (from Growatt VPP 2.01/2.03 docs):
+        # TODO #249: SPA VPP register applicability notes (from Growatt VPP 2.01/2.03 docs):
         #   30406 (Load Priority Discharge Cutoff SOC): Only DTC 3502, 3735, 3750, 3601
         #   30208 (Export Limitation Protection Mode): NOT used by DTC 3725, 3601, 5601, 5800
         #   30157 (EPS Offline Voltage): Different valid ranges per model —
         #     consult Growatt documentation for per-model min/max before writing
-        3601: 'sph_tl3_3000_10000_v201',  # SPH 4000-10000TL3 BH-UP (confirmed DTC)
-        3725: 'sph_tl3_3000_10000_v201',  # SPA 4000-10000TL3 BH-UP (confirmed DTC)
 
         # SPF series - Off-Grid (034xx range from SPF protocol documentation)
         3400: 'spf_3000_6000_es_plus',         # SPF 3000-6000 ES PLUS (off-grid)
@@ -455,20 +458,31 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
         # SPE series - Single-phase hybrid (SPF protocol variant, 8-12kW)
         64541: 'spe_8000_12000_es',            # SPE 8000-12000 ES (confirmed from issue #212 register scan)
 
-        # MIN/TL-XH/MIC series - Official Growatt DTCs
-        5100: 'tl_xh_3000_10000_v201',    # MIN 2500-6000TL-XH/XH(P) - covers TL-XH
-        5200: 'min_3000_6000_tl_x_v201',  # MIC/MIN 2500-6000TL-X/X2 - refined by testing registers 59-62 (per-MPPT energy)
-        5201: 'min_7000_10000_tl_x_v201', # MIN 7000-10000TL-X/X2
+        # MIN-XH series - Official Growatt DTCs (VPP 2.03 Table 3-1)
+        5100: 'tl_xh_3000_10000_v201',    # MIN 2500-6000TL-XH/XH2/XHE/XA
 
-        # MOD/MID series - Official Growatt DTC
-        5400: 'mod_6000_15000tl3_xh_v201', # MOD-XH\MID-XH - covers both MOD and MID
-        5401: 'mod_6000_15000tl3_xh_v201', # MOD 12-KTL3-HU (same family, confirmed scan #228)
+        # MIC/MIN-X series - Official Growatt DTCs (VPP 2.03 Table 3-1)
+        5200: 'min_3000_6000_tl_x_v201',  # MIC 600-3300TL-X/X2; MIN 2500-6000TL-X/X2 — refined by testing regs 59-62
+        5201: 'min_7000_10000_tl_x_v201', # MIN 7-10KTL-X/X2
 
-        # WIT/WIS series - Official Growatt DTCs
+        # MOD/MID-XH series — Official Growatt DTCs (VPP 2.03 Table 3-1)
+        5400: 'mod_6000_15000tl3_xh_v201', # MOD 3-10KTL3-XH/BP; MID 11-30KTL3-XH; MID 8-15KTL3-XHL/JP
+        5401: 'mod_6000_15000tl3_xh_v201', # MOD 3-15KTL3-HU; MID 33-50KTL3-HU (confirmed scan #228)
+
+        # MOD/MID/MAC-X series — grid-tied (no battery, no CT meter) — VPP 2.03 Table 3-1
+        # These report VPP 2.01 registers (31100-31115 active) but grid-power registers
+        # (3041-3044, 31112-31113) are always zero — no built-in CT at grid connection point.
+        5001: 'mid_15000_25000tl3_x_v201', # MID 17-25KTL3-X; MID 20-30KTL3-X2; MID 33-50KTL3-X2 (confirmed #242)
+        5002: 'mid_15000_25000tl3_x_v201', # MID 33-36KTL3-X(Pro.E); MID 3-33KTL3-X3; MOD 3-15KTL3-X; MOD 3-15KTL3-X2
+        5003: 'mid_15000_25000tl3_x_v201', # MAC 30-70KTL3-X; MAC 15-36KTL3-XL; MAC 50-70KTL3-X2 (best-effort, no profile)
+
+        # WIT/WIS series - Official Growatt DTCs (VPP 2.03 Table 3-1)
         # Register 988 can distinguish: 0=WIT, 1=WIS
         5603: 'wit_4000_15000tl3',          # WIT 4-15kW (residential three-phase hybrid) - Protocol V2.02
-        5601: 'mid_15000_25000tl3_x_v201',  # WIT 100KTL3-H (commercial)
-        5800: 'mid_15000_25000tl3_x_v201',  # WIS 215KTL3 (commercial)
+        5600: 'mid_15000_25000tl3_x_v201',  # WIS 100K-AM; WIT 50-100K-H/HE/HU/A/AE/AU (large commercial)
+        5601: 'mid_15000_25000tl3_x_v201',  # WIT 29.9-50K-XHU
+        5800: 'mid_15000_25000tl3_x_v201',  # WIS 210K
+        5801: 'mid_15000_25000tl3_x_v201',  # WIS 215K-AM
     }
 
     profile_key = dtc_map.get(dtc_code)
