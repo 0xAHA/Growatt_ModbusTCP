@@ -6,7 +6,7 @@
 
 ---
 
-## v0.8.6
+## v0.8.6b1
 
 - **Feature: SPH V2.01 remote power control registers (Issue #286):** Registers 30407–30410 are now exposed on `sph_3000_6000_v201` and `sph_7000_10000_v201` as writable entities: `remote_power_control_enable` (on/off), `remote_power_control_charging_time` (0–1440 min), `remote_charge_and_discharge_power` (−100 to +100%), and `vpp_ac_charge_enable` (disabled/PV priority/AC priority). Enables time-limited charge/discharge overrides and AC charging mode control from HA automations.
 
