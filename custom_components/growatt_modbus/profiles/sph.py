@@ -667,6 +667,12 @@ SPH_3000_6000_V201 = {
         # === V2.01 REGISTERS (30000+ range) ===
         30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 1000 for SPH 3-6kW', 'default': 3502},
         **VPP_V201_HOLDING_1P,
+
+        # VPP remote power control (Issue #286)
+        30407: {'name': 'remote_power_control_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Enable timed charge/discharge power override (0=off, 1=on)'},
+        30408: {'name': 'remote_power_control_charging_time', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Duration for remote power control (0–1440 min)'},
+        30409: {'name': 'remote_charge_and_discharge_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Remote charge/discharge power (−100% discharge … +100% charge)'},
+        30410: {'name': 'vpp_ac_charge_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'AC charging mode (0=off, 1=PV priority, 2=AC priority)'},
     }
 }
 
@@ -784,6 +790,12 @@ SPH_7000_10000_V201 = {
         # === V2.01 REGISTERS (30000+ range) ===
         30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 1001 for SPH 7-10kW', 'default': 3502},
         **VPP_V201_HOLDING_1P,
+
+        # VPP remote power control (Issue #286)
+        30407: {'name': 'remote_power_control_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Enable timed charge/discharge power override (0=off, 1=on)'},
+        30408: {'name': 'remote_power_control_charging_time', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Duration for remote power control (0–1440 min)'},
+        30409: {'name': 'remote_charge_and_discharge_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Remote charge/discharge power (−100% discharge … +100% charge)'},
+        30410: {'name': 'vpp_ac_charge_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'AC charging mode (0=off, 1=PV priority, 2=AC priority)'},
     }
 }
 

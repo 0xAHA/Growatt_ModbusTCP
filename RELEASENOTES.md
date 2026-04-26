@@ -6,9 +6,18 @@
 
 ## v0.8.6
 
-Issues: #287
+Issues: #286, #287
 
 ---
+
+- **Feature: SPH V2.01 remote power control registers (Issue #286):**
+  VPP registers 30407–30410 are now exposed on the `sph_3000_6000_v201` and `sph_7000_10000_v201`
+  profiles as writable entities. Register 30407 (`remote_power_control_enable`, on/off select),
+  30408 (`remote_power_control_charging_time`, 0–1440 min number), 30409
+  (`remote_charge_and_discharge_power`, −100 to +100% number), and 30410
+  (`vpp_ac_charge_enable`, disabled/PV priority/AC priority select) allow time-limited
+  charge/discharge power overrides and AC charging mode control from Home Assistant automations —
+  the same capability available in the Growatt SHINE app.
 
 - **Feature: Battery voltage range option in integration settings:**
   A new **Battery Voltage Range** dropdown has been added to the integration's Options flow

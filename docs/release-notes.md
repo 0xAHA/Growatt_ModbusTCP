@@ -8,6 +8,8 @@
 
 ## v0.8.6
 
+- **Feature: SPH V2.01 remote power control registers (Issue #286):** Registers 30407–30410 are now exposed on `sph_3000_6000_v201` and `sph_7000_10000_v201` as writable entities: `remote_power_control_enable` (on/off), `remote_power_control_charging_time` (0–1440 min), `remote_charge_and_discharge_power` (−100 to +100%), and `vpp_ac_charge_enable` (disabled/PV priority/AC priority). Enables time-limited charge/discharge overrides and AC charging mode control from HA automations.
+
 - **Feature: Battery voltage range option in integration settings:** A new **Battery Voltage Range** dropdown is available in Options (Settings → Devices & Services → Growatt Modbus → Configure): *Auto-detect* (default), *Standard battery (under 600 V)*, or *High-voltage battery (600–950 V, e.g. ARK)*. Use the High-voltage option when VPP register 31214 does not respond and register 3169 is reading ~10× too low due to a 16-bit overflow.
 
 - **Feature: MID TL3-X V2.01 PV3 string sensors:** `pv3_voltage`, `pv3_current`, and `pv3_power` are now available on the `mid_15000_25000tl3_x_v201` profile via VPP registers 31018–31021.

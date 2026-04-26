@@ -246,6 +246,17 @@ WRITABLE_REGISTERS = {
         'desc': 'Remote charge/discharge power (-100% to +100%, negative=discharge, positive=charge)',
         'signed': True
     },
+    'vpp_ac_charge_enable': {
+        'register': 30410,
+        'scale': 1,
+        'valid_range': (0, 2),
+        'options': {
+            0: 'Disabled',
+            1: 'PV priority',
+            2: 'AC priority',
+        },
+        'desc': 'AC charging enable (0=off, 1=PV charging first, 2=AC charging first)'
+    },
 
 
     # SPF Off-Grid Inverter Controls
