@@ -923,6 +923,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     _LOGGER.debug("All connection attempts failed")
                     return None
 
+                self._client._battery_voltage_range = self.config_entry.options.get(
+                    "battery_voltage_range", "Auto-detect"
+                )
                 data = self._client.read_all_data()
                 if data is not None:  # Success!
                     # Lazily read device identification on the first successful connection.

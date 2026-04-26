@@ -271,6 +271,7 @@ class GrowattData:
     remote_power_control_enable: int = 0  # 0=Disabled, 1=Enabled (timed override enable)
     remote_power_control_charging_time: int = 0  # 0-1440 minutes (duration)
     remote_charge_and_discharge_power: int = 0   # -100 to +100% (negative=discharge, positive=charge)
+    vpp_ac_charge_enable: int = 0                # 0=off, 1=PV priority, 2=AC priority
     vpp_export_limit_enable: int = 0          # 0=Disabled, 1=Enabled
     vpp_export_limit_power_rate: int = 0      # -100 to +100% (positive=export, 0=zero export)
     vpp_export_limit_available: bool = False  # True if inverter actually responded to registers 30200-30201
@@ -385,6 +386,7 @@ class GrowattModbus:
         self.min_read_interval = 0.25  # 250ms minimum between reads (reduced from 1s, safe for serial and TCP)
         self._timeout = timeout
         self._invert_battery_power = invert_battery_power
+        self._battery_voltage_range = "Auto-detect"  # updated by coordinator from config_entry.options
 
         # Store connection details for logging
         self.host = host
@@ -2081,7 +2083,7 @@ class GrowattModbus:
             )
             _VOLTAGE_MIN_V = 10.0    # below this is implausible for any connected battery pack
             _VOLTAGE_MAX_V = 1100.0  # MOD TL3-XH HV batteries operate up to 950V
-            _bvr = self.config_entry.options.get("battery_voltage_range", "Auto-detect")
+            _bvr = self._battery_voltage_range
 
             seen_voltage_addrs: set = set()
             voltage_candidates: list = []
@@ -2825,10 +2827,10 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read VPP export limitation registers 30200-30201: {e}")
 
-        # Remote Power Control (30407-30409)
-        if any(reg in holding_map for reg in [30407, 30408, 30409]):
+        # Remote Power Control (30407-30410)
+        if any(reg in holding_map for reg in [30407, 30408, 30409, 30410]):
             try:
-                vpp_power_regs = self.read_holding_registers(30407, 3)
+                vpp_power_regs = self.read_holding_registers(30407, 4)
                 if vpp_power_regs is not None and len(vpp_power_regs) >= 3:
                     if 30407 in holding_map:
                         data.remote_power_control_enable = int(vpp_power_regs[0])
@@ -2840,10 +2842,13 @@ class GrowattModbus:
                         if raw_val > 32767:  # Handle signed 16-bit
                             raw_val = raw_val - 65536
                         data.remote_charge_and_discharge_power = int(raw_val)
-                    logger.debug("[WIT VPP] remote_power_control_enable=%s, charging_time=%s min, charge_discharge_power=%s%%",
-                               data.remote_power_control_enable, data.remote_power_control_charging_time, data.remote_charge_and_discharge_power)
+                    if 30410 in holding_map and len(vpp_power_regs) >= 4:
+                        data.vpp_ac_charge_enable = int(vpp_power_regs[3])
+                    logger.debug("[VPP] remote_power_control_enable=%s, charging_time=%s min, charge_discharge_power=%s%%, ac_charge_enable=%s",
+                               data.remote_power_control_enable, data.remote_power_control_charging_time,
+                               data.remote_charge_and_discharge_power, data.vpp_ac_charge_enable)
             except Exception as e:
-                logger.debug(f"Could not read VPP remote power control registers 30407-30409: {e}")
+                logger.debug(f"Could not read VPP remote power control registers 30407-30410: {e}")
 
     def get_status_text(self, status_code: int) -> str:
         """Convert status code to human readable text"""
