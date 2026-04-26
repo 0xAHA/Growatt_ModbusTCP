@@ -2079,8 +2079,9 @@ class GrowattModbus:
                 'battery_voltage_bms',   # BMS voltage (WIT-only, typically more accurate)
                 'battery_voltage_legacy',
             )
-            _VOLTAGE_MIN_V = 10.0   # below this is implausible for any connected battery pack
-            _VOLTAGE_MAX_V = 800.0  # sanity ceiling
+            _VOLTAGE_MIN_V = 10.0    # below this is implausible for any connected battery pack
+            _VOLTAGE_MAX_V = 1100.0  # MOD TL3-XH HV batteries operate up to 950V
+            _bvr = self.config_entry.options.get("battery_voltage_range", "Auto-detect")
 
             seen_voltage_addrs: set = set()
             voltage_candidates: list = []
@@ -2101,6 +2102,26 @@ class GrowattModbus:
 
             if voltage_candidates:
                 _best_addr, _best_val = max(voltage_candidates, key=lambda c: c[1])
+
+                # Validate result against user-selected battery voltage range.
+                # The cascade above runs identically regardless of this setting;
+                # the selection acts as a post-hoc sanity gate on the winning value.
+                if "High-voltage" in _bvr and _best_val < 100:
+                    # HV gate: result below 100V on a declared HV system means register 3169
+                    # overflowed (16-bit wrap at 655.36V when using 0.01V/unit scale).
+                    _corrected = _best_val + 655.36
+                    logger.debug(f"Battery voltage {_best_val}V below HV range — overflow correction → {_corrected:.1f}V")
+                    _best_val = _corrected
+                elif "Standard" in _bvr and _best_val > 600:
+                    # Standard gate: result above 600V is implausible for a standard battery.
+                    # Try reading register 3169 directly (0.01V/unit, no overflow for <600V).
+                    _3169_raw = self._get_register_value(3169)
+                    if _3169_raw is not None and _VOLTAGE_MIN_V <= _3169_raw <= 600:
+                        logger.debug(f"Battery voltage {_best_val}V outside standard range — using reg 3169 directly: {_3169_raw:.1f}V")
+                        _best_val = _3169_raw
+                    else:
+                        logger.warning(f"Battery voltage {_best_val}V outside expected standard range (<600V); check battery_voltage_range setting")
+
                 data.battery_voltage = _best_val
                 logger.debug(f"Battery voltage: {_best_val}V (selected from {len(voltage_candidates)} candidate(s), reg {_best_addr})")
             else:

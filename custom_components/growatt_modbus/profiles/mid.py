@@ -1,5 +1,5 @@
 from .vpp_v201 import (
-    VPP_V201_STATUS, VPP_V201_PV2_INPUT, VPP_V201_PV2_TOTAL,
+    VPP_V201_STATUS, VPP_V201_PV2_INPUT, VPP_V201_PV3_AND_TOTAL,
     VPP_V201_TEMPERATURE_1P, VPP_V201_HOLDING_1P,
 )
 
@@ -127,9 +127,10 @@ MID_15000_25000TL3_X_V201 = {
         # PV strings 1 and 2 — VPP_V201_PV2_INPUT (31010–31017)
         **VPP_V201_PV2_INPUT,
 
-        # Total PV power — VPP_V201_PV2_TOTAL (31018–31019)
-        # MID is a 2-string profile at VPP level.
-        **VPP_V201_PV2_TOTAL,
+        # PV string 3 + total PV power — VPP_V201_PV3_AND_TOTAL (31018–31023)
+        # MID supports 3 PV strings. This block provides pv3_voltage/current/power
+        # at 31018–31021 and total PV power at 31022–31023.
+        **VPP_V201_PV3_AND_TOTAL,
 
         # === VPP 2.01 GRID POWER REGISTERS (31100-31113) ===
         # Per VPP 2.01/2.03 protocol spec (confirmed against issue #245/#242 scan data):

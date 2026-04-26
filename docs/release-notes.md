@@ -6,6 +6,16 @@
 
 ---
 
+## v0.8.6
+
+- **Feature: Battery voltage range option in integration settings:** A new **Battery Voltage Range** dropdown is available in Options (Settings → Devices & Services → Growatt Modbus → Configure): *Auto-detect* (default), *Standard battery (under 600 V)*, or *High-voltage battery (600–950 V, e.g. ARK)*. Use the High-voltage option when VPP register 31214 does not respond and register 3169 is reading ~10× too low due to a 16-bit overflow.
+
+- **Feature: MID TL3-X V2.01 PV3 string sensors:** `pv3_voltage`, `pv3_current`, and `pv3_power` are now available on the `mid_15000_25000tl3_x_v201` profile via VPP registers 31018–31021.
+
+- **Fix: MOD TL3-XH battery voltage 10× too high on standard battery systems (Issue #287):** v0.8.0 changed register 3169 scale to 0.1 to fix high-voltage ARK battery readings (600–950 V). This broke units with standard 200–300 V batteries, producing readings 10× too high (e.g. 2500 V instead of 250 V). Register 3169 reverted to 0.01 V/unit. VPP register 31214 is now a higher-priority candidate in the voltage selection logic — when it responds it correctly covers both battery voltage ranges. The plausibility ceiling is raised from 800 V to 1100 V so HV readings are not discarded.
+
+---
+
 ## v0.8.5
 
 - **Fix: MOD TL3-X and TL3-XH `ac_power` reported Phase R only:** Both profiles had the total-power alias on the Phase R register instead of the three-phase total register (35/36). `ac_power` now correctly reflects full three-phase output.

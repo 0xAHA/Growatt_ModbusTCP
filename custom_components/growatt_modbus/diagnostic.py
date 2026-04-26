@@ -1388,30 +1388,55 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     def has_reg(addr):
         return addr in register_data and register_data[addr]['status'] == 'success' and register_data[addr]['value'] is not None and register_data[addr]['value'] > 0
 
-    # Check for DTC code (holding register 30000)
+    # Helper to check if register responds at all (value may be 0 — e.g. PV string at night)
+    def reg_exists(addr):
+        return addr in register_data and register_data[addr]['status'] == 'success' and register_data[addr]['value'] is not None
+
+    # DTC code → (display name, profile key) — keep in sync with auto_detection.py dtc_map
+    _DTC_MAP = {
+        3501: ('SPH 3-6kW', 'sph_3000_6000_v201'),
+        3502: ('SPH 3-6kW', 'sph_3000_6000_v201'),
+        3503: ('SPH 3-6kW HU', 'sph_3000_6000_v201'),
+        3504: ('SPH 3-6kW HUB', 'sph_3000_6000_v201'),
+        3601: ('SPH-TL3 4-10kW', 'sph_tl3_3000_10000_v201'),
+        3701: ('SPA 1-3kW BL', 'sph_3000_6000_v201'),
+        3715: ('SPA 3-6kW AU', 'sph_3000_6000_v201'),
+        3716: ('SPA 3-6kW AUB', 'sph_3000_6000_v201'),
+        3725: ('SPA-TL3 4-10kW', 'sph_tl3_3000_10000_v201'),
+        3735: ('SPA 3-6kW BL', 'sph_3000_6000_v201'),
+        5001: ('MID 17-25KTL3-X / MID 20-30KTL3-X2', 'mid_15000_25000tl3_x_v201'),
+        5002: ('MID 33-36KTL3-X / MOD 3-15KTL3-X', 'mid_15000_25000tl3_x_v201'),
+        5003: ('MAC 30-70KTL3-X', 'mid_15000_25000tl3_x_v201'),
+        5100: ('TL-XH 3-10kW', 'tl_xh_3000_10000_v201'),
+        5200: ('MIN/MIC 2.5-6kW', 'min_3000_6000_tl_x_v201'),
+        5201: ('MIN 7-10kW', 'min_7000_10000_tl_x_v201'),
+        5400: ('MOD-XH/MID-XH', 'mod_6000_15000tl3_xh_v201'),
+        5600: ('WIS 100K-AM / WIT 50-100K-H', 'mid_15000_25000tl3_x_v201'),
+        5601: ('WIT 100kW Commercial', 'mid_15000_25000tl3_x_v201'),
+        5603: ('WIT 4-15kW Hybrid', 'wit_4000_15000tl3'),
+        5800: ('WIS 215kW Commercial', 'mid_15000_25000tl3_x_v201'),
+        5801: ('WIS 215K-AM', 'mid_15000_25000tl3_x_v201'),
+    }
+
+    # Check VPP DTC (holding 30000) first, then V1.39 DTC (holding 43) as fallback.
+    # V1.39 grid-tied inverters (MIN TL-X etc.) return 0 from holding 30000 but carry
+    # their DTC at holding 43 per the V1.39 Modbus protocol spec.
+    _dtc_source = None
     if 30000 in register_data and register_data[30000]['status'] == 'success' and register_data[30000]['value']:
         dtc_code = register_data[30000]['value']
+        _dtc_source = "holding 30000 (VPP)"
+    elif 43 in register_data and register_data[43]['status'] == 'success' and register_data[43]['value']:
+        dtc_code = register_data[43]['value']
+        _dtc_source = "holding 43 (V1.39)"
+    else:
+        dtc_code = None
+
+    if dtc_code:
         detection["dtc_code"] = dtc_code
-        detection["reasoning"].append(f"✓ DTC Code: {dtc_code} (register 30000)")
+        detection["reasoning"].append(f"✓ DTC Code: {dtc_code} ({_dtc_source})")
 
-        # Map DTC to profile (from auto_detection.py)
-        dtc_map = {
-            3501: ('SPH 3-6kW', 'sph_3000_6000_v201'),
-            3502: ('SPH 3-6kW', 'sph_3000_6000_v201'),
-            3735: ('SPA 3-6kW', 'sph_3000_6000_v201'),
-            3601: ('SPH-TL3 4-10kW', 'sph_tl3_3000_10000_v201'),
-            3725: ('SPA-TL3 4-10kW', 'sph_tl3_3000_10000_v201'),
-            5100: ('TL-XH 3-10kW', 'tl_xh_3000_10000_v201'),
-            5200: ('MIN/MIC 2.5-6kW', 'min_3000_6000_tl_x_v201'),
-            5201: ('MIN 7-10kW', 'min_7000_10000_tl_x_v201'),
-            5400: ('MOD-XH/MID-XH', 'mod_6000_15000tl3_xh_v201'),
-            5603: ('WIT 4-15kW Hybrid', 'wit_4000_15000tl3'),
-            5601: ('WIT 100kW Commercial', 'mid_15000_25000tl3_x_v201'),
-            5800: ('WIS 215kW Commercial', 'mid_15000_25000tl3_x_v201'),
-        }
-
-        if dtc_code in dtc_map:
-            model_name, profile_key = dtc_map[dtc_code]
+        if dtc_code in _DTC_MAP:
+            model_name, profile_key = _DTC_MAP[dtc_code]
             detection["model"] = f"{model_name} (DTC {dtc_code})"
             detection["profile_key"] = profile_key
             detection["confidence"] = "Very High"
@@ -1422,6 +1447,7 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
             # Must check here (not in the standalone block below) because the early return at
             # the end of this section exits before that block runs.
             # Fix for issue #251: use `is not None` (not truthy) so value=0 is handled correctly.
+            # V1.39 DTC detections (holding 43) have no 30099 entry — skip downgrade for them.
             proto_entry = register_data.get(30099, {})
             if proto_entry.get('status') == 'success' and proto_entry.get('value') is not None:
                 proto_ver = proto_entry['value']
@@ -1442,6 +1468,16 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
                     )
                     if proto_ver >= 201:
                         detection["reasoning"].append(f"  → VPP Protocol V{proto_str} - supports advanced features")
+            elif _dtc_source and "V1.39" in _dtc_source:
+                # V1.39 inverter — no VPP protocol version register; downgrade to legacy profile
+                legacy_key = convert_to_legacy_profile(profile_key)
+                if legacy_key != profile_key:
+                    detection["profile_key"] = legacy_key
+                    detection["confidence"] = "High"
+                    detection["reasoning"].append(
+                        f"⚠ DTC from V1.39 register (holding 43) — no VPP support "
+                        f"→ using legacy profile {legacy_key}"
+                    )
         else:
             detection["reasoning"].append(f"⚠ Unknown DTC code {dtc_code} - not in supported models")
 
@@ -1470,8 +1506,8 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     # Key register checks
     has_pv1_at_3 = has_reg(3)  # PV1 voltage in 0-124 range
     has_pv1_at_3003 = has_reg(3003)  # PV1 voltage in 3000 range
-    has_pv3_at_11 = has_reg(11)  # PV3 voltage in 0-124 range
-    has_pv3_at_3011 = has_reg(3011)  # PV3 voltage in 3000 range
+    has_pv3_at_11 = reg_exists(11)  # PV3 voltage in 0-124 range (0 when not producing)
+    has_pv3_at_3011 = reg_exists(3011)  # PV3 voltage in 3000 range (0 when not producing)
     has_battery_at_13 = has_reg(13)  # Battery voltage in 0-124 range (SPH)
     has_battery_at_1013 = has_reg(1013)  # Battery voltage in 1000 range (SPH TL3)
     has_battery_at_3169 = has_reg(3169)  # Battery voltage in 3000 range (MOD)
@@ -1826,6 +1862,16 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             all_register_data.update(fw_registers)
 
         if not offgrid_mode:
+            # Read V1.39 identification registers: holding 43 (DTC) and 3099 (DSP firmware code).
+            # Legacy grid-tied inverters (MIN TL-X etc.) carry DTC at holding 43 rather than 30000.
+            _LOGGER.info("Reading V1.39 identification registers (holding 43, 3099)...")
+            v139_dtc = _read_registers_chunked(client, 43, 1, slave_id, chunk_size=1, register_type='holding')
+            if v139_dtc:
+                all_register_data.update(v139_dtc)
+            v139_dsp = _read_registers_chunked(client, 3099, 1, slave_id, chunk_size=1, register_type='holding')
+            if v139_dsp:
+                all_register_data.update(v139_dsp)
+
             _LOGGER.info("Reading identification registers (DTC code, protocol version)...")
             id_registers = _read_registers_chunked(client, 30000, 100, slave_id, chunk_size=50, register_type='holding')
             if id_registers:
@@ -1968,25 +2014,27 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                 protocol_str = f"{protocol_ver // 100}.{protocol_ver % 100:02d}" if protocol_ver >= 100 else str(protocol_ver)
                 writer.writerow(["Protocol Version", f"V{protocol_str} (register value: {protocol_ver})"])
 
-            # Add firmware version if available (holding registers 9-11, ASCII encoded)
-            if 9 in all_register_data and 10 in all_register_data and 11 in all_register_data:
-                fw_regs = [all_register_data[9], all_register_data[10], all_register_data[11]]
-                if all(r['status'] == 'success' and r['value'] is not None for r in fw_regs):
-                    # Convert register values to ASCII (each register = 2 chars)
-                    fw_chars = []
-                    for reg_data in fw_regs:
-                        val = reg_data['value']
-                        # Extract high and low bytes
-                        high_byte = (val >> 8) & 0xFF
-                        low_byte = val & 0xFF
-                        # Convert to ASCII if printable
-                        if 32 <= high_byte <= 126:
-                            fw_chars.append(chr(high_byte))
-                        if 32 <= low_byte <= 126:
-                            fw_chars.append(chr(low_byte))
-                    firmware_version = ''.join(fw_chars).strip()
-                    if firmware_version:
-                        writer.writerow(["Firmware Version", firmware_version])
+            # Add firmware version — match coordinator's _registers_to_ascii decoding.
+            # Holding 9-11: standard firmware string for all models.
+            # Holding 3099: DSP software code for V1.39 3000-range models (MIN TL-X etc.).
+            def _regs_to_ascii(reg_addrs):
+                vals = [all_register_data.get(a) for a in reg_addrs]
+                if not all(v and v.get('status') == 'success' and v.get('value') is not None for v in vals):
+                    return None
+                raw = []
+                for v in vals:
+                    w = v['value']
+                    raw.extend([(w >> 8) & 0xFF, w & 0xFF])
+                return bytes(raw).decode('ascii', errors='ignore').strip('\x00').strip() or None
+
+            firmware_version = _regs_to_ascii([9, 10, 11])
+            # For V1.39 3000-range inverters the DSP code at holding 3099 may be more informative
+            dsp_code = all_register_data.get(3099)
+            if dsp_code and dsp_code.get('status') == 'success' and dsp_code.get('value'):
+                dsp_str = str(dsp_code['value'])
+                firmware_version = f"{firmware_version} (DSP: {dsp_str})" if firmware_version else f"DSP: {dsp_str}"
+            if firmware_version:
+                writer.writerow(["Firmware Version", firmware_version])
 
             writer.writerow(["Suggested Profile Key", detection["profile_key"]])
             writer.writerow(["Register Map", detection["register_map"]])

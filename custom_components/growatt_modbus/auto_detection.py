@@ -248,7 +248,12 @@ async def async_read_dtc_code_offgrid(
     Returns:
         DTC code (int) or None if read fails
     """
-    # Try input register 44 first (Protocol v0.11 standard)
+    # SPF OffGrid DTC codes (Protocol v0.11): only these values are valid at input 44.
+    # V1.39 grid-tied inverters (MIN, SPH, etc.) use input 44 for TP (tracker/phase count),
+    # which is non-zero but not a DTC — accepting it here would short-circuit before holding 43.
+    _SPF_DTC_CODES = (3400, 3401, 3402, 3403)
+
+    # Try input register 44 first (Protocol v0.11 standard — SPF only)
     try:
         result = await hass.async_add_executor_job(
             client.read_input_registers, 44, 1
@@ -256,9 +261,11 @@ async def async_read_dtc_code_offgrid(
 
         if result is not None and len(result) > 0:
             dtc_code = result[0]
-            if dtc_code and dtc_code > 0:
+            if dtc_code and dtc_code in _SPF_DTC_CODES:
                 _LOGGER.info(f"✓ OffGrid DTC Detection - Read DTC code: {dtc_code} from input register 44")
                 return dtc_code
+            elif dtc_code and dtc_code > 0:
+                _LOGGER.debug(f"Input register 44 returned {dtc_code} — not an SPF DTC code (likely TP field), continuing to holding 43")
 
     except Exception as e:
         _LOGGER.debug(f"Could not read DTC from input register 44: {str(e)}")

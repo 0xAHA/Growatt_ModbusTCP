@@ -149,7 +149,7 @@ MOD_6000_15000TL3_XH = {
         # Battery State (3000 range - PRIMARY for MOD XH with ARK battery)
         # Note: VPP 31200+ range doesn't respond on MOD 10000TL3-XH, so 3000+ is primary
         3144: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'desc': '0=Load, 1=Battery, 2=Grid'},
-        3169: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery voltage (MOD TL3-XH operates at 600-950V; scale 0.1 required — 0.01 would overflow 16-bit at >655V)'},
+        3169: {'name': 'battery_voltage', 'scale': 0.01, 'unit': 'V', 'desc': 'Battery voltage (0.01V/unit; use VPP 31214 as primary — it overrides this via max-value selection)'},
         3170: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True, 'desc': 'Battery current (primary source for MOD XH)'},
         3171: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (primary source for MOD XH)'},
         3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature (primary source for MOD XH)'},
@@ -191,7 +191,7 @@ MOD_6000_15000TL3_XH = {
 
         # Battery State (VPP range - NOT responding on MOD 10000TL3-XH, kept for other MOD variants)
         # Renamed with _vpp suffix to avoid conflict with 3000+ range (primary source)
-        31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'signed': True, 'desc': 'Battery voltage (VPP range, may not respond on XH variants)'},
+        31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'signed': True, 'maps_to': 'battery_voltage', 'desc': 'Battery voltage VPP (0.1V/unit; maps_to battery_voltage so it wins over 3169 in max-value selection)'},
         31215: {'name': 'battery_current_vpp_high', 'scale': 1, 'unit': '', 'pair': 31216},
         31216: {'name': 'battery_current_vpp_low', 'scale': 1, 'unit': '', 'pair': 31215, 'combined_scale': 0.1, 'combined_unit': 'A', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (VPP range, may not respond on XH variants)'},

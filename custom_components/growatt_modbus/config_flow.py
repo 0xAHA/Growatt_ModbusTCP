@@ -898,6 +898,7 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
         current_timeout = self.config_entry.options.get("timeout", 10)
         current_invert_grid = self.config_entry.options.get("invert_grid_power", False)
         current_invert_battery = self.config_entry.options.get("invert_battery_power", False)
+        current_bvr = self.config_entry.options.get("battery_voltage_range", "Auto-detect")
 
         # Get user-friendly profiles
         available_profiles = get_available_profiles(legacy_only=False, friendly_names=True)
@@ -934,6 +935,14 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                 "invert_battery_power",
                 default=current_invert_battery
             ): bool,
+            vol.Required(
+                "battery_voltage_range",
+                default=current_bvr
+            ): vol.In([
+                "Auto-detect",
+                "Standard battery (under 600V)",
+                "High-voltage battery (600-950V, e.g. ARK)",
+            ]),
         })
 
         return self.async_show_form(

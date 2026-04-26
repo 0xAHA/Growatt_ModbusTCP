@@ -4,6 +4,41 @@
 
 ---
 
+## v0.8.6
+
+Issues: #287
+
+---
+
+- **Feature: Battery voltage range option in integration settings:**
+  A new **Battery Voltage Range** dropdown has been added to the integration's Options flow
+  (Settings → Devices & Services → Growatt Modbus → Configure). Three choices are available:
+  *Auto-detect* (default, suitable for most installations), *Standard battery (under 600 V)*
+  (forces register 3169 to be read at 0.01 V/unit with no overflow correction), and
+  *High-voltage battery (600–950 V, e.g. ARK)* (applies an overflow correction to register 3169
+  when its reading is below 100 V — the symptom of a 16-bit overflow on HV systems where
+  VPP register 31214 does not respond). Useful when the auto-detection cascade gives an
+  incorrect result and the user knows their battery type.
+
+- **Feature: MID TL3-X V2.01 PV3 string sensors added:**
+  The `mid_15000_25000tl3_x_v201` profile now includes PV string 3 sensors
+  (`pv3_voltage`, `pv3_current`, `pv3_power`) sourced from VPP registers 31018–31021.
+  The total PV power register shifts to 31022–31023 (matching the VPP Protocol V2.01
+  3-string block layout). The legacy (non-VPP) MID profile is unchanged — PV3 data is
+  only available via VPP registers.
+
+- **Fix: MOD TL3-XH battery voltage 10× too high on standard (non-HV) battery systems (Issue #287):**
+  v0.8.0 changed register 3169 scale from 0.01 to 0.1 to correct readings on high-voltage ARK
+  battery systems (600–950 V). This broke MOD TL3-XH units with standard 200–300 V batteries,
+  which store voltage in 0.01 V/unit resolution — producing readings 10× too high (e.g. 2500 V
+  instead of 250 V). Register 3169 reverted to 0.01 V/unit scale. VPP register 31214 (0.1 V/unit,
+  per VPP Protocol V2.01) added as a higher-priority candidate via the existing max-value selection
+  logic: when 31214 responds it correctly covers both HV (600–950 V) and standard-voltage batteries
+  regardless of 3169's unit resolution. The battery voltage plausibility ceiling has also been raised
+  from 800 V to 1100 V so that valid HV readings are not discarded.
+
+---
+
 ## v0.8.5
 
 Issues: #228 · #242 · #284 · #285

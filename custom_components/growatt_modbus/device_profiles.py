@@ -400,12 +400,13 @@ INVERTER_PROFILES = {
         "description": "Three-phase commercial inverter (15-25kW) with VPP Protocol V2.01",
         "register_map": "MID_15000_25000TL3_X_V201",
         "phases": 3,
-        "has_pv3": False,
+        "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 25.0,
         "protocol_version": "v2.01",
         "sensors": (
             BASIC_PV_SENSORS |
+            PV3_SENSORS |
             THREE_PHASE_SENSORS |
             ENERGY_SENSORS |
             GRID_SENSORS |
