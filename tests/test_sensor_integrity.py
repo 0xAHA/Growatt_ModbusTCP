@@ -34,9 +34,6 @@ KNOWN_MAP_WITHOUT_DEF: frozenset = frozenset({
     # definition yet — device assignment is pre-reserved.
     "energy_to_user_today",
     "energy_to_user_total",
-    # Control/mode register (RW) — read back by coordinator; no sensor
-    # definition yet; present in SPH, MOD, SPH-TL3, WIT profiles
-    "priority_mode",
 })
 
 
