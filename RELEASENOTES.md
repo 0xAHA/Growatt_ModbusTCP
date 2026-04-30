@@ -4,11 +4,18 @@
 
 ---
 
-## v0.8.6b1
+## v0.8.7
 
-Issues: #286, #287
+Issues: #286, #287, #293
 
 ---
+
+- **Fix: `priority_mode` (register 1044) demoted from writable select to read-only sensor (Issue #293):**
+  V1.39 protocol specifies holding register 1044 as read-only. The integration incorrectly exposed it
+  as a writable select entity on SPH 3–6kW, SPH 7–10kW, and SPH-TL3 profiles, allowing writes that
+  the inverter silently ignores or rejects. Register 1044 is now a read-only diagnostic sensor
+  (Battery device) on all affected profiles. WIT (register 30476) and MOD (input register 3144) were
+  already read-only and are unchanged.
 
 - **Feature: SPH V2.01 remote power control registers (Issue #286):**
   VPP registers 30407–30410 are now exposed on the `sph_3000_6000_v201` and `sph_7000_10000_v201`

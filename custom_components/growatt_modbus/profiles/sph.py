@@ -109,9 +109,8 @@ SPH_3000_6000 = {
               'desc': 'Minimum battery SOC in Load First mode — inverter stops discharging below this level (10-100%)'},
 
         # Battery Management Control (1000+ range)
-        1044: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'access': 'RW',
-               'desc': 'Priority mode selection',
-               'valid_range': (0, 2),
+        1044: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'access': 'RO',
+               'desc': 'Priority mode selection (read-only per V1.39 spec)',
                'values': {
                    0: 'Load First',
                    1: 'Battery First',
@@ -319,9 +318,8 @@ SPH_7000_10000 = {
               'desc': 'Minimum battery SOC in Load First mode — inverter stops discharging below this level (10-100%)'},
 
         # Battery Management Control (1000+ range)
-        1044: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'access': 'RW',
-               'desc': 'Priority mode selection',
-               'valid_range': (0, 2),
+        1044: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'access': 'RO',
+               'desc': 'Priority mode selection (read-only per V1.39 spec)',
                'values': {
                    0: 'Load First',
                    1: 'Battery First',

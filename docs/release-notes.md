@@ -6,7 +6,9 @@
 
 ---
 
-## v0.8.6b1
+## v0.8.7
+
+- **Fix: `priority_mode` (register 1044) demoted to read-only sensor (Issue #293):** V1.39 protocol specifies holding register 1044 as read-only. SPH 3–6kW, SPH 7–10kW, and SPH-TL3 profiles incorrectly exposed it as a writable select entity. It is now a read-only diagnostic sensor under the Battery device. WIT (register 30476) and MOD (input register 3144) were already read-only and are unchanged.
 
 - **Feature: SPH V2.01 remote power control registers (Issue #286):** Registers 30407–30410 are now exposed on `sph_3000_6000_v201` and `sph_7000_10000_v201` as writable entities: `remote_power_control_enable` (on/off), `remote_power_control_charging_time` (0–1440 min), `remote_charge_and_discharge_power` (−100 to +100%), and `vpp_ac_charge_enable` (disabled/PV priority/AC priority). Enables time-limited charge/discharge overrides and AC charging mode control from HA automations.
 

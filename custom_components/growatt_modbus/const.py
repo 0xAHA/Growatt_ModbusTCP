@@ -335,18 +335,6 @@ WRITABLE_REGISTERS = {
         'battery_dependent': True
     },
 
-    # SPH Hybrid Inverter Battery Management Controls (1000+ range)
-    'priority_mode': {
-        'register': 1044,
-        'scale': 1,
-        'valid_range': (0, 2),
-        'options': {
-            0: 'Load First',
-            1: 'Battery First',
-            2: 'Grid First'
-        },
-        'desc': 'Battery priority mode'
-    },
     'discharge_power_rate': {
         'register': 1070,
         'scale': 1,

@@ -60,6 +60,8 @@ BATTERY_SENSORS: Set[str] = {
     "battery_charge_power", "battery_discharge_power",
     "battery_charge_today", "battery_discharge_today",
     "battery_charge_total", "battery_discharge_total",
+    # Battery management diagnostic
+    "priority_mode",
     # WIT: Battery SOH and BMS voltage
     "battery_soh", "battery_voltage_bms",
     # WIT/SPF/MOD: AC charge/discharge energy
