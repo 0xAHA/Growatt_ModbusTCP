@@ -887,6 +887,7 @@ SENSOR_DEFINITIONS = {
         "icon": "mdi:battery-charging-outline",
         "attr": "priority_mode",
         "entity_category": EntityCategory.DIAGNOSTIC,
+        "value_map": {0: "Load First", 1: "Battery First", 2: "Grid First"},
     },
 
     # System Sensors

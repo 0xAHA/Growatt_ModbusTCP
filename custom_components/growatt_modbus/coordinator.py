@@ -926,6 +926,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 self._client._battery_voltage_range = self.config_entry.options.get(
                     "battery_voltage_range", "Auto-detect"
                 )
+                delay_s = self.config_entry.options.get("modbus_delay", 250) / 1000.0
+                self._client._default_min_read_interval = delay_s
+                if not self._client._backed_off:
+                    self._client.min_read_interval = delay_s
                 data = self._client.read_all_data()
                 if data is not None:  # Success!
                     # Lazily read device identification on the first successful connection.

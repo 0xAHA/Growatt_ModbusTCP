@@ -536,6 +536,7 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                     "offline_scan_interval": 300,  # 5 minutes when offline
                     "timeout": 10,  # 10 seconds connection timeout
                     "invert_grid_power": invert_grid_power,  # Auto-detected or default
+                    "modbus_delay": 250,  # 250ms inter-request delay
                 }
 
                 # Create notification about grid orientation detection
@@ -899,6 +900,7 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
         current_invert_grid = self.config_entry.options.get("invert_grid_power", False)
         current_invert_battery = self.config_entry.options.get("invert_battery_power", False)
         current_bvr = self.config_entry.options.get("battery_voltage_range", "Auto-detect")
+        current_modbus_delay = self.config_entry.options.get("modbus_delay", 250)
 
         # Get user-friendly profiles
         available_profiles = get_available_profiles(legacy_only=False, friendly_names=True)
@@ -943,6 +945,10 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                 "Standard battery (under 600V)",
                 "High-voltage battery (600-950V, e.g. ARK)",
             ]),
+            vol.Required(
+                "modbus_delay",
+                default=current_modbus_delay
+            ): vol.All(vol.Coerce(int), vol.Range(min=50, max=1000)),
         })
 
         return self.async_show_form(
