@@ -76,7 +76,9 @@
           "offline_scan_interval": "Offline-skannausväli",
           "timeout": "Yhteyden aikakatkaisu",
           "invert_grid_power": "Käännä verkkovirta",
-          "invert_battery_power": "Käännä akkuteho"
+          "invert_battery_power": "Käännä akkuteho",
+          "battery_voltage_range": "Akkujännitteen alue",
+          "modbus_delay": "Modbus-pyyntöviive (ms)"
         },
         "data_description": {
           "device_name": "Nimesi laitteelle (asetetaan kaikkien anturinimien eteen)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "Kuinka usein invertteriä kysellään kun se on offline/yöllä (60-3600 sekuntia, oletus 300)",
           "timeout": "Kuinka kauan odottaa vastausta invertteriltä (1-60 sekuntia)",
           "invert_grid_power": "Ota käyttöön jos CT-puristin on asennettu väärinpäin (vaihtaa tuonti/vienti AC-puolella)",
-          "invert_battery_power": "Ota käyttöön jos akkuteho näyttää käänteistä suuntaa (vaihtaa lataus/purkausmerkin)"
+          "invert_battery_power": "Ota käyttöön jos akkuteho näyttää käänteistä suuntaa (vaihtaa lataus/purkausmerkin)",
+          "battery_voltage_range": "Ohita automaattinen akkujännitteen rekisterin valinta. Käytä Korkeajännitettä kun VPP register 31214 ei vastaa ja register 3169 lukee ~10× liian alhaisen arvon (16-bit ylivuodon oire ARK/HV-akustojärjestelmissä).",
+          "modbus_delay": "Vähimmäistauko peräkkäisten Modbus-pyyntöjen välillä kyselykierroksen aikana (50–1000 ms, oletus 250). Nosta arvoon 500–1000 ms jos lokissa näkyy transaction ID -epäsopivuusvirheitä tai jos invertteri kirjaa valevirhemerkintöjä integraation ollessa käynnissä."
         }
       }
     }

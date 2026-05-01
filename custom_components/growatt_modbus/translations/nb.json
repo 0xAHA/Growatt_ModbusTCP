@@ -76,7 +76,9 @@
           "offline_scan_interval": "Offline skanningsintervall",
           "timeout": "Tilkoblingstidtaker",
           "invert_grid_power": "Inverter netteffekt",
-          "invert_battery_power": "Inverter batterieffekt"
+          "invert_battery_power": "Inverter batterieffekt",
+          "battery_voltage_range": "Batterispenningsområde",
+          "modbus_delay": "Modbus forespørselsforsinkelse (ms)"
         },
         "data_description": {
           "device_name": "Ditt navn for enheten (vil stå foran alle sensornavn)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "Hvor ofte vekselretteren polles når den er offline/om natten (60-3600 sekunder, standard 300)",
           "timeout": "Hvor lenge vente på svar fra vekselretteren (1-60 sekunder)",
           "invert_grid_power": "Aktiver hvis CT-klemmen er installert omvendt (bytter import/eksport på AC-siden)",
-          "invert_battery_power": "Aktiver hvis batterieffekten viser omvendt retning (bytter lading/utladingstegn)"
+          "invert_battery_power": "Aktiver hvis batterieffekten viser omvendt retning (bytter lading/utladingstegn)",
+          "battery_voltage_range": "Overstyr automatisk valg av batterispenningsregister. Bruk Høyspenning når VPP register 31214 ikke svarer og register 3169 leser ~10× for lavt (symptom på 16-bit overflyt i ARK/HV batterisystemer).",
+          "modbus_delay": "Minimumspause mellom påfølgende Modbus forespørsler innenfor en pollingssyklus (50–1000 ms, standard 250). Øk til 500–1000 ms hvis loggen viser transaction ID uoverensstemmelsesfeil eller hvis vekselretteren logger ugyldige feileroppføringer mens integrasjonen kjører."
         }
       }
     }

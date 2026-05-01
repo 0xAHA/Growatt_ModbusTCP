@@ -76,7 +76,9 @@
           "offline_scan_interval": "Offline-Abtastintervall",
           "timeout": "Verbindungs-Timeout",
           "invert_grid_power": "Netzleistung invertieren",
-          "invert_battery_power": "Batterieleistung invertieren"
+          "invert_battery_power": "Batterieleistung invertieren",
+          "battery_voltage_range": "Batteriespannungsbereich",
+          "modbus_delay": "Modbus-Anfrageverzögerung (ms)"
         },
         "data_description": {
           "device_name": "Ihr Name für das Gerät (wird allen Sensornamen vorangestellt)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "Wie oft der Wechselrichter im Offline-/Nachtbetrieb abgefragt wird (60-3600 Sekunden, Standard 300)",
           "timeout": "Wie lange auf eine Antwort vom Wechselrichter gewartet wird (1-60 Sekunden)",
           "invert_grid_power": "Aktivieren, wenn der CT-Klemmsensor verkehrt herum installiert ist (tauscht Import/Export auf der AC-Seite)",
-          "invert_battery_power": "Aktivieren, wenn die Batterieleistung die falsche Richtung anzeigt (tauscht Lade-/Entladezeichen)"
+          "invert_battery_power": "Aktivieren, wenn die Batterieleistung die falsche Richtung anzeigt (tauscht Lade-/Entladezeichen)",
+          "battery_voltage_range": "Automatische Auswahl des Batteriespannungsregisters überschreiben. Verwenden Sie Hochspannung wenn VPP register 31214 nicht antwortet und register 3169 ~10× zu niedrig liest (Symptom eines 16-bit Überlaufs bei ARK/HV-Batteriesystemen).",
+          "modbus_delay": "Mindestpause zwischen aufeinanderfolgenden Modbus-Anfragen innerhalb eines Abfragezyklusses (50–1000 ms, Standard 250). Erhöhen Sie auf 500–1000 ms wenn das Protokoll transaction ID Fehler zeigt oder wenn der Wechselrichter während des Betriebs der Integration fehlerhafte Einträge protokolliert."
         }
       }
     }

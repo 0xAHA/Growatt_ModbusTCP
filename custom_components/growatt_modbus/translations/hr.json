@@ -76,7 +76,9 @@
           "offline_scan_interval": "Offline interval skeniranja",
           "timeout": "Vremensko ograničenje veze",
           "invert_grid_power": "Invertirati mrežnu snagu",
-          "invert_battery_power": "Invertirati snagu baterije"
+          "invert_battery_power": "Invertirati snagu baterije",
+          "battery_voltage_range": "Raspon napona baterije",
+          "modbus_delay": "Kašnjenje Modbus zahtjeva (ms)"
         },
         "data_description": {
           "device_name": "Vaš naziv uređaja (bit će ispred svih naziva senzora)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "Koliko često ispitivati izmjenjivač kada je offline/noću (60-3600 sekundi, zadano 300)",
           "timeout": "Koliko dugo čekati odgovor od izmjenjivača (1-60 sekundi)",
           "invert_grid_power": "Omogućite ako je CT stezaljka instalirana obrnuto (zamjenjuje uvoz/izvoz na AC strani)",
-          "invert_battery_power": "Omogućite ako snaga baterije prikazuje obrnutu vrijednost (zamjenjuje predznak punjenja/pražnjenja)"
+          "invert_battery_power": "Omogućite ako snaga baterije prikazuje obrnutu vrijednost (zamjenjuje predznak punjenja/pražnjenja)",
+          "battery_voltage_range": "Zaobiđite automatski odabir registra napona baterije. Koristite Visoki napon kada VPP register 31214 ne odgovara i register 3169 očitava ~10× prenisko (simptom 16-bit prekoračenja na ARK/HV sustavima baterija).",
+          "modbus_delay": "Minimalna pauza između uzastopnih Modbus zahtjeva unutar jednog ciklusa ispitivanja (50–1000 ms, zadano 250). Povećajte na 500–1000 ms ako dnevnik prikazuje greške nepodudarnosti transaction ID ili ako izmjenjivač bilježi lažne greške dok je integracija pokrenuta."
         }
       }
     }

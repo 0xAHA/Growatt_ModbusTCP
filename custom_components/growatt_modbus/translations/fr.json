@@ -76,7 +76,9 @@
           "offline_scan_interval": "Intervalle de balayage hors ligne",
           "timeout": "Délai de connexion",
           "invert_grid_power": "Inverser la puissance réseau",
-          "invert_battery_power": "Inverser la puissance batterie"
+          "invert_battery_power": "Inverser la puissance batterie",
+          "battery_voltage_range": "Plage de tension batterie",
+          "modbus_delay": "Délai de requête Modbus (ms)"
         },
         "data_description": {
           "device_name": "Votre nom pour l'appareil (sera placé avant tous les noms de capteurs)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "À quelle fréquence interroger l'onduleur hors ligne/la nuit (60-3600 secondes, défaut 300)",
           "timeout": "Combien de temps attendre une réponse de l'onduleur (1-60 secondes)",
           "invert_grid_power": "Activer si la pince CT est installée à l'envers (échange import/export côté AC)",
-          "invert_battery_power": "Activer si la puissance batterie affiche une direction inversée (échange le signe charge/décharge)"
+          "invert_battery_power": "Activer si la puissance batterie affiche une direction inversée (échange le signe charge/décharge)",
+          "battery_voltage_range": "Remplacer la sélection automatique du registre de tension batterie. Utilisez Haute tension lorsque VPP register 31214 ne répond pas et que register 3169 lit ~10× trop bas (symptôme d'un débordement 16-bit sur les systèmes de batterie ARK/HV).",
+          "modbus_delay": "Pause minimale entre des requêtes Modbus consécutives au sein d'un cycle d'interrogation (50–1000 ms, défaut 250). Augmentez à 500–1000 ms si le journal affiche des erreurs de discordance de transaction ID ou si l'onduleur enregistre des entrées de défaut parasites pendant le fonctionnement de l'intégration."
         }
       }
     }

@@ -76,7 +76,9 @@
           "offline_scan_interval": "Interval de scanare offline",
           "timeout": "Timeout conexiune",
           "invert_grid_power": "Inversează puterea rețelei",
-          "invert_battery_power": "Inversează puterea bateriei"
+          "invert_battery_power": "Inversează puterea bateriei",
+          "battery_voltage_range": "Interval tensiune baterie",
+          "modbus_delay": "Întârziere cerere Modbus (ms)"
         },
         "data_description": {
           "device_name": "Numele dvs. pentru dispozitiv (va fi plasat înaintea tuturor numelor senzorilor)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "Cât de des se interoghează invertorul când este offline/noaptea (60-3600 secunde, implicit 300)",
           "timeout": "Cât timp să aștepte un răspuns de la invertor (1-60 secunde)",
           "invert_grid_power": "Activați dacă clemele CT sunt instalate invers (schimbă import/export pe partea AC)",
-          "invert_battery_power": "Activați dacă puterea bateriei arată direcție inversă (schimbă semnul de încărcare/descărcare)"
+          "invert_battery_power": "Activați dacă puterea bateriei arată direcție inversă (schimbă semnul de încărcare/descărcare)",
+          "battery_voltage_range": "Suprascrieți selecția automată a registrului de tensiune al bateriei. Utilizați Tensiune înaltă când VPP register 31214 nu răspunde și register 3169 citește ~10× prea jos (simptom de depășire 16-bit pe sistemele de baterii ARK/HV).",
+          "modbus_delay": "Pauza minimă între cererile Modbus consecutive dintr-un ciclu de interogare (50–1000 ms, implicit 250). Măriți la 500–1000 ms dacă jurnalul arată erori de nepotrivire transaction ID sau dacă invertorul înregistrează intrări de eroare false cât timp integrarea funcționează."
         }
       }
     }

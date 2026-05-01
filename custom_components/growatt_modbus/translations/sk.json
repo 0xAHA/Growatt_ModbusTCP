@@ -76,7 +76,9 @@
           "offline_scan_interval": "Offline interval skenovania",
           "timeout": "Časový limit pripojenia",
           "invert_grid_power": "Invertovať výkon siete",
-          "invert_battery_power": "Invertovať výkon batérie"
+          "invert_battery_power": "Invertovať výkon batérie",
+          "battery_voltage_range": "Rozsah napätia batérie",
+          "modbus_delay": "Oneskorenie Modbus požiadavky (ms)"
         },
         "data_description": {
           "device_name": "Váš názov zariadenia (bude predradený pred všetky názvy senzorov)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "Ako často sa dopytuje striedač keď je offline/v noci (60-3600 sekúnd, predvolene 300)",
           "timeout": "Ako dlho čakať na odpoveď od striedača (1-60 sekúnd)",
           "invert_grid_power": "Povoliť ak je CT svorka nainštalovaná obrátenej (prepne import/export na AC strane)",
-          "invert_battery_power": "Povoliť ak výkon batérie zobrazuje opačný smer (prepne znamienko nabíjania/vybíjania)"
+          "invert_battery_power": "Povoliť ak výkon batérie zobrazuje opačný smer (prepne znamienko nabíjania/vybíjania)",
+          "battery_voltage_range": "Prepísať automatický výber registra napätia batérie. Použite Vysoké napätie keď VPP register 31214 neodpovedá a register 3169 číta ~10× príliš nízku hodnotu (príznak 16-bit pretečenia v systémoch batérií ARK/HV).",
+          "modbus_delay": "Minimálna pauza medzi po sebe nasledujúcimi Modbus požiadavkami v rámci jedného dotazovacieho cyklu (50–1000 ms, predvolene 250). Zvýšte na 500–1000 ms ak protokol zobrazuje chyby nezhodnosti transaction ID alebo ak striedač zaznamenáva falošné chybové záznamy počas behu integrácie."
         }
       }
     }

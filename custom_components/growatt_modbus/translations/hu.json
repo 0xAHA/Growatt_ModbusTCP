@@ -76,7 +76,9 @@
           "offline_scan_interval": "Offline szkennelési intervallum",
           "timeout": "Kapcsolat időtúllépés",
           "invert_grid_power": "Hálózati teljesítmény invertálása",
-          "invert_battery_power": "Akkumulátor teljesítmény invertálása"
+          "invert_battery_power": "Akkumulátor teljesítmény invertálása",
+          "battery_voltage_range": "Akkumulátorfeszültség tartomány",
+          "modbus_delay": "Modbus kérés késleltetés (ms)"
         },
         "data_description": {
           "device_name": "Az eszköz neve (az összes szenzornév elé kerül)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "Milyen gyakran kérdezi le az invertert offline/éjjel (60-3600 másodperc, alapértelmezett 300)",
           "timeout": "Mennyi ideig vár az inverter válaszára (1-60 másodperc)",
           "invert_grid_power": "Engedélyezze, ha a CT bilincs fordítva van felszerelve (felcseréli az import/export értékeket az AC oldalon)",
-          "invert_battery_power": "Engedélyezze, ha az akkumulátor teljesítmény fordított irányt mutat (felcseréli a töltés/merítés előjelét)"
+          "invert_battery_power": "Engedélyezze, ha az akkumulátor teljesítmény fordított irányt mutat (felcseréli a töltés/merítés előjelét)",
+          "battery_voltage_range": "Az akkumulátorfeszültség regiszter automatikus kiválasztásának felülbírálása. Használja a Nagyfeszültséget ha a VPP register 31214 nem válaszol és a register 3169 ~10× túl alacsony értéket mutat (16-bit túlcsordulás tünete ARK/HV akkumulátorrendszereknél).",
+          "modbus_delay": "Minimális szünet az egymást követő Modbus kérések között egy lekérdezési cikluson belül (50–1000 ms, alapértelmezett 250). Növelje 500–1000 ms-ra ha a napló transaction ID eltérési hibákat mutat vagy ha az inverter hamis hibaüzeneteket naplóz az integráció futása közben."
         }
       }
     }

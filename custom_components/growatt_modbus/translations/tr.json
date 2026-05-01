@@ -76,7 +76,9 @@
           "offline_scan_interval": "Çevrimdışı Tarama Aralığı",
           "timeout": "Bağlantı Zaman Aşımı",
           "invert_grid_power": "Şebeke Gücünü Ters Çevir",
-          "invert_battery_power": "Batarya Gücünü Ters Çevir"
+          "invert_battery_power": "Batarya Gücünü Ters Çevir",
+          "battery_voltage_range": "Batarya Gerilim Aralığı",
+          "modbus_delay": "Modbus İstek Gecikmesi (ms)"
         },
         "data_description": {
           "device_name": "Cihaz için adınız (tüm sensör adlarının önüne gelecek)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "İnvertör çevrimdışı/gece ne sıklıkta yoklanacağı (60-3600 saniye, varsayılan 300)",
           "timeout": "İnvertörden yanıt için ne kadar bekleneceği (1-60 saniye)",
           "invert_grid_power": "CT kelepçe ters takılıysa etkinleştirin (AC tarafında ithalat/ihracatı değiştirir)",
-          "invert_battery_power": "Batarya gücü ters yön gösteriyorsa etkinleştirin (şarj/deşarj işaretini değiştirir)"
+          "invert_battery_power": "Batarya gücü ters yön gösteriyorsa etkinleştirin (şarj/deşarj işaretini değiştirir)",
+          "battery_voltage_range": "Otomatik batarya gerilim register seçimini geçersiz kılın. VPP register 31214 yanıt vermediğinde ve register 3169 ~10× çok düşük okuyorsa Yüksek gerilimi kullanın (ARK/HV batarya sistemlerinde 16-bit taşma belirtisi).",
+          "modbus_delay": "Bir yoklama döngüsü içinde ardışık Modbus istekleri arasındaki minimum duraklama süresi (50–1000 ms, varsayılan 250). Günlük transaction ID uyumsuzluk hataları gösteriyorsa veya inverter çalışırken sahte hata kayıtları oluşturuyorsa 500–1000 ms'ye yükseltin."
         }
       }
     }

@@ -76,7 +76,9 @@
           "offline_scan_interval": "Intervallo di scansione offline",
           "timeout": "Timeout connessione",
           "invert_grid_power": "Inverti potenza di rete",
-          "invert_battery_power": "Inverti potenza batteria"
+          "invert_battery_power": "Inverti potenza batteria",
+          "battery_voltage_range": "Intervallo tensione batteria",
+          "modbus_delay": "Ritardo richiesta Modbus (ms)"
         },
         "data_description": {
           "device_name": "Il tuo nome per il dispositivo (verrà anteposto a tutti i nomi dei sensori)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "Con quale frequenza interrogare l'inverter quando è offline/di notte (60-3600 secondi, predefinito 300)",
           "timeout": "Quanto tempo attendere una risposta dall'inverter (1-60 secondi)",
           "invert_grid_power": "Attiva se il morsetto CT è installato al contrario (scambia importazione/esportazione sul lato AC)",
-          "invert_battery_power": "Attiva se la potenza della batteria mostra direzione invertita (scambia il segno di carica/scarica)"
+          "invert_battery_power": "Attiva se la potenza della batteria mostra direzione invertita (scambia il segno di carica/scarica)",
+          "battery_voltage_range": "Sostituisce la selezione automatica del registro della tensione batteria. Usa Alta tensione quando VPP register 31214 non risponde e register 3169 legge ~10× troppo basso (sintomo di un overflow 16-bit nei sistemi di batteria ARK/HV).",
+          "modbus_delay": "Pausa minima tra richieste Modbus consecutive all'interno di un ciclo di polling (50–1000 ms, predefinito 250). Aumentare a 500–1000 ms se il registro mostra errori di mancata corrispondenza di transaction ID o se l'inverter registra voci di guasto spurie mentre l'integrazione è in esecuzione."
         }
       }
     }

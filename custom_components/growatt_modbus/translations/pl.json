@@ -76,7 +76,9 @@
           "offline_scan_interval": "Interwał skanowania offline",
           "timeout": "Limit czasu połączenia",
           "invert_grid_power": "Odwróć moc sieci",
-          "invert_battery_power": "Odwróć moc baterii"
+          "invert_battery_power": "Odwróć moc baterii",
+          "battery_voltage_range": "Zakres napięcia baterii",
+          "modbus_delay": "Opóźnienie żądania Modbus (ms)"
         },
         "data_description": {
           "device_name": "Twoja nazwa urządzenia (będzie poprzedzać wszystkie nazwy czujników)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "Jak często odpytywać falownik gdy jest offline/w nocy (60-3600 sekund, domyślnie 300)",
           "timeout": "Jak długo czekać na odpowiedź od falownika (1-60 sekund)",
           "invert_grid_power": "Włącz jeśli kleszcze CT są zainstalowane odwrotnie (zamienia import/eksport po stronie AC)",
-          "invert_battery_power": "Włącz jeśli moc baterii pokazuje odwrócony kierunek (zamienia znak ładowania/rozładowania)"
+          "invert_battery_power": "Włącz jeśli moc baterii pokazuje odwrócony kierunek (zamienia znak ładowania/rozładowania)",
+          "battery_voltage_range": "Zastąp automatyczny wybór rejestru napięcia baterii. Użyj Wysokiego napięcia gdy VPP register 31214 nie odpowiada a register 3169 odczytuje ~10× zbyt niską wartość (objaw przepełnienia 16-bit w systemach baterii ARK/HV).",
+          "modbus_delay": "Minimalna przerwa między kolejnymi żądaniami Modbus w cyklu odpytywania (50–1000 ms, domyślnie 250). Zwiększ do 500–1000 ms jeśli logi pokazują błędy niezgodności transaction ID lub jeśli falownik rejestruje fałszywe wpisy błędów podczas pracy integracji."
         }
       }
     }

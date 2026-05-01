@@ -76,7 +76,9 @@
           "offline_scan_interval": "Offline skanningsintervall",
           "timeout": "Anslutningstimeout",
           "invert_grid_power": "Invertera näteffekt",
-          "invert_battery_power": "Invertera batterieffekt"
+          "invert_battery_power": "Invertera batterieffekt",
+          "battery_voltage_range": "Batterispänningsområde",
+          "modbus_delay": "Modbus begäransfördröjning (ms)"
         },
         "data_description": {
           "device_name": "Ditt namn för enheten (placeras före alla sensornamn)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "Hur ofta växelriktaren pollades när den är offline/på natten (60-3600 sekunder, standard 300)",
           "timeout": "Hur länge väntar på svar från växelriktaren (1-60 sekunder)",
           "invert_grid_power": "Aktivera om CT-klämman är installerad omvänt (byter import/export på AC-sidan)",
-          "invert_battery_power": "Aktivera om batterieffekten visar omvänd riktning (byter laddnings-/urladdningstecken)"
+          "invert_battery_power": "Aktivera om batterieffekten visar omvänd riktning (byter laddnings-/urladdningstecken)",
+          "battery_voltage_range": "Åsidosätt automatiskt val av batterispänningsregister. Använd Högspänning när VPP register 31214 inte svarar och register 3169 läser ~10× för lågt (symptom på 16-bit spill i ARK/HV batterisystem).",
+          "modbus_delay": "Minimipaus mellan på varandra följande Modbus förfrågningar inom en pollingscykel (50–1000 ms, standard 250). Öka till 500–1000 ms om loggen visar transaction ID felmatchningsfel eller om växelriktaren loggar falska felinmatningar medan integrationen körs."
         }
       }
     }

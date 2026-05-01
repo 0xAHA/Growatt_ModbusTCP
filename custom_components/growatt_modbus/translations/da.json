@@ -76,7 +76,9 @@
           "offline_scan_interval": "Offline Skannings Interval",
           "timeout": "Forbindelses Timeout",
           "invert_grid_power": "Inverter Net Effekt",
-          "invert_battery_power": "Inverter Batteri Effekt"
+          "invert_battery_power": "Inverter Batteri Effekt",
+          "battery_voltage_range": "Batteri Spændingsområde",
+          "modbus_delay": "Modbus Anmodningsforsinkelse (ms)"
         },
         "data_description": {
           "device_name": "Dit navn for enheden (vil være før alle sensor navne)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "Hvor ofte polles inverteren når offline/om natten (60-3600 sekunder, standard 300)",
           "timeout": "Hvor lang tid at vente på svar fra inverteren (1-60 sekunder)",
           "invert_grid_power": "Aktiver hvis CT clamp er installeret omvendt (bytter import/eksport på AC siden)",
-          "invert_battery_power": "Aktiver hvis batteri effekt viser omvendt retning (bytter lade/aflade tegn)"
+          "invert_battery_power": "Aktiver hvis batteri effekt viser omvendt retning (bytter lade/aflade tegn)",
+          "battery_voltage_range": "Tilsidesæt automatisk valg af batteri spændingsregister. Brug Høj spænding når VPP register 31214 ikke svarer og register 3169 aflæser ~10× for lavt (symptom på 16-bit overløb ved ARK/HV batterisystemer).",
+          "modbus_delay": "Minimumspause mellem på hinanden følgende Modbus forespørgsler i en afsøgningscyklus (50–1000 ms, standard 250). Øg til 500–1000 ms hvis loggen viser transaction ID uoverensstemmelsesfejl eller hvis inverteren logger falske fejlposter mens integrationen kører."
         }
       }
     }

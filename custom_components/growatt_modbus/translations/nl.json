@@ -76,7 +76,9 @@
           "offline_scan_interval": "Offline scaninterval",
           "timeout": "Verbindingstimeout",
           "invert_grid_power": "Netvermogen omkeren",
-          "invert_battery_power": "Batterijvermogen omkeren"
+          "invert_battery_power": "Batterijvermogen omkeren",
+          "battery_voltage_range": "Batterijspanningsbereik",
+          "modbus_delay": "Modbus-aanvraagvertraging (ms)"
         },
         "data_description": {
           "device_name": "Uw naam voor het apparaat (wordt voor alle sensornamen geplaatst)",
@@ -85,7 +87,9 @@
           "offline_scan_interval": "Hoe vaak de omvormer wordt gepolld wanneer offline/'s nachts (60-3600 seconden, standaard 300)",
           "timeout": "Hoe lang te wachten op een reactie van de omvormer (1-60 seconden)",
           "invert_grid_power": "Activeren als CT-klem omgekeerd is geïnstalleerd (wisselt import/export aan de AC-kant)",
-          "invert_battery_power": "Activeren als batterijvermogen omgekeerde richting toont (wisselt laad-/ontlaadteken)"
+          "invert_battery_power": "Activeren als batterijvermogen omgekeerde richting toont (wisselt laad-/ontlaadteken)",
+          "battery_voltage_range": "Automatische selectie van het batterijspanningsregister overschrijven. Gebruik Hoogspanning wanneer VPP register 31214 niet reageert en register 3169 ~10× te laag leest (symptoom van 16-bit overloop bij ARK/HV batterijsystemen).",
+          "modbus_delay": "Minimale pauze tussen opeenvolgende Modbus-aanvragen binnen een pollcyclus (50–1000 ms, standaard 250). Verhoog naar 500–1000 ms als het logboek transaction ID discrepantiefouten toont of als de omvormer valse foutmeldingen registreert terwijl de integratie actief is."
         }
       }
     }
