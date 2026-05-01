@@ -4,6 +4,41 @@
 
 ---
 
+## v0.8.8b1
+
+Issues: #294
+
+---
+
+- **Feature: Configurable inter-request Modbus delay (Issue #294):**
+  A new **Modbus Request Delay** field (50–1000 ms, default 250 ms) is available in Options
+  (Settings → Devices & Services → Growatt Modbus → Configure). This controls the minimum
+  pause between consecutive Modbus read requests within a single poll cycle. The 250 ms
+  interval was already hardcoded internally; this exposes it as a user-configurable setting.
+  Users seeing `transaction_id` mismatch errors in the log — caused by the inverter responding
+  late to requests while the next one has already been sent — should increase this to 500–1000 ms.
+  Takes effect immediately without an integration restart.
+
+- **Fix: Profile-driven input register block sizing:**
+  The base (0–N) and storage (1000–N) input register reads now read only up to the highest
+  register address defined in the active profile, rather than always reading 125 registers.
+  A profile that only uses registers 0–88 now requests 89 registers instead of 125, reducing
+  payload size and poll time.
+
+- **Fix: VPP holding register retry throttling:**
+  VPP-range holding registers (30100, 30200–30201, 30407–30410) that return no response on
+  the first read of a session are now permanently skipped for the remainder of that session.
+  This mirrors the existing behaviour for VPP input register ranges and prevents repeated
+  unanswered requests from accumulating transaction-ID mismatches on firmware that does not
+  implement these registers. On the next HA restart the registers are retried once in case
+  firmware was updated.
+
+- **Fix: `priority_mode` sensor displays mode name instead of raw integer:**
+  The Priority Mode sensor now shows "Load First", "Battery First", or "Grid First" instead
+  of the raw register value (0, 1, 2).
+
+---
+
 ## v0.8.7
 
 Issues: #286, #287, #293
