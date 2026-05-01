@@ -415,6 +415,12 @@ class GrowattModbus:
         # Format: set of (start_addr, count) tuples
         self._failed_optional_ranges = set()
 
+        # Track VPP holding register addresses that failed once this session.
+        # These are optional VPP-range registers (30000+) that some firmware variants
+        # don't implement.  After the first failure we skip them rather than retrying
+        # every poll and accumulating transaction-ID mismatches.
+        self._failed_optional_holding_addrs: set = set()
+
         # WIT control rate limiting (v0.4.6) - track last write time per register
         # Prevents oscillation and unstable control behavior
         self._wit_control_last_write = {}  # {register: timestamp}
@@ -891,14 +897,16 @@ class GrowattModbus:
         has_8000_range = any(8000 <= addr < 8200 for addr in addresses)
         has_31000_range = any(31000 <= addr < 32000 for addr in addresses)
         
-        # Read base range (0-124) if needed - SPH models
+        # Read base range (0-N) if needed — size trimmed to profile's actual max address
         if has_base_range:
-            logger.debug("Reading base range (0-124)")
-            registers = self.read_input_registers(0, 125)
+            max_base_addr = max(a for a in addresses if a < 1000)
+            base_count = max_base_addr + 1
+            logger.debug("Reading base range (0-%d, %d registers)", max_base_addr, base_count)
+            registers = self.read_input_registers(0, base_count)
             if registers is None:
                 logger.error("Failed to read base input register block")
                 return None
-            
+
             # Populate cache
             for i, value in enumerate(registers):
                 self._register_cache[i] = value
@@ -928,10 +936,12 @@ class GrowattModbus:
                     for i, value in enumerate(registers):
                         self._register_cache[min_addr_875 + i] = value
         
-        # Read storage range (1000-1124) if needed - SPH/hybrid models with battery
+        # Read storage range (1000-N) if needed — size trimmed to profile's actual max address
         if has_storage_range:
-            logger.debug("Reading storage range (1000-1124)")
-            registers = self.read_input_registers(1000, 125)
+            max_storage_addr = max(a for a in addresses if 1000 <= a < 2000)
+            storage_count = max_storage_addr - 1000 + 1
+            logger.debug("Reading storage range (1000-%d, %d registers)", max_storage_addr, storage_count)
+            registers = self.read_input_registers(1000, storage_count)
             if registers is None:
                 logger.warning("Failed to read storage register block (battery data may be unavailable)")
                 # Don't return None - continue with what we have
@@ -2796,20 +2806,28 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read diagnostic registers 235-238: {e}")
 
-        # --- WIT VPP Remote Control registers (30000+ range) ---
+        # --- VPP holding registers (30000+ range) ---
+        # These are optional — some firmware variants don't implement them.
+        # On first failure the anchor address is added to _failed_optional_holding_addrs
+        # and the block is skipped for the rest of the session, avoiding repeated
+        # transaction-ID mismatches caused by unanswered requests.
+
         # Control Authority (30100)
-        if 30100 in holding_map:
+        if 30100 in holding_map and 30100 not in self._failed_optional_holding_addrs:
             try:
                 vpp_ctrl_regs = self.read_holding_registers(30100, 1)
                 if vpp_ctrl_regs is not None and len(vpp_ctrl_regs) >= 1:
                     data.control_authority = int(vpp_ctrl_regs[0])
                     data.vpp_control_authority_available = True
-                    logger.debug("[WIT VPP] control_authority=%s", data.control_authority)
+                    logger.debug("[VPP] control_authority=%s", data.control_authority)
+                else:
+                    self._failed_optional_holding_addrs.add(30100)
+                    logger.debug("[VPP] Register 30100 not supported by this firmware — skipping in future polls")
             except Exception as e:
                 logger.debug(f"Could not read VPP control_authority register 30100: {e}")
 
         # VPP Export Limitation (30200-30201)
-        if any(reg in holding_map for reg in [30200, 30201]):
+        if any(reg in holding_map for reg in [30200, 30201]) and 30200 not in self._failed_optional_holding_addrs:
             try:
                 vpp_export_regs = self.read_holding_registers(30200, 2)
                 if vpp_export_regs is not None and len(vpp_export_regs) >= 2:
@@ -2821,14 +2839,17 @@ class GrowattModbus:
                         if raw_val > 32767:  # Handle signed 16-bit
                             raw_val = raw_val - 65536
                         data.vpp_export_limit_power_rate = int(raw_val)
-                    data.vpp_export_limit_available = True  # Inverter responded to these registers
-                    logger.debug("[WIT VPP] vpp_export_limit_enable=%s, vpp_export_limit_power_rate=%s%%",
+                    data.vpp_export_limit_available = True
+                    logger.debug("[VPP] vpp_export_limit_enable=%s, vpp_export_limit_power_rate=%s%%",
                                data.vpp_export_limit_enable, data.vpp_export_limit_power_rate)
+                else:
+                    self._failed_optional_holding_addrs.add(30200)
+                    logger.debug("[VPP] Registers 30200-30201 not supported by this firmware — skipping in future polls")
             except Exception as e:
                 logger.debug(f"Could not read VPP export limitation registers 30200-30201: {e}")
 
         # Remote Power Control (30407-30410)
-        if any(reg in holding_map for reg in [30407, 30408, 30409, 30410]):
+        if any(reg in holding_map for reg in [30407, 30408, 30409, 30410]) and 30407 not in self._failed_optional_holding_addrs:
             try:
                 vpp_power_regs = self.read_holding_registers(30407, 4)
                 if vpp_power_regs is not None and len(vpp_power_regs) >= 3:
@@ -2847,6 +2868,9 @@ class GrowattModbus:
                     logger.debug("[VPP] remote_power_control_enable=%s, charging_time=%s min, charge_discharge_power=%s%%, ac_charge_enable=%s",
                                data.remote_power_control_enable, data.remote_power_control_charging_time,
                                data.remote_charge_and_discharge_power, data.vpp_ac_charge_enable)
+                else:
+                    self._failed_optional_holding_addrs.add(30407)
+                    logger.debug("[VPP] Registers 30407-30410 not supported by this firmware — skipping in future polls")
             except Exception as e:
                 logger.debug(f"Could not read VPP remote power control registers 30407-30410: {e}")
 
