@@ -4,7 +4,7 @@
 
 ---
 
-## v0.8.8b1
+## v0.8.8
 
 Issues: #294
 
@@ -36,6 +36,13 @@ Issues: #294
 - **Fix: `priority_mode` sensor displays mode name instead of raw integer:**
   The Priority Mode sensor now shows "Load First", "Battery First", or "Grid First" instead
   of the raw register value (0, 1, 2).
+
+- **Feature: `Export Limit Fallback Power Rate` writable number entity (holding register 3000):**
+  A new **Export Limit Fallback Power Rate** number control (0–100%, step 0.1) is available on
+  MIN TL-X, MIN TL-XH, MIC 600–3300TL-X, and TL-XH 3000–10000 profiles (and all their V2.01
+  variants). It reads and writes holding register 3000 (`ExportLimitFailedPowerRate`) — the
+  fallback output power cap the inverter applies when export limitation control fails. Appears
+  under the Grid device as a configuration entity.
 
 ---
 

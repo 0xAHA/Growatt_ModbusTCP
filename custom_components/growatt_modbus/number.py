@@ -136,6 +136,7 @@ class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
         friendly_overrides = {
             'active_power_rate': 'VPP Active Power Rate',
             'export_limit_w': 'VPP Export Limit (W)',
+            'export_limit_failed_power_rate': 'Export Limit Fallback Power Rate',
             'max_output_power_rate': 'Max Output Power Rate',
             'vpp_export_limit_power_rate': 'VPP Export Limit Power Rate',
             'load_first_battery_minimum_soc': 'Load First Battery Minimum SOC',
@@ -154,6 +155,7 @@ class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
         """Get icon based on control name."""
         icon_map = {
             'export_limit_power': 'mdi:speedometer',
+            'export_limit_failed_power_rate': 'mdi:transmission-tower-export',
             'active_power_rate': 'mdi:speedometer',
             'ac_charge_current': 'mdi:current-ac',
             'gen_charge_current': 'mdi:current-ac',

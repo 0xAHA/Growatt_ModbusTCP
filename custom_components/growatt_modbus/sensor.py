@@ -494,16 +494,6 @@ SENSOR_DEFINITIONS = {
         "description": "Lifetime energy consumed by home loads from all sources (solar, battery, and grid combined). Sourced from a dedicated inverter register. Available on storage/hybrid models with load metering.",
     },
     
-    "export_limit_failed_power_rate": {
-        "name": "Export Limit Fallback Power Rate",
-        "icon": "mdi:transmission-tower-export",
-        "state_class": SensorStateClass.MEASUREMENT,
-        "unit": PERCENTAGE,
-        "attr": "export_limit_failed_power_rate",
-        "entity_category": EntityCategory.DIAGNOSTIC,
-        "disabled_by_default": True,
-    },
-
     # Temperature Sensors
     "inverter_temp": {
         "name": "Inverter Temperature",

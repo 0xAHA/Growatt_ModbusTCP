@@ -6,7 +6,7 @@
 
 ---
 
-## v0.8.8b1
+## v0.8.8
 
 - **Feature: Configurable inter-request Modbus delay (Issue #294):** A new **Modbus Request Delay** field (50–1000 ms, default 250 ms) is available in Options (Settings → Devices & Services → Growatt Modbus → Configure). Users seeing `transaction_id` mismatch errors or inverter fault log entries caused by Modbus traffic should increase this to 500–1000 ms. Takes effect immediately without restart.
 
@@ -15,6 +15,8 @@
 - **Fix: VPP holding register retry throttling:** VPP-range holding registers (30100, 30200–30201, 30407–30410) that return no response on the first read of a session are skipped for the rest of that session, preventing repeated unanswered requests from causing transaction-ID mismatches. Retried on the next HA restart.
 
 - **Fix: `priority_mode` sensor displays mode name instead of raw integer:** Shows "Load First", "Battery First", or "Grid First" instead of 0 / 1 / 2.
+
+- **Feature: `Export Limit Fallback Power Rate` writable number control (holding register 3000):** Available on MIN TL-X, MIN TL-XH, MIC 600–3300TL-X, and TL-XH 3000–10000 profiles (and all V2.01 variants). Reads and writes the fallback output power cap (0–100%) the inverter applies when export limitation control fails. Appears under the Grid device as a configuration entity.
 
 ---
 
