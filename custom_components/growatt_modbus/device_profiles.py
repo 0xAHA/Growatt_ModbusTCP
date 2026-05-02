@@ -23,6 +23,8 @@ BASIC_AC_SENSORS: Set[str] = {
 
 GRID_SENSORS: Set[str] = {
     "grid_power", "grid_export_power", "grid_import_power",
+    # MIN TL-X/TL-XH: fallback output rate when export limitation control fails (disabled by default)
+    "export_limit_failed_power_rate",
 }
 
 POWER_FLOW_SENSORS: Set[str] = {

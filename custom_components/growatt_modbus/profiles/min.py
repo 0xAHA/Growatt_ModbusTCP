@@ -100,6 +100,10 @@ MIN_3000_6000TL_X = {
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Max output power %'},
         30: {'name': 'modbus_address', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Modbus address 1-254'},
 
+        # Export limitation fallback rate (V1.39 §3000, TL-X and TL-XH group)
+        3000: {'name': 'export_limit_failed_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RO',
+               'desc': 'Fallback output power rate applied when export limitation control fails'},
+
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},
         236: {'name': 'nonstd_vac_enable', 'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Grade1, 2=Grade2 — non-standard VAC'},
@@ -242,6 +246,10 @@ MIN_7000_10000TL_X = {
         48: {'name': 'sys_hour', 'scale': 1, 'unit': '', 'access': 'RW'},
         49: {'name': 'sys_min', 'scale': 1, 'unit': '', 'access': 'RW'},
         50: {'name': 'sys_sec', 'scale': 1, 'unit': '', 'access': 'RW'},
+
+        # Export limitation fallback rate (V1.39 §3000, TL-X and TL-XH group)
+        3000: {'name': 'export_limit_failed_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RO',
+               'desc': 'Fallback output power rate applied when export limitation control fails'},
 
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},

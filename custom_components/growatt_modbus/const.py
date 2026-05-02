@@ -651,6 +651,8 @@ SENSOR_DEVICE_MAP = {
         'generator_discharge_today', 'generator_discharge_total',
         # WIT: Extra/parallel inverter power to grid
         'extra_power_to_grid',
+        # MIN TL-X/TL-XH: fallback rate applied when export limit control fails
+        'export_limit_failed_power_rate',
     },
 
     # Load device - consumption

@@ -255,6 +255,7 @@ class GrowattData:
     # Control registers (writable holding registers)
     export_limit_mode: int = 0        # 0=Disabled, 1=RS485, 2=RS232, 3=CT
     export_limit_power: int = 0       # 0-1000 (0-100.0%)
+    export_limit_failed_power_rate: float = 0.0  # Fallback output rate when export limit control fails (0.1 %/unit)
     active_power_rate: int = 100      # 0-100 (max output power %)
 
     # SPH/SPM Battery Control registers (1000+ range)
@@ -2516,6 +2517,17 @@ class GrowattModbus:
                     logger.debug("[POWER CTRL] Read active_power_rate: %s%%", data.active_power_rate)
             except Exception as e:
                 logger.debug(f"Could not read active_power_rate register: {e}")
+
+        # --- Export Limit Fallback Power Rate (holding 3000, TL-X / TL-XH) ---
+        if 3000 in holding_map:
+            try:
+                elfpr_regs = self.read_holding_registers(3000, 1)
+                if elfpr_regs is not None and len(elfpr_regs) >= 1:
+                    data.export_limit_failed_power_rate = round(elfpr_regs[0] * 0.1, 1)
+                    logger.debug("[EXPORT CTRL] export_limit_failed_power_rate=%.1f%%",
+                                 data.export_limit_failed_power_rate)
+            except Exception as e:
+                logger.debug(f"Could not read export_limit_failed_power_rate register 3000: {e}")
 
         # --- SPF Off-Grid Controls --- Read if present in profile
         # Read registers 1, 2, 8 (output config, charge config, AC input mode)
