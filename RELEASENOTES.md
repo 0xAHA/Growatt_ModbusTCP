@@ -4,6 +4,23 @@
 
 ---
 
+## v0.8.9b1
+
+Issues: #295
+
+---
+
+- **Fix: WIT all entities unavailable after upgrading to v0.8.8 (Issue #295):**
+  The profile-driven register scan sizing introduced in v0.8.8 contained a bug affecting WIT
+  inverters. `has_base_range` was checking for any address in 0–999, which includes the WIT
+  875-range registers. This caused `max_base_addr` to resolve to ~998, resulting in a single
+  FC04 read request for 999 registers starting at 0 — far exceeding the Modbus limit of 125
+  per request. The read failed, the poll returned `None`, and all entities became unavailable.
+  Fixed by excluding the 875–999 range from the base range check (it is already read
+  separately). Only WIT/WIS models are affected; all other profiles are unaffected.
+
+---
+
 ## v0.8.8
 
 Issues: #294

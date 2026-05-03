@@ -891,16 +891,18 @@ class GrowattModbus:
 
         # Determine which ranges we need to read
         # Check if we have registers in different ranges
-        has_base_range = any(0 <= addr < 1000 for addr in addresses)
+        # 875-999 is a separate WIT-only range handled below — exclude it from base range
+        # to avoid requesting a single oversized read spanning the 0-874 gap up to ~999
+        has_base_range = any(0 <= addr < 875 for addr in addresses)
         has_storage_range = any(1000 <= addr < 2000 for addr in addresses)
         has_3000_range = any(3000 <= addr < 4000 for addr in addresses)
         has_875_range = any(875 <= addr < 1000 for addr in addresses)
         has_8000_range = any(8000 <= addr < 8200 for addr in addresses)
         has_31000_range = any(31000 <= addr < 32000 for addr in addresses)
-        
+
         # Read base range (0-N) if needed — size trimmed to profile's actual max address
         if has_base_range:
-            max_base_addr = max(a for a in addresses if a < 1000)
+            max_base_addr = max(a for a in addresses if a < 875)
             base_count = max_base_addr + 1
             logger.debug("Reading base range (0-%d, %d registers)", max_base_addr, base_count)
             registers = self.read_input_registers(0, base_count)

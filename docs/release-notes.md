@@ -6,6 +6,12 @@
 
 ---
 
+## v0.8.9b1
+
+- **Fix: WIT all entities unavailable after upgrading to v0.8.8 (Issue #295):** The register scan sizing optimisation introduced in v0.8.8 caused WIT inverters to attempt a single 999-register Modbus read (far exceeding the 125-register limit), which failed and left all entities unavailable. Only WIT/WIS models are affected. Fixed in v0.8.9b1.
+
+---
+
 ## v0.8.8
 
 - **Feature: Configurable inter-request Modbus delay (Issue #294):** A new **Modbus Request Delay** field (50–1000 ms, default 250 ms) is available in Options (Settings → Devices & Services → Growatt Modbus → Configure). Users seeing `transaction_id` mismatch errors or inverter fault log entries caused by Modbus traffic should increase this to 500–1000 ms. Takes effect immediately without restart.
