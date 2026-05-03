@@ -23,6 +23,7 @@ The integration polls your inverter directly over Modbus — the same protocol t
 - **[Entity Reference](controls/entity-reference.md)** — all control entities with register details
 - **[Battery & Scheduling](controls/battery-scheduling.md)** — TOU and charge/discharge scheduling
 - **[WIT Inverter Guide](controls/wit-guide.md)** — VPP protocol control for WIT models
+- **[Raising an Issue](troubleshooting/raising-an-issue.md)** — what to include when reporting a bug
 - **[Diagnostic Service](troubleshooting/diagnostic-service.md)** — Universal Register Scanner
 - **[DTC Debugging](troubleshooting/dtc-debugging.md)** — device type code reference
 - **[Adding Sensors](developer/adding-sensors.md)** — add registers and sensors to an existing profile

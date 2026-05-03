@@ -49,6 +49,7 @@ nav:
     - Battery & Scheduling: controls/battery-scheduling.md
     - WIT Inverter Guide: controls/wit-guide.md
   - Troubleshooting:
+    - Raising an Issue: troubleshooting/raising-an-issue.md
     - Diagnostic Service: troubleshooting/diagnostic-service.md
     - DTC Debugging: troubleshooting/dtc-debugging.md
   - Developer:
