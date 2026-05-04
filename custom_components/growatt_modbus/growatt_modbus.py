@@ -949,19 +949,29 @@ class GrowattModbus:
                     for i, value in enumerate(registers):
                         self._register_cache[min_addr_875 + i] = value
         
-        # Read storage range (1000-N) if needed — size trimmed to profile's actual max address
+        # Read storage range (1000-N) if needed — size trimmed to profile's actual max address.
+        # Chunked if > 125 registers (defensive — current profiles peak at ~121).
         if has_storage_range:
             max_storage_addr = max(a for a in addresses if 1000 <= a < 2000)
             storage_count = max_storage_addr - 1000 + 1
             logger.debug("Reading storage range (1000-%d, %d registers)", max_storage_addr, storage_count)
-            registers = self.read_input_registers(1000, storage_count)
-            if registers is None:
-                logger.warning("Failed to read storage register block (battery data may be unavailable)")
-                # Don't return None - continue with what we have
+            if storage_count > 125:
+                for chunk_start in range(1000, max_storage_addr + 1, 125):
+                    chunk_count = min(125, max_storage_addr - chunk_start + 1)
+                    chunk_regs = self.read_input_registers(chunk_start, chunk_count)
+                    if chunk_regs is None:
+                        logger.warning("Failed to read storage register block (%d-%d)",
+                                       chunk_start, chunk_start + chunk_count - 1)
+                    else:
+                        for i, value in enumerate(chunk_regs):
+                            self._register_cache[chunk_start + i] = value
             else:
-                # Populate cache
-                for i, value in enumerate(registers):
-                    self._register_cache[1000 + i] = value
+                registers = self.read_input_registers(1000, storage_count)
+                if registers is None:
+                    logger.warning("Failed to read storage register block (battery data may be unavailable)")
+                else:
+                    for i, value in enumerate(registers):
+                        self._register_cache[1000 + i] = value
         
         # Read 3000 range if needed - MIN/MOD models
         if has_3000_range:
