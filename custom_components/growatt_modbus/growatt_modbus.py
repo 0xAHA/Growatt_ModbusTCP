@@ -900,19 +900,29 @@ class GrowattModbus:
         has_8000_range = any(8000 <= addr < 8200 for addr in addresses)
         has_31000_range = any(31000 <= addr < 32000 for addr in addresses)
 
-        # Read base range (0-N) if needed — size trimmed to profile's actual max address
+        # Read base range (0-N) if needed — size trimmed to profile's actual max address.
+        # Excludes 875-999 (WIT range handled separately). Chunked if > 125 registers.
         if has_base_range:
             max_base_addr = max(a for a in addresses if a < 875)
             base_count = max_base_addr + 1
             logger.debug("Reading base range (0-%d, %d registers)", max_base_addr, base_count)
-            registers = self.read_input_registers(0, base_count)
-            if registers is None:
-                logger.error("Failed to read base input register block")
-                return None
-
-            # Populate cache
-            for i, value in enumerate(registers):
-                self._register_cache[i] = value
+            if base_count > 125:
+                for chunk_start in range(0, base_count, 125):
+                    chunk_count = min(125, base_count - chunk_start)
+                    chunk_regs = self.read_input_registers(chunk_start, chunk_count)
+                    if chunk_regs is None:
+                        logger.error("Failed to read base input register block (%d-%d)",
+                                     chunk_start, chunk_start + chunk_count - 1)
+                        return None
+                    for i, value in enumerate(chunk_regs):
+                        self._register_cache[chunk_start + i] = value
+            else:
+                registers = self.read_input_registers(0, base_count)
+                if registers is None:
+                    logger.error("Failed to read base input register block")
+                    return None
+                for i, value in enumerate(registers):
+                    self._register_cache[i] = value
 
         # Read business storage range (875-999) if needed - WIT/WIS models
         if has_875_range:

@@ -6,9 +6,9 @@
 
 ---
 
-## v0.8.9b1
+## v0.8.9b2
 
-- **Fix: WIT all entities unavailable after upgrading to v0.8.8 (Issue #295):** The register scan sizing optimisation introduced in v0.8.8 caused WIT inverters to attempt a single 999-register Modbus read (far exceeding the 125-register limit), which failed and left all entities unavailable. Only WIT/WIS models are affected. Fixed in v0.8.9b1.
+- **Fix: WIT all entities unavailable after upgrading to v0.8.8 (Issue #295):** Two related bugs in the v0.8.8 register scan sizing affected WIT inverters. First, the base range check included WIT's 875-range registers, causing a ~999-register read that exceeded the Modbus limit. Second, WIT's base range extends to address 188, which also exceeds 125. Both fixed: 875-999 is now excluded from the base range check, and base ranges over 125 registers are now read in chunks. WIT/WIS models only.
 
 ---
 
