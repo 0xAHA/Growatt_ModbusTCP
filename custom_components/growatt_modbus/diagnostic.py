@@ -1985,44 +1985,41 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                     range_responses[range_name] = 0
                     _LOGGER.info(f"{range_name}: No response")
 
-        client.close()
+        # Re-read identification registers now that the connection is settled.
+        # By the time the range scan finishes, several seconds have elapsed since the
+        # scanner connected — the inverter is no longer reinitialising its Modbus state
+        # and these reads are reliable. This avoids using the coordinator's client
+        # (which races with the coordinator's own polling thread).
+        _LOGGER.info("Re-reading identification registers (connection now settled)...")
+        _settled_fw = _read_registers_chunked(client, 9, 3, slave_id, chunk_size=3, register_type='holding')
+        if _settled_fw:
+            for _addr, _val in _settled_fw.items():
+                if _val.get('status') == 'success' and _val.get('value') is not None:
+                    all_register_data[_addr] = _val
 
-        # Supplement identification registers from the coordinator's established client.
-        # The scanner opens a second TCP connection while the coordinator already holds one.
-        # Most Growatt inverters are single-connection: they drop the coordinator's session
-        # when the scanner connects, then spend several seconds reinitialising — during which
-        # holding 43 and registers 9-11 return 0 regardless of warmup delays.
-        # Reading these from the coordinator's client avoids the dual-connection conflict
-        # entirely. Firmware (9-11), legacy DTC (43), DSP code (3099), VPP DTC (30000).
-        if coordinator is not None and hasattr(coordinator, '_client'):
-            _LOGGER.info("Supplementing identification registers from coordinator client...")
-            _ID_REGS = [
-                (9,     'holding'),
-                (10,    'holding'),
-                (11,    'holding'),
-                (43,    'holding'),
-                (3099,  'holding'),
-                (30000, 'holding'),
-            ]
-            for _reg_addr, _reg_type in _ID_REGS:
-                _existing = all_register_data.get(_reg_addr)
-                _needs = (
-                    _existing is None
-                    or _existing.get('status') != 'success'
-                    or _existing.get('value') == 0
-                )
-                if _needs:
-                    try:
-                        _cr = _read_single_register(coordinator._client, _reg_addr, _reg_type)
-                        if _cr['success'] and _cr['value'] is not None:
-                            all_register_data[_reg_addr] = {
-                                'value': _cr['value'],
-                                'status': 'success',
-                                'error': None,
-                            }
-                            _LOGGER.info("  Reg %d supplemented from coordinator: %s", _reg_addr, _cr['value'])
-                    except Exception as _e:
-                        _LOGGER.debug("  Reg %d coordinator supplement failed: %s", _reg_addr, _e)
+        _settled_dtc43 = _read_registers_chunked(client, 43, 1, slave_id, chunk_size=1, register_type='holding')
+        if _settled_dtc43:
+            _e43 = _settled_dtc43.get(43)
+            if _e43 and _e43.get('status') == 'success':
+                all_register_data[43] = _e43
+
+        _settled_dsp = _read_registers_chunked(client, 3099, 1, slave_id, chunk_size=1, register_type='holding')
+        if _settled_dsp:
+            _edsp = _settled_dsp.get(3099)
+            if _edsp and _edsp.get('status') == 'success':
+                all_register_data[3099] = _edsp
+
+        # Only retry VPP DTC if it previously returned 0 (not if it threw an exception —
+        # that means the device doesn't support VPP registers at all).
+        _vpp_prev = all_register_data.get(30000)
+        if _vpp_prev and _vpp_prev.get('status') == 'success' and not _vpp_prev.get('value'):
+            _settled_vpp = _read_registers_chunked(client, 30000, 1, slave_id, chunk_size=1, register_type='holding')
+            if _settled_vpp:
+                _evpp = _settled_vpp.get(30000)
+                if _evpp and _evpp.get('status') == 'success' and _evpp.get('value'):
+                    all_register_data[30000] = _evpp
+
+        client.close()
 
         # Auto-detect model
         detection = _detect_inverter_model(all_register_data)
