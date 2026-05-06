@@ -172,6 +172,20 @@ export_register_dump:
       default: false
       selector:
         boolean:
+    block_size:
+      name: Block Size
+      description: "Number of registers read per Modbus request. 125 is fastest (default). Use 25 or 1 for inverters that reject large block reads (e.g. older RS485 models, TL3-S)."
+      required: false
+      default: 125
+      selector:
+        select:
+          options:
+            - label: "125 registers (default, fastest)"
+              value: "125"
+            - label: "25 registers (for finicky inverters)"
+              value: "25"
+            - label: "1 register (single-register scan, slowest)"
+              value: "1"
 
 write_register:
   name: Write Modbus Register

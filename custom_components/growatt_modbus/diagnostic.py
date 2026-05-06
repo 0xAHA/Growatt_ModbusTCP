@@ -124,6 +124,8 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         vol.Optional("scan_wit",          default=False): cv.boolean,  # WIT/WIS 8000-8124
         vol.Optional("scan_vpp_control",  default=False): cv.boolean,  # VPP control 30100-30499
         vol.Optional("scan_vpp_data",     default=False): cv.boolean,  # VPP data 31000-31399
+        # Block size for range reads: 125 (default, fastest), 25 (for finicky inverters), 1 (single-register, slowest but most compatible)
+        vol.Optional("block_size", default=125): vol.All(vol.Coerce(int), vol.In([125, 25, 1])),
     }
 )
 
@@ -337,6 +339,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         """Universal register scanner - scans all ranges and auto-detects model."""
         send_notification = call.data.get("notify", True)
         offgrid_mode = call.data.get("offgrid_mode", False)
+        block_size = call.data.get("block_size", 125)
 
         # Build enabled scan groups from boolean flags.
         # If none are explicitly checked, scan everything (full scan is the default).
@@ -408,7 +411,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         # Run export in executor — pass pre-resolved coordinator if available
         result = await hass.async_add_executor_job(
-            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode, enabled_groups, pre_resolved_coordinator
+            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode, enabled_groups, pre_resolved_coordinator, block_size
         )
         
         if result["success"]:
@@ -426,9 +429,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 f"**Confidence:** {confidence}",
             ]
 
-            # Add DTC/Protocol/Firmware info if available
-            if dtc_code:
-                message_lines.append(f"**DTC Code:** {dtc_code}")
+            # Add DTC/Protocol/Firmware info — always show both DTC registers
+            vpp_dtc = result.get("vpp_dtc")
+            leg_dtc = result.get("leg_dtc")
+            message_lines.append(f"**VPP DTC (reg 30000):** {vpp_dtc if vpp_dtc else 'no response'}")
+            message_lines.append(f"**Legacy DTC (reg 43):** {leg_dtc if leg_dtc else 'no response'}")
             if protocol_version:
                 protocol_str = f"{protocol_version // 100}.{protocol_version % 100:02d}" if protocol_version >= 100 else str(protocol_version)
                 message_lines.append(f"**Protocol:** V{protocol_str}")
@@ -438,6 +443,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             message_lines.extend([
                 f"**Suggested Profile:** `{profile_key}`\n",
                 f"**Scan Results:**",
+                f"• Block size: {block_size} registers/request",
                 f"• Total registers scanned: {result['total_registers']}",
                 f"• Non-zero registers: {result['non_zero']}",
                 f"• Responding ranges: {result['responding_ranges']}\n",
@@ -1732,7 +1738,7 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     return detection
 
 
-def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False, enabled_groups: set = None, coordinator=None) -> dict:
+def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False, enabled_groups: set = None, coordinator=None, block_size: int = 125) -> dict:
     """
     Export all registers to CSV file with auto-detection (blocking).
 
@@ -1905,9 +1911,9 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             count = range_config["count"]
             reg_type = range_config.get("register_type", "input")
 
-            _LOGGER.info(f"Scanning {range_name} ({reg_type})...")
+            _LOGGER.info(f"Scanning {range_name} ({reg_type}, block_size={block_size})...")
 
-            registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=50, register_type=reg_type)
+            registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=block_size, register_type=reg_type)
 
             if registers:
                 all_register_data.update(registers)
@@ -1936,7 +1942,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
 
                 _LOGGER.info(f"Scanning {range_name}...")
 
-                registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=50, register_type='holding')
+                registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=block_size, register_type='holding')
 
                 if registers:
                     all_register_data.update(registers)
@@ -1969,6 +1975,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             writer.writerow(["Connection", connection_str])
             writer.writerow(["Connection Type", connection_type.upper()])
             writer.writerow(["Slave ID", slave_id])
+            writer.writerow(["Block Size", block_size, "registers per Modbus request"])
 
             # Add currently selected/configured profile (if coordinator found)
             if selected_profile_key and selected_profile_name:
@@ -2006,9 +2013,15 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             writer.writerow(["Detected Model", detection["model"]])
             writer.writerow(["Confidence", detection["confidence"]])
 
-            # Add DTC code and protocol version if available
+            # Always show both DTC registers so users can compare them
+            _vpp_dtc_entry = all_register_data.get(30000)
+            _leg_dtc_entry = all_register_data.get(43)
+            _vpp_dtc_val = _vpp_dtc_entry['value'] if _vpp_dtc_entry and _vpp_dtc_entry.get('status') == 'success' else None
+            _leg_dtc_val = _leg_dtc_entry['value'] if _leg_dtc_entry and _leg_dtc_entry.get('status') == 'success' else None
+            writer.writerow(["VPP DTC (holding 30000)", _vpp_dtc_val if _vpp_dtc_val is not None else "not read / no response"])
+            writer.writerow(["Legacy DTC (holding 43)", _leg_dtc_val if _leg_dtc_val is not None else "not read / no response"])
             if detection.get("dtc_code"):
-                writer.writerow(["DTC Code", detection["dtc_code"]])
+                writer.writerow(["DTC Code (used)", detection["dtc_code"]])
             if detection.get("protocol_version"):
                 protocol_ver = detection["protocol_version"]
                 protocol_str = f"{protocol_ver // 100}.{protocol_ver % 100:02d}" if protocol_ver >= 100 else str(protocol_ver)
@@ -2334,6 +2347,12 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                     if 32 <= low_byte <= 126:
                         fw_chars.append(chr(low_byte))
                 firmware_version = ''.join(fw_chars).strip()
+
+        # Extract both DTC values for the notification message
+        _vpp_dtc_rd = all_register_data.get(30000)
+        _leg_dtc_rd = all_register_data.get(43)
+        result["vpp_dtc"] = _vpp_dtc_rd['value'] if _vpp_dtc_rd and _vpp_dtc_rd.get('status') == 'success' and _vpp_dtc_rd.get('value') else None
+        result["leg_dtc"] = _leg_dtc_rd['value'] if _leg_dtc_rd and _leg_dtc_rd.get('status') == 'success' and _leg_dtc_rd.get('value') else None
 
         result["success"] = True
         result["filename"] = filename
