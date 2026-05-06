@@ -4,6 +4,19 @@
 
 ---
 
+## v0.9.0b2
+
+---
+
+- **Fix: VPP battery charge/discharge today swapped on SPH V2.01 profiles (Issue #300):**
+  `battery_charge_today` and `battery_discharge_today` from VPP registers 31202 and 31206
+  were labelled the wrong way round on `sph_3000_6000_v201` and `sph_7000_10000_v201`.
+  VPP Protocol V2.01 specifies 31202 as daily charge and 31206 as daily discharge — the
+  integration had them reversed. The legacy storage-range registers (1052/1053 and 1056/1057)
+  were always correct; only the VPP-sourced entities were affected.
+
+---
+
 ## v0.9.0b1
 
 ---
