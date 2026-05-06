@@ -31,8 +31,9 @@ AC output block (31100–31119): varies between families.
   - Single-phase: SPH omits maps_to on meter_power; MIN/TL-XH map to power_to_grid.
   - Three-phase:  SPH-TL3/MID use different register names for phase voltages.
 Battery cluster 1 (31200–31222): SPH and TL-XH interpret registers 31202–31209
-  differently (SPH: energy totals; TL-XH: charge/discharge power).  Left
-  inline in each profile to make the difference explicit.
+  differently (SPH: 31202=charge today, 31204=charge total, 31206=discharge today,
+  31208=discharge total; TL-XH: charge/discharge power).  Left inline in each
+  profile to make the difference explicit.
 """
 
 # ---------------------------------------------------------------------------

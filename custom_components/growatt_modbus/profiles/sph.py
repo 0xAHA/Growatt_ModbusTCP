@@ -630,20 +630,21 @@ SPH_3000_6000_V201 = {
         **VPP_V201_TEMPERATURE_1P,
 
         # Battery Cluster 1 State (31200–31222) — SPH-specific register layout.
-        # Registers 31202–31209 are energy counters here (discharge today, charge total,
-        # charge today, discharge total); TL-XH interprets them as charge/discharge power.
+        # Registers 31202–31209 are energy counters here (charge today, charge total,
+        # discharge today, discharge total); TL-XH interprets them as charge/discharge power.
         # Per VPP Protocol V2.01: 31200–31201 is signed battery power
         # (positive = charge, negative = discharge).
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
         31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
-        # Battery Energy (VPP registers - validated against scan data)
-        31202: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery discharge energy today HIGH'},
-        31203: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # Battery Energy (VPP V2.01 protocol: 31202=charge today, 31204=charge total,
+        #                                       31206=discharge today, 31208=discharge total)
+        31202: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery charge energy today HIGH'},
+        31203: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         31204: {'name': 'battery_charge_total_high', 'scale': 1, 'unit': '', 'pair': 31205, 'desc': 'Battery charge energy total HIGH'},
         31205: {'name': 'battery_charge_total_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31206: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery charge energy today HIGH'},
-        31207: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31206: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery discharge energy today HIGH'},
+        31207: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         31208: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 31209, 'desc': 'Battery discharge energy total HIGH'},
         31209: {'name': 'battery_discharge_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
@@ -757,14 +758,16 @@ SPH_7000_10000_V201 = {
         **VPP_V201_TEMPERATURE_1P,
 
         # Battery Cluster 1 State — SPH energy-counter layout (see SPH_3000_6000_V201)
+        # VPP V2.01 protocol: 31202=charge today, 31204=charge total,
+        #                      31206=discharge today, 31208=discharge total
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
         31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        31202: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery discharge energy today HIGH'},
-        31203: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31202: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery charge energy today HIGH'},
+        31203: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         31204: {'name': 'battery_charge_total_high', 'scale': 1, 'unit': '', 'pair': 31205, 'desc': 'Battery charge energy total HIGH'},
         31205: {'name': 'battery_charge_total_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31206: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery charge energy today HIGH'},
-        31207: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31206: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery discharge energy today HIGH'},
+        31207: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         31208: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 31209, 'desc': 'Battery discharge energy total HIGH'},
         31209: {'name': 'battery_discharge_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
