@@ -433,8 +433,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             # Add DTC/Protocol/Firmware info — always show both DTC registers
             vpp_dtc = result.get("vpp_dtc")
             leg_dtc = result.get("leg_dtc")
-            message_lines.append(f"**VPP DTC (reg 30000):** {vpp_dtc if vpp_dtc else 'no response'}")
-            message_lines.append(f"**Legacy DTC (reg 43):** {leg_dtc if leg_dtc else 'no response'}")
+            message_lines.append(f"**VPP DTC (reg 30000):** {'no response' if vpp_dtc is None else vpp_dtc}")
+            message_lines.append(f"**Legacy DTC (reg 43):** {'no response' if leg_dtc is None else leg_dtc}")
             if protocol_version:
                 protocol_str = f"{protocol_version // 100}.{protocol_version % 100:02d}" if protocol_version >= 100 else str(protocol_version)
                 message_lines.append(f"**Protocol:** V{protocol_str}")
@@ -1797,8 +1797,8 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         # Without this, the inverter (which typically handles one TCP connection at a time)
         # may still be tearing down the coordinator's connection when the first reads fire,
         # causing DTC and other early registers to come back as 0 even though they work fine
-        # on an established connection.
-        time.sleep(0.5)
+        # on an established connection. 1.5 s is needed for some models (e.g. MIN TL-X).
+        time.sleep(1.5)
 
         mode_str = "OffGrid scan (safe for SPF)" if offgrid_mode else "universal scan"
         _LOGGER.info(f"Connected, starting {mode_str}...")
@@ -1919,8 +1919,8 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             # Retry legacy DTC (holding 43) if it came back zero — same settling issue.
             _leg_dtc_entry = all_register_data.get(43)
             if _leg_dtc_entry and _leg_dtc_entry.get('status') == 'success' and not _leg_dtc_entry.get('value'):
-                _LOGGER.info("  Legacy DTC (holding 43) returned zero — retrying...")
-                time.sleep(0.25)
+                _LOGGER.info("  Legacy DTC (holding 43) returned zero — retrying after 1 s...")
+                time.sleep(1.0)
                 v139_dtc_retry = _read_registers_chunked(client, 43, 1, slave_id, chunk_size=1, register_type='holding')
                 if v139_dtc_retry:
                     all_register_data.update(v139_dtc_retry)
@@ -2072,11 +2072,18 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                 return bytes(raw).decode('ascii', errors='ignore').strip('\x00').strip() or None
 
             firmware_version = _regs_to_ascii([9, 10, 11])
+            # Discard firmware strings that are too short to be meaningful (e.g. "@" from a
+            # partially-settled connection — the correct string is typically 4-6 characters).
+            if firmware_version and len(firmware_version.strip()) < 3:
+                firmware_version = None
             # For V1.39 3000-range inverters the DSP code at holding 3099 may be more informative
             dsp_code = all_register_data.get(3099)
             if dsp_code and dsp_code.get('status') == 'success' and dsp_code.get('value'):
-                dsp_str = str(dsp_code['value'])
-                firmware_version = f"{firmware_version} (DSP: {dsp_str})" if firmware_version else f"DSP: {dsp_str}"
+                dsp_val = dsp_code['value']
+                # Discard DSP values that look like garbled data (0x2020 = spaces, etc.)
+                dsp_str = str(dsp_val) if dsp_val >= 100 else None
+                if dsp_str:
+                    firmware_version = f"{firmware_version} (DSP: {dsp_str})" if firmware_version else f"DSP: {dsp_str}"
             if firmware_version:
                 writer.writerow(["Firmware Version", firmware_version])
 
@@ -2382,8 +2389,8 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         # Extract both DTC values for the notification message
         _vpp_dtc_rd = all_register_data.get(30000)
         _leg_dtc_rd = all_register_data.get(43)
-        result["vpp_dtc"] = _vpp_dtc_rd['value'] if _vpp_dtc_rd and _vpp_dtc_rd.get('status') == 'success' and _vpp_dtc_rd.get('value') else None
-        result["leg_dtc"] = _leg_dtc_rd['value'] if _leg_dtc_rd and _leg_dtc_rd.get('status') == 'success' and _leg_dtc_rd.get('value') else None
+        result["vpp_dtc"] = _vpp_dtc_rd['value'] if _vpp_dtc_rd and _vpp_dtc_rd.get('status') == 'success' and _vpp_dtc_rd.get('value') is not None else None
+        result["leg_dtc"] = _leg_dtc_rd['value'] if _leg_dtc_rd and _leg_dtc_rd.get('status') == 'success' and _leg_dtc_rd.get('value') is not None else None
 
         result["success"] = True
         result["filename"] = filename
