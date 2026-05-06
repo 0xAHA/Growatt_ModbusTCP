@@ -23,6 +23,19 @@ Issues: #295
      pattern already used for the 3000-range. As a side effect, WIT registers 125–188 are now
      read correctly for the first time (previously the 0–124 cap silently dropped them).
 
+- **Feature: Universal Scanner configurable block size:**
+  The `growatt_modbus.export_register_dump` service now accepts a **Block Size** field (125,
+  25, or 1 register per request; default 125). Inverters using older RS485 protocols or
+  single-register-only firmware (such as the TL3-S family) reject large Modbus block reads
+  and return Illegal Function errors for entire ranges. Setting block size to 25 or 1 allows
+  these inverters to be scanned successfully, at the cost of scan time.
+
+- **Feature: Universal Scanner always reports both DTC registers:**
+  The scan result notification and CSV detection section now always show the raw value of both
+  the VPP DTC register (holding 30000) and the legacy V1.39 DTC register (holding 43),
+  regardless of which one was used for model identification. Useful when investigating
+  inverters with unknown or conflicting DTC codes.
+
 ---
 
 ## v0.8.8
