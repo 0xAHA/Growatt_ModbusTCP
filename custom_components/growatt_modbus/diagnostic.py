@@ -3,6 +3,7 @@ import logging
 import csv
 import json
 import os
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple, Optional
 
@@ -1792,6 +1793,13 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             result["error"] = f"Cannot connect to {connection_str}"
             return result
 
+        # Allow the TCP connection to settle before the first request.
+        # Without this, the inverter (which typically handles one TCP connection at a time)
+        # may still be tearing down the coordinator's connection when the first reads fire,
+        # causing DTC and other early registers to come back as 0 even though they work fine
+        # on an established connection.
+        time.sleep(0.5)
+
         mode_str = "OffGrid scan (safe for SPF)" if offgrid_mode else "universal scan"
         _LOGGER.info(f"Connected, starting {mode_str}...")
 
@@ -1889,10 +1897,33 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                     _LOGGER.info(f"  Protocol: {id_registers[30099]['value'] if protocol_found else 'Not found'}")
                     range_responses["VPP Identification (30000-30099)"] = 1 if (dtc_found or protocol_found) else 0
                 else:
-                    _LOGGER.info("  No identification registers found (likely legacy protocol)")
-                    range_responses["VPP Identification (30000-30099)"] = 0
+                    # DTC came back zero — the inverter may still be settling after the fresh
+                    # TCP connection displaced the coordinator's session. Retry once after a
+                    # short pause before concluding there is no VPP DTC.
+                    _LOGGER.info("  VPP DTC returned zero — retrying after 500 ms...")
+                    time.sleep(0.5)
+                    id_registers_retry = _read_registers_chunked(client, 30000, 100, slave_id, chunk_size=50, register_type='holding')
+                    if id_registers_retry:
+                        all_register_data.update(id_registers_retry)
+                        dtc_found = 30000 in id_registers_retry and id_registers_retry[30000]['status'] == 'success' and id_registers_retry[30000]['value']
+                        protocol_found = 30099 in id_registers_retry and id_registers_retry[30099]['status'] == 'success' and id_registers_retry[30099]['value']
+                    if dtc_found or protocol_found:
+                        _LOGGER.info(f"  DTC (retry): {id_registers_retry[30000]['value'] if dtc_found else 'Not found'}")
+                        range_responses["VPP Identification (30000-30099)"] = 1
+                    else:
+                        _LOGGER.info("  No identification registers found (likely legacy protocol)")
+                        range_responses["VPP Identification (30000-30099)"] = 0
             else:
                 range_responses["VPP Identification (30000-30099)"] = 0
+
+            # Retry legacy DTC (holding 43) if it came back zero — same settling issue.
+            _leg_dtc_entry = all_register_data.get(43)
+            if _leg_dtc_entry and _leg_dtc_entry.get('status') == 'success' and not _leg_dtc_entry.get('value'):
+                _LOGGER.info("  Legacy DTC (holding 43) returned zero — retrying...")
+                time.sleep(0.25)
+                v139_dtc_retry = _read_registers_chunked(client, 43, 1, slave_id, chunk_size=1, register_type='holding')
+                if v139_dtc_retry:
+                    all_register_data.update(v139_dtc_retry)
         else:
             _LOGGER.info("⚠️ Skipping VPP identification registers (OffGrid mode)")
             range_responses["VPP Identification (SKIPPED - OffGrid mode)"] = 0
