@@ -8,6 +8,12 @@
 
 ## v0.9.0b1
 
+- **Fix: Universal Scanner DTC registers showing as zero on fresh TCP connection:** The DTC identification registers (holding 30000 and holding 43) frequently returned 0 in scan output even though `read_register` always worked. The scanner opens a new raw TCP connection that displaces the coordinator's session; the inverter returns 0 until it settles. Fixed with a 500 ms post-connect warmup delay and a single retry for each DTC register if it reads back as zero.
+
+---
+
+## v0.8.9
+
 - **Fix: WIT all entities unavailable after upgrading to v0.8.8 (Issue #295):** Two related bugs in the v0.8.8 register scan sizing affected WIT inverters. First, the base range check included WIT's 875-range registers, causing a ~999-register read that exceeded the Modbus limit. Second, WIT's base range extends to address 188, which also exceeds 125. Both fixed: 875-999 is now excluded from the base range check, and base ranges over 125 registers are now read in chunks. WIT/WIS models only.
 
 - **Feature: Universal Scanner configurable block size:** The `export_register_dump` service now has a **Block Size** field (125, 25, or 1 register per request; default 125). Use 25 or 1 for inverters that reject large block reads — older RS485 models and some TL3-S units return Illegal Function on 125-register requests. Smaller blocks scan every register individually at the cost of scan time.

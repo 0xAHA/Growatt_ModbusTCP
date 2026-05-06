@@ -6,6 +6,20 @@
 
 ## v0.9.0b1
 
+---
+
+- **Fix: Universal Scanner DTC registers showing as zero on fresh TCP connection:**
+  When using the `export_register_dump` scanner, the DTC identification registers (holding
+  30000 and holding 43) frequently returned 0 even though reading them individually via
+  `read_register` always worked. Root cause: the scanner opens a new raw TCP connection, which
+  displaces the coordinator's existing session. Until the inverter settles, the first reads
+  return 0 with no Modbus error. Fixed by adding a 500 ms warmup delay after connecting, plus
+  a single retry (with delay) for each DTC register if it reads back as zero.
+
+---
+
+## v0.8.9
+
 Issues: #295
 
 ---
