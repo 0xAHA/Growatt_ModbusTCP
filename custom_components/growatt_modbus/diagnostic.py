@@ -2108,20 +2108,28 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                     raw.extend([(w >> 8) & 0xFF, w & 0xFF])
                 return bytes(raw).decode('ascii', errors='ignore').strip('\x00').strip() or None
 
-            firmware_version = _regs_to_ascii([9, 10, 11])
-            # Discard firmware strings that are too short to be meaningful (e.g. "@" from a
-            # partially-settled connection — the correct string is typically 4-6 characters).
-            if firmware_version and len(firmware_version.strip()) < 3:
-                firmware_version = None
-            # For V1.39 3000-range inverters the DSP code at holding 3099 may be more informative
-            dsp_code = all_register_data.get(3099)
-            if dsp_code and dsp_code.get('status') == 'success' and dsp_code.get('value'):
-                dsp_val = dsp_code['value']
-                # Valid DSP protocol codes are in range 100–999 (e.g. 126=V1.26, 139=V1.39).
-                # Values outside this range (e.g. 8224=0x2020, two space bytes) are garbled.
-                dsp_str = str(dsp_val) if 100 <= dsp_val <= 999 else None
-                if dsp_str:
-                    firmware_version = f"{firmware_version} (DSP: {dsp_str})" if firmware_version else f"DSP: {dsp_str}"
+            # Firmware version: prefer coordinator entity value when available — it reads the
+            # correct profile register and is unaffected by connection timing issues.
+            # Fall back to ASCII decode of holding 9-11 for manual (no coordinator) connections.
+            firmware_version = None
+            if coordinator and coordinator.data:
+                entity_fw = getattr(coordinator.data, 'firmware_version', None)
+                if entity_fw is not None and entity_fw not in (0, 0.0, ""):
+                    firmware_version = str(entity_fw)
+
+            if not firmware_version:
+                firmware_version = _regs_to_ascii([9, 10, 11])
+                if firmware_version and len(firmware_version.strip()) < 3:
+                    firmware_version = None
+                # For V1.39 3000-range inverters the DSP code at holding 3099 may be informative
+                dsp_code = all_register_data.get(3099)
+                if dsp_code and dsp_code.get('status') == 'success' and dsp_code.get('value'):
+                    dsp_val = dsp_code['value']
+                    # Valid DSP protocol codes are in range 100–999 (e.g. 126=V1.26, 139=V1.39).
+                    # Values outside this range (e.g. 8224=0x2020, two space bytes) are garbled.
+                    dsp_str = str(dsp_val) if 100 <= dsp_val <= 999 else None
+                    if dsp_str:
+                        firmware_version = f"{firmware_version} (DSP: {dsp_str})" if firmware_version else f"DSP: {dsp_str}"
             if firmware_version:
                 writer.writerow(["Firmware Version", firmware_version])
 
