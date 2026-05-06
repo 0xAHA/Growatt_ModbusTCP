@@ -1987,6 +1987,43 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
 
         client.close()
 
+        # Supplement identification registers from the coordinator's established client.
+        # The scanner opens a second TCP connection while the coordinator already holds one.
+        # Most Growatt inverters are single-connection: they drop the coordinator's session
+        # when the scanner connects, then spend several seconds reinitialising — during which
+        # holding 43 and registers 9-11 return 0 regardless of warmup delays.
+        # Reading these from the coordinator's client avoids the dual-connection conflict
+        # entirely. Firmware (9-11), legacy DTC (43), DSP code (3099), VPP DTC (30000).
+        if coordinator is not None and hasattr(coordinator, '_client'):
+            _LOGGER.info("Supplementing identification registers from coordinator client...")
+            _ID_REGS = [
+                (9,     'holding'),
+                (10,    'holding'),
+                (11,    'holding'),
+                (43,    'holding'),
+                (3099,  'holding'),
+                (30000, 'holding'),
+            ]
+            for _reg_addr, _reg_type in _ID_REGS:
+                _existing = all_register_data.get(_reg_addr)
+                _needs = (
+                    _existing is None
+                    or _existing.get('status') != 'success'
+                    or _existing.get('value') == 0
+                )
+                if _needs:
+                    try:
+                        _cr = _read_single_register(coordinator._client, _reg_addr, _reg_type)
+                        if _cr['success'] and _cr['value'] is not None:
+                            all_register_data[_reg_addr] = {
+                                'value': _cr['value'],
+                                'status': 'success',
+                                'error': None,
+                            }
+                            _LOGGER.info("  Reg %d supplemented from coordinator: %s", _reg_addr, _cr['value'])
+                    except Exception as _e:
+                        _LOGGER.debug("  Reg %d coordinator supplement failed: %s", _reg_addr, _e)
+
         # Auto-detect model
         detection = _detect_inverter_model(all_register_data)
         
@@ -2080,8 +2117,9 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             dsp_code = all_register_data.get(3099)
             if dsp_code and dsp_code.get('status') == 'success' and dsp_code.get('value'):
                 dsp_val = dsp_code['value']
-                # Discard DSP values that look like garbled data (0x2020 = spaces, etc.)
-                dsp_str = str(dsp_val) if dsp_val >= 100 else None
+                # Valid DSP protocol codes are in range 100–999 (e.g. 126=V1.26, 139=V1.39).
+                # Values outside this range (e.g. 8224=0x2020, two space bytes) are garbled.
+                dsp_str = str(dsp_val) if 100 <= dsp_val <= 999 else None
                 if dsp_str:
                     firmware_version = f"{firmware_version} (DSP: {dsp_str})" if firmware_version else f"DSP: {dsp_str}"
             if firmware_version:
