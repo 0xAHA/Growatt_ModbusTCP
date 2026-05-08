@@ -66,6 +66,10 @@ UNIVERSAL_SCAN_RANGES = [
     {"name": "MIN/MOD Range 3000-3124",         "start": 3000, "count": 125, "group": "mod_extended"},
     {"name": "MOD Extended 3125-3249",          "start": 3125, "count": 125, "group": "mod_extended"},
     {"name": "MOD Extended Input 3250-3374",    "start": 3250, "count": 125, "group": "mod_extended"},
+    # Legacy holding registers — writable controls present on all grid-tied/hybrid models
+    # (TOU schedule, charge/discharge control, AC charge enable, priority mode, etc.)
+    {"name": "Legacy Holding 0-124",    "start": 0,    "count": 125, "group": "legacy",  "register_type": "holding"},
+    {"name": "Legacy Holding 1000-1124","start": 1000, "count": 125, "group": "storage", "register_type": "holding"},
     # MOD TL3-XH holding registers (FC04) — includes TOU schedule (3038-3045) and other settings
     {"name": "MOD Holding 3000-3124",           "start": 3000, "count": 125, "group": "mod_extended", "register_type": "holding"},
     {"name": "MOD Holding 3125-3249",           "start": 3125, "count": 125, "group": "mod_extended", "register_type": "holding"},
@@ -275,6 +279,22 @@ def _lookup_register_info(register_addr: int) -> Optional[str]:
         return " ".join(parts)
 
     return None
+
+
+def _get_holding_register_name(register_addr: int, coordinator) -> Optional[str]:
+    """
+    Return the profile-defined name for a holding register, with a note where names
+    vary across protocol versions.  Falls back to the static HOLDING_REGISTERS map.
+    """
+    if coordinator and hasattr(coordinator, '_client') and hasattr(coordinator._client, 'register_map'):
+        reg_info = coordinator._client.register_map.get('holding_registers', {}).get(register_addr)
+        if reg_info:
+            name = reg_info.get('name', '')
+            desc = reg_info.get('desc', '')
+            if name:
+                return f"{name} — {desc}" if desc else name
+    # Fallback to static map (sparse)
+    return _lookup_register_info(register_addr)
 
 
 def _get_entity_value_for_register(register_addr: int, coordinator, register_type: str = 'input') -> Optional[str]:
@@ -1864,7 +1884,9 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                 _LOGGER.info(f"Extracted {len(current_entity_values)} current entity values")
 
         # Scan ALL ranges
-        all_register_data = {}
+        all_register_data = {}     # input registers (FC04)
+        holding_range_data = {}    # holding registers (FC03) from scan loop — kept separate
+        #                            so holding and input addresses don't overwrite each other
         range_responses = {}
 
         # FIRST: Read DTC code, protocol version, and firmware version (holding registers - critical for identification)
@@ -1947,7 +1969,12 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=block_size, register_type=reg_type)
 
             if registers:
-                all_register_data.update(registers)
+                # Holding ranges go into a separate dict so they don't overwrite
+                # input register data at the same addresses (e.g. 0-124, 1000-1124).
+                if reg_type == 'holding':
+                    holding_range_data.update(registers)
+                else:
+                    all_register_data.update(registers)
                 # Count successful non-zero reads for range summary
                 successful_count = sum(1 for r in registers.values() if r['status'] == 'success' and r['value'] > 0)
                 range_responses[range_name] = successful_count
@@ -2329,7 +2356,11 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                     ])
 
             # THEN: Group by input register ranges for organized output
+            # Skip holding ranges — they are written separately below to avoid
+            # showing holding values in what should be an input-register section.
             for range_config in UNIVERSAL_SCAN_RANGES:
+                if range_config.get("register_type") == "holding":
+                    continue
                 range_name = range_config["name"]
                 start = range_config["start"]
                 end = start + range_config["count"]
@@ -2405,6 +2436,76 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                                 status_comment
                             ])
         
+            # Holding register ranges (separate from input — H-prefix, FC03)
+            holding_scan_ranges = [r for r in UNIVERSAL_SCAN_RANGES if r.get("register_type") == "holding"]
+            for range_config in holding_scan_ranges:
+                range_name = range_config["name"]
+                start = range_config["start"]
+                end = start + range_config["count"]
+
+                range_registers = {k: v for k, v in holding_range_data.items() if start <= k < end}
+
+                if range_registers:
+                    writer.writerow([])
+                    writer.writerow([f"--- {range_name} (Holding Registers) ---"])
+
+                    for reg_addr in range(start, end):
+                        if reg_addr not in range_registers:
+                            continue
+                        reg_info = range_registers[reg_addr]
+                        value = reg_info['value']
+                        status = reg_info['status']
+                        error = reg_info['error']
+
+                        total += 1
+
+                        if status == 'success':
+                            if value == 0:
+                                status_comment = "Read OK (zero value)"
+                            else:
+                                status_comment = "Read OK"
+                                non_zero += 1
+                        elif status == 'error':
+                            status_comment = f"Modbus Error: {error}"
+                            value = ""
+                        else:
+                            status_comment = error
+                            value = ""
+
+                        if status == 'success' and value != "":
+                            scaled_01 = value * 0.1
+                            scaled_001 = value * 0.01
+                            signed = value - 65536 if value > 32767 else value
+                            combined_32bit = ""
+                            if reg_addr + 1 in holding_range_data:
+                                next_info = holding_range_data[reg_addr + 1]
+                                if next_info['status'] == 'success' and next_info['value'] is not None:
+                                    next_val = next_info['value']
+                                    combined = (value << 16) | next_val
+                                    if 0 < combined < 10000000:
+                                        combined_32bit = f"{combined} (×0.1={combined*0.1:.1f})"
+                        else:
+                            scaled_01 = ""
+                            scaled_001 = ""
+                            signed = ""
+                            combined_32bit = ""
+
+                        entity_value = _get_entity_value_for_register(reg_addr, coordinator, 'holding') or ""
+                        suggested_match = _get_holding_register_name(reg_addr, coordinator) or ""
+
+                        writer.writerow([
+                            f"H{reg_addr}",
+                            f"0x{reg_addr:04X}",
+                            value,
+                            f"{scaled_01:.1f}" if scaled_01 != "" else "",
+                            f"{scaled_001:.2f}" if scaled_001 != "" else "",
+                            signed,
+                            combined_32bit,
+                            entity_value,
+                            suggested_match,
+                            status_comment
+                        ])
+
         # Extract firmware version from holding registers 9-11 (ASCII encoded)
         firmware_version = None
         if 9 in all_register_data and 10 in all_register_data and 11 in all_register_data:
