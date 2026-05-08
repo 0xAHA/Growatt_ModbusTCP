@@ -6,15 +6,13 @@
 
 ---
 
-## v0.9.0b2
+## v0.9.0
 
-- **Fix: VPP battery charge/discharge today swapped on SPH V2.01 profiles (Issue #300):** `battery_charge_today` and `battery_discharge_today` from VPP registers 31202 and 31206 were labelled the wrong way round on `sph_3000_6000_v201` and `sph_7000_10000_v201`. VPP Protocol V2.01 specifies 31202 as daily charge and 31206 as daily discharge — the integration had them reversed. The legacy storage-range registers (1052/1053 and 1056/1057) were always correct; only the VPP-sourced entities were affected. Verified against scan data from the issue report.
+- **Fix: Universal Scanner DTC registers showing as zero on fresh TCP connection:** The DTC identification registers (holding 30000 and holding 43) frequently returned 0 in scan output even though `read_register` always worked. The scanner opens a new raw TCP connection that displaces the coordinator's session; the inverter returns 0 until it settles. Fixed with a post-connect warmup delay and end-of-scan settled re-reads — by the time the full range scan completes the inverter's Modbus state is stable. Also fixes garbled firmware version (holding 9-11) from the same cause.
 
----
+- **Fix: VPP battery charge/discharge today swapped on SPH V2.01 profiles (Issue #300):** `battery_charge_today` and `battery_discharge_today` from VPP registers 31202 and 31206 were labelled the wrong way round on `sph_3000_6000_v201` and `sph_7000_10000_v201`. VPP Protocol V2.01 specifies 31202 as daily charge and 31206 as daily discharge. The legacy storage-range registers (1052/1053 and 1056/1057) were always correct; only the VPP-sourced entities were affected.
 
-## v0.9.0b1
-
-- **Fix: Universal Scanner DTC registers showing as zero on fresh TCP connection:** The DTC identification registers (holding 30000 and holding 43) frequently returned 0 in scan output even though `read_register` always worked. The scanner opens a new raw TCP connection that displaces the coordinator's session; the inverter returns 0 until it settles. Fixed with a 500 ms post-connect warmup delay and a single retry for each DTC register if it reads back as zero.
+- **Feature: Universal Scanner now includes holding register scan (0-124 and 1000-1124):** The `export_register_dump` scanner now reads holding registers (FC03) for the base range (0-124) and control range (1000-1124). These contain writable controls including `ac_charge_enable` (H1092), TOU time period slots (H1100-H1108), charge/discharge power rates, and scheduling windows. Holding register rows appear in the CSV with an H-prefix and a Suggested Match column populated from the active profile's register definitions.
 
 ---
 

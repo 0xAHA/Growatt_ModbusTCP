@@ -4,9 +4,17 @@
 
 ---
 
-## v0.9.0b2
+## v0.9.0
 
 ---
+
+- **Fix: Universal Scanner DTC registers showing as zero on fresh TCP connection:**
+  The DTC identification registers (holding 30000 and holding 43) frequently returned 0 in
+  scan output even though `read_register` always worked. The scanner opens a new raw TCP
+  connection that displaces the coordinator's session; the inverter returns 0 until it settles.
+  Fixed with a post-connect warmup delay and end-of-scan settled re-reads — by the time the
+  full range scan completes, several seconds have elapsed and the inverter's Modbus state is
+  stable. Also fixes garbled firmware version (holding 9-11) from the same cause.
 
 - **Fix: VPP battery charge/discharge today swapped on SPH V2.01 profiles (Issue #300):**
   `battery_charge_today` and `battery_discharge_today` from VPP registers 31202 and 31206
@@ -15,19 +23,15 @@
   integration had them reversed. The legacy storage-range registers (1052/1053 and 1056/1057)
   were always correct; only the VPP-sourced entities were affected.
 
----
-
-## v0.9.0b1
-
----
-
-- **Fix: Universal Scanner DTC registers showing as zero on fresh TCP connection:**
-  When using the `export_register_dump` scanner, the DTC identification registers (holding
-  30000 and holding 43) frequently returned 0 even though reading them individually via
-  `read_register` always worked. Root cause: the scanner opens a new raw TCP connection, which
-  displaces the coordinator's existing session. Until the inverter settles, the first reads
-  return 0 with no Modbus error. Fixed by adding a 500 ms warmup delay after connecting, plus
-  a single retry (with delay) for each DTC register if it reads back as zero.
+- **Feature: Universal Scanner now includes holding register scan (0-124 and 1000-1124):**
+  The `export_register_dump` scanner now reads holding registers (FC03) for the legacy base
+  range (0-124) and storage/control range (1000-1124) in addition to the existing input
+  register scan. These ranges contain writable controls such as `ac_charge_enable` (holding
+  1092), TOU time period slots (holding 1100-1108), charge/discharge power rates, priority
+  mode, and scheduling windows. Holding register rows appear in the CSV with an H-prefix
+  address (e.g. H1092) and a Suggested Match column populated from the active profile's
+  register definitions. Holding and input data are kept in separate dictionaries so values
+  at the same address do not overwrite each other.
 
 ---
 
