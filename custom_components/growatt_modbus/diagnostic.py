@@ -283,8 +283,9 @@ def _lookup_register_info(register_addr: int) -> Optional[str]:
 
 def _get_holding_register_name(register_addr: int, coordinator) -> Optional[str]:
     """
-    Return the profile-defined name for a holding register, with a note where names
-    vary across protocol versions.  Falls back to the static HOLDING_REGISTERS map.
+    Return the profile-defined name for a holding register.
+    Only uses the active profile's holding_registers definition — does NOT fall back
+    to input register names, which would be misleading for the same address.
     """
     if coordinator and hasattr(coordinator, '_client') and hasattr(coordinator._client, 'register_map'):
         reg_info = coordinator._client.register_map.get('holding_registers', {}).get(register_addr)
@@ -293,8 +294,7 @@ def _get_holding_register_name(register_addr: int, coordinator) -> Optional[str]
             desc = reg_info.get('desc', '')
             if name:
                 return f"{name} — {desc}" if desc else name
-    # Fallback to static map (sparse)
-    return _lookup_register_info(register_addr)
+    return None
 
 
 def _get_entity_value_for_register(register_addr: int, coordinator, register_type: str = 'input') -> Optional[str]:
@@ -722,32 +722,29 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             register_name, raw_grid_power
         )
 
-        # IEC 61850 standard: positive = export, negative = import
-        # When exporting, raw_grid_power should be positive in IEC standard
-        # HA convention: negative = export, positive = import
+        # Integration convention: positive = export, negative = import.
+        # Inversion is only needed when the inverter itself reports the opposite sign.
+        # Most Growatt inverters report positive = export, which requires NO inversion.
 
         current_invert_setting = coordinator.entry.options.get("invert_grid_power", False)
 
-        # Expected: exporting, so raw_grid_power should be positive (IEC standard)
         if raw_grid_power > 100:
-            # Positive grid power while exporting = IEC standard (correct)
-            # Need to invert FOR Home Assistant visualization
-            recommended_invert = True
-            confidence = "High"
-            explanation = (
-                f"Your inverter follows **IEC 61850 standard** (positive = export).\n"
-                f"Register used: **{register_name}** = {power_to_grid if register_name == 'power_to_grid' else power_to_user:.0f}W\n"
-                f"Home Assistant expects **negative = export** for visualization.\n"
-                f"**Inversion is needed** for correct display."
-            )
-        elif raw_grid_power < -100:
-            # Negative grid power while exporting = already inverted or wrong
+            # Positive while exporting = matches integration convention → no inversion needed
             recommended_invert = False
             confidence = "High"
             explanation = (
-                f"Your grid power is already in **Home Assistant format** (negative = export).\n"
+                f"Your inverter reports **positive = export** — this matches the integration convention.\n"
                 f"Register used: **{register_name}** = {power_to_grid if register_name == 'power_to_grid' else power_to_user:.0f}W\n"
-                f"**No inversion needed** for correct display."
+                f"**No inversion needed.**"
+            )
+        elif raw_grid_power < -100:
+            # Negative while exporting = inverter uses opposite sign → inversion needed
+            recommended_invert = True
+            confidence = "High"
+            explanation = (
+                f"Your inverter reports **negative = export**, which is opposite to the integration convention.\n"
+                f"Register used: **{register_name}** = {power_to_grid if register_name == 'power_to_grid' else power_to_user:.0f}W\n"
+                f"**Inversion is needed** to correct the sign."
             )
         else:
             # Close to zero - ambiguous

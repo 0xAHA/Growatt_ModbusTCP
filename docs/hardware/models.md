@@ -174,11 +174,15 @@ Both calculated and register-based values are available. Register-based sensors 
 
 ## Invert Grid Power
 
-All models support an **Invert Grid Power** option to correct backwards CT clamp installations. When enabled, grid import and export values are swapped, and the sign of all grid power/energy sensors is flipped.
+> ⚠️ **v0.9.1b1 note:** A bug in the setup wizard's auto-detection caused **Invert Grid Power** to be incorrectly enabled for most users during initial configuration. If you set up the integration before v0.9.1b1 and your grid export/import sensors appear swapped after upgrading, go to **Settings → Devices & Services → Growatt Modbus → Configure** and turn **Invert Grid Power off**. The vast majority of Growatt inverters do not need this option.
 
-**When to enable:** If the Power Flow card shows export when you are actually importing, or vice versa.
+All models support an **Invert Grid Power** option. When enabled, the sign of the `Grid Power` sensor is flipped. This is only needed in the rare case where your inverter's registers report the opposite sign to the integration convention (positive = export).
 
-**How to enable:** Integration → **Configure** → toggle **Invert Grid Power**.
+**When to enable:** Only if `Grid Power` shows a positive value while you are definitely importing from the grid (or negative while definitely exporting), and `Grid Export Power` / `Grid Import Power` still look correct. This indicates the inverter itself reports the opposite sign convention.
+
+**When NOT to enable:** Do not enable this to fix a swapped `Grid Export Power` / `Grid Import Power` display — those sensors derive directly from the physical register values and are independent of this setting since v0.9.1b1.
+
+**How to change:** Integration → **Configure** → toggle **Invert Grid Power**.
 
 ---
 

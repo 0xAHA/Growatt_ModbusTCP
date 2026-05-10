@@ -146,7 +146,7 @@ The integration pre-configures sensors with the correct `state_class` and `devic
 | Battery in | `sensor.{name}_charge_energy_today` *(use total variant)* |
 | Battery out | `sensor.{name}_discharge_energy_today` *(use total variant)* |
 
-> If grid values appear backwards, run the `detect_grid_orientation` service or enable **Invert Grid Power** in the integration options.
+> If `Grid Power` shows the wrong sign, run the `detect_grid_orientation` service. If `Grid Export Power` and `Grid Import Power` appear swapped after upgrading to v0.9.1b1, disable **Invert Grid Power** in the integration options (Settings → Devices & Services → Growatt Modbus → Configure) — it was incorrectly enabled by the setup wizard's auto-detection in previous versions. Most users should have this option off.
 
 ---
 

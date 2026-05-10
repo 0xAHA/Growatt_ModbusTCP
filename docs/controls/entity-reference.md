@@ -243,7 +243,7 @@ The integration pre-configures all energy sensors with the correct `state_class`
 | Battery in | `sensor.{name}_charge_energy_today` *(use total variant)* |
 | Battery out | `sensor.{name}_discharge_energy_today` *(use total variant)* |
 
-> If grid values appear backwards in the Energy Dashboard, run the `detect_grid_orientation` service or enable **Invert Grid Power** in the integration options (Settings → Devices & Services → Growatt Modbus → Configure).
+> If `Grid Export Power` and `Grid Import Power` appear swapped after upgrading to v0.9.1b1, disable **Invert Grid Power** in the integration options (Settings → Devices & Services → Growatt Modbus → Configure) — it was incorrectly enabled by the setup wizard's auto-detection in previous versions. Most users should have this option off. If the signed `Grid Power` sensor shows the wrong sign independently, run the `detect_grid_orientation` service.
 
 ---
 

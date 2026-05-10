@@ -40,15 +40,14 @@ _LOGGER = logging.getLogger(__name__)
 
 def _detect_grid_orientation(client: GrowattModbus) -> tuple[bool, str]:
     """
-    Detect if grid power needs inversion for Home Assistant compatibility.
+    Detect if grid power sign needs inversion.
 
+    Integration convention is positive = export, negative = import. Inversion is
+    only enabled when the inverter reports the opposite (negative while exporting).
     Handles SPH-TL3 dual-register configuration (power_to_grid + power_to_user).
-    Different CT sensor configurations affect which registers report values.
 
     Returns:
         tuple: (invert_needed, detection_message)
-            - invert_needed: True if inversion should be enabled
-            - detection_message: Human-readable explanation of detection result
     """
     try:
         # Read current data from inverter
@@ -72,31 +71,24 @@ def _detect_grid_orientation(client: GrowattModbus) -> tuple[bool, str]:
         if expected_export < 100:
             return False, f"⚠️ Not exporting enough ({expected_export:.0f}W) - using default (no inversion). Run detection service later."
 
-        # Analyze grid power sign with SPH-TL3 dual-register support
-        # IEC 61850: positive = export, negative = import
-        # HA: negative = export, positive = import
-
-        # Determine which register has the actual grid power value
-        # Typically one register shows export, the other shows import
+        # Determine which register has the actual grid power value.
+        # Integration convention: positive = export, negative = import.
+        # Inversion is only needed when the inverter itself reports the opposite sign.
         if abs(power_to_grid) > abs(power_to_user):
-            # power_to_grid has the dominant value
             raw_grid_power = power_to_grid
             register_name = "power_to_grid"
         else:
-            # power_to_user has the dominant value (or they're equal)
-            # For import scenarios, power_to_user is typically positive
-            # We need to negate it to get the grid power sign
+            # power_to_user is dominant — negate so positive still means export
             raw_grid_power = -power_to_user
             register_name = "power_to_user"
 
         if raw_grid_power > 100:
-            # Positive while exporting = IEC standard → need inversion for HA
-            return True, f"✅ Auto-detected: IEC 61850 standard ({register_name}={power_to_grid if register_name == 'power_to_grid' else power_to_user:.0f}W while exporting) - inversion enabled"
+            # Positive while exporting = matches our convention → no inversion needed
+            return False, f"✅ Auto-detected: positive = export ({register_name}={power_to_grid if register_name == 'power_to_grid' else power_to_user:.0f}W while exporting) - no inversion needed"
         elif raw_grid_power < -100:
-            # Negative while exporting = already HA format → no inversion
-            return False, f"✅ Auto-detected: Already HA format ({register_name}={power_to_grid if register_name == 'power_to_grid' else power_to_user:.0f}W while exporting) - no inversion needed"
+            # Negative while exporting = inverter reports opposite sign → inversion needed
+            return True, f"✅ Auto-detected: negative = export ({register_name}={power_to_grid if register_name == 'power_to_grid' else power_to_user:.0f}W while exporting) - inversion enabled"
         else:
-            # Too close to zero - check both registers for debugging
             return False, f"⚠️ Grid power near zero (power_to_grid={power_to_grid:.0f}W, power_to_user={power_to_user:.0f}W) - using default (no inversion). Run detection service later."
 
     except Exception as e:

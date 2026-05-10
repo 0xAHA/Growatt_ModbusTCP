@@ -4,6 +4,51 @@
 
 ---
 
+## v0.9.1b1
+
+Issues: #302
+
+We apologise for this one. The `Grid Export Power` and `Grid Import Power` sensors have had
+their values swapped since they were introduced, meaning every user has been seeing export
+labelled as import and vice versa. The bug was in the formula that splits the signed grid power
+value into its two always-positive halves — the positive and negative parts were extracted into
+the wrong sensors. The signed `Grid Power` sensor and all daily energy sensors were unaffected
+because they use a different code path. We only caught it because a user noticed the symptom
+on a hybrid inverter where both directions are active (Issue #302). Grid-tied string inverter
+users (MIN, MID, MIC) were also affected but the symptom was less obvious — those inverters
+only export during the day, so `Grid Export Power` silently read zero while `Grid Import Power`
+carried the export value. Both are now correct.
+
+> ⚠️ **BREAKING CHANGE — affects all users.**
+> `Grid Export Power` and `Grid Import Power` were swapped in all previous versions.
+> After upgrading, these sensors will read the opposite value to before.
+> If you have automations, dashboards, or energy dashboard slots referencing either sensor,
+> you must swap them. The signed `Grid Power` sensor and all daily energy sensors are unaffected.
+> Users with **Invert Grid Power** enabled should also disable it (Settings → Devices &
+> Services → Growatt Modbus → Configure) — it was incorrectly set by auto-detection in
+> previous versions and is no longer needed for standard inverters.
+
+- **Breaking fix: `grid_export_power` and `grid_import_power` swapped on all profiles (Issue #302):**
+  The two always-positive derived power sensors had their formulas inverted in all previous
+  versions. `grid_export_power` was extracting the import portion of the signed grid power
+  value and `grid_import_power` was extracting the export portion — the opposite of their names.
+  On hybrid profiles (SPH, MOD, WIT) the symptom was visible: during grid import,
+  `grid_export_power` showed the import magnitude while `grid_import_power` read zero. On
+  grid-tied string inverters (MIN, MIC, MID) the inverter only exports, so `grid_export_power`
+  silently read zero and `grid_import_power` showed the export value under the wrong name.
+  The signed `grid_power` sensor and the daily energy sensors (`Energy to Grid Today`,
+  `Grid Import Energy Today`) were unaffected — they read from separate register addresses.
+
+- **Fix: `invert_grid_power` auto-detection was inverting the wrong case:**
+  The setup wizard's grid orientation detection returned the wrong result — it enabled inversion
+  when it detected positive = export (the correct convention) and disabled it when it detected
+  negative = export (the case that actually needs correction). This caused some users to have
+  `invert_grid_power` incorrectly set to True, which negated the signed `grid_power` sensor
+  so it showed negative while exporting. Auto-detection is now correct. Existing users with
+  the flag incorrectly enabled should disable it via Configure.
+
+---
+
 ## v0.9.0
 
 ---

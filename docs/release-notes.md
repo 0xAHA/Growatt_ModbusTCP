@@ -6,6 +6,18 @@
 
 ---
 
+## v0.9.1b1
+
+We apologise for this one. The `Grid Export Power` and `Grid Import Power` sensors have had their values swapped since they were introduced — every user has been seeing export labelled as import and vice versa. The bug was in the formula that splits the signed grid power value into its two always-positive halves. The signed `Grid Power` sensor and all daily energy sensors were unaffected. We only caught it because a user noticed it on a hybrid inverter where both directions are active (Issue #302). Grid-tied string inverter users (MIN, MID, MIC) were also affected but less obviously — those inverters only export during the day, so `Grid Export Power` silently read zero while `Grid Import Power` carried the export value. Both are now correct.
+
+> ⚠️ **BREAKING CHANGE — affects all users.** After upgrading, `Grid Export Power` and `Grid Import Power` will read the opposite value to before. Swap any automations, dashboard cards, or energy dashboard slots that reference either sensor. Users with **Invert Grid Power** enabled should also disable it (Settings → Devices & Services → Growatt Modbus → Configure) — it was incorrectly set by auto-detection in previous versions.
+
+- **Breaking fix: `grid_export_power` and `grid_import_power` swapped on all profiles (Issue #302):** The two always-positive derived power sensors had their formulas inverted in all previous versions. On hybrid profiles (SPH, MOD, WIT) the symptom was visible: during grid import, `grid_export_power` showed the import magnitude while `grid_import_power` read zero. On grid-tied string inverters (MIN, MIC, MID), `grid_export_power` silently read zero and `grid_import_power` showed the export value under the wrong name. The signed `grid_power` sensor and the daily energy sensors (`Energy to Grid Today`, `Grid Import Energy Today`) were unaffected.
+
+- **Fix: `invert_grid_power` auto-detection was enabling inversion for the wrong case:** The setup wizard's grid orientation detection returned the wrong result — it enabled inversion when it detected positive = export (the correct convention) and disabled it when it detected negative = export (the case that actually needs correction). Existing users with the flag incorrectly enabled should disable it via Configure.
+
+---
+
 ## v0.9.0
 
 - **Fix: Universal Scanner DTC registers showing as zero on fresh TCP connection:** The DTC identification registers (holding 30000 and holding 43) frequently returned 0 in scan output even though `read_register` always worked. The scanner opens a new raw TCP connection that displaces the coordinator's session; the inverter returns 0 until it settles. Fixed with a post-connect warmup delay and end-of-scan settled re-reads — by the time the full range scan completes the inverter's Modbus state is stable. Also fixes garbled firmware version (holding 9-11) from the same cause.

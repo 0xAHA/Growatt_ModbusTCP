@@ -1238,8 +1238,10 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 export = getattr(data, "power_to_grid", 0)
                 import_power = getattr(data, "power_to_user", 0)
 
-                # Determine grid power (positive = export, IEC convention)
-                # Prefer direct register values over fallback calculation
+                # Compute raw signed grid power (positive = export) from physical registers.
+                # invert_grid_power is a sign-convention correction for the signed grid_power
+                # sensor only — do NOT apply it here. The always-positive sensors derive from
+                # the directional register values directly, regardless of sign convention.
                 if export > 0:
                     grid_power = export
                 elif import_power > 0:
@@ -1251,12 +1253,8 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                     discharge = getattr(data, "discharge_power", 0)
                     grid_power = (solar + discharge) - (load + charge)
 
-                # Apply inversion if configured (for HA convention: negative = export)
-                if invert_grid_power:
-                    grid_power = -grid_power
-
-                # After inversion for HA: negative = export, so take negative part and make positive
-                raw_value = round(max(0, -grid_power), 1)
+                # Export = positive portion of raw signed value
+                raw_value = round(max(0, grid_power), 1)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
 
             elif self._sensor_key == "grid_import_power":
@@ -1266,8 +1264,7 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 export = getattr(data, "power_to_grid", 0)
                 import_power = getattr(data, "power_to_user", 0)
 
-                # Determine grid power (positive = export, IEC convention)
-                # Prefer direct register values over fallback calculation
+                # Same raw derivation — no inversion applied (see grid_export_power comment).
                 if export > 0:
                     grid_power = export
                 elif import_power > 0:
@@ -1279,12 +1276,8 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                     discharge = getattr(data, "discharge_power", 0)
                     grid_power = (solar + discharge) - (load + charge)
 
-                # Apply inversion if configured (for HA convention: positive = import)
-                if invert_grid_power:
-                    grid_power = -grid_power
-
-                # After inversion for HA: positive = import, so take positive part
-                raw_value = round(max(0, grid_power), 1)
+                # Import = negative portion of raw signed value, flipped to positive
+                raw_value = round(max(0, -grid_power), 1)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
                 
             elif self._sensor_key == "self_consumption":
