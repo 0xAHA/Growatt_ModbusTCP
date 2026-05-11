@@ -6,6 +6,16 @@
 
 ---
 
+## v0.9.1b2
+
+- **New profile: Growatt 3000-15000TL3-S (Issue #299):** Added support for the TL3-S three-phase grid-tied string inverter (3–15 kW, legacy protocol). Register layout confirmed from a full device scan — PV inputs, per-phase AC output (R/S/T confirmed by sum crosscheck), temperature, and energy. Auto-detected via DTC 2049. No VPP support.
+
+- **Fix: `house_consumption` mirrors solar on SPM/SPH HU variants (Issue #303):** The HU variant does not populate `power_to_load` or `power_to_user`, causing the fallback to collapse to `load = solar`. Fixed with a full energy balance: `load = solar + discharge − charge + import − export`. Correctly computes real house load on HU models with active battery and grid.
+
+- **New profile: MIC 2500-5500MTL-S (Issue #304):** Added support for the MIC 2500–5500MTL-S single-phase dual-string grid-tied inverter family (legacy V3.05 protocol). Inherits the MIC 600–3300TL-X register map with a confirmed second PV string. Auto-detected via DTC 210. Note: this inverter rejects multi-register Modbus block reads — use `block_size=1` with the Universal Scanner.
+
+---
+
 ## v0.9.1b1
 
 We apologise for this one. The `Grid Export Power` and `Grid Import Power` sensors have had their values swapped since they were introduced — every user has been seeing export labelled as import and vice versa. The bug was in the formula that splits the signed grid power value into its two always-positive halves. The signed `Grid Power` sensor and all daily energy sensors were unaffected. We only caught it because a user noticed it on a hybrid inverter where both directions are active (Issue #302). Grid-tied string inverter users (MIN, MID, MIC) were also affected but less obviously — those inverters only export during the day, so `Grid Export Power` silently read zero while `Grid Import Power` carried the export value. Both are now correct.
