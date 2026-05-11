@@ -4,6 +4,22 @@
 
 ---
 
+## v0.9.1b3
+
+Issues: #304
+
+- **Fix: MIC 2500-5500MTL-S entities all unavailable (Issue #304):**
+  The inverter rejects Modbus reads of more than one register at a time (responds with
+  ExceptionResponse FC=132, exception_code=1 — Illegal Function for any block read).
+  Fixed by adding per-profile `max_block_size` support to the coordinator. When a profile
+  sets `max_block_size: 1`, the coordinator switches to sparse read mode: it reads only the
+  specific register addresses defined in the profile, grouped into consecutive runs of at most
+  `max_block_size` registers, skipping all gaps. This also eliminates unnecessary register reads
+  for registers not defined in the profile. All other profiles continue to use the original
+  dense read mode (contiguous 125-register block reads) unchanged.
+
+---
+
 ## v0.9.1b2
 
 Issues: #299, #303, #304

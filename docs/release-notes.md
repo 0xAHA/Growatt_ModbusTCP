@@ -6,6 +6,12 @@
 
 ---
 
+## v0.9.1b3
+
+- **Fix: MIC 2500-5500MTL-S entities all unavailable (Issue #304):** The inverter rejects any Modbus read of more than one register at a time (ExceptionResponse, Illegal Function). Fixed by adding per-profile `max_block_size` support to the coordinator. Profiles that set `max_block_size: 1` now use sparse read mode — only the specific register addresses defined in the profile are read, skipping all gaps between them. All other profiles continue using the original 125-register block reads unchanged.
+
+---
+
 ## v0.9.1b2
 
 - **New profile: Growatt 3000-15000TL3-S (Issue #299):** Added support for the TL3-S three-phase grid-tied string inverter (3–15 kW, legacy protocol). Register layout confirmed from a full device scan — PV inputs, per-phase AC output (R/S/T confirmed by sum crosscheck), temperature, and energy. Auto-detected via DTC 2049. No VPP support.

@@ -889,6 +889,41 @@ class GrowattModbus:
         # Clear cache
         self._register_cache = {}
 
+        # Per-profile block size limit. When 'max_block_size' is set in the register map,
+        # sparse mode is used: only the register addresses defined in the profile are read,
+        # grouped into consecutive runs of at most max_block_size. This avoids reading unused
+        # gaps and satisfies inverters that reject multi-register reads (e.g. MIC 2500-5500MTL-S).
+        # Profiles without 'max_block_size' use the original dense mode (contiguous 0-to-max
+        # range reads in 125-register chunks).
+        _raw_block_size = self.register_map.get('max_block_size')
+        _sparse_mode = _raw_block_size is not None
+        _block_size = int(_raw_block_size) if _sparse_mode else 125
+
+        def _read_sparse(addr_list: list, fatal: bool = False) -> bool:
+            """Read only the listed addresses, batching consecutive ones into runs."""
+            idx = 0
+            while idx < len(addr_list):
+                run_start = addr_list[idx]
+                run_end = run_start
+                j = idx + 1
+                while (j < len(addr_list)
+                       and addr_list[j] == run_end + 1
+                       and (run_end - run_start + 2) <= _block_size):
+                    run_end = addr_list[j]
+                    j += 1
+                count = run_end - run_start + 1
+                regs = self.read_input_registers(run_start, count)
+                if regs is None:
+                    if fatal:
+                        logger.error("Failed to read register block (%d-%d)", run_start, run_end)
+                        return False
+                    logger.warning("Failed to read register block (%d-%d)", run_start, run_end)
+                else:
+                    for k, value in enumerate(regs):
+                        self._register_cache[run_start + k] = value
+                idx = j
+            return True
+
         # Determine which ranges we need to read
         # Check if we have registers in different ranges
         # 875-999 is a separate WIT-only range handled below — exclude it from base range
@@ -901,12 +936,18 @@ class GrowattModbus:
         has_31000_range = any(31000 <= addr < 32000 for addr in addresses)
 
         # Read base range (0-N) if needed — size trimmed to profile's actual max address.
-        # Excludes 875-999 (WIT range handled separately). Chunked if > 125 registers.
+        # Excludes 875-999 (WIT range handled separately).
         if has_base_range:
-            max_base_addr = max(a for a in addresses if a < 875)
-            base_count = max_base_addr + 1
-            logger.debug("Reading base range (0-%d, %d registers)", max_base_addr, base_count)
-            if base_count > 125:
+            if _sparse_mode:
+                base_addrs = sorted(a for a in addresses if a < 875)
+                logger.debug("Reading base range sparse (%d registers, block_size=%d)",
+                             len(base_addrs), _block_size)
+                if not _read_sparse(base_addrs, fatal=True):
+                    return None
+            else:
+                max_base_addr = max(a for a in addresses if a < 875)
+                base_count = max_base_addr + 1
+                logger.debug("Reading base range (0-%d, %d registers)", max_base_addr, base_count)
                 for chunk_start in range(0, base_count, 125):
                     chunk_count = min(125, base_count - chunk_start)
                     chunk_regs = self.read_input_registers(chunk_start, chunk_count)
@@ -916,46 +957,40 @@ class GrowattModbus:
                         return None
                     for i, value in enumerate(chunk_regs):
                         self._register_cache[chunk_start + i] = value
-            else:
-                registers = self.read_input_registers(0, base_count)
-                if registers is None:
-                    logger.error("Failed to read base input register block")
-                    return None
-                for i, value in enumerate(registers):
-                    self._register_cache[i] = value
 
         # Read business storage range (875-999) if needed - WIT/WIS models
         if has_875_range:
-            addrs_875 = sorted([addr for addr in addresses if 875 <= addr < 1000])
-            min_addr_875 = min(addrs_875)
-            max_addr_875 = max(addrs_875)
-            count_875 = (max_addr_875 - min_addr_875) + 1
-
-            logger.debug(f"Reading 875 range ({min_addr_875}-{max_addr_875}, {count_875} registers)")
-            if count_875 > 125:
+            addrs_875 = sorted(a for a in addresses if 875 <= a < 1000)
+            if _sparse_mode:
+                logger.debug("Reading 875 range sparse (%d registers, block_size=%d)",
+                             len(addrs_875), _block_size)
+                _read_sparse(addrs_875)
+            else:
+                min_addr_875 = addrs_875[0]
+                max_addr_875 = addrs_875[-1]
+                count_875 = max_addr_875 - min_addr_875 + 1
+                logger.debug("Reading 875 range (%d-%d, %d registers)", min_addr_875, max_addr_875, count_875)
                 for chunk_start in range(min_addr_875, max_addr_875 + 1, 125):
                     chunk_count = min(125, max_addr_875 - chunk_start + 1)
                     registers = self.read_input_registers(chunk_start, chunk_count)
                     if registers is None:
-                        logger.warning(f"Failed to read 875 block ({chunk_start}-{chunk_start+chunk_count-1})")
+                        logger.warning("Failed to read 875 block (%d-%d)", chunk_start, chunk_start + chunk_count - 1)
                     else:
                         for i, value in enumerate(registers):
                             self._register_cache[chunk_start + i] = value
-            else:
-                registers = self.read_input_registers(min_addr_875, count_875)
-                if registers is None:
-                    logger.warning("Failed to read business storage register block (875-999)")
-                else:
-                    for i, value in enumerate(registers):
-                        self._register_cache[min_addr_875 + i] = value
-        
+
         # Read storage range (1000-N) if needed — size trimmed to profile's actual max address.
         # Chunked if > 125 registers (defensive — current profiles peak at ~121).
         if has_storage_range:
-            max_storage_addr = max(a for a in addresses if 1000 <= a < 2000)
-            storage_count = max_storage_addr - 1000 + 1
-            logger.debug("Reading storage range (1000-%d, %d registers)", max_storage_addr, storage_count)
-            if storage_count > 125:
+            if _sparse_mode:
+                storage_addrs = sorted(a for a in addresses if 1000 <= a < 2000)
+                logger.debug("Reading storage range sparse (%d registers, block_size=%d)",
+                             len(storage_addrs), _block_size)
+                _read_sparse(storage_addrs)
+            else:
+                max_storage_addr = max(a for a in addresses if 1000 <= a < 2000)
+                storage_count = max_storage_addr - 1000 + 1
+                logger.debug("Reading storage range (1000-%d, %d registers)", max_storage_addr, storage_count)
                 for chunk_start in range(1000, max_storage_addr + 1, 125):
                     chunk_count = min(125, max_storage_addr - chunk_start + 1)
                     chunk_regs = self.read_input_registers(chunk_start, chunk_count)
@@ -965,13 +1000,6 @@ class GrowattModbus:
                     else:
                         for i, value in enumerate(chunk_regs):
                             self._register_cache[chunk_start + i] = value
-            else:
-                registers = self.read_input_registers(1000, storage_count)
-                if registers is None:
-                    logger.warning("Failed to read storage register block (battery data may be unavailable)")
-                else:
-                    for i, value in enumerate(registers):
-                        self._register_cache[1000 + i] = value
         
         # Read 3000 range if needed - MIN/MOD models
         if has_3000_range:

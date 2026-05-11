@@ -325,6 +325,7 @@ MIC_2500_6000TL_X_MIN_RANGE = {
 MIC_2500_5500MTL_S = {
     'name': 'MIC 2500-5500MTL-S',
     'description': 'Single-phase grid-tied (2.5-5.5kW), 2 PV strings, legacy V3.05 protocol',
+    'max_block_size': 1,
     'notes': (
         'Legacy 0-179 register range. Two MPPT inputs (PV1 regs 3-6, PV2 regs 7-10). '
         'Firmware AH1.0. DTC 210 at holding reg 43. Inverter rejects block reads — use block_size=1 with the scanner. '
