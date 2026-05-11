@@ -315,9 +315,43 @@ MIC_2500_6000TL_X_MIN_RANGE = {
     }
 }
 
+# MIC 2500-5500MTL-S (Single-phase, 2.5-5.5kW, dual PV string, legacy V3.05 protocol)
+# DTC at holding register 43: 210 (confirmed from MIC 4200MTL-S scan, firmware AH1.0)
+# Inherits MIC_600_3300TL_X 0-179 register layout and adds a second PV string (regs 7-10).
+# Block-read limitation: this inverter rejects multi-register reads; use block_size=1 in scanner.
+# NOTE: PV2 power at regs 9-10 is unconfirmed — if pv2_power shows an unrealistic value
+# (e.g. millions of watts) those registers contain firmware version bytes (like TL3-S regs 9-10)
+# and should be removed. PV2 voltage/current at regs 7-8 are confirmed from scan.
+MIC_2500_5500MTL_S = {
+    'name': 'MIC 2500-5500MTL-S',
+    'description': 'Single-phase grid-tied (2.5-5.5kW), 2 PV strings, legacy V3.05 protocol',
+    'notes': (
+        'Legacy 0-179 register range. Two MPPT inputs (PV1 regs 3-6, PV2 regs 7-10). '
+        'Firmware AH1.0. DTC 210 at holding reg 43. Inverter rejects block reads — use block_size=1 with the scanner. '
+        'PV2 voltage/current (regs 7-8) confirmed from scan. '
+        'PV2 power pair (regs 9-10) unconfirmed — verify that pv2_power shows a realistic value '
+        '(~half of total PV power); if it shows millions of watts, regs 9-10 are firmware bytes and should be removed.'
+    ),
+    'input_registers': {
+        **MIC_600_3300TL_X['input_registers'],
+
+        # PV String 2 — voltage/current confirmed from scan (212.6V / 7.6A)
+        # Power pair at regs 9-10: unconfirmed, may be firmware version bytes (see notes)
+        7:  {'name': 'pv2_voltage', 'scale': 0.1, 'unit': 'V'},
+        8:  {'name': 'pv2_current', 'scale': 0.1, 'unit': 'A'},
+        9:  {'name': 'pv2_power_high', 'scale': 1, 'unit': '', 'pair': 10},
+        10: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W'},
+    },
+    'holding_registers': {
+        **MIC_600_3300TL_X['holding_registers'],
+    },
+}
+
+
 # Export all MIC profiles
 MIC_REGISTER_MAPS = {
     'MIC_600_3300TL_X': MIC_600_3300TL_X,
     'MIC_600_3300TL_X_V201': MIC_600_3300TL_X_V201,
     'MIC_2500_6000TL_X_MIN_RANGE': MIC_2500_6000TL_X_MIN_RANGE,
+    'MIC_2500_5500MTL_S': MIC_2500_5500MTL_S,
 }

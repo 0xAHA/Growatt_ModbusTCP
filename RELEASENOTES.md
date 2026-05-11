@@ -4,6 +4,38 @@
 
 ---
 
+## v0.9.1b2
+
+Issues: #299, #303, #304
+
+- **New profile: Growatt 3000-15000TL3-S (Issue #299):**
+  Added support for the TL3-S three-phase grid-tied string inverter (3–15 kW, legacy protocol).
+  Register layout confirmed from a full device scan: PV inputs at regs 3–8 (PV1 voltage/current/power
+  and PV2 voltage/current), total AC power at reg 12, per-phase output (R/S/T) at regs 16–25,
+  temperature at reg 32, and energy at standalone regs 53/55 (×0.1 kWh). Auto-detected via DTC 2049
+  at holding register 43. No VPP support — holding register 30000 returns Illegal Function.
+  Note: regs 9–10 contain firmware version bytes (not PV2 power), so PV2 power stays 0; use the
+  Total PV Power sensor instead.
+
+- **Fix: `house_consumption` mirrors solar on SPM 8000TL-HU (Issue #303):**
+  The HU variant of the SPH family does not populate `power_to_load` or `power_to_user` registers,
+  causing `house_consumption` to collapse to solar power when both are zero (the simple `load = solar`
+  fallback). Fixed with a full energy balance fallback: when battery or grid data is present,
+  `house_consumption = solar + battery_discharge − battery_charge + grid_import − grid_export`.
+  With the HU test case (solar 2389 W, import 2801 W, discharge 501 W) this now correctly
+  computes ≈ 5691 W instead of 2389 W.
+
+- **New profile: MIC 2500-5500MTL-S (Issue #304):**
+  Added support for the MIC 2500–5500MTL-S single-phase dual-string grid-tied inverter family
+  (2.5–5.5 kW, legacy V3.05 protocol). Inherits the MIC 600–3300TL-X register map with PV2
+  voltage and current confirmed at regs 7–8. PV2 power pair at regs 9–10 is included but
+  unconfirmed — if the PV2 Power sensor shows an unrealistic value, those registers contain
+  firmware version bytes and should be reported via the issue tracker.
+  Auto-detected via DTC 210 at holding register 43. Note: this inverter rejects multi-register
+  Modbus block reads — use `block_size=1` with the Universal Scanner service.
+
+---
+
 ## v0.9.1b1
 
 Issues: #302

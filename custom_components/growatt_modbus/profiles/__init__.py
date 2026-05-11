@@ -14,6 +14,7 @@ Profile Structure:
 - spf.py: SPF series (off-grid with battery)
 - spe.py: SPE series (off-grid, larger capacity, SPF protocol)
 - wit.py: WIT series (4-15kW three-phase hybrid with advanced storage)
+- tl3s.py: TL3-S series (3-15kW three-phase grid-tied, legacy protocol)
 """
 
 from typing import Dict, List, Optional
@@ -30,6 +31,7 @@ from .spe import SPE_REGISTER_MAPS
 from .mod import MOD_REGISTER_MAPS
 from .tl_xh import TL_XH_REGISTER_MAPS
 from .wit import WIT_REGISTER_MAPS
+from .tl3s import TL3S_REGISTER_MAPS
 
 
 # Combine all register maps into single dict
@@ -45,6 +47,7 @@ REGISTER_MAPS = {
     **MOD_REGISTER_MAPS,
     **TL_XH_REGISTER_MAPS,
     **WIT_REGISTER_MAPS,
+    **TL3S_REGISTER_MAPS,
 }
 
 

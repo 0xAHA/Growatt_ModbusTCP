@@ -223,6 +223,25 @@ INVERTER_PROFILES = {
         ),
     },
 
+    # MIC 2500-5500MTL-S — Single-phase 2.5-5.5kW, dual PV string, legacy V3.05 protocol
+    # DTC 210 at holding register 43. Inherits MIC 600-3300 register layout + PV2 at regs 7-10.
+    "mic_2500_5500mtl_s": {
+        "name": "MIC 2500-5500MTL-S",
+        "description": "Single-phase grid-tied (2.5-5.5kW), 2 PV strings, legacy protocol",
+        "register_map": "MIC_2500_5500MTL_S",
+        "phases": 1,
+        "has_pv3": False,
+        "has_battery": False,
+        "max_power_kw": 5.5,
+        "sensors": (
+            BASIC_PV_SENSORS |
+            BASIC_AC_SENSORS |
+            ENERGY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
     # MIC 1000-6000TL-X with MIN register layout (Hybrid profile)
     # Uses MIN addressing (0-124 + 3000-3124) but has MIC per-MPPT energy tracking
     # Includes MIC-1000TL-X models with firmware "PV 1000"
@@ -419,9 +438,34 @@ INVERTER_PROFILES = {
     },
 
     # ========================================================================
+    # TL3-S SERIES - Three-Phase Grid-Tied String Inverters (Legacy Protocol)
+    # ========================================================================
+
+    # TL3-S 3000-15000 — DTC 2049 at holding register 43, legacy 0-179 register range.
+    # AC output total at reg 12 (MIC-style standalone), per-phase R/S/T at regs 16-25.
+    # Regs 35-39 (MID-style AC layout) are all zero for this model.
+    "tl3_s_3000_15000": {
+        "name": "TL3-S 3000-15000",
+        "description": "Three-phase grid-tied string inverter (3-15kW), legacy protocol",
+        "register_map": "TL3_S_3000_15000",
+        "phases": 3,
+        "has_pv3": False,
+        "has_battery": False,
+        "max_power_kw": 15.0,
+        "sensors": (
+            BASIC_PV_SENSORS |
+            BASIC_AC_SENSORS |
+            THREE_PHASE_SENSORS |
+            ENERGY_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
+    # ========================================================================
     # SPH SERIES - Hybrid Storage (Single Phase with Battery)
     # ========================================================================
-    
+
     "sph_3000_6000": {
         "name": "SPH Series 3000-6000",
         "description": "Single-phase hybrid inverter with battery storage (3-6kW)",
@@ -695,6 +739,11 @@ PROFILE_DISPLAY_NAMES = {
         "v201": "mic_2500_6000tl_x_min_range",  # Hybrid profile (same for both)
         "description": "MIC inverter with MIN register layout, 1-2 PV strings",
     },
+    "MIC 2500-5500MTL-S": {
+        "base": "mic_2500_5500mtl_s",
+        "v201": "mic_2500_5500mtl_s",
+        "description": "Single-phase 2.5-5.5kW, 2 PV strings, legacy protocol (DTC 210)",
+    },
     "MIN (3-6kW)": {
         "base": "min_3000_6000_tl_x",
         "v201": "min_3000_6000_tl_x_v201",
@@ -729,6 +778,11 @@ PROFILE_DISPLAY_NAMES = {
     },
 
     # Three-Phase Grid-Tied
+    "TL3-S (3-15kW)": {
+        "base": "tl3_s_3000_15000",
+        "v201": "tl3_s_3000_15000",
+        "description": "Three-phase grid-tied string inverter, legacy protocol (DTC 2049)",
+    },
     "MID (15-25kW)": {
         "base": "mid_15000_25000tl3_x",
         "v201": "mid_15000_25000tl3_x_v201",

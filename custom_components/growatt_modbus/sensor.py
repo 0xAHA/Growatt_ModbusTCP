@@ -1326,13 +1326,18 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                     load = getattr(data, "self_consumption_power", 0)
 
                 if load == 0:
-                    # Fallback calculation from solar production and grid export
+                    # Energy balance fallback for hybrids where load registers return 0
                     solar = getattr(data, "pv_total_power", 0)
                     export = getattr(data, "power_to_grid", 0)
-                    if export > 0:
-                        load = max(0, solar - export)
+                    import_power = getattr(data, "power_to_user", 0)
+                    charge = getattr(data, "charge_power", 0)
+                    discharge = getattr(data, "discharge_power", 0)
+                    has_battery = (charge > 0 or discharge > 0)
+                    has_grid = (export > 0 or import_power > 0)
+                    if has_battery or has_grid:
+                        load = solar + discharge - charge + import_power - export
                     else:
-                        load = solar
+                        load = max(0, solar - export)
 
                 raw_value = round(max(0, load), 1)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)

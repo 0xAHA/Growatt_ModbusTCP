@@ -46,6 +46,14 @@ def detect_profile_from_model_name(model_name: str) -> Optional[str]:
         'MIC2500': 'mic_600_3300tl_x',
         'MIC3000': 'mic_600_3300tl_x',
         'MIC3300': 'mic_600_3300tl_x',
+        'MIC2500MTL': 'mic_2500_5500mtl_s',
+        'MIC3000MTL': 'mic_2500_5500mtl_s',
+        'MIC3500MTL': 'mic_2500_5500mtl_s',
+        'MIC4000MTL': 'mic_2500_5500mtl_s',
+        'MIC4200MTL': 'mic_2500_5500mtl_s',
+        'MIC4200': 'mic_2500_5500mtl_s',
+        'MIC5000MTL': 'mic_2500_5500mtl_s',
+        'MIC5500MTL': 'mic_2500_5500mtl_s',
         
         # MIN series
         'MIN3000': 'min_3000_6000_tl_x',
@@ -434,6 +442,10 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
     # Official DTC codes from Growatt VPP 2.03 Protocol documentation Table 3-1
     # Note: Some legacy models use DTC register but don't support full V2.01 protocol
     dtc_map = {
+        # Legacy protocol models — DTC at holding register 43, no VPP support
+        210:  'mic_2500_5500mtl_s',     # MIC 2500-5500MTL-S: single-phase dual-string, firmware AH1.0
+        2049: 'tl3_s_3000_15000',      # TL3-S 3000-15000: three-phase grid-tied string, firmware DH1.0
+
         # SPH series - Official Growatt DTCs (VPP 2.03 Table 3-1)
         3501: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL
         3502: 'sph_3000_6000_v201',       # SPH 3000-6000TL BL-UP
