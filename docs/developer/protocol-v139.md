@@ -1094,7 +1094,7 @@
 | 993–998 | Reserved | Reserved | — | |
 | 999 | SystemCmd | M3 to DSP system command | — | |
 | *Ninth group — Storage power (1000–1249)* | | | | |
-| 1000 | uwSysWorkMode | System work mode | — | 0x00=Waiting, 0x01=Self-test, 0x03=Fault, 0x04=Flash, 0x05-0x08=Normal |
+| 1000 | uwSysWorkMode | System work mode | — | 0x00=Waiting, 0x01=Self-test, 0x02=Reserved, 0x03=Fault, 0x04=Updating, 0x05=PV On-Grid, 0x06=Bat On-Grid, 0x07=PV+Bat Off-Grid, 0x08=Bat Off-Grid |
 | 1001 | Systemfault word0 | System fault word 0 | — | See Hybrid fault table |
 | 1002 | Systemfault word1 | System fault word 1 | — | |
 | 1003 | Systemfault word2 | System fault word 2 | — | |

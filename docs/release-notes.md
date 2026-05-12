@@ -6,6 +6,14 @@
 
 ---
 
+## v0.9.1b4
+
+- **Fix: Inverter Status shows wrong text on hybrid inverters (Issue #305):** The status sensor was using a single code table for all inverter families. Hybrid inverters use the V1.39 / VPP V2.01 status map where code 5 means "PV On-Grid", not "Standby", and code 1 means "Self-Test", not "Normal". SPF off-grid inverters have their own distinct set. Fixed by selecting the correct table at runtime based on the active profile. Hybrid status codes are now: 0=Waiting, 1=Self-Test, 2=Reserved, 3=Fault, 4=Updating, 5=PV On-Grid, 6=Bat On-Grid, 7=PV+Bat Off-Grid, 8=Bat Off-Grid, 9=Bypass.
+
+- **Docs: corrected legacy storage register 1000 status description** — previously showed `0x05-0x08=Normal`; now lists each code individually to match VPP register 31000.
+
+---
+
 ## v0.9.1b3
 
 - **Fix: MIC 2500-5500MTL-S entities all unavailable (Issue #304):** The inverter rejects any Modbus read of more than one register at a time (ExceptionResponse, Illegal Function). Fixed by adding per-profile `max_block_size` support to the coordinator. Profiles that set `max_block_size: 1` now use sparse read mode — only the specific register addresses defined in the profile are read, skipping all gaps between them. All other profiles continue using the original 125-register block reads unchanged.

@@ -1491,14 +1491,15 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
         
         # Special handling for status sensor
         if self._sensor_key == "status":
-            from .const import STATUS_CODES
+            from .const import STATUS_CODES, HYBRID_STATUS_CODES, SPF_STATUS_CODES, PROFILE_STATUS_MAP
 
-            # If offline, show "Offline"
             if not self.coordinator.is_online:
                 return "Offline"
 
-            status_info = STATUS_CODES.get(value, {"name": f"Unknown ({value})"})
-            return status_info["name"]
+            client = self.coordinator.modbus_client
+            map_key = PROFILE_STATUS_MAP.get(client.register_map_name if client else '', 'grid_tied')
+            codes = HYBRID_STATUS_CODES if map_key == 'hybrid' else (SPF_STATUS_CODES if map_key == 'spf' else STATUS_CODES)
+            return codes.get(int(value), {"name": f"Unknown ({value})"})["name"]
 
         # Special handling for derating_mode sensor
         if self._sensor_key == "derating_mode":

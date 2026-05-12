@@ -820,25 +820,73 @@ def get_entity_category(sensor_key: str) -> str | None:
 # STATUS CODE MAPPINGS
 # ============================================================================
 
+# Grid-tied string inverters (MIN, MIC, MID, TL3-S): simple 3-state map.
 STATUS_CODES = {
-    # Grid-tied inverter status codes (MIN, MIC, SPH, MOD series)
     0: {'name': 'Waiting', 'desc': 'Waiting for sufficient PV power or grid conditions'},
-    1: {'name': 'Normal', 'desc': 'Operating normally'},
-    3: {'name': 'Fault', 'desc': 'Fault condition detected'},
-    5: {'name': 'Standby', 'desc': 'Inverter in standby mode'},
+    1: {'name': 'Normal',  'desc': 'Operating normally'},
+    3: {'name': 'Fault',   'desc': 'Fault condition detected'},
+}
 
-    # SPF off-grid inverter status codes (additional codes 2, 4, 6-12)
-    # Note: SPF uses different meanings for codes 0, 1, 3, 5
-    # 0 = Standby (off-grid), 1 = No Use, 5 = PV Charge (off-grid)
-    2: {'name': 'Discharge', 'desc': 'Battery discharging to load'},
-    4: {'name': 'Flash', 'desc': 'Firmware update mode'},
-    6: {'name': 'AC Charge', 'desc': 'Charging battery from AC input (grid/generator)'},
-    7: {'name': 'Combine Charge', 'desc': 'Charging from both PV and AC'},
-    8: {'name': 'Combine Charge+Bypass', 'desc': 'Charging from PV+AC with AC bypass to load'},
-    9: {'name': 'PV Charge+Bypass', 'desc': 'Charging from PV with AC bypass to load'},
-    10: {'name': 'AC Charge+Bypass', 'desc': 'Charging from AC with AC bypass to load'},
-    11: {'name': 'Bypass', 'desc': 'AC input bypassed directly to load'},
-    12: {'name': 'PV Charge+Discharge', 'desc': 'Charging battery from PV while discharging to load'},
+# Hybrid inverters (SPH, SPM, MOD, WIT, TL-XH, SPA, SPE): V1.39 / VPP Protocol V2.01
+# Source: VPP Protocol V2.01 register 31000; legacy storage register 1000 (uwSysWorkMode)
+HYBRID_STATUS_CODES = {
+    0: {'name': 'Waiting',         'desc': 'Waiting for operating conditions'},
+    1: {'name': 'Self-Test',       'desc': 'Running self-test at startup'},
+    2: {'name': 'Reserved',        'desc': 'Reserved operating state'},
+    3: {'name': 'Fault',           'desc': 'Fault condition detected'},
+    4: {'name': 'Updating',        'desc': 'Firmware update in progress'},
+    5: {'name': 'PV On-Grid',      'desc': 'PV active, battery offline, connected to grid'},
+    6: {'name': 'Bat On-Grid',     'desc': 'Battery active, connected to grid'},
+    7: {'name': 'PV+Bat Off-Grid', 'desc': 'PV and battery active, off-grid mode'},
+    8: {'name': 'Bat Off-Grid',    'desc': 'Battery active, off-grid mode (PV inactive)'},
+    9: {'name': 'Bypass',          'desc': 'AC bypass mode'},
+}
+
+# SPF / SPE off-grid inverters: distinct status set, different meanings for shared codes
+SPF_STATUS_CODES = {
+    0:  {'name': 'Standby',              'desc': 'Off-grid inverter in standby'},
+    1:  {'name': 'No Use',               'desc': 'Unused state'},
+    2:  {'name': 'Discharge',            'desc': 'Battery discharging to load'},
+    3:  {'name': 'Fault',                'desc': 'Fault condition detected'},
+    4:  {'name': 'Flash',                'desc': 'Firmware update mode'},
+    5:  {'name': 'PV Charge',            'desc': 'Charging battery from PV'},
+    6:  {'name': 'AC Charge',            'desc': 'Charging battery from AC input'},
+    7:  {'name': 'Combine Charge',       'desc': 'Charging from both PV and AC'},
+    8:  {'name': 'Combine+Bypass',       'desc': 'PV+AC charging with AC bypass to load'},
+    9:  {'name': 'PV Charge+Bypass',     'desc': 'PV charging with AC bypass to load'},
+    10: {'name': 'AC Charge+Bypass',     'desc': 'AC charging with bypass to load'},
+    11: {'name': 'Bypass',               'desc': 'AC input bypassed directly to load'},
+    12: {'name': 'PV Charge+Discharge',  'desc': 'PV charging battery while discharging to load'},
+}
+
+# Maps register map keys to the status code family they use.
+# Keys absent from this dict use the default STATUS_CODES (grid-tied).
+PROFILE_STATUS_MAP: dict[str, str] = {
+    # Hybrid — SPH single-phase
+    'SPH_3000_6000':       'hybrid',
+    'SPH_7000_10000':      'hybrid',
+    'SPH_8000_10000_HU':   'hybrid',
+    'SPH_3000_6000_V201':  'hybrid',
+    'SPH_7000_10000_V201': 'hybrid',
+    # Hybrid — SPH three-phase
+    'SPH_TL3_3000_10000':       'hybrid',
+    'SPH_TL3_3000_10000_V201':  'hybrid',
+    # Hybrid — MOD three-phase
+    'MOD_6000_15000TL3_XH': 'hybrid',
+    'MOD_6000_15000TL3_X':  'hybrid',
+    # Hybrid — WIT commercial
+    'WIT_4000_15000TL3': 'hybrid',
+    # Hybrid — MIN TL-XH
+    'TL_XH_3000_10000':          'hybrid',
+    'TL_XH_US_3000_10000':       'hybrid',
+    'TL_XH_3000_10000_V201':     'hybrid',
+    'TL_XH_US_3000_10000_V201':  'hybrid',
+    'MIN_TL_XH_3000_10000_V201': 'hybrid',
+    # Hybrid — SPA / SPE
+    'SPA_3000_6000_TL_BL': 'hybrid',
+    'SPE_8000_12000_ES':   'hybrid',
+    # Off-grid — SPF / SPE uses SPF codes
+    'SPF_3000_6000_ES_PLUS': 'spf',
 }
 
 

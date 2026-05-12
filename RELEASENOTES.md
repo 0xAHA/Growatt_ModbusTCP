@@ -4,6 +4,43 @@
 
 ---
 
+## v0.9.1b4
+
+Issues: #305
+
+- **Fix: Inverter Status shows wrong text on hybrid inverters (Issue #305):**
+  The `Inverter Status` sensor was using a single status code table shared across all inverter
+  families. Hybrid inverters (SPH, SPM, MOD, WIT, MIN TL-XH, SPA, SPE) use the V1.39 / VPP
+  Protocol V2.01 status map where the codes have completely different meanings to the grid-tied
+  map — most critically, code 5 was shown as "Standby" when the correct label is "PV On-Grid",
+  and code 1 was shown as "Normal" when it means "Self-Test" on hybrid models. SPF off-grid
+  inverters have their own distinct status set (0=Standby, 2=Discharge, 5=PV Charge, etc.)
+  which was previously mixed into the same dict and would now also collide.
+
+  Fixed by introducing three separate status code tables (`STATUS_CODES` for grid-tied,
+  `HYBRID_STATUS_CODES` for hybrid, `SPF_STATUS_CODES` for off-grid) and selecting the correct
+  table at runtime based on the active profile. Hybrid status codes are now:
+
+  | Code | Label |
+  | --- | --- |
+  | 0 | Waiting |
+  | 1 | Self-Test |
+  | 2 | Reserved |
+  | 3 | Fault |
+  | 4 | Updating |
+  | 5 | PV On-Grid |
+  | 6 | Bat On-Grid |
+  | 7 | PV+Bat Off-Grid |
+  | 8 | Bat Off-Grid |
+  | 9 | Bypass |
+
+- **Docs: corrected legacy storage register 1000 (uwSysWorkMode) status description:**
+  The protocol-v139 reference table previously showed `0x05-0x08=Normal` for register 1000.
+  Updated to list each code individually, matching the VPP Protocol V2.01 register 31000
+  definition which was already correct in the docs.
+
+---
+
 ## v0.9.1b3
 
 Issues: #304
