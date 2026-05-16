@@ -1626,6 +1626,9 @@ class GrowattModbus:
             self._ensure_connection("[WRITE]")
 
             # ---- Perform actual write ---------------------------------------------
+            # Modbus FC06 requires an unsigned 16-bit value; convert signed Python int
+            if value < 0:
+                value = value & 0xFFFF
             logger.debug(f"[WRITE] Sending write_register({register}, {value}) to inverter")
 
             # Try different keyword arguments for pymodbus version compatibility
@@ -1712,7 +1715,7 @@ class GrowattModbus:
                 )
                 return (True, True)  # Don't fail write on read error
 
-            if read_back[0] == value:
+            if read_back[0] == (value & 0xFFFF):
                 if attempt > 0:
                     logger.info(
                         "[WRITE VERIFY] Register %d verified on retry %d (value=%d)",

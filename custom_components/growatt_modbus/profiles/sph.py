@@ -470,7 +470,7 @@ SPH_8000_10000_HU = {
         1016: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 1015, 'combined_scale': 0.1, 'combined_unit': 'W'},
         1021: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'Total load power consumption'},
         1022: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        1029: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 1030, 'desc': 'Power to grid (negative=export, positive=import)'},
+        1029: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 1030, 'desc': 'AC power to grid total H (Pactogrid total, positive=export)'},
         1030: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 1029, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         1037: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 1038},
         1038: {'name': 'self_consumption_power_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},

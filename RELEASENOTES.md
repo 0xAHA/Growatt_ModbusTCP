@@ -4,6 +4,48 @@
 
 ---
 
+## v0.9.1b5
+
+Issues: #303, #306
+
+- **Fix: Remote Charge/Discharge Power cannot be set to negative values (Issue #306):**
+  Register 30409 (`remote_charge_and_discharge_power`) accepts values from −100% (full discharge)
+  to +100% (full charge). Writing a negative value requires sending the unsigned 16-bit
+  two's complement representation over Modbus (e.g. −80 → 65456 / 0xFFB0). The code was
+  passing the raw negative Python integer directly to pymodbus, which expects an unsigned
+  16-bit value and raises a struct error. Positive values worked because no conversion was
+  needed.
+
+  Fixed by converting signed values to unsigned 16-bit (`value & 0xFFFF`) in `write_register`
+  before the pymodbus call. The read-back verification comparison in `write_register_verified`
+  is also updated to compare against the unsigned representation, so positive write + verified
+  confirmation is correctly reported.
+
+- **Fix: SPH/SPM 8000-10000TL-HU auto-detection fails (DTC 21303 unmapped, Issue #303):**
+  DTC code 21303, which identifies the SPH/SPM 8000–10000TL-HU running firmware UL2.21,
+  was not in the DTC map. The detection logic could fall through to the legacy register
+  probing path, which may identify a high-PV-voltage SPH as a MIC micro inverter. On the
+  MIC profile, all battery and grid registers are absent, so every power-flow derived sensor
+  (`Grid Export Power`, `Grid Import Power`, `House Consumption`) was computed from solar
+  generation alone.
+
+  Fixed by adding `21303 → sph_8000_10000_hu` to the DTC map. Detection now resolves at
+  Step 1 (OffGrid DTC) and reaches the correct profile without reaching the register-probing
+  fallback.
+
+- **Fix: `house_consumption` returns solar on SPH HU regardless of energy balance (Issue #303):**
+  Register 1037/1038 (`self_consumption_power`) on HU firmware UL2.21 reports solar-only
+  self-consumption, not total house load. The previous code used it as a direct house load
+  proxy when `power_to_load` (register 1021/1022) was zero, causing `house_consumption` to
+  equal solar in most operating conditions. The energy balance
+  (`solar + discharge − charge + import − export`) was never reached.
+
+  Fixed by removing the `self_consumption_power` intermediate step. When `power_to_load = 0`,
+  the integration now goes directly to the energy balance using the direct grid import/export
+  registers (1015/1016 and 1029/1030), which are correct on UL2.21.
+
+---
+
 ## v0.9.1b4
 
 Issues: #305

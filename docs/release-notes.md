@@ -6,6 +6,16 @@
 
 ---
 
+## v0.9.1b5
+
+- **Fix: Remote Charge/Discharge Power slider rejects negative values (Issue #306):** Register 30409 encodes discharge as a negative percentage (e.g. −80% = 0xFFB0 unsigned). The code was passing the raw negative Python integer to pymodbus, which expects unsigned 16-bit and raised a struct error. Fixed by converting to unsigned two's complement (`value & 0xFFFF`) in `write_register` before the Modbus call, and aligning the read-back verification comparison to match.
+
+- **Fix: SPH/SPM 8000-10000TL-HU auto-detection fails (Issue #303):** DTC 21303 (firmware UL2.21) was missing from the DTC map, causing the detection to fall through to register probing. The probing path could misidentify the SPH HU as a MIC micro inverter (the MIC profile has no grid or battery registers, so all power-flow sensors read as zero and derived sensors equalled solar generation). Fixed by mapping DTC 21303 → `sph_8000_10000_hu`.
+
+- **Fix: `house_consumption` equals solar on SPH HU (Issue #303):** Register 1037/1038 (`self_consumption_power`) on UL2.21 reports solar self-consumption, not total house load. The previous fallback used it as a direct house load proxy, bypassing the energy balance. Removed that intermediate step — the integration now goes directly to `solar + discharge − charge + import − export` using the direct grid registers (1015/1016 and 1029/1030), which are correct on UL2.21.
+
+---
+
 ## v0.9.1b4
 
 - **Fix: Inverter Status shows wrong text on hybrid inverters (Issue #305):** The status sensor was using a single code table for all inverter families. Hybrid inverters use the V1.39 / VPP V2.01 status map where code 5 means "PV On-Grid", not "Standby", and code 1 means "Self-Test", not "Normal". SPF off-grid inverters have their own distinct set. Fixed by selecting the correct table at runtime based on the active profile. Hybrid status codes are now: 0=Waiting, 1=Self-Test, 2=Reserved, 3=Fault, 4=Updating, 5=PV On-Grid, 6=Bat On-Grid, 7=PV+Bat Off-Grid, 8=Bat Off-Grid, 9=Bypass.

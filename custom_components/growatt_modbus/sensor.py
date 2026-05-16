@@ -1322,11 +1322,9 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 load = getattr(data, "power_to_load", 0)
 
                 if load == 0:
-                    # Try self_consumption_power (SPH TL-HU variant uses this for total load)
-                    load = getattr(data, "self_consumption_power", 0)
-
-                if load == 0:
-                    # Energy balance fallback for hybrids where load registers return 0
+                    # Energy balance: solar + battery_discharge - battery_charge + grid_import - grid_export
+                    # self_consumption_power (reg 1037/1038 on HU) is NOT used — it reports
+                    # solar self-consumed, not total house load (omits battery discharge + grid import).
                     solar = getattr(data, "pv_total_power", 0)
                     export = getattr(data, "power_to_grid", 0)
                     import_power = getattr(data, "power_to_user", 0)

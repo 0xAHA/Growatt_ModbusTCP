@@ -452,6 +452,7 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
         3503: 'sph_3000_6000_v201',       # SPH 3000-6000TL HU
         3504: 'sph_3000_6000_v201',       # SPH 3000-6000TL HUB
         3601: 'sph_tl3_3000_10000_v201',  # SPH 4-10KTL3 BH-UP (confirmed DTC)
+        21303: 'sph_8000_10000_hu',       # SPH/SPM 8000-10000TL-HU (firmware UL2.21, DTC confirmed scan #303)
 
         # SPA series - Official Growatt DTCs (VPP 2.03 Table 3-1)
         # SPA variants share the sph_3000_6000_v201 register layout for VPP.
