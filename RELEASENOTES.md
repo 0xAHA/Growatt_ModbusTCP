@@ -4,6 +4,27 @@
 
 ---
 
+## v0.9.1b6
+
+Issues: #307
+
+- **Fix: `energy_today` rises through the night on SPH hybrid inverters (Issue #307):**
+  On SPH (and WIT) hybrid inverters the hardware register for `energy_today` (reg 53/54)
+  counts total AC system output, including battery discharge — not solar generation only.
+  The integration normally avoids this by summing the per-MPPT DC string registers
+  (`pv1_energy_today + pv2_energy_today`), which track PV input only.
+
+  However, the guard condition checked `pv*_energy_today > 0` before using the MPPT sum.
+  After the inverter's daily energy counters reset to zero at midnight, all MPPT values
+  return 0, the guard evaluated `False`, and the code fell back to register 53/54 — which
+  then climbed through the night at a rate matching house load (battery powering the house).
+
+  Fixed by gating on register *address existence* rather than *value > 0*. If the profile
+  defines per-MPPT energy registers (which all SPH/WIT profiles do), the MPPT sum is always
+  used — including when it is zero. Zero at night is the correct value.
+
+---
+
 ## v0.9.1b5
 
 Issues: #303, #306

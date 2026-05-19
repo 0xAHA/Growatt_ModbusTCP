@@ -1453,9 +1453,14 @@ class GrowattModbus:
             # For pure grid-tied profiles (MIN, MIC, MOD) this flag is absent/False and
             # energy_today is read directly from its register — no summation.
             use_mppt = self.register_map.get('use_mppt_energy_today', False)
-            has_mppt_energy = use_mppt and (data.pv1_energy_today > 0 or data.pv2_energy_today > 0 or data.pv3_energy_today > 0)
+            pv1_energy_addr = self._find_register_by_name('pv1_energy_today_low')
 
-            if has_mppt_energy:
+            if use_mppt and pv1_energy_addr:
+                # SPH/WIT hybrid: reg 53/54 counts all AC output including battery discharge,
+                # so it rises at night as the battery powers the house. Per-MPPT DC registers
+                # track solar input only — 0 at night or on a cloudy day is the correct value.
+                # Gate on register *existence* not *value > 0* to avoid falling back to the
+                # battery-inflated register at night when the daily total resets to zero.
                 pv_energy_sum = data.pv1_energy_today + data.pv2_energy_today + data.pv3_energy_today
 
                 # Sanity check: per-MPPT energy should be reasonable (< 100 kWh per day)
@@ -1463,15 +1468,14 @@ class GrowattModbus:
                     data.energy_today = pv_energy_sum
                     logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from per-MPPT registers: PV1={data.pv1_energy_today} + PV2={data.pv2_energy_today} + PV3={data.pv3_energy_today} = {data.energy_today} kWh")
                 else:
-                    # Garbage data detected - fall back to register reading
+                    # Garbage data — fall back to direct register
                     logger.warning(f"[{self.register_map['name']}@{self.connection_id}] Per-MPPT energy {pv_energy_sum} kWh unrealistic - using fallback register instead")
                     energy_today_addr = self._find_register_by_name('energy_today_low')
                     if energy_today_addr:
                         data.energy_today = self._get_register_value(energy_today_addr) or 0.0
                         logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from reg {energy_today_addr}: {data.energy_today} kWh")
             else:
-                # Read energy_today directly from its register (all non-hybrid profiles, or
-                # hybrid profiles where per-MPPT data hasn't accumulated yet today)
+                # Grid-tied profiles (MIC/MIN/MOD): energy_today register is solar-only, read directly
                 energy_today_addr = self._find_register_by_name('energy_today_low')
                 if energy_today_addr:
                     data.energy_today = self._get_register_value(energy_today_addr) or 0.0

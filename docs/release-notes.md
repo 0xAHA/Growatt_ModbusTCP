@@ -6,6 +6,12 @@
 
 ---
 
+## v0.9.1b6
+
+- **Fix: `energy_today` rises through the night on SPH hybrid inverters (Issue #307):** The hardware register for `energy_today` (reg 53/54) on SPH/WIT hybrids counts total AC output including battery discharge. The integration normally uses per-MPPT DC registers (solar-only) instead, but the guard condition checked `pv*_energy_today > 0`. After midnight when the daily counters reset to zero, the guard failed and the integration fell back to reg 53/54 — which climbed all night as the battery powered the house. Fixed by checking whether the per-MPPT register *address exists* in the profile (rather than whether its value is non-zero), so the MPPT sum is always used on hybrid profiles and zero at night is correctly reported.
+
+---
+
 ## v0.9.1b5
 
 - **Fix: Remote Charge/Discharge Power slider rejects negative values (Issue #306):** Register 30409 encodes discharge as a negative percentage (e.g. −80% = 0xFFB0 unsigned). The code was passing the raw negative Python integer to pymodbus, which expects unsigned 16-bit and raised a struct error. Fixed by converting to unsigned two's complement (`value & 0xFFFF`) in `write_register` before the Modbus call, and aligning the read-back verification comparison to match.
