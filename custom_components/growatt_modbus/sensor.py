@@ -1474,7 +1474,7 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 if not self.coordinator.is_online:
                     return "Offline"
 
-                status = int(getattr(data, "status", 0))
+                status = int(getattr(data, "equipment_status", 0) or getattr(data, "status", 0))
                 if status in (5, 6):
                     return "On-grid"
                 if status in (7, 8):

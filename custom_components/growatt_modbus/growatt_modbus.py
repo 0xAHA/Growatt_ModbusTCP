@@ -243,6 +243,7 @@ class GrowattData:
         
     # Diagnostics
     status: int = 0                   # Inverter status
+    equipment_status: int = 0         # VPP hybrid equipment status (31000)
     derating_mode: int = 0
     fault_code: int = 0
     warning_code: int = 0
@@ -1167,6 +1168,9 @@ class GrowattModbus:
         try:
             # Status
             data.status = int(self._get_register_value(min_addr) or 0)
+            equipment_status_addr = self._find_register_by_name('equipment_status')
+            if equipment_status_addr:
+                data.equipment_status = int(self._get_register_value(equipment_status_addr) or 0)
             
             # PV String 1
             pv1_voltage_addr = self._find_register_by_name('pv1_voltage')
