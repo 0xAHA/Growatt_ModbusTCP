@@ -408,6 +408,8 @@ MIN_TL_XH_3000_10000_V201 = {
                'desc': 'Work mode / priority mode for MIN TL-XH'},
         30200: {'name': 'export_limit_enable',     'scale': 1,   'unit': '', 'access': 'RW'},
         30201: {'name': 'export_limit_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW'},
+        3047: {'name': 'batt_first_charge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (1, 100), 'desc': 'Charge power rate when Battery First mode is active'},
         3048: {'name': 'batt_first_charge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
                'valid_range': (0, 100), 'desc': 'Stop charging SOC when Battery First mode is active'},
         3067: {'name': 'grid_first_discharge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
