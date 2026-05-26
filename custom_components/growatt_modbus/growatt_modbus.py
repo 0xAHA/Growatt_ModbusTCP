@@ -2587,6 +2587,16 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read export_limit_failed_power_rate register 3000: {e}")
 
+        # TL-XH/MIN TL-XH Work Mode (holding 3018)
+        if 3018 in holding_map:
+            try:
+                tl_xh_mode_regs = self.read_holding_registers(3018, 1)
+                if tl_xh_mode_regs is not None and len(tl_xh_mode_regs) >= 1:
+                    data.tl_xh_priority_mode = int(tl_xh_mode_regs[0])
+                    logger.debug("[TL-XH CTRL] tl_xh_priority_mode=%s", data.tl_xh_priority_mode)
+            except Exception as e:
+                logger.debug(f"Could not read tl_xh_priority_mode register 3018: {e}")
+
         # --- SPF Off-Grid Controls --- Read if present in profile
         # Read registers 1, 2, 8 (output config, charge config, AC input mode)
         if any(reg in holding_map for reg in [1, 2, 8]):

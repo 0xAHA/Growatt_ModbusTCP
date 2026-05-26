@@ -246,6 +246,17 @@ WRITABLE_REGISTERS = {
         'desc': 'Remote charge/discharge power (-100% to +100%, negative=discharge, positive=charge)',
         'signed': True
     },
+    'tl_xh_priority_mode': {
+        'register': 3018,
+        'scale': 1,
+        'valid_range': (0, 3),
+        'options': {
+            0: 'Load First',
+            2: 'Battery First',
+            3: 'Grid First',
+        },
+        'desc': 'TL-XH work mode / priority mode'
+    },
     'vpp_ac_charge_enable': {
         'register': 30410,
         'scale': 1,
