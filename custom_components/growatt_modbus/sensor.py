@@ -896,6 +896,12 @@ SENSOR_DEFINITIONS = {
         "icon": "mdi:information",
         "attr": "status",
     },
+    "grid_connection_status": {
+        "name": "Grid Connection Status",
+        "icon": "mdi:transmission-tower",
+        "attr": "calculated",
+        "description": "Derived from the hybrid inverter status code. On-grid for states 5 and 6; off-grid for states 7 and 8.",
+    },
     "last_update": {
         "name": "Last Update",
         "icon": "mdi:clock-outline",
@@ -1463,6 +1469,17 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                         dt = dt.replace(tzinfo=timezone.utc)
                     return dt
                 return None
+
+            elif self._sensor_key == "grid_connection_status":
+                if not self.coordinator.is_online:
+                    return "Offline"
+
+                status = int(getattr(data, "status", 0))
+                if status in (5, 6):
+                    return "On-grid"
+                if status in (7, 8):
+                    return "Off-grid"
+                return "Unknown"
             
             return None
 

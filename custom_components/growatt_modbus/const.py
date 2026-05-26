@@ -122,7 +122,7 @@ SENSOR_TYPES = {
 
     # Status sensors - show "offline" when not responding
     'status': ['status', 'derating_mode', 'fault_code', 'warning_code',
-               'priority_mode', 'battery_derating_mode'],
+               'priority_mode', 'grid_connection_status', 'battery_derating_mode'],
 }
 
 # WRITABLE REGISTERS - Control Entities
@@ -674,6 +674,7 @@ SENSOR_DEVICE_MAP = {
     # Grid device - grid connection and import/export
     DEVICE_TYPE_GRID: {
         'grid_power', 'grid_export_power', 'grid_import_power',
+        'grid_connection_status',
         'grid_energy_today', 'grid_energy_total',
         'grid_import_energy_today', 'grid_import_energy_total',
         'energy_to_grid_today', 'energy_to_grid_total',
