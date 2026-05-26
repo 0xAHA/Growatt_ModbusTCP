@@ -2834,6 +2834,24 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read batt_first_charge_power_rate register 3047: {e}")
 
+        if 3048 in holding_map:
+            try:
+                bfcs_regs = self.read_holding_registers(3048, 1)
+                if bfcs_regs is not None and len(bfcs_regs) >= 1:
+                    data.batt_first_charge_stopped_soc = int(bfcs_regs[0])
+                    logger.debug("[TL-XH CTRL] batt_first_charge_stopped_soc=%s%%", data.batt_first_charge_stopped_soc)
+            except Exception as e:
+                logger.debug(f"Could not read batt_first_charge_stopped_soc register 3048: {e}")
+
+        if 3067 in holding_map:
+            try:
+                gfds_regs = self.read_holding_registers(3067, 1)
+                if gfds_regs is not None and len(gfds_regs) >= 1:
+                    data.grid_first_discharge_stopped_soc = int(gfds_regs[0])
+                    logger.debug("[TL-XH CTRL] grid_first_discharge_stopped_soc=%s%%", data.grid_first_discharge_stopped_soc)
+            except Exception as e:
+                logger.debug(f"Could not read grid_first_discharge_stopped_soc register 3067: {e}")
+
         # MOD TL3-XH TOU slots 5-9 (registers 3050-3059)
         if 3050 in holding_map:
             try:

@@ -536,6 +536,20 @@ WRITABLE_REGISTERS = {
         'unit': '%',
         'desc': 'Charge power rate when Battery First mode (1-100%)'
     },
+    'batt_first_charge_stopped_soc': {
+        'register': 3048,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'SOC level to stop battery charge when Battery First mode is active'
+    },
+    'grid_first_discharge_stopped_soc': {
+        'register': 3067,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'SOC level to stop battery discharge when Grid First mode is active'
+    },
 
     # MOD GEN4 grid-charge prerequisite gate (must be Enabled for TOU writes to persist)
     'allow_grid_charge': {

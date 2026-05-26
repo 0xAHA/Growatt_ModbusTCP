@@ -405,6 +405,10 @@ MIN_TL_XH_3000_10000_V201 = {
         30114: {'name': 'active_power_rate_vpp', 'scale': 0.1, 'unit': '%', 'access': 'RW', 'maps_to': 'active_power_rate'},
         30200: {'name': 'export_limit_enable',     'scale': 1,   'unit': '', 'access': 'RW'},
         30201: {'name': 'export_limit_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW'},
+        3048: {'name': 'batt_first_charge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100), 'desc': 'Stop charging SOC when Battery First mode is active'},
+        3067: {'name': 'grid_first_discharge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100), 'desc': 'Stop discharging SOC when Grid First mode is active'},
 
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},
