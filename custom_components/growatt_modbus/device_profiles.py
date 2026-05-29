@@ -665,6 +665,18 @@ INVERTER_PROFILES = {
         "sensors": HYBRID_3P_SENSORS | PV3_SENSORS,
     },
 
+    "mid_11000_30000tl3_xh_v201": {
+        "name": "MID 11-30KTL3-XH",
+        "description": "Three-phase commercial hybrid inverter (11-30kW) with VPP Protocol V2.01",
+        "register_map": "MID_11000_30000TL3_XH_V201",
+        "phases": 3,
+        "has_pv3": True,
+        "has_battery": True,
+        "max_power_kw": 30.0,
+        "protocol_version": "v2.01",
+        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS,
+    },
+
     # ========================================================================
     # WIT SERIES - Three-Phase Hybrid with Advanced Storage
     # ========================================================================
@@ -798,6 +810,11 @@ PROFILE_DISPLAY_NAMES = {
     "MOD Hybrid (6-15kW)": {
         "base": "mod_6000_15000tl3_xh",
         "v201": "mod_6000_15000tl3_xh_v201",
+        "description": "Three-phase hybrid with battery",
+    },
+    "MID Hybrid (11-30kW)": {
+        "base": "mid_11000_30000tl3_xh_v201",
+        "v201": "mid_11000_30000tl3_xh_v201",
         "description": "Three-phase hybrid with battery",
     },
     "SPH-TL3 (3-10kW)": {

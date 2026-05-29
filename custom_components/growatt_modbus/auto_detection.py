@@ -486,7 +486,7 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
         5201: 'min_7000_10000_tl_x_v201', # MIN 7-10KTL-X/X2
 
         # MOD/MID-XH series — Official Growatt DTCs (VPP 2.03 Table 3-1)
-        5400: 'mod_6000_15000tl3_xh_v201', # MOD 3-10KTL3-XH/BP; MID 11-30KTL3-XH; MID 8-15KTL3-XHL/JP
+        5400: 'mid_11000_30000tl3_xh_v201', # MOD 3-10KTL3-XH/BP; MID 11-30KTL3-XH; MID 8-15KTL3-XHL/JP
         5401: 'mod_6000_15000tl3_xh_v201', # MOD 3-15KTL3-HU; MID 33-50KTL3-HU (confirmed scan #228)
 
         # MOD/MID/MAC-X series — grid-tied (no battery, no CT meter) — VPP 2.03 Table 3-1
