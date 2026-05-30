@@ -6,55 +6,35 @@
 
 ---
 
-## v0.9.1b6
+## v0.9.1
 
-- **Fix: `energy_today` rises through the night on SPH hybrid inverters (Issue #307):** The hardware register for `energy_today` (reg 53/54) on SPH/WIT hybrids counts total AC output including battery discharge. The integration normally uses per-MPPT DC registers (solar-only) instead, but the guard condition checked `pv*_energy_today > 0`. After midnight when the daily counters reset to zero, the guard failed and the integration fell back to reg 53/54 — which climbed all night as the battery powered the house. Fixed by checking whether the per-MPPT register *address exists* in the profile (rather than whether its value is non-zero), so the MPPT sum is always used on hybrid profiles and zero at night is correctly reported.
+> ⚠️ **BREAKING CHANGE — affects all users.** `Grid Export Power` and `Grid Import Power` have had their values swapped in all previous versions. After upgrading, each will read the opposite direction. Swap any automations, dashboard cards, or Energy Dashboard slots that reference either sensor. Users with **Invert Grid Power** enabled should also disable it (Settings → Devices & Services → Growatt Modbus → Configure).
 
----
+**New profiles:**
 
-## v0.9.1b5
+- **Growatt 3000–15000TL3-S (Issue #299):** Three-phase grid-tied string inverter (3–15 kW, legacy protocol). PV inputs, per-phase AC output (R/S/T), temperature, energy. Auto-detected via DTC 2049.
 
-- **Fix: Remote Charge/Discharge Power slider rejects negative values (Issue #306):** Register 30409 encodes discharge as a negative percentage (e.g. −80% = 0xFFB0 unsigned). The code was passing the raw negative Python integer to pymodbus, which expects unsigned 16-bit and raised a struct error. Fixed by converting to unsigned two's complement (`value & 0xFFFF`) in `write_register` before the Modbus call, and aligning the read-back verification comparison to match.
+- **MIC 2500–5500MTL-S (Issue #304):** Single-phase dual-string grid-tied (2.5–5.5 kW, legacy V3.05). Second PV string confirmed at regs 7–8. Auto-detected via DTC 210. Inverter rejects block reads — `max_block_size: 1` mode handles this automatically (see fix below).
 
-- **Fix: SPH/SPM 8000-10000TL-HU auto-detection fails (Issue #303):** DTC 21303 (firmware UL2.21) was missing from the DTC map, causing the detection to fall through to register probing. The probing path could misidentify the SPH HU as a MIC micro inverter (the MIC profile has no grid or battery registers, so all power-flow sensors read as zero and derived sensors equalled solar generation). Fixed by mapping DTC 21303 → `sph_8000_10000_hu`.
+- **MID Hybrid (11–30kW) (Issue #313):** MID 11–30KTL3-XH and MID 8–15KTL3-XHL/JP share DTC 5400 with MOD 3–10KTL3-XH and use identical registers. Added as a named manual-selection option ("MID Hybrid (11–30kW)") for MID users. Auto-detection continues to route DTC 5400 to MOD Hybrid.
 
-- **Fix: `house_consumption` equals solar on SPH HU (Issue #303):** Register 1037/1038 (`self_consumption_power`) on UL2.21 reports solar self-consumption, not total house load. The previous fallback used it as a direct house load proxy, bypassing the energy balance. Removed that intermediate step — the integration now goes directly to `solar + discharge − charge + import − export` using the direct grid registers (1015/1016 and 1029/1030), which are correct on UL2.21.
+**Fixes:**
 
----
+- **Breaking fix: `grid_export_power` and `grid_import_power` swapped on all profiles (Issue #302):** Both sensors had inverted formulas in all previous versions. On hybrid profiles the symptom was visible — during import, `grid_export_power` showed the import magnitude. On grid-tied models (MIN, MIC, MID), `grid_export_power` silently read zero. The signed `grid_power` sensor and daily energy sensors were unaffected. Also fixes the setup wizard's grid orientation detection which was enabling **Invert Grid Power** for the wrong case.
 
-## v0.9.1b4
+- **Fix: MIC 2500–5500MTL-S entities all unavailable (Issue #304):** Inverter rejects any Modbus read of more than one register (ExceptionResponse, Illegal Function). Fixed by adding per-profile `max_block_size: 1` support — profiles with this flag use sparse read mode, reading only defined register addresses one at a time. All other profiles unchanged.
 
-- **Fix: Inverter Status shows wrong text on hybrid inverters (Issue #305):** The status sensor was using a single code table for all inverter families. Hybrid inverters use the V1.39 / VPP V2.01 status map where code 5 means "PV On-Grid", not "Standby", and code 1 means "Self-Test", not "Normal". SPF off-grid inverters have their own distinct set. Fixed by selecting the correct table at runtime based on the active profile. Hybrid status codes are now: 0=Waiting, 1=Self-Test, 2=Reserved, 3=Fault, 4=Updating, 5=PV On-Grid, 6=Bat On-Grid, 7=PV+Bat Off-Grid, 8=Bat Off-Grid, 9=Bypass.
+- **Fix: Inverter Status shows wrong text on hybrid inverters (Issue #305):** The status sensor used a single code table for all families. Hybrid inverters use the VPP V2.01 map where code 5 = "PV On-Grid" (not "Standby") and code 1 = "Self-Test" (not "Normal"). Fixed by selecting the correct table at runtime: `STATUS_CODES` for grid-tied, `HYBRID_STATUS_CODES` for hybrid, `SPF_STATUS_CODES` for off-grid.
 
-- **Docs: corrected legacy storage register 1000 status description** — previously showed `0x05-0x08=Normal`; now lists each code individually to match VPP register 31000.
+- **Fix: SPH/SPM 8000–10000TL-HU auto-detection fails (Issue #303):** DTC 21303 (firmware UL2.21) was missing from the DTC map, causing fallthrough to register probing which could misidentify the SPH HU as a MIC. Fixed by mapping DTC 21303 → `sph_8000_10000_hu`.
 
----
+- **Fix: `house_consumption` returns solar generation on SPH/SPM HU (Issue #303):** The HU variant does not populate `power_to_load`. The fallback to `self_consumption_power` (reg 1037/1038) was wrong — on UL2.21 it reports solar self-consumption, not total house load. Removed the intermediate step; integration now goes directly to `solar + discharge − charge + import − export`.
 
-## v0.9.1b3
+- **Fix: Remote Charge/Discharge Power slider rejects negative values (Issue #306):** Register 30409 encodes discharge as negative (e.g. −80% = 0xFFB0). Code was passing a raw negative Python int to pymodbus (expects unsigned 16-bit). Fixed with `value & 0xFFFF` conversion and aligned read-back verification.
 
-- **Fix: MIC 2500-5500MTL-S entities all unavailable (Issue #304):** The inverter rejects any Modbus read of more than one register at a time (ExceptionResponse, Illegal Function). Fixed by adding per-profile `max_block_size` support to the coordinator. Profiles that set `max_block_size: 1` now use sparse read mode — only the specific register addresses defined in the profile are read, skipping all gaps between them. All other profiles continue using the original 125-register block reads unchanged.
+- **Fix: `energy_today` rises through the night on SPH hybrid inverters (Issue #307):** Register 53/54 counts total AC output including battery discharge. The integration uses per-MPPT registers instead, but the guard checked `pv*_energy_today > 0` — after midnight reset all MPPT values are 0, the guard failed, and the code fell back to reg 53/54 which climbed all night. Fixed by gating on register address existence, not value; the MPPT sum is always used on hybrid profiles.
 
----
-
-## v0.9.1b2
-
-- **New profile: Growatt 3000-15000TL3-S (Issue #299):** Added support for the TL3-S three-phase grid-tied string inverter (3–15 kW, legacy protocol). Register layout confirmed from a full device scan — PV inputs, per-phase AC output (R/S/T confirmed by sum crosscheck), temperature, and energy. Auto-detected via DTC 2049. No VPP support.
-
-- **Fix: `house_consumption` mirrors solar on SPM/SPH HU variants (Issue #303):** The HU variant does not populate `power_to_load` or `power_to_user`, causing the fallback to collapse to `load = solar`. Fixed with a full energy balance: `load = solar + discharge − charge + import − export`. Correctly computes real house load on HU models with active battery and grid.
-
-- **New profile: MIC 2500-5500MTL-S (Issue #304):** Added support for the MIC 2500–5500MTL-S single-phase dual-string grid-tied inverter family (legacy V3.05 protocol). Inherits the MIC 600–3300TL-X register map with a confirmed second PV string. Auto-detected via DTC 210. Note: this inverter rejects multi-register Modbus block reads — use `block_size=1` with the Universal Scanner.
-
----
-
-## v0.9.1b1
-
-We apologise for this one. The `Grid Export Power` and `Grid Import Power` sensors have had their values swapped since they were introduced — every user has been seeing export labelled as import and vice versa. The bug was in the formula that splits the signed grid power value into its two always-positive halves. The signed `Grid Power` sensor and all daily energy sensors were unaffected. We only caught it because a user noticed it on a hybrid inverter where both directions are active (Issue #302). Grid-tied string inverter users (MIN, MID, MIC) were also affected but less obviously — those inverters only export during the day, so `Grid Export Power` silently read zero while `Grid Import Power` carried the export value. Both are now correct.
-
-> ⚠️ **BREAKING CHANGE — affects all users.** After upgrading, `Grid Export Power` and `Grid Import Power` will read the opposite value to before. Swap any automations, dashboard cards, or energy dashboard slots that reference either sensor. Users with **Invert Grid Power** enabled should also disable it (Settings → Devices & Services → Growatt Modbus → Configure) — it was incorrectly set by auto-detection in previous versions.
-
-- **Breaking fix: `grid_export_power` and `grid_import_power` swapped on all profiles (Issue #302):** The two always-positive derived power sensors had their formulas inverted in all previous versions. On hybrid profiles (SPH, MOD, WIT) the symptom was visible: during grid import, `grid_export_power` showed the import magnitude while `grid_import_power` read zero. On grid-tied string inverters (MIN, MIC, MID), `grid_export_power` silently read zero and `grid_import_power` showed the export value under the wrong name. The signed `grid_power` sensor and the daily energy sensors (`Energy to Grid Today`, `Grid Import Energy Today`) were unaffected.
-
-- **Fix: `invert_grid_power` auto-detection was enabling inversion for the wrong case:** The setup wizard's grid orientation detection returned the wrong result — it enabled inversion when it detected positive = export (the correct convention) and disabled it when it detected negative = export (the case that actually needs correction). Existing users with the flag incorrectly enabled should disable it via Configure.
+- **Fix: MID 15–25kW PV3 missing from base profile (Issue #313):** Base profile `MID_15000_25000TL3_X` was missing PV3 registers 11–14. Confirmed from the Issue #313 scan. MID models with a third MPPT string now show `pv3_voltage`, `pv3_current`, and `pv3_power` on both base and V2.01 profiles.
 
 ---
 
