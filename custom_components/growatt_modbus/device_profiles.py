@@ -402,11 +402,12 @@ INVERTER_PROFILES = {
         "description": "Three-phase commercial inverter (15-25kW)",
         "register_map": "MID_15000_25000TL3_X",
         "phases": 3,
-        "has_pv3": False,
+        "has_pv3": True,   # PV3 at regs 11-14 confirmed in Issue #313 scan; added to base profile
         "has_battery": False,
         "max_power_kw": 25.0,
         "sensors": (
             BASIC_PV_SENSORS |
+            PV3_SENSORS |
             THREE_PHASE_SENSORS |
             ENERGY_SENSORS |
             GRID_SENSORS |
@@ -665,6 +666,24 @@ INVERTER_PROFILES = {
         "sensors": HYBRID_3P_SENSORS | PV3_SENSORS,
     },
 
+    # MID 11-30KTL3-XH / MID 8-15KTL3-XHL/JP — three-phase commercial hybrid
+    # DTC 5400 covers MOD 3-10KTL3-XH, MID 11-30KTL3-XH, and MID 8-15KTL3-XHL/JP.
+    # All share the same register layout, so this profile uses the MOD_6000_15000TL3_XH
+    # register map unchanged. Auto-detection routes DTC 5400 to mod_6000_15000tl3_xh_v201
+    # (preserving entity IDs for existing users); this profile exists as a correctly-named
+    # manual-selection option for MID users who want the MID branding in HA.
+    "mid_11000_30000tl3_xh_v201": {
+        "name": "MID 11-30KTL3-XH",
+        "description": "Three-phase commercial hybrid inverter (11-30kW) with VPP Protocol V2.01",
+        "register_map": "MOD_6000_15000TL3_XH",
+        "protocol_version": "v2.01",
+        "phases": 3,
+        "has_pv3": True,
+        "has_battery": True,
+        "max_power_kw": 30.0,
+        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS,
+    },
+
     # ========================================================================
     # WIT SERIES - Three-Phase Hybrid with Advanced Storage
     # ========================================================================
@@ -799,6 +818,14 @@ PROFILE_DISPLAY_NAMES = {
         "base": "mod_6000_15000tl3_xh",
         "v201": "mod_6000_15000tl3_xh_v201",
         "description": "Three-phase hybrid with battery",
+    },
+    "MID Hybrid (11-30kW)": {
+        # MID 11-30KTL3-XH and MID 8-15KTL3-XHL/JP share DTC 5400 with MOD and
+        # use identical registers. This manual-selection option provides correct
+        # MID branding; auto-detection still maps DTC 5400 → mod_6000_15000tl3_xh_v201.
+        "base": "mid_11000_30000tl3_xh_v201",
+        "v201": "mid_11000_30000tl3_xh_v201",
+        "description": "Three-phase hybrid with battery (MID 11-30kW)",
     },
     "SPH-TL3 (3-10kW)": {
         "base": "sph_tl3_3000_10000",

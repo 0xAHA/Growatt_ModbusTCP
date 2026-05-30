@@ -27,7 +27,15 @@ MID_15000_25000TL3_X = {
         8: {'name': 'pv2_current', 'scale': 0.1, 'unit': 'A'},
         9: {'name': 'pv2_power_high', 'scale': 1, 'unit': '', 'pair': 10},
         10: {'name': 'pv2_power_low', 'scale': 1, 'unit': '', 'pair': 9, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        
+
+        # PV String 3 — confirmed present on MID models with 3 MPPT inputs (Issue #313 scan).
+        # Same register layout used by MOD and SPH-TL3 (regs 11-14 for PV3).
+        # The V2.01 profile additionally exposes PV3 via VPP registers 31018-31021.
+        11: {'name': 'pv3_voltage', 'scale': 0.1, 'unit': 'V'},
+        12: {'name': 'pv3_current', 'scale': 0.1, 'unit': 'A'},
+        13: {'name': 'pv3_power_high', 'scale': 1, 'unit': '', 'pair': 14},
+        14: {'name': 'pv3_power_low', 'scale': 1, 'unit': '', 'pair': 13, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
         # Output Power
         35: {'name': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36},
         36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W'},
