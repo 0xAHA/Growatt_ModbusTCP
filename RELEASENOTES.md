@@ -4,6 +4,29 @@
 
 ---
 
+## v0.9.2
+
+Issues: #311 (PR)
+
+- **Feature: Battery First and Grid First SOC limit controls on MIN TL-XH (PR #311):**
+  Two new writable number controls are now available on MIN TL-XH profiles (registers
+  confirmed against the V1.39 protocol document):
+  - `batt_first_charge_stopped_soc` (holding 3048, 0–100%): SOC level at which the inverter
+    stops charging the battery when running in Battery First mode.
+  - `grid_first_discharge_stopped_soc` (holding 3067, 1–100%): SOC level at which the inverter
+    stops discharging the battery when running in Grid First mode. Note: V1.39 marks this
+    register as US-model only, added in firmware ZACA-08/UEAA-09.
+  - `batt_first_charge_power_rate` (holding 3047, 1–100%): the charge power rate control
+    previously available on MOD/MID profiles is now also enabled for TL-XH.
+
+- **Feature: Grid Connection Status sensor (PR #311):**
+  A new text sensor `grid_connection_status` is available on hybrid profiles that include the
+  VPP equipment status register (31000): SPH, SPM, MOD, MIN TL-XH, WIT, SPA, SPE, MID V2.01.
+  Reports On-grid (status codes 5–6), Off-grid (7–8), Unknown, or Offline. Appears under the
+  Grid device.
+
+---
+
 ## v0.9.1
 
 Issues: #299, #302, #303, #304, #305, #306, #307, #313
