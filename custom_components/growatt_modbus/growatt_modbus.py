@@ -243,6 +243,8 @@ class GrowattData:
         
     # Diagnostics
     status: int = 0                   # Inverter status
+    equipment_status: int = 0         # VPP hybrid equipment status (reg 31000); see equipment_status_valid
+    equipment_status_valid: bool = False  # True when reg 31000 was read from the active profile
     derating_mode: int = 0
     fault_code: int = 0
     warning_code: int = 0
@@ -304,7 +306,9 @@ class GrowattData:
     allow_grid_charge: int = 0
     # MOD GEN4 power rate limits per priority mode
     grid_first_discharge_power_rate: int = 0  # 0-100% discharge rate when Grid First (register 3036)
-    batt_first_charge_power_rate: int = 0     # 0-100% charge rate when Battery First (register 3047)
+    batt_first_charge_power_rate: int = 0      # 0-100% charge rate when Battery First (register 3047)
+    batt_first_charge_stopped_soc: int = 0     # SOC % to stop charging in Battery First mode (register 3048)
+    grid_first_discharge_stopped_soc: int = 0  # SOC % to stop discharging in Grid First mode (register 3067)
 
     time_period_1_enable: int = 0     # 0=Disabled, 1=Enabled
     time_period_1_start: int = 0      # hex-packed (hours*256+minutes, e.g. 06:00 = 0x0600 = 1536)
@@ -1167,7 +1171,11 @@ class GrowattModbus:
         try:
             # Status
             data.status = int(self._get_register_value(min_addr) or 0)
-            
+            equipment_status_addr = self._find_register_by_name('equipment_status')
+            if equipment_status_addr:
+                data.equipment_status = int(self._get_register_value(equipment_status_addr) or 0)
+                data.equipment_status_valid = True
+
             # PV String 1
             pv1_voltage_addr = self._find_register_by_name('pv1_voltage')
             pv1_current_addr = self._find_register_by_name('pv1_current')
@@ -2833,6 +2841,26 @@ class GrowattModbus:
                     logger.debug("[MOD CTRL] batt_first_charge_power_rate=%s%%", data.batt_first_charge_power_rate)
             except Exception as e:
                 logger.debug(f"Could not read batt_first_charge_power_rate register 3047: {e}")
+
+        # TL-XH / MOD Battery First charge stopped SOC (register 3048)
+        if 3048 in holding_map:
+            try:
+                bfcs_regs = self.read_holding_registers(3048, 1)
+                if bfcs_regs is not None and len(bfcs_regs) >= 1:
+                    data.batt_first_charge_stopped_soc = int(bfcs_regs[0])
+                    logger.debug("[TL-XH CTRL] batt_first_charge_stopped_soc=%s%%", data.batt_first_charge_stopped_soc)
+            except Exception as e:
+                logger.debug(f"Could not read batt_first_charge_stopped_soc register 3048: {e}")
+
+        # TL-XH Grid First discharge stopped SOC (register 3067; US model / firmware ZACA-08+)
+        if 3067 in holding_map:
+            try:
+                gfds_regs = self.read_holding_registers(3067, 1)
+                if gfds_regs is not None and len(gfds_regs) >= 1:
+                    data.grid_first_discharge_stopped_soc = int(gfds_regs[0])
+                    logger.debug("[TL-XH CTRL] grid_first_discharge_stopped_soc=%s%%", data.grid_first_discharge_stopped_soc)
+            except Exception as e:
+                logger.debug(f"Could not read grid_first_discharge_stopped_soc register 3067: {e}")
 
         # MOD TL3-XH TOU slots 5-9 (registers 3050-3059)
         if 3050 in holding_map:

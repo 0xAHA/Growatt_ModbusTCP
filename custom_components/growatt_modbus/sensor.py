@@ -896,6 +896,11 @@ SENSOR_DEFINITIONS = {
         "icon": "mdi:information",
         "attr": "status",
     },
+    "grid_connection_status": {
+        "name": "Grid Connection Status",
+        "icon": "mdi:transmission-tower",
+        "attr": "calculated",
+    },
     "last_update": {
         "name": "Last Update",
         "icon": "mdi:clock-outline",
@@ -1463,7 +1468,23 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                         dt = dt.replace(tzinfo=timezone.utc)
                     return dt
                 return None
-            
+
+            elif self._sensor_key == "grid_connection_status":
+                if not self.coordinator.is_online:
+                    return "Offline"
+                # Use VPP equipment_status (reg 31000) when available in the active profile.
+                # equipment_status_valid distinguishes "register present but reads 0 (Standby)"
+                # from "register not in this profile" — both yield equipment_status=0 otherwise.
+                if data.equipment_status_valid:
+                    status = data.equipment_status
+                else:
+                    status = data.status
+                if status in (5, 6):
+                    return "On-grid"
+                if status in (7, 8):
+                    return "Off-grid"
+                return "Unknown"
+
             return None
 
         # MIN TL-XH energy_today register (3049/3050) can represent total system AC

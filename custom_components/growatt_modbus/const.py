@@ -121,7 +121,7 @@ SENSOR_TYPES = {
     ],
 
     # Status sensors - show "offline" when not responding
-    'status': ['status', 'derating_mode', 'fault_code', 'warning_code',
+    'status': ['status', 'grid_connection_status', 'derating_mode', 'fault_code', 'warning_code',
                'priority_mode', 'battery_derating_mode'],
 }
 
@@ -536,6 +536,20 @@ WRITABLE_REGISTERS = {
         'unit': '%',
         'desc': 'Charge power rate when Battery First mode (1-100%)'
     },
+    'batt_first_charge_stopped_soc': {
+        'register': 3048,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'SOC to stop charging when Battery First mode is active (V1.39)'
+    },
+    'grid_first_discharge_stopped_soc': {
+        'register': 3067,
+        'scale': 1,
+        'valid_range': (1, 100),
+        'unit': '%',
+        'desc': 'SOC to stop discharging when Grid First mode is active (V1.39: US model / firmware ZACA-08+)'
+    },
 
     # MOD GEN4 grid-charge prerequisite gate (must be Enabled for TOU writes to persist)
     'allow_grid_charge': {
@@ -649,6 +663,7 @@ SENSOR_DEVICE_MAP = {
     # Grid device - grid connection and import/export
     DEVICE_TYPE_GRID: {
         'grid_power', 'grid_export_power', 'grid_import_power',
+        'grid_connection_status',
         'grid_energy_today', 'grid_energy_total',
         'grid_import_energy_today', 'grid_import_energy_total',
         'energy_to_grid_today', 'energy_to_grid_total',
