@@ -6,6 +6,14 @@
 
 ---
 
+## v0.9.3
+
+- **Fix: TCP receive buffer flush on reconnect (Issue #317):** After an HA restart, RS485-to-TCP adapters that buffer stale responses from a previous session caused repeated transaction ID mismatch errors. The integration now drains the adapter's receive buffer immediately after each `connect()` call.
+
+- **Fix: Grid Connection Status shows Unknown on WIT inverters (Issue #319):** Added VPP register 31000 (`equipment_status`) to the WIT profile. Improved fallback logic so profiles without register 31000 correctly report "On-grid" for legacy status codes 0 (Waiting) and 1 (Normal).
+
+---
+
 ## v0.9.2
 
 - **Feature: Battery First / Grid First SOC limit controls on MIN TL-XH (PR #311):** Two new number controls confirmed against V1.39: `batt_first_charge_stopped_soc` (H3048, 0–100%) stops charging at a set SOC in Battery First mode; `grid_first_discharge_stopped_soc` (H3067, 1–100%) stops discharging at a set SOC in Grid First mode (V1.39: US model / firmware ZACA-08+). `batt_first_charge_power_rate` (H3047) is now also available on TL-XH (was MOD/MID only). All appear as sliders under the Battery device.

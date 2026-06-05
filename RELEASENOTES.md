@@ -4,6 +4,14 @@
 
 ---
 
+## v0.9.3
+
+Issues: #317, #319
+
+- **Fix: TCP receive buffer flush on reconnect (Issue #317):** RS485-to-TCP adapters can buffer stale Modbus responses from a previous connection session. After an HA restart, pymodbus starts with a fresh transaction counter; the adapter's buffered old responses (with high IDs from the prior session) caused repeated transaction ID mismatch errors on every register read until the buffer drained naturally. The integration now drains the adapter's receive buffer immediately after each `connect()` call, clearing stale responses before the first request is sent.
+
+- **Fix: Grid Connection Status shows Unknown on WIT inverters (Issue #319):** The WIT profile was missing VPP register 31000 (`equipment_status`), causing the sensor to fall back to the legacy `inverter_status` code. The fallback logic only recognised V2.01 codes (5/6/7/8) and not the legacy codes (0=Waiting, 1=Normal), so WIT inverters always showed "Unknown". Fixed by adding register 31000 to the WIT VPP profile, and improving the fallback mapping for any profile without register 31000 (0/1 now maps to "On-grid").
+
 ## v0.9.2
 
 Issues: #311 (PR)

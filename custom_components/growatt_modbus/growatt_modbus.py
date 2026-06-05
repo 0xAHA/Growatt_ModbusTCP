@@ -522,13 +522,70 @@ class GrowattModbus:
             result = self.client.connect()
             if result:
                 logger.info(f"[{self.register_map['name']}@{self.connection_id}] Successfully connected")
+                self._flush_receive_buffer()
             else:
                 logger.error(f"[{self.register_map['name']}@{self.connection_id}] Failed to connect")
             return result
         except Exception as e:
             logger.error(f"[{self.register_map['name']}@{self.connection_id}] Connection error: {e}")
             return False
-    
+
+    def _flush_receive_buffer(self) -> None:
+        """Drain stale Modbus TCP responses from the adapter's receive buffer after reconnect.
+
+        RS485-to-TCP adapters buffer late responses from a previous connection session.
+        When pymodbus restarts with a fresh transaction counter (e.g. after an HA restart),
+        the old high-ID responses sitting in the adapter's buffer cause repeated
+        transaction ID mismatches on every read until the buffer is drained (Issue #317).
+
+        This method reads and discards all pending bytes on the socket immediately after
+        connect() succeeds, before the first real request is sent.
+        """
+        if self.connection_type != 'tcp':
+            return
+
+        # Locate the underlying socket — attribute name varies by pymodbus version
+        sock = getattr(self.client, 'socket', None)
+        if sock is None:
+            # pymodbus 3.4+ wraps in a transport; try common attribute paths
+            transport = getattr(self.client, 'transport', None)
+            if transport is not None:
+                sock = getattr(transport, 'socket', None) or getattr(transport, '_sock', None)
+
+        if sock is None:
+            logger.debug(
+                "[%s@%s] _flush_receive_buffer: socket not accessible (pymodbus transport abstraction)",
+                self.register_map['name'], self.connection_id
+            )
+            return
+
+        try:
+            original_timeout = sock.gettimeout()
+            sock.settimeout(0)  # non-blocking
+            discarded = 0
+            try:
+                while True:
+                    chunk = sock.recv(4096)
+                    if not chunk:
+                        break
+                    discarded += len(chunk)
+            except (BlockingIOError, OSError):
+                pass  # no more data — expected
+            finally:
+                sock.settimeout(original_timeout)
+
+            if discarded:
+                logger.debug(
+                    "[%s@%s] Flushed %d stale bytes from receive buffer after reconnect "
+                    "(adapter had buffered responses from a previous session)",
+                    self.register_map['name'], self.connection_id, discarded
+                )
+        except Exception as e:
+            logger.debug(
+                "[%s@%s] Receive buffer flush failed (non-critical): %s",
+                self.register_map['name'], self.connection_id, e
+            )
+
     def disconnect(self):
         """Close connection and release resources (critical for preventing file descriptor leaks)"""
         if self.client:

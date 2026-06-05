@@ -1476,14 +1476,22 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 # equipment_status_valid distinguishes "register present but reads 0 (Standby)"
                 # from "register not in this profile" — both yield equipment_status=0 otherwise.
                 if data.equipment_status_valid:
+                    # V2.01 equipment_status (reg 31000): 5/6=On-grid, 7/8=Off-grid/EPS
                     status = data.equipment_status
+                    if status in (5, 6):
+                        return "On-grid"
+                    if status in (7, 8):
+                        return "Off-grid"
+                    return "Unknown"
                 else:
+                    # Legacy inverter_status (reg 0): 0=Waiting, 1=Normal, 3=Fault
+                    # For all grid-tied/hybrid profiles 0 (idle) and 1 (normal) both
+                    # indicate a grid connection — distinguish from off-grid is not possible
+                    # without equipment_status.
                     status = data.status
-                if status in (5, 6):
-                    return "On-grid"
-                if status in (7, 8):
-                    return "Off-grid"
-                return "Unknown"
+                    if status in (0, 1):
+                        return "On-grid"
+                    return "Unknown"
 
             return None
 

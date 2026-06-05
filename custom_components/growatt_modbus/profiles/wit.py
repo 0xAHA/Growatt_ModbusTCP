@@ -167,6 +167,14 @@ WIT_4000_15000TL3 = {
         8107: {'name': 'extra_energy_total_low', 'scale': 1, 'unit': '', 'pair': 8106, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # ============================================================================
+        # VPP SYSTEM STATUS (31000): Equipment Running Status
+        # ============================================================================
+        # V2.01 equipment_status — same register as MOD/SPH/MIN TL-XH VPP family.
+        # 0=Standby, 1=Normal, 2=Fault, 5=On-grid, 6=On-grid (export limited),
+        # 7=Off-grid/EPS, 8=Bypass. Used by grid_connection_status sensor (Issue #319).
+        31000: {'name': 'equipment_status', 'scale': 1, 'unit': '', 'desc': 'Equipment running status (V2.01)'},
+
+        # ============================================================================
         # VPP BATTERY RANGE (31200-31323): Battery Cluster Data
         # ============================================================================
         # Per VPP Protocol V2.02: Battery power and energy data
