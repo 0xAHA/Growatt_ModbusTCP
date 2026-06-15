@@ -259,6 +259,7 @@ class GrowattData:
     export_limit_power: int = 0       # 0-1000 (0-100.0%)
     export_limit_failed_power_rate: int = 0       # 0-1000 raw (×0.1 = 0-100%); fallback output power cap when export limit fails
     active_power_rate: int = 100      # 0-100 (max output power %)
+    export_limit_w: int = 0           # WIT holding reg 203: export limit in watts (0=zero export)
 
     # SPH/SPM Battery Control registers (1000+ range)
     priority_mode: int = 0            # 0=Load First, 1=Battery First, 2=Grid First
@@ -1638,7 +1639,7 @@ class GrowattModbus:
                 logger.debug(f"{tag} is_socket_open() returned: {socket_is_open}")
 
                 if not socket_is_open:
-                    logger.warning(f"{tag} Socket not open, attempting reconnect...")
+                    logger.debug(f"{tag} Socket not open, attempting reconnect...")
                     if not self.connect():
                         raise ModbusWriteError(0, [], "Reconnect failed - not connected")
                     logger.info(f"{tag} Reconnect successful, proceeding with write")
@@ -2639,6 +2640,16 @@ class GrowattModbus:
                     logger.debug("[POWER CTRL] Read active_power_rate: %s%%", data.active_power_rate)
             except Exception as e:
                 logger.debug(f"Could not read active_power_rate register: {e}")
+
+        # --- WIT Export Limit W (holding 203) ---
+        if 203 in holding_map:
+            try:
+                export_w_regs = self.read_holding_registers(203, 1)
+                if export_w_regs is not None and len(export_w_regs) >= 1:
+                    data.export_limit_w = int(export_w_regs[0])
+                    logger.debug("[WIT CTRL] Read export_limit_w: %dW", data.export_limit_w)
+            except Exception as e:
+                logger.debug(f"Could not read export_limit_w register 203: {e}")
 
         # --- Export Limit Fallback Power Rate (holding 3000, TL-X / TL-XH) ---
         if 3000 in holding_map:

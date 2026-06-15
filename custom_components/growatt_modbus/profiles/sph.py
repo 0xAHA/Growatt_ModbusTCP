@@ -45,6 +45,16 @@ SPH_3000_6000 = {
         1014: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery state of charge'},
         1040: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature'},
 
+        # Power Flow — grid import/export and load (Issue #326)
+        1015: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 1016, 'desc': 'Power to user (grid import when positive)'},
+        1016: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 1015, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1021: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'Total load power consumption'},
+        1022: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1029: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 1030, 'desc': 'AC power to grid total (positive=export)'},
+        1030: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 1029, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        1037: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 1038},
+        1038: {'name': 'self_consumption_power_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
         # AC Output
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
         38: {'name': 'ac_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Grid voltage'},
@@ -262,6 +272,16 @@ SPH_7000_10000 = {
         1013: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery voltage (Vbat)'},
         1014: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery state of charge'},
         1040: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature'},
+
+        # Power Flow — grid import/export and load (Issue #326)
+        1015: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 1016, 'desc': 'Power to user (grid import when positive)'},
+        1016: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 1015, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1021: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'Total load power consumption'},
+        1022: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1029: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 1030, 'desc': 'AC power to grid total (positive=export)'},
+        1030: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 1029, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        1037: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 1038},
+        1038: {'name': 'self_consumption_power_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         # AC Output
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},

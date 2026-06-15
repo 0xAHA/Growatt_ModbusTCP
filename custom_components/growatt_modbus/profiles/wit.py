@@ -25,7 +25,7 @@ WIT_4000_15000TL3 = {
 
         # PV Total Power (32-bit)
         1: {'name': 'pv_total_power_high', 'scale': 1, 'unit': '', 'pair': 2},
-        2: {'name': 'pv_total_power_low', 'scale': 1, 'unit': '', 'pair': 1, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        2: {'name': 'pv_total_power_low', 'scale': 1, 'unit': '', 'pair': 1, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
         # PV String 1
         3: {'name': 'pv1_voltage', 'scale': 0.1, 'unit': 'V'},
