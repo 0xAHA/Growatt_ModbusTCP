@@ -406,7 +406,10 @@ MIN_TL_XH_3000_10000_V201 = {
         30200: {'name': 'export_limit_enable',     'scale': 1,   'unit': '', 'access': 'RW'},
         30201: {'name': 'export_limit_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW'},
 
-        # EMS controls — Battery First / Grid First power and SOC limits (V1.39, PR #311)
+        # EMS controls — Priority mode and Battery First / Grid First power and SOC limits (V1.39, Issues #311)
+        # Register 3018: hardware-confirmed on MIN 4200TL-XH (0=Load First, 2=Battery First, 3=Grid First)
+        3018: {'name': 'tl_xh_priority_mode', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Priority mode (0=Load First, 2=Battery First, 3=Grid First — hardware confirmed MIN TL-XH)'},
         3047: {'name': 'batt_first_charge_power_rate',    'scale': 1, 'unit': '%', 'access': 'RW',
                'valid_range': (1, 100), 'desc': 'Charge power rate when Battery First mode (1-100%)'},
         3048: {'name': 'batt_first_charge_stopped_soc',   'scale': 1, 'unit': '%', 'access': 'RW',

@@ -8,6 +8,10 @@
 
 ## v0.9.4
 
+- **Feature: MIN TL-XH priority mode control (Issue #311):** Register 3018 hardware-confirmed on MIN 4200TL-XH: Load First (0), Battery First (2), Grid First (3). Appears as a select entity under the Battery device.
+
+- **Fix: WIT `battery_voltage_bms` reads 1/10th of actual (Issue #323):** Register 8095 scale corrected from 0.1 to 1 — WIT/JK BMS returns whole volts, not tenths.
+
 - **Fix: WIT `solar_total_power` spikes to 429 MW (Issue #323):** 32-bit unsigned overflow when the inverter sends a small negative value at night. Register pair regs 1–2 now treated as signed — resolves to ≈ −0.1 W instead of 429,496,729.5 W.
 
 - **Fix: WIT `vpp_export_limit_w` entity always Unknown (Issue #323):** Holding register 203 was defined in the WIT profile but never read. Now polled each cycle and stored; the number entity shows the current export limit and accepts writes.

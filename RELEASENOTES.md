@@ -6,7 +6,13 @@
 
 ## v0.9.4
 
-Issues: #323, #326, #327
+Issues: #311, #323, #326, #327
+
+- **Feature: MIN TL-XH priority mode control (Issue #311):**
+  Register 3018 (`tl_xh_priority_mode`) hardware-confirmed on MIN 4200TL-XH: write 0 → Load First, 2 → Battery First, 3 → Grid First (default). Appears as a select entity under the Battery device on `MIN_TL_XH_3000_10000_V201` profiles. Note: value 1 is not a valid priority mode on this hardware (V1.39 maps it as a system topology setting).
+
+- **Fix: WIT `battery_voltage_bms` reads 1/10th of actual (Issue #323):**
+  Register 8095 (`battery_voltage_bms`) on WIT inverters with JK BMS returns whole volts (e.g., raw 54 at 54.0 V). The previous `scale: 0.1` was producing readings of 5.4 V. Scale corrected to `1`.
 
 - **Fix: WIT `solar_total_power` spikes to 429 MW (Issue #323):**
   The WIT `pv_total_power` 32-bit register pair (regs 1–2) was missing `signed: True`. When the
