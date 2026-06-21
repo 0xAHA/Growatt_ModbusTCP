@@ -1,3 +1,5 @@
+<a href="https://www.buymeacoffee.com/0xAHA" target="_blank"><img src="docs/images/qr-code-buymeacoffee.png" alt="Buy Me A Coffee QR code" width="130" align="right"></a>
+
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
@@ -6,12 +8,6 @@
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
 <a href="https://www.buymeacoffee.com/0xAHA" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
-
-<details>
-<summary>☕ Scan to support</summary>
-<br>
-<img src="docs/images/qr-code-buymeacoffee.png" alt="Buy Me A Coffee QR code" width="160">
-</details>
 
 A native Home Assistant integration for Growatt solar inverters using **direct Modbus RTU/TCP communication**. Real-time data straight from your inverter — no cloud, no ShineWiFi, no dependency on Growatt's servers.
 
