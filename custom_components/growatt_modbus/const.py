@@ -529,6 +529,16 @@ WRITABLE_REGISTERS = {
         'unit': '%',
         'desc': 'Discharge power rate when Grid First mode (1-100%)'
     },
+    'tl_xh_priority_mode': {
+        'register': 3018,
+        'scale': 1,
+        'options': {
+            0: 'Load First',
+            2: 'Battery First',
+            3: 'Grid First',
+        },
+        'desc': 'Priority mode — hardware-confirmed on MIN TL-XH (Issue #311)'
+    },
     'batt_first_charge_power_rate': {
         'register': 3047,
         'scale': 1,

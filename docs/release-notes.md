@@ -6,6 +6,22 @@
 
 ---
 
+## v0.9.4
+
+- **Feature: MIN TL-XH priority mode control (Issue #311):** Register 3018 hardware-confirmed on MIN 4200TL-XH: Load First (0), Battery First (2), Grid First (3). Appears as a select entity under the Battery device.
+
+- **Fix: WIT `battery_voltage_bms` reads 1/10th of actual (Issue #323):** Register 8095 scale corrected from 0.1 to 1 — WIT/JK BMS returns whole volts, not tenths.
+
+- **Fix: WIT `solar_total_power` spikes to 429 MW (Issue #323):** 32-bit unsigned overflow when the inverter sends a small negative value at night. Register pair regs 1–2 now treated as signed — resolves to ≈ −0.1 W instead of 429,496,729.5 W.
+
+- **Fix: WIT `vpp_export_limit_w` entity always Unknown (Issue #323):** Holding register 203 was defined in the WIT profile but never read. Now polled each cycle and stored; the number entity shows the current export limit and accepts writes.
+
+- **Fix: Grid import/export and load sensors missing on SPH 3/6kW and 7/10kW (Issue #326):** Power-flow registers 1015–1038 were present in `SPH_8000_10000_HU` and V2.01 profiles but absent from `SPH_3000_6000` and `SPH_7000_10000`. Both base profiles now include `power_to_user`, `power_to_load`, `power_to_grid`, and `self_consumption_power`.
+
+- **Fix: Spurious WARNING log before every control write (Issue #327):** "Socket not open, attempting reconnect" downgraded from WARNING to DEBUG — the socket closing between read cycles is by design, not a fault.
+
+---
+
 ## v0.9.3
 
 - **Fix: TCP receive buffer flush on reconnect (Issue #317):** After an HA restart, RS485-to-TCP adapters that buffer stale responses from a previous session caused repeated transaction ID mismatch errors. The integration now drains the adapter's receive buffer immediately after each `connect()` call.

@@ -259,6 +259,7 @@ class GrowattData:
     export_limit_power: int = 0       # 0-1000 (0-100.0%)
     export_limit_failed_power_rate: int = 0       # 0-1000 raw (×0.1 = 0-100%); fallback output power cap when export limit fails
     active_power_rate: int = 100      # 0-100 (max output power %)
+    export_limit_w: int = 0           # WIT holding reg 203: export limit in watts (0=zero export)
 
     # SPH/SPM Battery Control registers (1000+ range)
     priority_mode: int = 0            # 0=Load First, 1=Battery First, 2=Grid First
@@ -307,6 +308,7 @@ class GrowattData:
     # MOD GEN4 power rate limits per priority mode
     grid_first_discharge_power_rate: int = 0  # 0-100% discharge rate when Grid First (register 3036)
     batt_first_charge_power_rate: int = 0      # 0-100% charge rate when Battery First (register 3047)
+    tl_xh_priority_mode: int = 3               # MIN TL-XH priority mode: 0=Load First, 2=Battery First, 3=Grid First (register 3018)
     batt_first_charge_stopped_soc: int = 0     # SOC % to stop charging in Battery First mode (register 3048)
     grid_first_discharge_stopped_soc: int = 0  # SOC % to stop discharging in Grid First mode (register 3067)
 
@@ -1638,7 +1640,7 @@ class GrowattModbus:
                 logger.debug(f"{tag} is_socket_open() returned: {socket_is_open}")
 
                 if not socket_is_open:
-                    logger.warning(f"{tag} Socket not open, attempting reconnect...")
+                    logger.debug(f"{tag} Socket not open, attempting reconnect...")
                     if not self.connect():
                         raise ModbusWriteError(0, [], "Reconnect failed - not connected")
                     logger.info(f"{tag} Reconnect successful, proceeding with write")
@@ -2640,6 +2642,16 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read active_power_rate register: {e}")
 
+        # --- WIT Export Limit W (holding 203) ---
+        if 203 in holding_map:
+            try:
+                export_w_regs = self.read_holding_registers(203, 1)
+                if export_w_regs is not None and len(export_w_regs) >= 1:
+                    data.export_limit_w = int(export_w_regs[0])
+                    logger.debug("[WIT CTRL] Read export_limit_w: %dW", data.export_limit_w)
+            except Exception as e:
+                logger.debug(f"Could not read export_limit_w register 203: {e}")
+
         # --- Export Limit Fallback Power Rate (holding 3000, TL-X / TL-XH) ---
         if 3000 in holding_map:
             try:
@@ -2898,6 +2910,16 @@ class GrowattModbus:
                     logger.debug("[MOD CTRL] batt_first_charge_power_rate=%s%%", data.batt_first_charge_power_rate)
             except Exception as e:
                 logger.debug(f"Could not read batt_first_charge_power_rate register 3047: {e}")
+
+        # MIN TL-XH Priority Mode (register 3018: 0=Load First, 2=Battery First, 3=Grid First)
+        if 3018 in holding_map:
+            try:
+                pm_regs = self.read_holding_registers(3018, 1)
+                if pm_regs is not None and len(pm_regs) >= 1:
+                    data.tl_xh_priority_mode = int(pm_regs[0])
+                    logger.debug("[TL-XH CTRL] tl_xh_priority_mode=%s", data.tl_xh_priority_mode)
+            except Exception as e:
+                logger.debug(f"Could not read tl_xh_priority_mode register 3018: {e}")
 
         # TL-XH / MOD Battery First charge stopped SOC (register 3048)
         if 3048 in holding_map:

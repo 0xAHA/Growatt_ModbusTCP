@@ -25,7 +25,7 @@ WIT_4000_15000TL3 = {
 
         # PV Total Power (32-bit)
         1: {'name': 'pv_total_power_high', 'scale': 1, 'unit': '', 'pair': 2},
-        2: {'name': 'pv_total_power_low', 'scale': 1, 'unit': '', 'pair': 1, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        2: {'name': 'pv_total_power_low', 'scale': 1, 'unit': '', 'pair': 1, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
         # PV String 1
         3: {'name': 'pv1_voltage', 'scale': 0.1, 'unit': 'V'},
@@ -155,7 +155,7 @@ WIT_4000_15000TL3 = {
 
         8093: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
         8094: {'name': 'battery_soh', 'scale': 1, 'unit': '%'},
-        8095: {'name': 'battery_voltage_bms', 'scale': 0.1, 'unit': 'V', 'desc': 'BMS reported voltage (more accurate than 8034)'},
+        8095: {'name': 'battery_voltage_bms', 'scale': 1, 'unit': 'V', 'desc': 'BMS reported voltage (more accurate than 8034)'},
 
         # Extra/Parallel inverter output (for multi-inverter systems) - 32-bit pairs
         # These will be 0 for single inverter installations
