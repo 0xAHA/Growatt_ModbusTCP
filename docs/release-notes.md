@@ -10,6 +10,8 @@
 
 - **Fix: WIT `vpp_export_limit_w` write rejected by inverter (Issue #320):** Register 203 only accepts FC16 (Write Multiple Registers); FC06 (Write Single Register) returns Illegal Function. The write now uses the correct function code.
 
+- **Fix: SPH TL3 battery charge/discharge energy sensors always 0 on V2.01 profile (Issue #324):** The battery register range detector scored VPP (31000+) higher than the fallback (1000+) range because it looked for `battery_discharge_today_low` but the SPH TL3 profile names those registers `discharge_energy_today_low`. The fallback range missed the score points, VPP won, and daily energy read from a range where those registers don't exist. Both naming variants are now included in the scoring list.
+
 - **Fix: WIT `battery_voltage_bms` 10× too high on standard BMS firmware (Issue #332):** The v0.9.4 scale change broke OEM BMS users (YE1.0 firmware) while fixing JK BMS users. Scale reverted to 0.1 with runtime auto-detection: if the BMS voltage reads less than 20% of the inverter's own battery voltage, it is automatically multiplied by 10. Both firmware variants now work with no user configuration.
 
 ---

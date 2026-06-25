@@ -2021,12 +2021,16 @@ class GrowattModbus:
             return 'legacy'
 
         # Key sensors to check for valid data (non-zero indicates active range)
+        # Include both naming conventions: battery_*_today_low (most profiles) and
+        # discharge_energy_today_low / charge_energy_today_low (SPH TL3 profile)
         test_sensors = [
             'battery_voltage',
             'battery_soc',
             'battery_power_low',
             'battery_discharge_today_low',
             'battery_charge_today_low',
+            'discharge_energy_today_low',
+            'charge_energy_today_low',
         ]
 
         vpp_score = 0
