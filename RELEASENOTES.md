@@ -4,6 +4,25 @@
 
 ---
 
+## v0.9.5
+
+Issues: #320, #332
+
+- **Fix: WIT `vpp_export_limit_w` write rejected by inverter (Issue #320):**
+  The WIT inverter returns Modbus exception 1 (Illegal Function) when register 203 is written
+  with FC06 (Write Single Register). Register 203 requires FC16 (Write Multiple Registers).
+  The write now uses `write_registers` instead of `write_register`.
+
+- **Fix: WIT `battery_voltage_bms` 10× too high on standard BMS firmware (Issue #332):**
+  The v0.9.4 scale change (0.1 → 1) for register 8095 corrected readings for DIY JK BMS units
+  (which report in whole volts) but broke OEM BMS firmware (YE1.0 etc.) that follows the
+  standard Growatt 0.1 V/LSB convention. The scale is reverted to 0.1 and the integration now
+  auto-detects whole-volt BMS firmware at runtime: if the BMS-reported voltage is less than 20%
+  of the inverter's own battery voltage reading (register 8034), it is automatically multiplied
+  by 10. Both firmware variants are now handled correctly with no user configuration required.
+
+---
+
 ## v0.9.4
 
 Issues: #311, #323, #326, #327

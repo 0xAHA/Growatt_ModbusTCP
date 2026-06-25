@@ -2326,8 +2326,16 @@ class GrowattModbus:
             if addr:
                 value = self._get_register_value(addr)
                 if value is not None:
+                    # Some BMS firmware (e.g. JK BMS DIY) report in whole volts (raw ~54 for 54V)
+                    # while the profile scale of 0.1 assumes tenths (raw ~527 for 52.7V).
+                    # If the result is ~1/10th of battery_voltage (reg 8034, same 0.1 scale),
+                    # multiply by 10 to correct for whole-volt BMS firmware.
+                    if data.battery_voltage > 0 and value > 0 and value < data.battery_voltage * 0.2:
+                        value = round(value * 10, 1)
+                        logger.debug(f"Battery voltage BMS from reg {addr}: whole-volt BMS detected, corrected to {value}V")
+                    else:
+                        logger.debug(f"Battery voltage BMS from reg {addr}: {value}V")
                     setattr(data, 'battery_voltage_bms', value)
-                    logger.debug(f"Battery voltage BMS from reg {addr}: {value}V")
 
             # Battery power (signed: positive=charging, negative=discharging)
             # Use range-aware lookup to respect VPP vs fallback detection

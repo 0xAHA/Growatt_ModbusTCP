@@ -6,6 +6,14 @@
 
 ---
 
+## v0.9.5
+
+- **Fix: WIT `vpp_export_limit_w` write rejected by inverter (Issue #320):** Register 203 only accepts FC16 (Write Multiple Registers); FC06 (Write Single Register) returns Illegal Function. The write now uses the correct function code.
+
+- **Fix: WIT `battery_voltage_bms` 10× too high on standard BMS firmware (Issue #332):** The v0.9.4 scale change broke OEM BMS users (YE1.0 firmware) while fixing JK BMS users. Scale reverted to 0.1 with runtime auto-detection: if the BMS voltage reads less than 20% of the inverter's own battery voltage, it is automatically multiplied by 10. Both firmware variants now work with no user configuration.
+
+---
+
 ## v0.9.4
 
 - **Feature: MIN TL-XH priority mode control (Issue #311):** Register 3018 hardware-confirmed on MIN 4200TL-XH: Load First (0), Battery First (2), Grid First (3). Appears as a select entity under the Battery device.

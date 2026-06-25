@@ -459,10 +459,12 @@ class GrowattWitExportLimitWNumber(CoordinatorEntity, NumberEntity):
         raw_value = int(max(0, min(int(value), 20000)))
         _LOGGER.debug("[WIT] Writing export_limit_w (203) = %d", raw_value)
         try:
+            # WIT inverter rejects FC06 (Write Single Register) on reg 203 with Illegal Function.
+            # Must use FC16 (Write Multiple Registers) instead.
             success = await self.hass.async_add_executor_job(
-                self.coordinator.modbus_client.write_register,
+                self.coordinator.modbus_client.write_registers,
                 203,
-                raw_value,
+                [raw_value],
             )
         except Exception as err:  # noqa: BLE001
             _LOGGER.exception("[WIT] export_limit_w write failed: %s", err)

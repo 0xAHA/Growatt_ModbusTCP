@@ -155,7 +155,7 @@ WIT_4000_15000TL3 = {
 
         8093: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
         8094: {'name': 'battery_soh', 'scale': 1, 'unit': '%'},
-        8095: {'name': 'battery_voltage_bms', 'scale': 1, 'unit': 'V', 'desc': 'BMS reported voltage (more accurate than 8034)'},
+        8095: {'name': 'battery_voltage_bms', 'scale': 0.1, 'unit': 'V', 'desc': 'BMS reported voltage (auto-corrected for whole-volt BMS firmware)'},
 
         # Extra/Parallel inverter output (for multi-inverter systems) - 32-bit pairs
         # These will be 0 for single inverter installations
