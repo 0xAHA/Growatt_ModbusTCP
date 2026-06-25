@@ -1228,8 +1228,12 @@ class GrowattModbus:
 
         # Now extract values using the register map
         try:
-            # Status
-            data.status = int(self._get_register_value(min_addr) or 0)
+            # Status — look up by name rather than assuming it's at min_addr
+            status_addr = self._find_register_by_name('inverter_status') or self._find_register_by_name('status')
+            if status_addr:
+                data.status = int(self._get_register_value(status_addr) or 0)
+            else:
+                data.status = int(self._get_register_value(min_addr) or 0)
             equipment_status_addr = self._find_register_by_name('equipment_status')
             if equipment_status_addr:
                 data.equipment_status = int(self._get_register_value(equipment_status_addr) or 0)

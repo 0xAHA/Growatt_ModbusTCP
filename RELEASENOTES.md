@@ -6,7 +6,14 @@
 
 ## v0.9.5
 
-Issues: #320, #324, #332
+Issues: #316, #320, #324, #332
+
+- **Fix: `inverter_status` entity shows energy total value instead of status code (Issue #316):**
+  The data extraction code used `min_addr` (the lowest register address in the profile) as the
+  status register address, relying on the implicit assumption that the status register is always
+  the profile's first register. This assumption holds for current profiles but is fragile.
+  The status is now looked up by name (`inverter_status` or `status`) via `_find_register_by_name`,
+  eliminating the assumption and making status reading robust to any future register ordering.
 
 - **Fix: WIT `vpp_export_limit_w` write rejected by inverter (Issue #320):**
   The WIT inverter returns Modbus exception 1 (Illegal Function) when register 203 is written
