@@ -6,9 +6,9 @@
 
 ---
 
-## v0.9.6b1 (Beta)
+## v0.9.6
 
-> **Beta release** — WIT TOU schedule entities are new and untested on hardware. Please report any issues on [#331](https://github.com/0xAHA/Growatt_ModbusTCP/issues/331).
+> **Note:** WIT TOU schedule entities are new and untested on hardware. Please report any issues on [#331](https://github.com/0xAHA/Growatt_ModbusTCP/issues/331).
 
 - **Feature: WIT VPP Time-of-Use schedule controls (Issue #331):** Ten TOU periods now exposed as number entities — start time, end time (minutes since midnight), and power level (−100% to +100%, negative = discharge). Setting negative power during peak hours achieves zero grid import within grid regulations. Periods 1–10 supported (30412–30441), written via FC16.
 

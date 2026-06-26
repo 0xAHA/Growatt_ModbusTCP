@@ -4,11 +4,11 @@
 
 ---
 
-## v0.9.6b1 (Beta)
+## v0.9.6
 
 Issues: #331
 
-> **Beta release** — WIT TOU schedule entities are new and untested on hardware.
+> **Note:** WIT TOU schedule entities are new and untested on hardware.
 > Please report any write failures or unexpected inverter behaviour on issue #331.
 
 - **Feature: WIT VPP Time-of-Use schedule controls (Issue #331):**
