@@ -532,7 +532,22 @@ WIT_4000_15000TL3 = {
         30424: {'name': 'vpp_tou_period5_start', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 5 start'},
         30425: {'name': 'vpp_tou_period5_end', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 5 end'},
         30426: {'name': 'vpp_tou_period5_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Period 5 power'},
-        # Periods 6-20 follow same pattern: 30427-30471
+        30427: {'name': 'vpp_tou_period6_start', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 6 start'},
+        30428: {'name': 'vpp_tou_period6_end', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 6 end'},
+        30429: {'name': 'vpp_tou_period6_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Period 6 power'},
+        30430: {'name': 'vpp_tou_period7_start', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 7 start'},
+        30431: {'name': 'vpp_tou_period7_end', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 7 end'},
+        30432: {'name': 'vpp_tou_period7_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Period 7 power'},
+        30433: {'name': 'vpp_tou_period8_start', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 8 start'},
+        30434: {'name': 'vpp_tou_period8_end', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 8 end'},
+        30435: {'name': 'vpp_tou_period8_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Period 8 power'},
+        30436: {'name': 'vpp_tou_period9_start', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 9 start'},
+        30437: {'name': 'vpp_tou_period9_end', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 9 end'},
+        30438: {'name': 'vpp_tou_period9_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Period 9 power'},
+        30439: {'name': 'vpp_tou_period10_start', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 10 start'},
+        30440: {'name': 'vpp_tou_period10_end', 'scale': 1, 'unit': 'min', 'access': 'RW', 'desc': 'Period 10 end'},
+        30441: {'name': 'vpp_tou_period10_power', 'scale': 1, 'unit': '%', 'access': 'RW', 'signed': True, 'desc': 'Period 10 power'},
+        # Periods 11-20 follow same pattern: 30442-30471
 
         # Actual Control Value (Read-only feedback)
         30474: {'name': 'vpp_actual_control_value', 'scale': 1, 'unit': '%', 'access': 'RO',

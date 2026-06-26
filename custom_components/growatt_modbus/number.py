@@ -71,6 +71,13 @@ async def async_setup_entry(
         if 30411 in holding_registers:
             entities.append(GrowattWitVppTouPeriodsNumber(coordinator, config_entry))
 
+        # TOU period schedule entities (periods 1-10, start/end/power each)
+        for _period in range(1, 11):
+            _base = 30412 + (_period - 1) * 3
+            if _base in holding_registers:
+                for _slot in ('start', 'end', 'power'):
+                    entities.append(GrowattWitVppTouPeriodNumber(coordinator, config_entry, _period, _slot))
+
         # NOTE: work_mode is a Select entity (in select.py)
         if entities:
             entry_name = config_entry.data.get("name", config_entry.title)
@@ -774,3 +781,80 @@ class GrowattWitVppTouPeriodsNumber(CoordinatorEntity, NumberEntity):
 
         except Exception as err:  # noqa: BLE001
             _LOGGER.exception("[WIT-VPP] Failed to set TOU periods: %s", err)
+
+
+class GrowattWitVppTouPeriodNumber(CoordinatorEntity, NumberEntity):
+    """WIT VPP TOU period schedule entity.
+
+    Handles start time, end time, or power level for a single TOU period.
+    Periods use minutes-since-midnight for start/end (0–1439) and signed
+    percentage for power (+100 = full charge, -100 = full discharge).
+
+    Registers: base 30412 + (period-1)*3 + slot_offset
+    Writes use FC16 (write_registers) — WIT inverter rejects FC06 on VPP registers.
+    """
+
+    _attr_entity_category = EntityCategory.CONFIG
+
+    _SLOT_META = {
+        'start': {'icon': 'mdi:clock-start',  'unit': 'min', 'min': 0.0, 'max': 1439.0, 'step': 1.0, 'mode': NumberMode.BOX},
+        'end':   {'icon': 'mdi:clock-end',    'unit': 'min', 'min': 0.0, 'max': 1440.0, 'step': 1.0, 'mode': NumberMode.BOX},
+        'power': {'icon': 'mdi:battery-arrow-up-outline', 'unit': '%',   'min': -100.0, 'max': 100.0, 'step': 1.0, 'mode': NumberMode.SLIDER},
+    }
+    _SLOT_OFFSET = {'start': 0, 'end': 1, 'power': 2}
+
+    def __init__(
+        self,
+        coordinator: GrowattModbusCoordinator,
+        config_entry: ConfigEntry,
+        period: int,
+        slot: str,
+    ) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        self._period = period
+        self._slot = slot
+        self._register = 30412 + (period - 1) * 3 + self._SLOT_OFFSET[slot]
+        self._coordinator_attr = f"wit_vpp_tou_p{period}_{slot}"
+
+        meta = self._SLOT_META[slot]
+        self._attr_native_min_value = meta['min']
+        self._attr_native_max_value = meta['max']
+        self._attr_native_step = meta['step']
+        self._attr_native_unit_of_measurement = meta['unit']
+        self._attr_mode = meta['mode']
+        self._attr_icon = meta['icon']
+
+        entry_name = config_entry.data.get("name", config_entry.title)
+        slot_label = slot.capitalize()
+        self._attr_name = f"{entry_name} TOU Period {period} {slot_label}"
+        self._attr_unique_id = f"{config_entry.entry_id}_vpp_tou_p{period}_{slot}"
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        return self.coordinator.get_device_info(get_device_type_for_control("work_mode"))
+
+    @property
+    def native_value(self) -> float | None:
+        default = 0.0
+        return float(getattr(self.coordinator, self._coordinator_attr, default))
+
+    async def async_set_native_value(self, value: float) -> None:
+        raw = int(value)
+        # Two's complement for negative power values
+        encoded = raw & 0xFFFF
+        _LOGGER.info("[WIT-TOU] Period %d %s → %d (reg %d)", self._period, self._slot, raw, self._register)
+        try:
+            success = await self.hass.async_add_executor_job(
+                self.coordinator.modbus_client.write_registers,
+                self._register,
+                [encoded],
+            )
+            if success:
+                setattr(self.coordinator, self._coordinator_attr, raw)
+                _LOGGER.info("[WIT-TOU] Period %d %s set to %d", self._period, self._slot, raw)
+                await self.coordinator.async_request_refresh()
+            else:
+                _LOGGER.error("[WIT-TOU] Failed to write period %d %s", self._period, self._slot)
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.exception("[WIT-TOU] Period %d %s write error: %s", self._period, self._slot, err)

@@ -4,6 +4,28 @@
 
 ---
 
+## v0.9.6b1 (Beta)
+
+Issues: #331
+
+> **Beta release** — WIT TOU schedule entities are new and untested on hardware.
+> Please report any write failures or unexpected inverter behaviour on issue #331.
+
+- **Feature: WIT VPP Time-of-Use schedule controls (Issue #331):**
+  The WIT profile already had TOU period registers mapped (30411–30441) but no Home Assistant
+  entities to control them. Ten periods are now exposed as number entities per period:
+  - **Start time** — minutes since midnight (0–1439; e.g. 480 = 08:00, 1320 = 22:00)
+  - **End time** — minutes since midnight (0–1440)
+  - **Power level** — signed percentage (−100% to +100%; negative = discharge, positive = charge)
+  - **Active period count** (reg 30411, 0–20) — already existed; now accompanied by period entities
+
+  Setting a period with a negative power value during peak tariff hours forces the inverter to
+  cover household load from battery, achieving zero grid import safely within grid regulations.
+  Periods are written using FC16 (Write Multiple Registers). Periods must not overlap.
+  Profile extended from 5 periods (30412–30426) to 10 periods (30412–30441).
+
+---
+
 ## v0.9.5
 
 Issues: #316, #320, #324, #332

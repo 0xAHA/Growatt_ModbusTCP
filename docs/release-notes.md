@@ -6,6 +6,14 @@
 
 ---
 
+## v0.9.6b1 (Beta)
+
+> **Beta release** — WIT TOU schedule entities are new and untested on hardware. Please report any issues on [#331](https://github.com/0xAHA/Growatt_ModbusTCP/issues/331).
+
+- **Feature: WIT VPP Time-of-Use schedule controls (Issue #331):** Ten TOU periods now exposed as number entities — start time, end time (minutes since midnight), and power level (−100% to +100%, negative = discharge). Setting negative power during peak hours achieves zero grid import within grid regulations. Periods 1–10 supported (30412–30441), written via FC16.
+
+---
+
 ## v0.9.5
 
 - **Fix: `inverter_status` entity shows energy total instead of status code (Issue #316):** The data extraction code used `min_addr` (the lowest register address in the profile) as the status register address, assuming it always corresponds to the inverter status. The status is now looked up by name (`inverter_status`) making it robust to any profile register ordering.
