@@ -71,12 +71,11 @@ async def async_setup_entry(
         if 30411 in holding_registers:
             entities.append(GrowattWitVppTouPeriodsNumber(coordinator, config_entry))
 
-        # TOU period schedule entities (periods 1-10, start/end/power each)
+        # TOU period power entities (periods 1-10, power only — start/end are TimeEntity in time.py)
         for _period in range(1, 11):
             _base = 30412 + (_period - 1) * 3
             if _base in holding_registers:
-                for _slot in ('start', 'end', 'power'):
-                    entities.append(GrowattWitVppTouPeriodNumber(coordinator, config_entry, _period, _slot))
+                entities.append(GrowattWitVppTouPeriodNumber(coordinator, config_entry, _period, 'power'))
 
         # NOTE: work_mode is a Select entity (in select.py)
         if entities:
@@ -784,51 +783,40 @@ class GrowattWitVppTouPeriodsNumber(CoordinatorEntity, NumberEntity):
 
 
 class GrowattWitVppTouPeriodNumber(CoordinatorEntity, NumberEntity):
-    """WIT VPP TOU period schedule entity.
+    """WIT VPP TOU period power entity.
 
-    Handles start time, end time, or power level for a single TOU period.
-    Periods use minutes-since-midnight for start/end (0–1439) and signed
-    percentage for power (+100 = full charge, -100 = full discharge).
+    Handles the power level for a single TOU period (+100 = full charge, -100 = full discharge).
+    Start/end times are TimeEntity instances in time.py.
 
-    Registers: base 30412 + (period-1)*3 + slot_offset
+    Register: base 30412 + (period-1)*3 + 2 (power offset).
     Writes use FC16 (write_registers) — WIT inverter rejects FC06 on VPP registers.
     """
 
     _attr_entity_category = EntityCategory.CONFIG
-
-    _SLOT_META = {
-        'start': {'icon': 'mdi:clock-start',  'unit': 'min', 'min': 0.0, 'max': 1439.0, 'step': 1.0, 'mode': NumberMode.BOX},
-        'end':   {'icon': 'mdi:clock-end',    'unit': 'min', 'min': 0.0, 'max': 1440.0, 'step': 1.0, 'mode': NumberMode.BOX},
-        'power': {'icon': 'mdi:battery-arrow-up-outline', 'unit': '%',   'min': -100.0, 'max': 100.0, 'step': 1.0, 'mode': NumberMode.SLIDER},
-    }
-    _SLOT_OFFSET = {'start': 0, 'end': 1, 'power': 2}
+    _attr_native_min_value = -100.0
+    _attr_native_max_value = 100.0
+    _attr_native_step = 1.0
+    _attr_native_unit_of_measurement = '%'
+    _attr_mode = NumberMode.SLIDER
+    _attr_icon = 'mdi:battery-arrow-up-outline'
 
     def __init__(
         self,
         coordinator: GrowattModbusCoordinator,
         config_entry: ConfigEntry,
         period: int,
-        slot: str,
+        slot: str = 'power',
     ) -> None:
         super().__init__(coordinator)
         self._config_entry = config_entry
         self._period = period
-        self._slot = slot
-        self._register = 30412 + (period - 1) * 3 + self._SLOT_OFFSET[slot]
-        self._coordinator_attr = f"wit_vpp_tou_p{period}_{slot}"
-
-        meta = self._SLOT_META[slot]
-        self._attr_native_min_value = meta['min']
-        self._attr_native_max_value = meta['max']
-        self._attr_native_step = meta['step']
-        self._attr_native_unit_of_measurement = meta['unit']
-        self._attr_mode = meta['mode']
-        self._attr_icon = meta['icon']
+        self._slot = 'power'
+        self._register = 30412 + (period - 1) * 3 + 2  # power offset within the period triplet
+        self._coordinator_attr = f"wit_vpp_tou_p{period}_power"
 
         entry_name = config_entry.data.get("name", config_entry.title)
-        slot_label = slot.capitalize()
-        self._attr_name = f"{entry_name} TOU Period {period} {slot_label}"
-        self._attr_unique_id = f"{config_entry.entry_id}_vpp_tou_p{period}_{slot}"
+        self._attr_name = f"{entry_name} TOU Period {period} Power"
+        self._attr_unique_id = f"{config_entry.entry_id}_vpp_tou_p{period}_power"
 
     @property
     def device_info(self) -> dict[str, Any]:

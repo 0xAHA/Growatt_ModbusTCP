@@ -203,6 +203,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.info("Removing stale number entity %s (migrated to time entity)", old_entity_id)
             entity_registry.async_remove(old_entity_id)
 
+    # Remove stale WIT TOU start/end number entities (migrated to TimeEntity in v0.9.7)
+    for _p in range(1, 11):
+        for _slot in ('start', 'end'):
+            _stale_uid = f"{entry.entry_id}_vpp_tou_p{_p}_{_slot}"
+            _stale_eid = entity_registry.async_get_entity_id("number", DOMAIN, _stale_uid)
+            if _stale_eid:
+                _LOGGER.info("Removing stale number entity %s (WIT TOU migrated to time entity)", _stale_eid)
+                entity_registry.async_remove(_stale_eid)
+
     coordinator = GrowattModbusCoordinator(hass, entry)
 
     await coordinator.async_config_entry_first_refresh()

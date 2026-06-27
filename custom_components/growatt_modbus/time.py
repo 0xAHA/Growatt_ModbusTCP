@@ -43,6 +43,15 @@ async def async_setup_entry(
         entities.append(GrowattGenericTime(coordinator, config_entry, control_name, control_config))
         _LOGGER.info("%s time control enabled (register %d)", control_name, control_config['register'])
 
+    # WIT VPP TOU time pickers (periods 1-10, start + end each = up to 20 entities)
+    is_wit = str(register_map_name).upper() == "WIT_4000_15000TL3"
+    if is_wit:
+        for _period in range(1, 11):
+            _start_reg = 30412 + (_period - 1) * 3
+            if _start_reg in holding_registers:
+                entities.append(GrowattWitVppTouTime(coordinator, config_entry, _period, is_start=True))
+                entities.append(GrowattWitVppTouTime(coordinator, config_entry, _period, is_start=False))
+
     # MOD TL3-XH TOU time pickers (4 start + 4 end = 8 entities)
     if 3038 in holding_registers:
         for period_def in MOD_TOU_PERIODS:
@@ -55,6 +64,74 @@ async def async_setup_entry(
     if entities:
         _LOGGER.info("Created %d time entities for %s", len(entities), config_entry.data['name'])
         async_add_entities(entities)
+
+
+class GrowattWitVppTouTime(CoordinatorEntity, TimeEntity):
+    """WIT VPP TOU period start or end time.
+
+    Stores time as plain minutes since midnight (0–1439 start, 0–1440 end).
+    Converts to/from datetime.time for the HA time picker.
+    Writes use FC16 — WIT inverter rejects FC06 on VPP holding registers.
+    """
+
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        coordinator: GrowattModbusCoordinator,
+        config_entry: ConfigEntry,
+        period: int,
+        is_start: bool,
+    ) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        self._period = period
+        self._is_start = is_start
+        offset = 0 if is_start else 1
+        self._register = 30412 + (period - 1) * 3 + offset
+        self._coordinator_attr = f"wit_vpp_tou_p{period}_{'start' if is_start else 'end'}"
+
+        self._attr_icon = "mdi:clock-start" if is_start else "mdi:clock-end"
+        label = "Start" if is_start else "End"
+        entry_name = config_entry.data.get("name", config_entry.title)
+        self._attr_name = f"{entry_name} TOU Period {period} {label}"
+        self._attr_unique_id = f"{config_entry.entry_id}_vpp_tou_p{period}_{'start' if is_start else 'end'}"
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        return self.coordinator.get_device_info(DEVICE_TYPE_BATTERY)
+
+    @property
+    def native_value(self) -> dt_time | None:
+        minutes = getattr(self.coordinator, self._coordinator_attr, None)
+        if minutes is None:
+            return None
+        try:
+            m = int(minutes)
+            return dt_time(m // 60, m % 60)
+        except (ValueError, ZeroDivisionError):
+            return None
+
+    async def async_set_value(self, value: dt_time) -> None:
+        minutes = value.hour * 60 + value.minute
+        slot = "start" if self._is_start else "end"
+        _LOGGER.info("[WIT-TOU] Period %d %s → %s (%d min, reg %d)",
+                     self._period, slot, value.strftime("%H:%M"), minutes, self._register)
+        try:
+            success = await self.hass.async_add_executor_job(
+                self.coordinator.modbus_client.write_registers,
+                self._register,
+                [minutes],
+            )
+            if success:
+                setattr(self.coordinator, self._coordinator_attr, minutes)
+                _LOGGER.info("[WIT-TOU] Period %d %s set to %s", self._period, slot, value.strftime("%H:%M"))
+                await self.coordinator.async_request_refresh()
+            else:
+                _LOGGER.error("[WIT-TOU] Failed to write period %d %s (reg %d)", self._period, slot, self._register)
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.exception("[WIT-TOU] Period %d %s write error: %s", self._period, slot, err)
 
 
 class GrowattGenericTime(CoordinatorEntity, TimeEntity):

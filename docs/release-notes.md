@@ -6,11 +6,19 @@
 
 ---
 
+## v0.9.7
+
+> **Note:** WIT TOU schedule entities are new and untested on hardware. Please report any issues on [#331](https://github.com/0xAHA/Growatt_ModbusTCP/issues/331).
+
+- **Improvement: WIT TOU period start/end times use proper HA time pickers:** Start and end time entities are now native HH:MM time pickers instead of number inputs requiring minutes since midnight. Existing v0.9.6 number entities are removed automatically on upgrade.
+
+---
+
 ## v0.9.6
 
 > **Note:** WIT TOU schedule entities are new and untested on hardware. Please report any issues on [#331](https://github.com/0xAHA/Growatt_ModbusTCP/issues/331).
 
-- **Feature: WIT VPP Time-of-Use schedule controls (Issue #331):** Ten TOU periods now exposed as number entities — start time, end time (minutes since midnight), and power level (−100% to +100%, negative = discharge). Setting negative power during peak hours achieves zero grid import within grid regulations. Periods 1–10 supported (30412–30441), written via FC16.
+- **Feature: WIT VPP Time-of-Use schedule controls (Issue #331):** Ten TOU periods now exposed — start/end time pickers and power level (−100% to +100%, negative = discharge). Setting negative power during peak hours achieves zero grid import within grid regulations. Periods 1–10 supported (30412–30441), written via FC16.
 
 ---
 

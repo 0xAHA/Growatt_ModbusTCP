@@ -4,6 +4,21 @@
 
 ---
 
+## v0.9.7
+
+Issues: #331
+
+> **Note:** WIT TOU schedule entities are new and untested on hardware.
+> Please report any write failures or unexpected inverter behaviour on issue #331.
+
+- **Improvement: WIT TOU period start/end times use proper HA time pickers:**
+  Start and end time entities for TOU periods 1–10 are now `TimeEntity` instances showing a
+  native HH:MM time picker, replacing the previous number inputs that required entering
+  minutes since midnight (e.g. 480 for 08:00). Existing v0.9.6 number entities are
+  automatically removed from the entity registry on upgrade.
+
+---
+
 ## v0.9.6
 
 Issues: #331
@@ -13,9 +28,9 @@ Issues: #331
 
 - **Feature: WIT VPP Time-of-Use schedule controls (Issue #331):**
   The WIT profile already had TOU period registers mapped (30411–30441) but no Home Assistant
-  entities to control them. Ten periods are now exposed as number entities per period:
-  - **Start time** — minutes since midnight (0–1439; e.g. 480 = 08:00, 1320 = 22:00)
-  - **End time** — minutes since midnight (0–1440)
+  entities to control them. Ten periods are now exposed with entities per period:
+  - **Start time** — HH:MM time picker (v0.9.7+); previously minutes since midnight
+  - **End time** — HH:MM time picker (v0.9.7+); previously minutes since midnight
   - **Power level** — signed percentage (−100% to +100%; negative = discharge, positive = charge)
   - **Active period count** (reg 30411, 0–20) — already existed; now accompanied by period entities
 
