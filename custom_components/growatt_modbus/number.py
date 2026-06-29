@@ -46,8 +46,9 @@ async def async_setup_entry(
 
     if is_wit:
         # Only create controls if the registers exist in this map
-        if 203 in holding_registers:
-            entities.append(GrowattWitExportLimitWNumber(coordinator, config_entry))
+        # NOTE: reg 203 (export_limit_w) is intentionally NOT exposed as a writable entity —
+        # writes are rejected by WIT firmware (exception_code=0) even with all VPP enables set.
+        # The register is still polled for reading; add a sensor if display-only is desired.
         if 201 in holding_registers:
             entities.append(GrowattWitActivePowerRateNumber(coordinator, config_entry))
 

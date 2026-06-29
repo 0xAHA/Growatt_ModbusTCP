@@ -212,6 +212,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _LOGGER.info("Removing stale number entity %s (WIT TOU migrated to time entity)", _stale_eid)
                 entity_registry.async_remove(_stale_eid)
 
+    # Remove stale WIT export_limit_w number entity (removed in v0.9.8 — reg 203 not writable on WIT)
+    _stale_export_eid = entity_registry.async_get_entity_id("number", DOMAIN, f"{entry.entry_id}_export_limit_w")
+    if _stale_export_eid:
+        _LOGGER.info("Removing stale number entity %s (WIT export_limit_w reg 203 not writable)", _stale_export_eid)
+        entity_registry.async_remove(_stale_export_eid)
+
     coordinator = GrowattModbusCoordinator(hass, entry)
 
     await coordinator.async_config_entry_first_refresh()

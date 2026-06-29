@@ -4,6 +4,25 @@
 
 ---
 
+## v0.9.8
+
+Issues: #335
+
+- **Safety fix: WIT `vpp_export_limit_power_rate` (reg 30201) clamped to 0–100% (Issue #335):**
+  The entity previously allowed negative values (−100 to +100%). On WIT hardware, writing a
+  negative value to register 30201 while VPP is active triggers **warning 401** and puts the
+  inverter into a fault state requiring a service technician reset. The minimum is now 0%
+  (zero export). Negative values are not valid export throttle commands on this hardware.
+
+- **Fix: WIT `Export Limit (W)` number entity removed (Issue #335):**
+  Holding register 203 is not writable on WIT inverters — writes are rejected with an
+  application-level error even when `control_authority`, `vpp_export_limit_enable`, and
+  `remote_power_control_enable` are all enabled. The misleading writable entity has been
+  removed. The register continues to be polled and its value is available in coordinator
+  data. Existing stale entities are cleaned up automatically on upgrade.
+
+---
+
 ## v0.9.7
 
 Issues: #331

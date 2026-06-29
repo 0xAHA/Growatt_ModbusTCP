@@ -216,10 +216,10 @@ WRITABLE_REGISTERS = {
     'vpp_export_limit_power_rate': {
         'register': 30201,
         'scale': 1,
-        'valid_range': (-100, 100),
+        'valid_range': (0, 100),
         'unit': '%',
         'signed': True,
-        'desc': 'Export limit power rate (-100 to +100%, positive=export, 0=zero export)'
+        'desc': 'Export limit power rate (0–100%; 0=zero export, 100=full export). Negative values trigger WIT warning 401 fault state.'
     },
     'remote_power_control_enable': {
         'register': 30407,

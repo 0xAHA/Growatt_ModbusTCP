@@ -6,6 +6,16 @@
 
 ---
 
+## v0.9.8
+
+Issues: [#335](https://github.com/0xAHA/Growatt_ModbusTCP/issues/335)
+
+- **Safety fix: WIT `vpp_export_limit_power_rate` clamped to 0–100%:** Negative values on register 30201 trigger WIT warning 401 and a fault state requiring a service technician reset. Minimum is now 0% (zero export).
+
+- **Fix: WIT Export Limit (W) write entity removed:** Register 203 is not writable on WIT firmware regardless of VPP enable state. The misleading number entity is removed; stale entities are cleaned up automatically on upgrade.
+
+---
+
 ## v0.9.7
 
 > **Note:** WIT TOU schedule entities are new and untested on hardware. Please report any issues on [#331](https://github.com/0xAHA/Growatt_ModbusTCP/issues/331).
