@@ -9,12 +9,14 @@ WIT (Wireless Inverter Technology) series inverters (4000-15000TL3) use a fundam
 ## Critical Difference: VPP Protocol vs Legacy Protocol
 
 ### SPH/SPF/MOD Models (Legacy Protocol)
+
 - **Direct mode control**: Can set priority mode (Load First/Battery First/Grid First) via Modbus
 - **Persistent settings**: Mode changes remain active until changed again
 - **Simple control**: Write to register, mode changes immediately
 - **Register range**: 1000+ (holding registers)
 
 ### WIT Models (VPP Protocol)
+
 - **Time-limited overrides**: Control commands are temporary (duration-based)
 - **Read-only base mode**: Register 30476 (priority_mode) shows TOU schedule default, cannot be changed via Modbus
 - **VPP remote control**: Registers 201-202 and 30407-30409 for temporary overrides
@@ -24,13 +26,15 @@ WIT (Wireless Inverter Technology) series inverters (4000-15000TL3) use a fundam
 
 ## WIT Control Model Explained
 
-### What You CAN Do:
+### What You CAN Do
+
 ✅ **Read** the current priority mode (register 30476) - shows TOU schedule default
 ✅ **Override** battery behavior temporarily using VPP remote control
 ✅ **Set** charge/discharge power and duration (30407-30409)
 ✅ **Monitor** all battery/inverter parameters
 
-### What You CANNOT Do:
+### What You CANNOT Do
+
 ❌ **Change** the base priority mode via Modbus (register 30476 is read-only)
 ❌ **Permanently set** battery mode externally
 ❌ **Disable** TOU schedule via Modbus
@@ -65,20 +69,26 @@ WIT (Wireless Inverter Technology) series inverters (4000-15000TL3) use a fundam
 
 ### Remote Power Control (Registers 30407-30409)
 
+> **EEPROM-safe:** Registers 30407, 30408, and 30409 are explicitly marked **"Not storage"** in the VPP V2.03 spec — they bypass non-volatile memory entirely. High-frequency writes (e.g., updating charge/discharge power every minute based on spot prices or live consumption) do not risk wearing out the inverter's flash memory. All other writable VPP registers ARE written to EEPROM and should not be written at high frequency.
+
 #### Register 30407: Remote Power Control Enable
 - 0 = Disabled
 - 1 = Enabled (activates timed override)
+- Resets to 0 on inverter reboot (built-in safety failsafe)
 
 #### Register 30408: Charging Time (Duration)
-- Range: 0-1440 minutes (0-24 hours)
-- How long the override remains active
+
+- Range: 0–1440 minutes
+- **0 = unlimited/continuous control** (no automatic timeout)
+- 1–1440 = control active for this many minutes, then reverts
 - Timer starts when register 30407 is set to 1
 
 #### Register 30409: Charge/Discharge Power
-- Range: -100 to +100 (signed integer)
-- Negative values = Discharge battery to grid
-- Positive values = Charge battery from grid
-- 0 = No charge/discharge (passthrough)
+
+- Range: -100 to +100 (signed integer, percentage of rated power)
+- Negative values = Discharge battery / export to grid
+- Positive values = Charge battery from grid/PV
+- 0 = Suspend forced cycle (passthrough)
 
 ### Legacy VPP Registers (Registers 201-202)
 
@@ -93,27 +103,310 @@ WIT (Wireless Inverter Technology) series inverters (4000-15000TL3) use a fundam
 
 ---
 
+## Timed vs Continuous Control
+
+WIT remote control has two fundamentally different operating modes depending on register 30408:
+
+| Mode | 30408 value | Behaviour |
+| --- | --- | --- |
+| **Timed** | 1–1440 min | Override active for exactly that many minutes, then inverter returns to base mode automatically |
+| **Continuous** | 0 | Override stays active indefinitely — only cancelled by writing 30407=0 or an inverter reboot |
+
+**Continuous mode (30408=0) is the right choice for:**
+
+- Spot-price automations that adjust power in real time
+- Energy management systems that control charge/discharge every minute
+- Any scenario where you want HA to explicitly control the end of the session
+
+**Timed mode (30408=1–1440) is the right choice for:**
+
+- Simple time-bounded overrides ("charge for 2 hours")
+- Set-and-forget operations that should self-cancel
+- Cases where you want the inverter to recover on its own if HA goes offline
+
+> **Safety note:** Register 30407 resets to 0 on inverter reboot or power cut. This is an intentional hardware failsafe — the inverter never stays in externally-commanded state across a restart. Design automations to re-enable remote control after an unexpected reboot if unattended operation is required.
+
+---
+
+## Write Order
+
+Always write registers in this order to avoid momentary incorrect inverter state:
+
+1. **30408** — set duration (or 0 for continuous)
+2. **30409** — set charge/discharge power target
+3. **30407** — enable remote control last
+
+Enabling 30407 before setting 30409 puts the inverter under remote control with whatever power value was last in 30409 (which could be stale).
+
+---
+
 ## Proper WIT Control Patterns
+
+> **Entity names:** Replace `INVERTER` in all entity IDs with your integration entry name.
+> Find it at **Settings → Devices & Services → Growatt Modbus** — it appears as the card title
+> (e.g. if named "Growatt", IDs become `select.growatt_control_authority`, etc.).
 
 ### Pattern 1: Temporary Grid Charging (2-hour window)
 
-1. Enable control authority (if not already enabled)
-2. Set charging time: 120 minutes (register 30408)
-3. Set charge power: +50 (50% charge, register 30409)
-4. Enable remote control: 1 (register 30407)
-5. After 2 hours, inverter automatically returns to base mode
+```yaml
+action:
+  # 1. Set duration (BEFORE enabling)
+  - action: number.set_value
+    target:
+      entity_id: number.INVERTER_remote_power_control_charging_time
+    data:
+      value: 120  # 2 hours
 
-### Pattern 2: Peak Shaving (discharge during high rates)
+  # 2. Set charge power
+  - action: number.set_value
+    target:
+      entity_id: number.INVERTER_remote_charge_and_discharge_power
+    data:
+      value: 50  # +50% = charge from grid at half rate
 
-1. Set discharge power: -80 (80% discharge, register 30409)
-2. Set duration: 180 minutes (3 hours, register 30408)
-3. Enable remote control: 1 (register 30407)
-4. Inverter discharges battery for 3 hours, then returns to normal
+  # 3. Enable last
+  - action: select.select_option
+    target:
+      entity_id: select.INVERTER_remote_power_control_enable
+    data:
+      option: Enabled
+```
 
-### Pattern 3: Cancel Active Override
+After 2 hours the inverter returns to base mode automatically (TOU schedule or self-consumption).
 
-1. Set remote control enable: 0 (register 30407)
-2. Inverter immediately returns to base mode (TOU schedule or priority_mode default)
+### Pattern 2: Peak Shaving / Grid Export (timed)
+
+```yaml
+action:
+  - action: number.set_value
+    target:
+      entity_id: number.INVERTER_remote_power_control_charging_time
+    data:
+      value: 180  # 3 hours
+
+  - action: number.set_value
+    target:
+      entity_id: number.INVERTER_remote_charge_and_discharge_power
+    data:
+      value: -80  # -80% = discharge battery / export to grid
+
+  - action: select.select_option
+    target:
+      entity_id: select.INVERTER_remote_power_control_enable
+    data:
+      option: Enabled
+```
+
+### Pattern 3: Simple Cancel
+
+```yaml
+action:
+  - action: select.select_option
+    target:
+      entity_id: select.INVERTER_remote_power_control_enable
+    data:
+      option: Disabled
+```
+
+Inverter returns to base mode immediately. Use this for timed sessions. For continuous sessions (30408=0) use [Pattern 5](#pattern-5-proper-termination-sequence-continuous-sessions) instead.
+
+### Pattern 4: Continuous Control Session (30408=0)
+
+Use this when HA will explicitly manage the entire session — spot-price automation, dynamic load following, or any case where you want HA to control the end state.
+
+```yaml
+# --- START continuous session ---
+action:
+  # Duration = 0 means unlimited (no auto-expiry)
+  - action: number.set_value
+    target:
+      entity_id: number.INVERTER_remote_power_control_charging_time
+    data:
+      value: 0
+
+  # Initial power target
+  - action: number.set_value
+    target:
+      entity_id: number.INVERTER_remote_charge_and_discharge_power
+    data:
+      value: -50  # -50% discharge
+
+  - action: select.select_option
+    target:
+      entity_id: select.INVERTER_remote_power_control_enable
+    data:
+      option: Enabled
+```
+
+Once the session is active, **only update 30409** to change power. You do NOT need to re-touch 30407 or 30408:
+
+```yaml
+# --- MID-SESSION power update (every minute, spot price changed) ---
+action:
+  - action: number.set_value
+    target:
+      entity_id: number.INVERTER_remote_charge_and_discharge_power
+    data:
+      value: "{{ new_power_target | int }}"
+  # remote_power_control_enable and charging_time are unchanged — session stays active
+```
+
+End a continuous session with [Pattern 5](#pattern-5-proper-termination-sequence-continuous-sessions).
+
+### Pattern 5: Proper Termination Sequence (Continuous Sessions)
+
+Simply disabling 30407 (`remote_power_control_enable`) is not sufficient for clean termination of a continuous session — the inverter may not immediately release forced battery state, causing stray power flows. The correct sequence is to revoke `control_authority` first, then disable remote control.
+
+A 35-second delay between the two steps is required to prevent Modbus command collisions while the inverter processes the state change.
+
+```yaml
+# Triggered when: export session is done (SOC target reached, price changed, etc.)
+action:
+  - if:
+      - condition: state
+        entity_id: select.INVERTER_control_authority
+        state: Enabled
+    then:
+      # Optional: set a helper to signal that a handover is in progress
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.wit_session_active
+
+      # 1. Revoke grid control authority — forces inverter back to local self-consumption mode
+      - action: select.select_option
+        target:
+          entity_id: select.INVERTER_control_authority
+        data:
+          option: Disabled
+
+      # 2. Wait for inverter to process the state change
+      - delay: "00:00:35"
+
+      # 3. Disable remote power control (register 30407 → 0)
+      - action: select.select_option
+        target:
+          entity_id: select.INVERTER_remote_power_control_enable
+        data:
+          option: Disabled
+
+      # Clear helper flag
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.wit_session_active
+```
+
+> **Why two steps?** `control_authority` (register 30100) is the master VPP compliance switch. Disabling it immediately drops the inverter out of externally-commanded state and resumes local battery self-consumption logic — even before 30407 is cleared. Disabling 30407 afterwards cleanly resets the remote control registers. Skipping step 1 and only clearing 30407 can leave the inverter in a brief intermediate state with undefined battery behaviour. Credit: [@Wojak129](https://github.com/Wojak129) — confirmed on WIT 15KTL3 hardware.
+
+### Pattern 6: Dynamic Spot-Price Automation
+
+Full example — continuously adjusts charge/discharge every minute based on electricity price, with correct session start and termination. Registers 30407/30408/30409 are marked "Not storage" (EEPROM-safe) — per-minute writes carry no risk of flash wear.
+
+```yaml
+automation:
+  - alias: "WIT Spot Price Battery Control"
+    trigger:
+      - platform: time_pattern
+        minutes: "/1"  # Every minute
+    condition:
+      # Only run when control authority is enabled
+      - condition: state
+        entity_id: select.INVERTER_control_authority
+        state: Enabled
+    action:
+      - variables:
+          price: "{{ states('sensor.electricity_price') | float(0) }}"
+          soc: "{{ states('sensor.INVERTER_battery_soc') | int(0) }}"
+
+      - choose:
+          # High price: discharge battery if SOC > cutoff
+          - conditions:
+              - condition: template
+                value_template: "{{ price > 0.25 and soc > 20 }}"
+            sequence:
+              - action: number.set_value
+                target:
+                  entity_id: number.INVERTER_remote_charge_and_discharge_power
+                data:
+                  value: -80  # Discharge at 80%
+
+          # Low price: charge battery if SOC < 95%
+          - conditions:
+              - condition: template
+                value_template: "{{ price < 0.10 and soc < 95 }}"
+            sequence:
+              - action: number.set_value
+                target:
+                  entity_id: number.INVERTER_remote_charge_and_discharge_power
+                data:
+                  value: 80  # Charge at 80%
+
+          # Mid price: hold (minimal positive value keeps register active without forcing charge)
+          default:
+            - action: number.set_value
+              target:
+                entity_id: number.INVERTER_remote_charge_and_discharge_power
+              data:
+                value: 1
+
+      # Re-enable remote control if inverter rebooted (30407 resets to 0 on power cut)
+      - action: select.select_option
+        target:
+          entity_id: select.INVERTER_remote_power_control_enable
+        data:
+          option: Enabled
+```
+
+To end the session call [Pattern 5](#pattern-5-proper-termination-sequence-continuous-sessions).
+
+### Pattern 7: Checking SOC Cutoffs Before Commanding
+
+The inverter enforces its own SOC limits (registers 30404/30405). Your automation can mirror these:
+
+```yaml
+variables:
+  soc: "{{ states('sensor.INVERTER_battery_soc') | int(0) }}"
+  charge_cutoff: "{{ states('number.INVERTER_vpp_charge_cutoff_soc') | int(100) }}"
+  discharge_cutoff: "{{ states('number.INVERTER_vpp_discharge_cutoff_soc') | int(20) }}"
+condition:
+  - condition: template
+    value_template: >
+      {{ (power_target > 0 and soc < charge_cutoff) or
+         (power_target < 0 and soc > discharge_cutoff) }}
+```
+
+---
+
+## Export Limitation (VPP Registers 30200–30208)
+
+WIT inverters support VPP export limitation, which is **percentage-based only** — there is no watts-based register in the VPP protocol.
+
+| Register | Name | Notes |
+| --- | --- | --- |
+| 30200 | Export Limitation Enable | 0=disabled, 1=single machine enable |
+| 30201 | Export Limitation power Rate | 0–100%, positive=export allowed, 0=no export |
+| 30202 | Failure power Rate | If EMS comms fail (see 30203/30204), export drops to this % — default 0% |
+| 30203 | EMS Failure Time | Seconds before failure rate applies (default 30s) |
+| 30204 | EMS Failure Enable | Must also be enabled for failure rate to activate |
+| 30206 | Change slope | Ramp rate: default 27 × 0.01%Pn/s |
+| 30208 | Protection mode | **Not used by WIT/WIS** (per VPP V2.03 spec Note 2) |
+
+> **Important:** The 5000W value often visible at legacy register 203 is a **grid compliance cap** set by the Growatt commissioning tool at installation — it acts as a hard ceiling below VPP control. VPP register 30201 at 100% combined with a 5000W legacy cap means actual export is limited to 5000W. This legacy cap is not writable via VPP Modbus and requires the Growatt service tool to change.
+
+---
+
+## VPP Standby Hazard
+
+When `control_authority` (register 30100) is enabled but `remote_power_control` (register 30407) is **not** enabled, the inverter enters a standby state where local battery logic is suspended and load is drawn from the grid.
+
+**Safe state combinations:**
+
+| control_authority (30100) | remote_power_control (30407) | Result |
+| --- | --- | --- |
+| 0 | 0 | Normal local control (no VPP) |
+| 1 | 1 | VPP active — battery follows register 30409 |
+| **1** | **0** | **⚠️ VPP standby — inverter draws from grid, battery suspended** |
+
+Always ensure remote power control is enabled when control authority is on, or disable both together.
 
 ---
 
@@ -353,5 +646,5 @@ Check entity: `switch.growatt_control_authority` (must be ON)
 
 ---
 
-**Version**: 0.4.6
-**Last Updated**: 2026-02-14
+**Version**: 0.9.8
+**Last Updated**: 2026-06-30

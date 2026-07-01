@@ -201,7 +201,7 @@ WRITABLE_REGISTERS = {
             0: 'Disabled',
             1: 'Enabled'
         },
-        'desc': 'VPP master enable switch'
+        'desc': 'VPP master enable switch. WARNING: enabling this without also enabling remote_power_control (30407) suspends local battery logic and causes the inverter to draw load from the grid (VPP standby state).'
     },
     'vpp_export_limit_enable': {
         'register': 30200,

@@ -52,7 +52,7 @@ When you add the integration, it attempts to identify your inverter automaticall
 | **MOD 6000-15000TL3-X** | 6–15 kW | 3 | No | VPP + Legacy | DTC 5400 | ⚠️ | Grid-tied; grid flow sensors require Growatt smart meter (GOSS-W / SPM-S) |
 | **MOD 6000-15000TL3-XH** | 6–15 kW | 3 | Yes | VPP + Legacy | DTC 5400 | ✅ | Battery monitoring only (control pending) |
 | **SPH-TL3 3000-10000** | 3–10 kW | 2 | Yes | VPP + Legacy | DTC | ✅ | Tested: SPH 8000TL3 BH-UP |
-| **WIT 4000-15000TL3** | 4–15 kW | 2 | Yes | VPP v2.02 | DTC 5603 | ✅ | Advanced VPP control |
+| **WIT 4000-15000TL3** | 4–15 kW | 2 | Yes | VPP v2.03 | DTC 5603 | ✅ | Advanced VPP control — DTC 5603 hardware-confirmed (Issue #335) |
 
 **Legend:** ✅ Tested with real hardware · ⚠️ Profile from documentation, community validation welcome
 

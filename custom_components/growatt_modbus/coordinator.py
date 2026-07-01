@@ -542,10 +542,15 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # Daily totals: same logic, but retention clears at midnight.
         # Spike guard: the inverter writes 32-bit register pairs (high word, then low
         # word) separately.  During the midnight daily-counter reset, the two words
-        # can be read in an inconsistent state, producing a transient garbage value
-        # (e.g. 79 kWh when the real value should be near 0).  Any daily-counter jump
-        # larger than _SPIKE_THRESHOLD_KWH in a single poll is rejected as a glitch.
-        _SPIKE_THRESHOLD_KWH = 20.0  # safe upper bound for any poll interval / system size
+        # can be read in an inconsistent state, producing a transient garbage value.
+        # Any daily-counter jump larger than _SPIKE_THRESHOLD_KWH in a single poll
+        # is rejected as a glitch.  WIT 15KTL3 and similar high-output systems can
+        # legitimately read 50–80 kWh on the first post-reconnect poll if the gateway
+        # was offline for part of the day; use a higher threshold for those profiles.
+        # True word-tear glitches produce values in the thousands of kWh range and
+        # are caught by any reasonable threshold.
+        _is_high_output = 'wit' in (self._register_map_key or '').lower()
+        _SPIKE_THRESHOLD_KWH = 80.0 if _is_high_output else 20.0
 
         # Expire the midnight grace window once the time has passed (self-cleaning).
         if self._midnight_grace_expires and datetime.now() >= self._midnight_grace_expires:
@@ -791,22 +796,21 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 energy_today = getattr(data, 'energy_today', 0)
                 yesterday_energy = self._previous_day_totals.get('energy_today', 0)
 
-                # Stale data detection: matches yesterday's final value OR is suspiciously high for early morning
-                hours_since_midnight = (current_time.hour * 60 + current_time.minute) / 60
-                max_expected_early = hours_since_midnight * 2.0  # Assume max 2 kWh/hour in early morning
-
-                is_stale = (abs(energy_today - yesterday_energy) < tolerance and energy_today > 0) or \
-                          (energy_today > max_expected_early and energy_today > 1.0)
+                # Stale data detection: value exactly matches yesterday's final reading.
+                # The "suspiciously high for time of day" heuristic (hours * 2 kWh/h) was
+                # removed — it produces false positives for high-output systems (e.g. WIT
+                # 15KTL3 can legitimately read 50+ kWh on a mid-day reconnect) and the
+                # spike guard in _protect_energy_totals handles genuinely bad values.
+                is_stale = (abs(energy_today - yesterday_energy) < tolerance and energy_today > 0)
 
                 _mins_since_wake = (current_time - self._just_came_online_time).total_seconds() / 60
                 if is_stale:
                     _LOGGER.warning(
                         "[ENERGY_GUARD] Stale daily totals detected in debounce window "
-                        "(%.1f min since wake-up): energy_today=%.3f kWh "
-                        "(yesterday=%.3f kWh, max_expected=%.3f kWh, hours_since_midnight=%.2f) — "
+                        "(%.1f min since wake-up): energy_today=%.3f kWh matches yesterday=%.3f kWh — "
                         "resetting all daily totals to 0",
                         _mins_since_wake,
-                        energy_today, yesterday_energy, max_expected_early, hours_since_midnight,
+                        energy_today, yesterday_energy,
                     )
                     # Reset stale daily totals to zero
                     data.energy_today = 0
@@ -822,11 +826,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 else:
                     _LOGGER.debug(
                         "[ENERGY_GUARD] Debounce window active (%.1f min since wake-up): "
-                        "energy_today=%.3f kWh (yesterday=%.3f kWh, max_expected=%.3f kWh, "
-                        "hours_since_midnight=%.2f) — energy_to_user_today=%.3f kWh — "
-                        "values accepted as valid",
+                        "energy_today=%.3f kWh (yesterday=%.3f kWh) — "
+                        "energy_to_user_today=%.3f kWh — values accepted as valid",
                         _mins_since_wake,
-                        energy_today, yesterday_energy, max_expected_early, hours_since_midnight,
+                        energy_today, yesterday_energy,
                         getattr(data, 'energy_to_user_today', 0.0),
                     )
             elif self._just_came_online_time:

@@ -66,7 +66,7 @@ Based on **Growatt VPP Protocol V2.01 - Table 3-1**:
 | **MIC/MIN 2500-6000TL-X/X2** | 5200 | V2.01 | No | 0-179 (MIC)<br>3000-3124 (MIN) | Shared code |
 | **MIN 7000-10000TL-X/X2** | 5201 | V2.01 | No | 3000-3124 | Grid-tied, 3 PV strings |
 | **MOD-XH / MID-XH** | 5400 | V2.01 | MOD: Yes<br>MID: No | 0-124, 3000+ (MOD)<br>0-124 (MID) | Shared code |
-| **WIT 4000-15000TL3** | 5603 | V2.02 | Yes | 0-124, 8000+, 31000+ | Three-phase hybrid with advanced storage |
+| **WIT 4000-15000TL3** | 5603 | V2.03 | Yes | 0-124, 8000+, 31000+ | Three-phase hybrid with advanced storage — DTC confirmed via hardware register read (Issue #335) |
 | **WIT 100KTL3-H** | 5601 | V2.01 | No | Uses MID profile | Large commercial |
 | **WIS 215KTL3** | 5800 | V2.01 | No | Uses MID profile | Large commercial |
 

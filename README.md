@@ -3,7 +3,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.9.8-blue.svg)
+![Version](https://img.shields.io/badge/Version-0.9.9-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
@@ -63,3 +63,13 @@ MIT License — see [LICENSE](LICENSE)
 ---
 
 **Made with ☀️ and ☕ by [@0xAHA](https://github.com/0xAHA)**
+
+---
+
+## Hardware Contributors
+
+The following community members contributed live hardware testing, field diagnostics, and official protocol documentation that directly shaped this integration:
+
+| Contributor | Hardware | Contribution |
+| --- | --- | --- |
+| [@Wojak129](https://github.com/Wojak129) | WIT 15KTL3 + DIY 32 kWh battery (EVE 314Ah / JK BMS) | DTC 5603 field-confirmation, VPP register scanning, safety limit discovery (reg 30201 fault trigger), official VPP protocol documentation obtained from Growatt service |

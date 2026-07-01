@@ -47,10 +47,14 @@ the inverter model. The integration reads this at startup for automatic model de
 | 5200 | MIC/MIN 2500-6000TL-X/X2 |
 | 5201 | MIN 7000-10000TL-X/X2 |
 | 5400 | MOD-XH / MID-XH |
-| 5600 | WIS 100K-AM / WIT 50–100K-H/HE/HU |
-| 5601 | WIT 100KTL3-H |
-| 5800 | WIS 215KTL3 |
-| 5801 | WIS 215K-AM |
+| 5600 | WIS 100K-AM / WIT 50–100K-H/HE/HU/A/AE/AU / WIT 28–55K (US variants) / WIT 29.9–50K-XHU / WIS 210K |
+| 5601 | WIS 215K-AM (V2.03) — note: V2.01 listed this as WIT 100KTL3-H |
+| 5800 | WIS 215KTL3 (from V2.01; not present in V2.03 DTC table) |
+| 5801 | WIS 215K-AM (from V2.01) |
+
+| 5603 | WIT 4–15KTL3 (residential three-phase hybrid) — confirmed via live register read by community contributor (Issue #335); absent from V2.03 spec DTC table but follows V2.03 protocol structure |
+
+> **WIT residential models (4–15KTL3):** The VPP V2.03 spec (dated 2025.9.1) does **not** include the WIT 4–15KTL3 residential series in its DTC table. Only commercial WIT (50K–100K) models appear. DTC 5603 has been confirmed via live hardware register read (register 30000 = 5603 on a WIT 15KTL3) and protocol version register 30099 = 203 (V2.03), confirming the residential range follows V2.03 register structure despite the omission from the spec's device table.
 
 ---
 
@@ -114,7 +118,7 @@ the inverter model. The integration reads this at startup for automatic model de
 | 30156 | EPS offline frequency | RW | UINT16 | 0.01Hz | 1 | 0:50Hz, 1:60Hz, Default: 0 |
 | 30157 | EPS offline voltage | RW | UINT16 | - | 1 | Default: 0 — WIT/WIS: 0:230V 1:208V 2:240V 3:220V 4:127V 5:277V 6:254V; MOD-XH/MID-XH/MOD/MID-HU: 0:230V 1:208V 2:240V 3:220V; SPH/SPA: 0:230V 1:208V 2:240V; other models: not used |
 | 30158 | Reserve | RW | UINT16 | - | 2 | - |
-| 30160 | Fix Q | RW | UINT16 | % | 1 | Power limit percentage: [0,70], Default: 60 |
+| 30160 | Fix Q | RW | UINT16 | % | 1 | Power limit percentage: [0,70], Default: 0 |
 | 30161 | Reactive power mode | RW | UINT16 | - | 1 | 0: PF=1, 1: Pf value setting, 4: Lagging reactive power (+), 5: Leading reactive power (-), Default: 0 |
 | 30162 | Power factor | RW | UINT16 | - | 1 | [0,2000] ∪ [18000,20000], Default: 20000, Actual PF = (set value - 10000) * 0.0001 |
 | 30163 | Reserve | RW | INT16 | % | 1 | - |
@@ -127,7 +131,7 @@ the inverter model. The integration reads this at startup for automatic model de
 | 30205 | Super Export Limitation enable | RW | UINT16 | - | 1 | 0: not enabled, 1: enable, Default: 0 |
 | 30206 | Export Limitation change slope | RW | UINT16 | *0.01%Pn/s | 1 | [1,20000], Default: 27 |
 | 30207 | Export Limitation single phase control enable | RW | UINT16 | - | 1 | 0: not enabled, 1: enable, Default: 0 |
-| 30208 | Export Limitation protection mode | RW | UINT16 | - | 1 | 0: Default mode, 1: Combine control, 2: software control, 3: hardware control, Default: 0 |
+| 30208 | Export Limitation protection mode | RW | UINT16 | - | 1 | 0: Default mode, 1: Combine control, 2: software control, 3: hardware control, Default: 0 — **not used by SPH/SPA/WIT/WIS** (per spec Note 2) |
 | 30209 | Automatic on/off-grid switch enable (V2.03) | RW | UINT16 | - | 1 | 0: Automatic, 1: Manual, Default: 0 |
 | 30210 | On/off-grid set (V2.03) | RW | UINT16 | - | 1 | 0: on-grid, 1: off-grid, 2: diesel engine mode, Default: 0 — settable only when 30209=1 (Manual) |
 | 30211 | Active power R (V2.03) | RW | UINT16 | 0.1kW | 1 | [0, rated power/3] |

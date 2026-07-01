@@ -498,7 +498,7 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
 
         # WIT/WIS series - Official Growatt DTCs (VPP 2.03 Table 3-1)
         # Register 988 can distinguish: 0=WIT, 1=WIS
-        5603: 'wit_4000_15000tl3',          # WIT 4-15kW (residential three-phase hybrid) - Protocol V2.02
+        5603: 'wit_4000_15000tl3',          # WIT 4-15kW (residential three-phase hybrid) - Protocol V2.03 (confirmed via hardware, Issue #335)
         5600: 'mid_15000_25000tl3_x_v201',  # WIS 100K-AM; WIT 50-100K-H/HE/HU/A/AE/AU (large commercial)
         5601: 'mid_15000_25000tl3_x_v201',  # WIT 29.9-50K-XHU
         5800: 'mid_15000_25000tl3_x_v201',  # WIS 210K

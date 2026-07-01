@@ -6,6 +6,20 @@
 
 ---
 
+## v0.9.9
+
+Issues: [#335](https://github.com/0xAHA/Growatt_ModbusTCP/issues/335), [#336](https://github.com/0xAHA/Growatt_ModbusTCP/issues/336)
+
+- **Fix: ENERGY_GUARD daily sensors permanently zeroed after gateway reconnect (WIT 15K):** A `hours × 2 kWh/h` heuristic incorrectly flagged large-system legitimate daily totals (e.g. 50 kWh at 2pm) as stale and reset all energy sensors to 0 for a 15-minute window. Only an exact match against yesterday's final total is now used as a stale indicator.
+
+- **Fix: ENERGY_GUARD spike threshold too low for WIT 15K:** The 20 kWh rejection threshold blocked the first valid post-reconnect read on high-output profiles. WIT profiles now use an 80 kWh threshold — above a full day's production for residential WIT, far below any real word-tear glitch (which produces thousands of kWh).
+
+- **Fix: MOD/MID-XH `Grid Import Energy Total` missing and incorrect (Issue #336):** Registers 3069/3070 (`energy_to_user_total`) were absent from the MOD profile despite the surrounding 3067–3074 energy block being present. The coordinator fell back to the VPP range (31120/31121), which returns a different value on MID 15KTL3-XH hardware and oscillates due to non-atomic word reads — causing the sensor to drop backward and corrupt the HA energy dashboard. Registers 3069/3070 are now defined, restoring the stable 3000-range source.
+
+- **Hardware contributor credit:** [@Wojak129](https://github.com/Wojak129) — WIT 15KTL3 field testing, DTC 5603 hardware confirmation, VPP register scanning, and official Growatt protocol documentation that shaped the WIT implementation. Credited in README.
+
+---
+
 ## v0.9.8
 
 Issues: [#335](https://github.com/0xAHA/Growatt_ModbusTCP/issues/335)

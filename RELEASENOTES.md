@@ -4,6 +4,53 @@
 
 ---
 
+## v0.9.9
+
+Issues: #335, #336
+
+- **Fix: ENERGY_GUARD false-zeroes WIT 15K daily sensors after gateway reconnect (Issue #335):**
+  The stale-data debounce logic contained a `hours_since_midnight × 2 kWh/h` heuristic to detect
+  stale daily totals after a wake-up event. For high-output systems (WIT 15KTL3 produces 70+ kWh/day),
+  this correctly classifies a legitimate 50 kWh mid-afternoon reading as "too high" and resets all
+  daily energy sensors to 0, permanently corrupting that day's stats. The heuristic is removed;
+  only an exact match against yesterday's final value is used as a stale indicator.
+
+- **Fix: ENERGY_GUARD spike threshold too low for WIT 15K (Issue #335):**
+  The 20 kWh spike-rejection threshold blocked legitimate first-reads after a gateway reconnect on
+  high-output profiles. WIT profiles now use an 80 kWh threshold (their full daily production is
+  the maximum realistic single-poll reading, and genuine word-tear glitches produce values in the
+  thousands of kWh).
+
+- **Docs: WIT DTC 5603 confirmed (Issue #335):**
+  Register 30000 = 5603 on a WIT 15KTL3 hardware unit confirmed by community contributor Wojak129.
+  This DTC was already mapped in auto-detection since v0.0.7-beta4 — this is independent field
+  confirmation. Added to protocol-vpp.md DTC table with source note.
+
+- **Docs: Registers 30407/30408/30409 are EEPROM-safe ("Not storage"):**
+  The VPP V2.03 spec explicitly marks these as "Not storage" — they bypass non-volatile memory
+  and are safe for high-frequency automation (e.g., updating charge/discharge power every minute).
+  Register 30408 = 0 means unlimited/continuous control with no automatic timeout. Documented in
+  wit-guide.md.
+
+- **Docs: VPP export limitation section added to wit-guide.md:**
+  Registers 30200–30208 now documented including the 5000W legacy register 203 grid compliance cap
+  explanation, VPP standby hazard table, and note that 30208 is not used by WIT/WIS models.
+
+- **Fix: MOD/MID-XH `Grid Import Energy Total` missing (Issue #336):**
+  Registers 3069/3070 (`energy_to_user_total_high/low`) were absent from `mod.py` despite 3067/3068
+  (daily) and 3071–3074 (grid export) being present — a clear omission in the 3067–3074 block.
+  Without these registers the coordinator fell back to VPP 31120/31121, which returns a different
+  (inflated) value on MID 15KTL3-XH hardware and oscillates due to non-atomic word reads, causing
+  the `total_increasing` HA sensor to show backward steps and corrupt the energy dashboard.
+  Adding 3069/3070 restores the stable 3000-range source (matching the register scan value) and
+  eliminates the drops.
+
+- **Hardware contributor credit:** [@Wojak129](https://github.com/Wojak129) — WIT 15KTL3 field
+  testing, DTC 5603 confirmation, register scanning, official VPP protocol documentation obtained
+  from Growatt service (Poland), and safety limit discovery that led to v0.9.8 safety fixes.
+
+---
+
 ## v0.9.8
 
 Issues: #335
