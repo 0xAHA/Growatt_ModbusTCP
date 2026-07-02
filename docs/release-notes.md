@@ -6,6 +6,18 @@
 
 ---
 
+## v0.9.10
+
+Issues: [#333](https://github.com/0xAHA/Growatt_ModbusTCP/issues/333), [#337](https://github.com/0xAHA/Growatt_ModbusTCP/issues/337)
+
+- **Fix: SPH time period start/end writes silently revert (Issue #333):** SPH firmware rejects FC06 single-register writes to time period start/end registers — the write ACKs but the inverter rolls back the value within ~6 seconds. All SPH time period controls (AC charge periods 1–3, Battery First periods 4–6, Grid First periods 4–9) now use an atomic FC16 write that sends the full [start, end, enable] triple in a single transaction. Falls back to FC06 only if sibling registers can't be resolved.
+
+- **Fix: SPH 3-6kW auto-detects as `sph_8000_10000_hu` (Issue #337):** The DTC-3502 refinement checked register 1086 before PV3 string presence. Register 1086 responds on all SPH models with a battery (returning battery SOC ~95 on 3-6kW units), so the HU branch fired unconditionally for any 3-6kW SPH with a battery. Detection order is now: (1) check PV3 — absent means `sph_3000_6000_v201` immediately (HU is 3-string; 2-string units are excluded); (2) PV3 present → check 1086 to distinguish HU from 7-10kW.
+
+- **Fix: WIS/WIT commercial DTC display names corrected:** Per VPP V2.03: DTC 5601 = WIT 29.9-50K-XHU, DTC 5800 = WIS 210K.
+
+---
+
 ## v0.9.9
 
 Issues: [#335](https://github.com/0xAHA/Growatt_ModbusTCP/issues/335), [#336](https://github.com/0xAHA/Growatt_ModbusTCP/issues/336)

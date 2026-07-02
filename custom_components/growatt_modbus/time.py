@@ -188,9 +188,90 @@ class GrowattGenericTime(CoordinatorEntity, TimeEntity):
             return None
 
     async def async_set_value(self, value: dt_time) -> None:
-        """Write a new time value encoded as hex-packed bytes to the Modbus register."""
+        """Write a new time value using atomic FC16 for [start, end, enable] triples.
+
+        SPH firmware silently rejects FC06 single-register writes to time period start/end
+        registers — the value appears to write but reverts within ~6 seconds. The inverter
+        requires all three registers [start, end, enable] written atomically in one FC16 call.
+
+        Falls back to FC06 single-register write if sibling registers can't be resolved.
+        """
         raw_value = (value.hour << 8) | value.minute
         register = self._control_config['register']
+        name = self._control_name
+
+        # Identify start/end triples and resolve siblings
+        if name.endswith('_start'):
+            base = name[:-6]
+            is_start = True
+        elif name.endswith('_end'):
+            base = name[:-4]
+            is_start = False
+        else:
+            await self._write_single(register, raw_value, value)
+            return
+
+        start_name = f"{base}_start"
+        end_name = f"{base}_end"
+        enable_name = f"{base}_enable"
+
+        start_cfg = WRITABLE_REGISTERS.get(start_name)
+        end_cfg = WRITABLE_REGISTERS.get(end_name)
+        enable_cfg = WRITABLE_REGISTERS.get(enable_name)
+
+        if not start_cfg or not end_cfg or not enable_cfg:
+            _LOGGER.warning(
+                "%s: sibling registers not found — falling back to single-register FC06 write", name,
+            )
+            await self._write_single(register, raw_value, value)
+            return
+
+        start_reg = start_cfg['register']
+        end_reg = end_cfg['register']
+        enable_reg = enable_cfg['register']
+        if end_reg != start_reg + 1 or enable_reg != start_reg + 2:
+            _LOGGER.warning(
+                "%s: registers not consecutive (start=%d end=%d enable=%d) — falling back",
+                name, start_reg, end_reg, enable_reg,
+            )
+            await self._write_single(register, raw_value, value)
+            return
+
+        data = self.coordinator.data
+        current_start = int(getattr(data, start_name, 0) or 0) if data else 0
+        current_end = int(getattr(data, end_name, 0) or 0) if data else 0
+        current_enable = int(getattr(data, enable_name, 0) or 0) if data else 0
+
+        new_start = raw_value if is_start else current_start
+        new_end = raw_value if not is_start else current_end
+
+        _LOGGER.debug(
+            "%s: atomic FC16 → reg %d [start=0x%04X, end=0x%04X, enable=%d]",
+            name, start_reg, new_start, new_end, current_enable,
+        )
+        try:
+            success = await self.hass.async_add_executor_job(
+                self.coordinator.modbus_client.write_registers,
+                start_reg,
+                [new_start, new_end, current_enable],
+            )
+        except ModbusWriteError:
+            _LOGGER.error("Failed atomic FC16 write for %s (register %d)", name, start_reg)
+            return
+
+        if success:
+            _LOGGER.info(
+                "Set %s to %s (atomic FC16: start=0x%04X, end=0x%04X, enable=%d)",
+                name, value.strftime("%H:%M"), new_start, new_end, current_enable,
+            )
+            self.coordinator.track_write(start_reg, new_start, start_name)
+            self.coordinator.track_write(end_reg, new_end, end_name)
+            await self.coordinator.async_request_refresh()
+        else:
+            _LOGGER.warning("%s: atomic FC16 write returned False (register %d)", name, start_reg)
+
+    async def _write_single(self, register: int, raw_value: int, value: dt_time) -> None:
+        """Fallback: write a single register via FC06 with readback verification."""
         try:
             write_ok, verified = await self.hass.async_add_executor_job(
                 self.coordinator.modbus_client.write_register_verified, register, raw_value,

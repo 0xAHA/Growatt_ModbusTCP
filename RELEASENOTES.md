@@ -4,6 +4,35 @@
 
 ---
 
+## v0.9.10
+
+Issues: #333, #337
+
+- **Fix: SPH time period start/end writes silently revert (Issue #333):**
+  SPH firmware rejects FC06 single-register writes to time period start/end registers — the write
+  is acknowledged by Modbus but the inverter reverts the value within ~6 seconds. All SPH time
+  period controls (AC charge periods 1–3 at registers 1100–1108, Battery First periods 4–6 at
+  1017–1025, Grid First periods 4–9 at 1026–1034 and 1080–1088) now use an atomic FC16 write that
+  sends all three registers in the triple [start, end, enable] in a single transaction. This matches
+  the write behaviour already used for MOD TOU periods, which resolved the same issue on MOD hardware.
+  Falls back to FC06 if sibling registers cannot be resolved (e.g. non-SPH profiles that use
+  `GrowattGenericTime` for other purposes).
+
+- **Fix: SPH 3-6kW auto-detects as `sph_8000_10000_hu` (Issue #337):**
+  The DTC-3502 refinement previously checked register 1086 before checking PV3 string presence.
+  Register 1086 responds on all SPH models with a battery (it returns battery SOC on 3-6kW units),
+  so the HU branch fired immediately for any 3-6kW SPH with a battery installed, regardless of
+  actual model. The detection order is now: (1) check PV3 — if absent return `sph_3000_6000_v201`
+  immediately (HU is a 3-string model, so 2-string units are excluded unconditionally); (2) if PV3
+  confirmed, check register 1086 to distinguish HU from 7-10kW.
+
+- **Fix: DTC display names corrected for WIS/WIT commercial models:**
+  Per VPP V2.03 specification: DTC 5601 is WIT 29.9-50K-XHU (not "WIT 100KTL3-H"); DTC 5800 is
+  WIS 210K (not "WIS 215KTL3"). Updated in `diagnostic.py`, `auto_detection.py`, `wit.py`, and
+  `docs/developer/protocol-vpp.md`.
+
+---
+
 ## v0.9.9
 
 Issues: #335, #336
