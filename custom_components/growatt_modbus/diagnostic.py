@@ -1435,10 +1435,10 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
         5200: ('MIN/MIC 2.5-6kW', 'min_3000_6000_tl_x_v201'),
         5201: ('MIN 7-10kW', 'min_7000_10000_tl_x_v201'),
         5400: ('MOD-XH/MID-XH', 'mod_6000_15000tl3_xh_v201'),
-        5600: ('WIS 100K-AM / WIT 50-100K-H', 'mid_15000_25000tl3_x_v201'),
-        5601: ('WIT 100kW Commercial', 'mid_15000_25000tl3_x_v201'),
+        5600: ('WIS 100K-AM / WIT 50-100K-H/HE/HU/A/AE/AU (incl. US variants)', 'mid_15000_25000tl3_x_v201'),
+        5601: ('WIT 29.9-50K-XHU (commercial hybrid)', 'mid_15000_25000tl3_x_v201'),
         5603: ('WIT 4-15kW Hybrid', 'wit_4000_15000tl3'),
-        5800: ('WIS 215kW Commercial', 'mid_15000_25000tl3_x_v201'),
+        5800: ('WIS 210K', 'mid_15000_25000tl3_x_v201'),
         5801: ('WIS 215K-AM', 'mid_15000_25000tl3_x_v201'),
     }
 

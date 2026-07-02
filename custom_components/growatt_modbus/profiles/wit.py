@@ -444,7 +444,7 @@ WIT_4000_15000TL3 = {
         # VPP Export Limitation Control
         # NOTE: Register 30208 (Export Limitation Protection Mode) is NOT used by:
         #   SPA 4000-10000TL3 BH-UP (DTC 3725), SPH 4000-10000TL3 BH-UP (DTC 3601),
-        #   WIT 100KTL3-H (DTC 5601), WIS 215KTL3 (DTC 5800)
+        #   WIT 29.9-50K-XHU (DTC 5601), WIS 210K (DTC 5800)
         # Mode descriptions for reference (VPP 2.01/2.03 documentation):
         #   0: Default mode — meter disconnect limits output to Export Limitation Failure Power;
         #      output > Export Limitation Power → inverter reports error and goes off-grid

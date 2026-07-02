@@ -47,10 +47,10 @@ the inverter model. The integration reads this at startup for automatic model de
 | 5200 | MIC/MIN 2500-6000TL-X/X2 |
 | 5201 | MIN 7000-10000TL-X/X2 |
 | 5400 | MOD-XH / MID-XH |
-| 5600 | WIS 100K-AM / WIT 50–100K-H/HE/HU/A/AE/AU / WIT 28–55K (US variants) / WIT 29.9–50K-XHU / WIS 210K |
-| 5601 | WIS 215K-AM (V2.03) — note: V2.01 listed this as WIT 100KTL3-H |
-| 5800 | WIS 215KTL3 (from V2.01; not present in V2.03 DTC table) |
-| 5801 | WIS 215K-AM (from V2.01) |
+| 5600 | WIS 100K-AM; WIT 50–100K-H/HE/HU/A/AE/AU; WIT 50–100K-H/HE/HU/A/AE/AU-US; WIT 28–55K-H/HE/HU/A/AE/AU-US L2 |
+| 5601 | WIT 29.9–50K-XHU (commercial hybrid with battery — confirmed via hardware scan Issue #338) |
+| 5800 | WIS 210K |
+| 5801 | WIS 215K-AM |
 
 | 5603 | WIT 4–15KTL3 (residential three-phase hybrid) — confirmed via live register read by community contributor (Issue #335); absent from V2.03 spec DTC table but follows V2.03 protocol structure |
 

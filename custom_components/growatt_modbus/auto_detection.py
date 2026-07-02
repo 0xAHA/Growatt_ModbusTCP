@@ -430,8 +430,8 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
     - MIN 7000-10000TL-X/X2: 5201
     - MOD-XH/MID-XH: 5400
     - WIT 4-15kW: 5603
-    - WIT 100KTL3-H: 5601
-    - WIS 215KTL3: 5800
+    - WIT 29.9-50K-XHU: 5601
+    - WIS 210K: 5800
 
     Args:
         dtc_code: DTC code from OffGrid (reg 44/43/34) or VPP (reg 30000)
@@ -808,35 +808,44 @@ async def async_refine_dtc_detection(
             return initial_profile_key
 
         # DTC 3502: SPH 3-6kW vs 7-10kW vs 8-10kW HU
-        # Priority: Storage Range (HU) > PV3 (7-10kW) > No PV3 (3-6kW)
+        # Priority: No PV3 → 3-6kW; PV3 + HU range → 8-10kW HU; PV3 only → 7-10kW
+        # IMPORTANT: Check PV3 FIRST. Reg 1086 responds on ALL SPH models (returns battery SOC
+        # on 3-6kW units), so the old order (1086 first) incorrectly matched 3-6kW as HU.
         if dtc_code == 3502:
-            # Check for storage range 1000-1124 (SPH/SPM 8000-10000TL-HU exclusive)
-            # HU models have extended storage range with BMS registers at 1082+
-            result = await hass.async_add_executor_job(
-                client.read_input_registers, 1086, 1  # BMS SOC register (HU-specific)
-            )
-            if result is not None:
-                _LOGGER.info("Detected storage range 1000+ with BMS registers - SPH/SPM 8000-10000TL-HU")
-                return 'sph_8000_10000_hu'
-
             # Check V2.01 PV3 voltage register (31018)
+            pv3_present = False
             result = await hass.async_add_executor_job(
                 client.read_input_registers, 31018, 1  # V2.01 PV3 voltage
             )
             if result is not None and len(result) > 0 and result[0] > 0:
-                _LOGGER.info("Detected PV3 in V2.01 range (3PV) - SPH 7-10kW")
-                return 'sph_7000_10000_v201'
+                pv3_present = True
+                _LOGGER.debug("DTC 3502 refinement: PV3 present in V2.01 range (31018=%d)", result[0])
 
-            # Fallback to legacy register 11 (base range PV3 voltage)
-            result = await hass.async_add_executor_job(
-                client.read_input_registers, 11, 1  # Legacy PV3 voltage
-            )
-            if result is not None and len(result) > 0 and result[0] > 0:
-                _LOGGER.info("Detected PV3 in legacy range (3PV) - SPH 7-10kW")
-                return 'sph_7000_10000_v201'
-            else:
+            if not pv3_present:
+                # Fallback to legacy register 11 (base range PV3 voltage)
+                result = await hass.async_add_executor_job(
+                    client.read_input_registers, 11, 1  # Legacy PV3 voltage
+                )
+                if result is not None and len(result) > 0 and result[0] > 0:
+                    pv3_present = True
+                    _LOGGER.debug("DTC 3502 refinement: PV3 present in legacy range (reg11=%d)", result[0])
+
+            if not pv3_present:
+                # 2-string inverter — definitely NOT HU (which is 3-string)
                 _LOGGER.info("No PV3 string (2PV) - SPH 3-6kW")
                 return 'sph_3000_6000_v201'
+
+            # PV3 confirmed → now distinguish 7-10kW from 8-10kW HU
+            # HU has extended BMS storage range; reg 1086 is BMS-SOC on HU, absent on 7-10kW
+            result = await hass.async_add_executor_job(
+                client.read_input_registers, 1086, 1  # HU BMS SOC (absent on non-HU 7-10kW)
+            )
+            if result is not None:
+                _LOGGER.info("Detected PV3 + storage range BMS (reg 1086) - SPH/SPM 8000-10000TL-HU")
+                return 'sph_8000_10000_hu'
+
+            _LOGGER.info("Detected PV3, no BMS storage range - SPH 7-10kW")
+            return 'sph_7000_10000_v201'
 
         # DTC 5400: MOD-XH (hybrid) vs MOD-X (grid-tied) vs MID
         # Check V2.01 battery registers (MOD-XH has battery, MOD-X/MID don't)
