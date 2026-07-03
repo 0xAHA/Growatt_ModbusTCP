@@ -264,6 +264,9 @@ WIT_4000_15000TL3 = {
 
         8085: {'name': 'system_output_power_high', 'scale': 1, 'unit': '', 'pair': 8086},
         8086: {'name': 'system_output_power_low', 'scale': 1, 'unit': '', 'pair': 8085, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Battery cluster 2 (31300–31323) — commercial WIT installs can have dual stacks
+        **VPP_V201_BATTERY2,
     },
     'holding_registers': {
         # ============================================================================

@@ -727,6 +727,7 @@ INVERTER_PROFILES = {
             PV_MPPT_TOTAL_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
+            BATTERY2_SENSORS |
             WIT_EXTRA_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
