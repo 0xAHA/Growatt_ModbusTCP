@@ -648,6 +648,8 @@ SENSOR_DEVICE_MAP = {
         'pv1_voltage', 'pv1_current', 'pv1_power',
         'pv2_voltage', 'pv2_current', 'pv2_power',
         'pv3_voltage', 'pv3_current', 'pv3_power',
+        'pv4_voltage', 'pv4_current', 'pv4_power',
+        'pv4_energy_today', 'pv4_energy_total',
         'pv_total_power',
         # AC output (single phase) - current and power
         'ac_current', 'ac_power', 'ac_apparent_power', 'ac_frequency',

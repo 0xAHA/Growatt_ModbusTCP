@@ -140,6 +140,11 @@ class GrowattData:
     pv3_power: float = 0.0            # W
     pv3_energy_today: float = 0.0     # kWh (3-string models like SPH TL3 10000 - Issue #211)
     pv3_energy_total: float = 0.0     # kWh (MIN 7-10kW per-MPPT lifetime total - Issue #265)
+    pv4_voltage: float = 0.0          # V (WIT 29.9-50K-XHU 4th MPPT - Issue #338)
+    pv4_current: float = 0.0          # A
+    pv4_power: float = 0.0            # W
+    pv4_energy_today: float = 0.0     # kWh
+    pv4_energy_total: float = 0.0     # kWh
     pv_total_power: float = 0.0       # W
     pv_energy_total: float = 0.0      # kWh (WIT total PV lifetime energy - Issue #146)
     
@@ -1274,14 +1279,26 @@ class GrowattModbus:
                 data.pv3_current = self._get_register_value(pv3_current_addr) or 0.0
             if pv3_power_low_addr:
                 data.pv3_power = self._get_register_value(pv3_power_low_addr) or 0.0
-            
+
+            # PV String 4 (if available — 4-MPPT models like WIT 29.9-50K-XHU)
+            pv4_voltage_addr = self._find_register_by_name('pv4_voltage')
+            pv4_current_addr = self._find_register_by_name('pv4_current')
+            pv4_power_low_addr = self._find_register_by_name('pv4_power_low')
+
+            if pv4_voltage_addr:
+                data.pv4_voltage = self._get_register_value(pv4_voltage_addr) or 0.0
+            if pv4_current_addr:
+                data.pv4_current = self._get_register_value(pv4_current_addr) or 0.0
+            if pv4_power_low_addr:
+                data.pv4_power = self._get_register_value(pv4_power_low_addr) or 0.0
+
             # Total PV Power
             pv_total_addr = self._find_register_by_name('pv_total_power_low')
             if pv_total_addr:
                 data.pv_total_power = self._get_register_value(pv_total_addr) or 0.0
             else:
                 # Calculate from strings if not available
-                data.pv_total_power = data.pv1_power + data.pv2_power + data.pv3_power
+                data.pv_total_power = data.pv1_power + data.pv2_power + data.pv3_power + data.pv4_power
 
             # PV Energy (WIT per-MPPT tracking - Issue #146)
             # These registers track DC input from solar panels only (not total system output)
@@ -1300,6 +1317,11 @@ class GrowattModbus:
                 data.pv3_energy_today = self._get_register_value(pv3_energy_today_addr) or 0.0
                 logger.debug(f"[{self.register_map['name']}] PV3 energy today from reg {pv3_energy_today_addr}: {data.pv3_energy_today} kWh")
 
+            pv4_energy_today_addr = self._find_register_by_name('pv4_energy_today_low')
+            if pv4_energy_today_addr:
+                data.pv4_energy_today = self._get_register_value(pv4_energy_today_addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}] PV4 energy today from reg {pv4_energy_today_addr}: {data.pv4_energy_today} kWh")
+
             pv1_energy_total_addr = self._find_register_by_name('pv1_energy_total_low')
             if pv1_energy_total_addr:
                 data.pv1_energy_total = self._get_register_value(pv1_energy_total_addr) or 0.0
@@ -1314,6 +1336,11 @@ class GrowattModbus:
             if pv3_energy_total_addr:
                 data.pv3_energy_total = self._get_register_value(pv3_energy_total_addr) or 0.0
                 logger.debug(f"[{self.register_map['name']}] PV3 energy total from reg {pv3_energy_total_addr}: {data.pv3_energy_total} kWh")
+
+            pv4_energy_total_addr = self._find_register_by_name('pv4_energy_total_low')
+            if pv4_energy_total_addr:
+                data.pv4_energy_total = self._get_register_value(pv4_energy_total_addr) or 0.0
+                logger.debug(f"[{self.register_map['name']}] PV4 energy total from reg {pv4_energy_total_addr}: {data.pv4_energy_total} kWh")
 
             pv_energy_total_addr = self._find_register_by_name('pv_energy_total_low')
             if pv_energy_total_addr:
@@ -1532,12 +1559,13 @@ class GrowattModbus:
                 # track solar input only — 0 at night or on a cloudy day is the correct value.
                 # Gate on register *existence* not *value > 0* to avoid falling back to the
                 # battery-inflated register at night when the daily total resets to zero.
-                pv_energy_sum = data.pv1_energy_today + data.pv2_energy_today + data.pv3_energy_today
+                pv_energy_sum = data.pv1_energy_today + data.pv2_energy_today + data.pv3_energy_today + data.pv4_energy_today
 
-                # Sanity check: per-MPPT energy should be reasonable (< 100 kWh per day)
-                if pv_energy_sum < 100:
+                # Sanity check: guard against corrupt/unresponsive register reads (e.g. 65535 values).
+                # 1000 kWh threshold accommodates large 4-MPPT commercial systems (50 kW × 8 hrs × 2.5× = ~1000).
+                if pv_energy_sum < 1000:
                     data.energy_today = pv_energy_sum
-                    logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from per-MPPT registers: PV1={data.pv1_energy_today} + PV2={data.pv2_energy_today} + PV3={data.pv3_energy_today} = {data.energy_today} kWh")
+                    logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from per-MPPT registers: PV1={data.pv1_energy_today} + PV2={data.pv2_energy_today} + PV3={data.pv3_energy_today} + PV4={data.pv4_energy_today} = {data.energy_today} kWh")
                 else:
                     # Garbage data — fall back to direct register
                     logger.warning(f"[{self.register_map['name']}@{self.connection_id}] Per-MPPT energy {pv_energy_sum} kWh unrealistic - using fallback register instead")

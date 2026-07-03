@@ -44,7 +44,7 @@ async def async_setup_entry(
         _LOGGER.info("%s time control enabled (register %d)", control_name, control_config['register'])
 
     # WIT VPP TOU time pickers (periods 1-10, start + end each = up to 20 entities)
-    is_wit = str(register_map_name).upper() == "WIT_4000_15000TL3"
+    is_wit = str(register_map_name).upper() in ("WIT_4000_15000TL3", "WIT_29900_50000TL3_XHU")
     if is_wit:
         for _period in range(1, 11):
             _start_reg = 30412 + (_period - 1) * 3

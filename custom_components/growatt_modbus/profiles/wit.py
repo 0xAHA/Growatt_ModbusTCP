@@ -9,6 +9,8 @@ IMPORTANT CONTROL MODEL DIFFERENCES:
 - See docs/WIT_CONTROL_GUIDE.md for detailed control patterns and best practices
 """
 
+from .vpp_v201 import VPP_V201_PV3_AND_TOTAL
+
 # WIT 4000-15000TL3 (Three-phase hybrid with battery, 4-15kW residential)
 WIT_4000_15000TL3 = {
     'name': 'WIT 4-15kW Hybrid',
@@ -629,7 +631,56 @@ WIT_4000_15000TL3 = {
     }
 }
 
+# WIT 29900-50000TL3-XHU (Commercial, 4 MPPT, 3 battery channels, DTC 5601)
+# Hardware confirmed from manual (Issue #338): 4 MPPT trackers (50A×4 / 40A×4 per nameplate),
+# 3 battery channels at 55A each, 200-900V battery range, off-grid capable.
+# Register addresses based on the universal Growatt sequential pattern (PV1@3-6, PV2@7-10,
+# PV3@11-14). PV4 at 15-18 follows the same pattern — pending hardware register scan to confirm.
+WIT_29900_50000TL3_XHU = {
+    'name': 'WIT 29.9-50K-XHU',
+    'description': 'Commercial three-phase hybrid inverter with battery, 4 MPPT, 3 battery channels (29.9-50kW)',
+    'notes': 'DTC 5601. 5 variants: 29.9K/30K/36K/40K/50K-XHU. 4 MPPT × 2 strings max. 3 battery channels (55A×3). Off-grid capable. No Modbus register documentation available — PV4 addresses (15-18) are inferred from the universal sequential pattern and require confirmation via diagnostic register scan.',
+    'use_mppt_energy_today': True,
+    'input_registers': {
+        **WIT_4000_15000TL3['input_registers'],
+
+        # PV String 3 (registers 11-14, universal Growatt pattern — confirmed in mid, mod, sph, min)
+        11: {'name': 'pv3_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'PV3 DC voltage'},
+        12: {'name': 'pv3_current', 'scale': 0.1, 'unit': 'A', 'desc': 'PV3 DC current'},
+        13: {'name': 'pv3_power_high', 'scale': 1, 'unit': '', 'pair': 14, 'desc': 'PV3 power HIGH word'},
+        14: {'name': 'pv3_power_low', 'scale': 1, 'unit': '', 'pair': 13, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # PV String 4 (registers 15-18, follows sequential pattern — pending register scan verification)
+        15: {'name': 'pv4_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'PV4 DC voltage'},
+        16: {'name': 'pv4_current', 'scale': 0.1, 'unit': 'A', 'desc': 'PV4 DC current'},
+        17: {'name': 'pv4_power_high', 'scale': 1, 'unit': '', 'pair': 18, 'desc': 'PV4 power HIGH word'},
+        18: {'name': 'pv4_power_low', 'scale': 1, 'unit': '', 'pair': 17, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # PV3 energy today/total (67-70, following PV1@59-62 / PV2@63-66 pattern in WIT base profile)
+        67: {'name': 'pv3_energy_today_high', 'scale': 1, 'unit': '', 'pair': 68},
+        68: {'name': 'pv3_energy_today_low', 'scale': 1, 'unit': '', 'pair': 67, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        69: {'name': 'pv3_energy_total_high', 'scale': 1, 'unit': '', 'pair': 70},
+        70: {'name': 'pv3_energy_total_low', 'scale': 1, 'unit': '', 'pair': 69, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # PV4 energy today/total (71-74, following PV3 pattern above — pending verification)
+        71: {'name': 'pv4_energy_today_high', 'scale': 1, 'unit': '', 'pair': 72},
+        72: {'name': 'pv4_energy_today_low', 'scale': 1, 'unit': '', 'pair': 71, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        73: {'name': 'pv4_energy_total_high', 'scale': 1, 'unit': '', 'pair': 74},
+        74: {'name': 'pv4_energy_total_low', 'scale': 1, 'unit': '', 'pair': 73, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # VPP PV3 block (31018-31023): pv3_voltage/current/power via VPP range as fallback
+        **VPP_V201_PV3_AND_TOTAL,
+    },
+    'holding_registers': {
+        **WIT_4000_15000TL3['holding_registers'],
+        # Override DTC code for this series (5601 vs base profile's 5603)
+        30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 5601 for WIT 29.9-50K-XHU', 'default': 5601},
+    },
+}
+
+
 # Export all WIT profiles
 WIT_REGISTER_MAPS = {
     'WIT_4000_15000TL3': WIT_4000_15000TL3,
+    'WIT_29900_50000TL3_XHU': WIT_29900_50000TL3_XHU,
 }

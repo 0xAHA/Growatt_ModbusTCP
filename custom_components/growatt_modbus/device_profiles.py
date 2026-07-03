@@ -17,6 +17,12 @@ PV3_SENSORS: Set[str] = {
     "pv3_energy_total",  # disabled-by-default; condition-gated on actual non-zero data
 }
 
+PV4_SENSORS: Set[str] = {
+    "pv4_voltage", "pv4_current", "pv4_power",
+    "pv4_energy_today",  # disabled-by-default; condition-gated on actual non-zero data
+    "pv4_energy_total",  # disabled-by-default; condition-gated on actual non-zero data
+}
+
 BASIC_AC_SENSORS: Set[str] = {
     "ac_voltage", "ac_current", "ac_power", "ac_frequency",
 }
@@ -716,6 +722,37 @@ INVERTER_PROFILES = {
             STATUS_SENSORS
         ),
     },
+    "wit_29900_50000tl3_xhu": {
+        "name": "WIT 29.9-50K-XHU",
+        "description": "Commercial three-phase hybrid inverter, 4 MPPT, 3 battery channels (29.9-50kW)",
+        "register_map": "WIT_29900_50000TL3_XHU",
+        "phases": 3,
+        "has_pv3": True,
+        "has_pv4": True,
+        "has_battery": True,
+        "max_power_kw": 50.0,
+        "protocol_version": "v2.03",  # VPP Protocol V2.03 (DTC 5601)
+        "dtc_code": 5601,
+        "sensors": (
+            BASIC_PV_SENSORS |
+            PV3_SENSORS |
+            PV4_SENSORS |
+            BASIC_AC_SENSORS |
+            THREE_PHASE_SENSORS |
+            SYSTEM_OUTPUT_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
+            ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |
+            PV_MPPT_TOTAL_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
+            BATTERY_SENSORS |
+            WIT_EXTRA_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
 }
 
 
@@ -836,6 +873,11 @@ PROFILE_DISPLAY_NAMES = {
         "base": "wit_4000_15000tl3",
         "v201": "wit_4000_15000tl3",  # Only one variant
         "description": "Three-phase hybrid with advanced storage",
+    },
+    "WIT (29.9-50kW XHU)": {
+        "base": "wit_29900_50000tl3_xhu",
+        "v201": "wit_29900_50000tl3_xhu",
+        "description": "Commercial three-phase hybrid, 4 MPPT, 3 battery channels",
     },
 
     # Off-Grid

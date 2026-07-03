@@ -44,6 +44,19 @@ Issues: #333, #336, #337
   WIS 210K (not "WIS 215KTL3"). Updated in `diagnostic.py`, `auto_detection.py`, `wit.py`, and
   `docs/developer/protocol-vpp.md`.
 
+- **New: WIT 29.9-50K-XHU profile (Issue #338):**
+  New dedicated profile `wit_29900_50000tl3_xhu` for the 5-variant WIT XHU commercial hybrid series
+  (29.9K / 30K / 36K / 40K / 50K-XHU). DTC 5601 now correctly maps to this profile instead of the
+  MID grid-tied profile. Hardware confirmed from manual: 4 MPPT trackers (50 d.c.A×4 / 40 d.c.A×4),
+  3 battery channels (55A×3), 200-900V battery range, off-grid capable, three-phase 3P3W+PE/3P4W+PE.
+  The profile inherits the full WIT register set and adds PV3 (registers 11-14, universally confirmed
+  pattern) and PV4 (registers 15-18, inferred from sequential pattern — pending hardware register scan
+  verification). PV3/PV4 energy today/total registers at 67-74 follow the WIT per-MPPT energy tracking
+  pattern. PV4 sensors are disabled by default and gate on a non-zero voltage reading. The per-MPPT
+  `energy_today` sanity limit is raised from 100 kWh to 1000 kWh to accommodate 50 kW 4-string
+  commercial systems on high-production days. Battery channel 2/3 registers require Modbus
+  documentation (not in manual) — to be addressed when register documentation becomes available.
+
 ---
 
 ## v0.9.9

@@ -42,7 +42,7 @@ async def async_setup_entry(
     # WIT-specific controls (VPP remote) - use dedicated entities with
     # work mode re-assertion logic
     # ---------------------------------------------------------------------
-    is_wit = str(register_map_name).upper() == "WIT_4000_15000TL3"
+    is_wit = str(register_map_name).upper() in ("WIT_4000_15000TL3", "WIT_29900_50000TL3_XHU")
 
     if is_wit:
         # Only create controls if the registers exist in this map
