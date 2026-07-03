@@ -8,7 +8,9 @@
 
 ## v0.9.10
 
-Issues: [#333](https://github.com/0xAHA/Growatt_ModbusTCP/issues/333), [#337](https://github.com/0xAHA/Growatt_ModbusTCP/issues/337)
+Issues: [#333](https://github.com/0xAHA/Growatt_ModbusTCP/issues/333), [#336](https://github.com/0xAHA/Growatt_ModbusTCP/issues/336), [#337](https://github.com/0xAHA/Growatt_ModbusTCP/issues/337)
+
+- **Fix: MOD-XH `Grid Import Energy Today/Total` shows inflated values (Issue #336):** The calculated grid import formula uses `energy_today` as a proxy for AC inverter output, but on MOD-XH `energy_today` is PV DC string energy (battery contribution excluded). This inflates the result by the net battery discharge — e.g. 2.0 kWh calculated vs 0.8 kWh actual at end of day. MOD-XH (and any profile with "xh" in its series name) now reads directly from the hardware registers (`energy_to_user_today` at 3067/3068, `energy_to_user_total` at 3069/3070), matching Growatt's own cloud portal. The Total sensor discrepancy visible in HA's energy dashboard is pre-v0.9.9 statistics corruption and requires a manual stats reset.
 
 - **Fix: SPH time period start/end writes silently revert (Issue #333):** SPH firmware rejects FC06 single-register writes to time period start/end registers — the write ACKs but the inverter rolls back the value within ~6 seconds. All SPH time period controls (AC charge periods 1–3, Battery First periods 4–6, Grid First periods 4–9) now use an atomic FC16 write that sends the full [start, end, enable] triple in a single transaction. Falls back to FC06 only if sibling registers can't be resolved.
 

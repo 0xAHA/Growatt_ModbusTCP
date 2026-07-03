@@ -6,7 +6,20 @@
 
 ## v0.9.10
 
-Issues: #333, #337
+Issues: #333, #336, #337
+
+- **Fix: MOD-XH `Grid Import Energy Today/Total` shows wrong values (Issue #336):**
+  The calculated grid import formula (`load + export − energy_today`) is incorrect on MOD-XH models
+  because `energy_today` on those profiles is PV DC string energy (due to `use_mppt_energy_today:
+  True`), not AC inverter output. The formula omits the battery charge/discharge contribution,
+  producing a result inflated by net battery discharge. For example: load 38.7 kWh, export 1.2 kWh,
+  PV DC 37.9 kWh → formula gives 2.0 kWh; correct value per energy balance and hardware register
+  is 0.8 kWh. The fix: MOD-XH (and any profile with "xh" in its series name) now reads grid import
+  from the hardware registers directly (`energy_to_user_today` at 3067/3068 and
+  `energy_to_user_total` at 3069/3070), bypassing the calculation entirely. This matches what
+  Growatt's own cloud portal reports. The Total sensor discrepancy (1037.90 vs 725.1 kWh) is
+  pre-existing HA long-term statistics corruption from before v0.9.9 and requires a manual stats
+  reset in HA's energy dashboard — the raw sensor value will now be correct.
 
 - **Fix: SPH time period start/end writes silently revert (Issue #333):**
   SPH firmware rejects FC06 single-register writes to time period start/end registers — the write
