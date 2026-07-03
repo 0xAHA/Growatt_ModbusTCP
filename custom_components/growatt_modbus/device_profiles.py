@@ -74,6 +74,16 @@ BATTERY_SENSORS: Set[str] = {
     "ac_charge_energy_today", "ac_charge_energy_total", "ac_discharge_energy_total",
 }
 
+_EXTRA_BATTERY_FIELDS = (
+    'voltage', 'current', 'power', 'soc', 'soh', 'temp',
+    'charge_energy_today', 'charge_energy_total',
+    'discharge_energy_today', 'discharge_energy_total',
+)
+
+BATTERY2_SENSORS: Set[str] = {f"battery2_{f}" for f in _EXTRA_BATTERY_FIELDS}
+BATTERY3_SENSORS: Set[str] = {f"battery3_{f}" for f in _EXTRA_BATTERY_FIELDS}
+BATTERY4_SENSORS: Set[str] = {f"battery4_{f}" for f in _EXTRA_BATTERY_FIELDS}
+
 BMS_SENSORS: Set[str] = {
     "bms_status", "bms_error", "bms_warn_info",
     "bms_max_current", "bms_cycle_count", "bms_soh",
@@ -748,6 +758,8 @@ INVERTER_PROFILES = {
             PV_MPPT_TOTAL_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
+            BATTERY2_SENSORS |
+            BATTERY3_SENSORS |
             WIT_EXTRA_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS

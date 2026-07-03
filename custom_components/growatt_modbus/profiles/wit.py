@@ -9,7 +9,7 @@ IMPORTANT CONTROL MODEL DIFFERENCES:
 - See docs/WIT_CONTROL_GUIDE.md for detailed control patterns and best practices
 """
 
-from .vpp_v201 import VPP_V201_PV3_AND_TOTAL
+from .vpp_v201 import VPP_V201_PV3_AND_TOTAL, VPP_V201_BATTERY2, VPP_V201_BATTERY3
 
 # WIT 4000-15000TL3 (Three-phase hybrid with battery, 4-15kW residential)
 WIT_4000_15000TL3 = {
@@ -670,6 +670,11 @@ WIT_29900_50000TL3_XHU = {
 
         # VPP PV3 block (31018-31023): pv3_voltage/current/power via VPP range as fallback
         **VPP_V201_PV3_AND_TOTAL,
+
+        # Battery clusters 2 and 3 (31300–31323, 31400–31423)
+        # 3-channel battery: 55A×3. Gate: batteryN_voltage > 0 in reading code.
+        **VPP_V201_BATTERY2,
+        **VPP_V201_BATTERY3,
     },
     'holding_registers': {
         **WIT_4000_15000TL3['holding_registers'],

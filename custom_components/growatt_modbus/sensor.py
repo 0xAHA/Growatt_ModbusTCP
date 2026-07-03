@@ -839,6 +839,42 @@ SENSOR_DEFINITIONS = {
         "description": "Battery voltage as reported directly by the Battery Management System (BMS) via its communication bus. May differ slightly from Battery Voltage which is measured by the inverter's own hardware. The BMS reading is generally more accurate for cell-level monitoring.",
     },
 
+    # ---- Battery clusters 2 / 3 / 4 (VPP 31300 / 31400 / 31500) ----
+    # Sensors only created when batteryN_voltage is set on data (> 0 at read time).
+    **{
+        f"battery{n}_{field}": {
+            "name": f"Battery {n} {label}",
+            "icon": icon,
+            **extra,
+            "attr": f"battery{n}_{field}",
+            "condition": (lambda nn: lambda data: hasattr(data, f"battery{nn}_voltage"))(n),
+            "disabled_by_default": True,
+        }
+        for n in (2, 3, 4)
+        for field, label, icon, extra in (
+            ("voltage",  "Voltage",    "mdi:battery",
+             {"device_class": SensorDeviceClass.VOLTAGE,  "state_class": SensorStateClass.MEASUREMENT, "unit": UnitOfElectricPotential.VOLT}),
+            ("current",  "Current",    "mdi:current-dc",
+             {"device_class": SensorDeviceClass.CURRENT,  "state_class": SensorStateClass.MEASUREMENT, "unit": UnitOfElectricCurrent.AMPERE}),
+            ("power",    "Power",      "mdi:battery-charging",
+             {"device_class": SensorDeviceClass.POWER,    "state_class": SensorStateClass.MEASUREMENT, "unit": UnitOfPower.WATT}),
+            ("soc",      "State of Charge", "mdi:battery-medium",
+             {"device_class": SensorDeviceClass.BATTERY,  "state_class": SensorStateClass.MEASUREMENT, "unit": PERCENTAGE}),
+            ("soh",      "State of Health", "mdi:battery-heart",
+             {"state_class": SensorStateClass.MEASUREMENT, "unit": PERCENTAGE}),
+            ("temp",     "Temperature", "mdi:thermometer",
+             {"device_class": SensorDeviceClass.TEMPERATURE, "state_class": SensorStateClass.MEASUREMENT, "unit": UnitOfTemperature.CELSIUS}),
+            ("charge_energy_today",    "Charge Today",    "mdi:battery-plus",
+             {"device_class": SensorDeviceClass.ENERGY, "state_class": SensorStateClass.TOTAL_INCREASING, "unit": UnitOfEnergy.KILO_WATT_HOUR}),
+            ("charge_energy_total",    "Charge Total",    "mdi:battery-plus",
+             {"device_class": SensorDeviceClass.ENERGY, "state_class": SensorStateClass.TOTAL_INCREASING, "unit": UnitOfEnergy.KILO_WATT_HOUR}),
+            ("discharge_energy_today", "Discharge Today", "mdi:battery-minus",
+             {"device_class": SensorDeviceClass.ENERGY, "state_class": SensorStateClass.TOTAL_INCREASING, "unit": UnitOfEnergy.KILO_WATT_HOUR}),
+            ("discharge_energy_total", "Discharge Total", "mdi:battery-minus",
+             {"device_class": SensorDeviceClass.ENERGY, "state_class": SensorStateClass.TOTAL_INCREASING, "unit": UnitOfEnergy.KILO_WATT_HOUR}),
+        )
+    },
+
     "ac_charge_energy_today": {
         "name": "AC Charge Energy Today",
         "icon": "mdi:battery-charging-50",

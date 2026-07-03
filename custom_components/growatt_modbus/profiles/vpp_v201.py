@@ -12,7 +12,9 @@ Grep index — all register keys defined here:
   VPP_V201_PV3_AND_TOTAL:     31018–31023  (PV string 3 + total, 3-string profiles)
   VPP_V201_ENERGY_1P:         31120–31123  (single-phase energy today/total)
   VPP_V201_TEMPERATURE_1P:    31130–31132  (single-phase temperatures)
-  VPP_V201_BATTERY2:          31300–31303, 31314–31322  (battery cluster 2)
+  VPP_V201_BATTERY2:          31300–31309, 31314–31318, 31323  (battery cluster 2)
+  VPP_V201_BATTERY3:          31400–31409, 31414–31418, 31423  (battery cluster 3)
+  VPP_V201_BATTERY4:          31500–31509, 31514–31518, 31523  (battery cluster 4)
   VPP_V201_HOLDING_1P:        30099–30109, 30114, 30200–30201
 
 Usage guide
@@ -128,22 +130,88 @@ VPP_V201_TEMPERATURE_1P = {
 }
 
 # ---------------------------------------------------------------------------
-# Battery cluster 2 — all hybrid V2.01 profiles (SPH, TL-XH, SPH-TL3)
-# Verified identical across all three families.
+# Battery cluster 2/3/4 — VPP V2.01/V2.03 (31300–31399, 31400–31499, 31500–31599)
+# Per spec: "Battery Information N refer to 31200–31299" — same layout, offset +100 per channel.
+# Used by: SPH, TL-XH, SPH-TL3, MOD, WIT-XHU (3-channel), and any future multi-battery profile.
+# Connection gate: battery N_voltage > 0 (reading code skips the block if 0 or register absent).
 # ---------------------------------------------------------------------------
 
 VPP_V201_BATTERY2 = {
-    31300: {'name': 'battery2_power_high',        'scale': 1,   'unit': '', 'pair': 31301},
-    31301: {'name': 'battery2_power',             'scale': 1,   'unit': '', 'pair': 31300,
+    31300: {'name': 'battery2_power_high',               'scale': 1,   'unit': '', 'pair': 31301},
+    31301: {'name': 'battery2_power',                    'scale': 1,   'unit': '', 'pair': 31300,
             'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-    31302: {'name': 'battery2_charge_power_high', 'scale': 1,   'unit': '', 'pair': 31303},
-    31303: {'name': 'battery2_charge_power_low',  'scale': 1,   'unit': '', 'pair': 31302,
-            'combined_scale': 0.1, 'combined_unit': 'W'},
-    31314: {'name': 'battery2_voltage',  'scale': 0.1, 'unit': 'V',
-            'desc': 'Battery 2 voltage (0 if not present)', 'signed': True},
-    31315: {'name': 'battery2_current',  'scale': 0.1, 'unit': 'A', 'signed': True},
-    31317: {'name': 'battery2_soc',      'scale': 1,   'unit': '%'},
-    31322: {'name': 'battery2_temp',     'scale': 0.1, 'unit': '°C', 'signed': True},
+    31302: {'name': 'battery2_charge_energy_today_high', 'scale': 1,   'unit': '', 'pair': 31303},
+    31303: {'name': 'battery2_charge_energy_today',      'scale': 1,   'unit': '', 'pair': 31302,
+            'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    31304: {'name': 'battery2_charge_energy_total_high', 'scale': 1,   'unit': '', 'pair': 31305},
+    31305: {'name': 'battery2_charge_energy_total',      'scale': 1,   'unit': '', 'pair': 31304,
+            'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    31306: {'name': 'battery2_discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31307},
+    31307: {'name': 'battery2_discharge_energy_today',   'scale': 1,   'unit': '', 'pair': 31306,
+            'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    31308: {'name': 'battery2_discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31309},
+    31309: {'name': 'battery2_discharge_energy_total',   'scale': 1,   'unit': '', 'pair': 31308,
+            'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    31314: {'name': 'battery2_voltage',  'scale': 0.1, 'unit': 'V', 'signed': True,
+            'desc': 'Battery 2 voltage (0 = not connected)'},
+    31315: {'name': 'battery2_current_high', 'scale': 1, 'unit': '', 'pair': 31316},
+    31316: {'name': 'battery2_current_low',  'scale': 1, 'unit': '', 'pair': 31315,
+            'combined_scale': 0.1, 'combined_unit': 'A', 'signed': True},
+    31317: {'name': 'battery2_soc',  'scale': 1,   'unit': '%'},
+    31318: {'name': 'battery2_soh',  'scale': 1,   'unit': '%'},
+    31323: {'name': 'battery2_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+}
+
+VPP_V201_BATTERY3 = {
+    31400: {'name': 'battery3_power_high',               'scale': 1,   'unit': '', 'pair': 31401},
+    31401: {'name': 'battery3_power',                    'scale': 1,   'unit': '', 'pair': 31400,
+            'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+    31402: {'name': 'battery3_charge_energy_today_high', 'scale': 1,   'unit': '', 'pair': 31403},
+    31403: {'name': 'battery3_charge_energy_today',      'scale': 1,   'unit': '', 'pair': 31402,
+            'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    31404: {'name': 'battery3_charge_energy_total_high', 'scale': 1,   'unit': '', 'pair': 31405},
+    31405: {'name': 'battery3_charge_energy_total',      'scale': 1,   'unit': '', 'pair': 31404,
+            'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    31406: {'name': 'battery3_discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31407},
+    31407: {'name': 'battery3_discharge_energy_today',   'scale': 1,   'unit': '', 'pair': 31406,
+            'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    31408: {'name': 'battery3_discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31409},
+    31409: {'name': 'battery3_discharge_energy_total',   'scale': 1,   'unit': '', 'pair': 31408,
+            'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    31414: {'name': 'battery3_voltage',  'scale': 0.1, 'unit': 'V', 'signed': True,
+            'desc': 'Battery 3 voltage (0 = not connected)'},
+    31415: {'name': 'battery3_current_high', 'scale': 1, 'unit': '', 'pair': 31416},
+    31416: {'name': 'battery3_current_low',  'scale': 1, 'unit': '', 'pair': 31415,
+            'combined_scale': 0.1, 'combined_unit': 'A', 'signed': True},
+    31417: {'name': 'battery3_soc',  'scale': 1,   'unit': '%'},
+    31418: {'name': 'battery3_soh',  'scale': 1,   'unit': '%'},
+    31423: {'name': 'battery3_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+}
+
+VPP_V201_BATTERY4 = {
+    31500: {'name': 'battery4_power_high',               'scale': 1,   'unit': '', 'pair': 31501},
+    31501: {'name': 'battery4_power',                    'scale': 1,   'unit': '', 'pair': 31500,
+            'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+    31502: {'name': 'battery4_charge_energy_today_high', 'scale': 1,   'unit': '', 'pair': 31503},
+    31503: {'name': 'battery4_charge_energy_today',      'scale': 1,   'unit': '', 'pair': 31502,
+            'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    31504: {'name': 'battery4_charge_energy_total_high', 'scale': 1,   'unit': '', 'pair': 31505},
+    31505: {'name': 'battery4_charge_energy_total',      'scale': 1,   'unit': '', 'pair': 31504,
+            'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    31506: {'name': 'battery4_discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31507},
+    31507: {'name': 'battery4_discharge_energy_today',   'scale': 1,   'unit': '', 'pair': 31506,
+            'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    31508: {'name': 'battery4_discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31509},
+    31509: {'name': 'battery4_discharge_energy_total',   'scale': 1,   'unit': '', 'pair': 31508,
+            'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    31514: {'name': 'battery4_voltage',  'scale': 0.1, 'unit': 'V', 'signed': True,
+            'desc': 'Battery 4 voltage (0 = not connected)'},
+    31515: {'name': 'battery4_current_high', 'scale': 1, 'unit': '', 'pair': 31516},
+    31516: {'name': 'battery4_current_low',  'scale': 1, 'unit': '', 'pair': 31515,
+            'combined_scale': 0.1, 'combined_unit': 'A', 'signed': True},
+    31517: {'name': 'battery4_soc',  'scale': 1,   'unit': '%'},
+    31518: {'name': 'battery4_soh',  'scale': 1,   'unit': '%'},
+    31523: {'name': 'battery4_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
 }
 
 # ---------------------------------------------------------------------------

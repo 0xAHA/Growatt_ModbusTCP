@@ -2559,6 +2559,37 @@ class GrowattModbus:
             if data.battery_voltage > 0:
                 logger.debug(f"Battery summary: {data.battery_voltage}V, {data.battery_current}A, {data.battery_soc}%, {data.battery_temp}°C, Charge={data.charge_power}W, Discharge={data.discharge_power}W")
 
+            # Battery clusters 2/3/4 (VPP 31300/31400/31500 — multi-battery models e.g. WIT-XHU, MOD)
+            # Only populated when voltage > 0 so hasattr(data, 'batteryN_voltage') is a reliable gate.
+            for _bn in (2, 3, 4):
+                _pfx = f"battery{_bn}"
+                _volt_addr = self._find_register_by_name(f"{_pfx}_voltage")
+                if _volt_addr is None:
+                    continue
+                _volt = self._get_register_value(_volt_addr) or 0.0
+                if _volt <= 0:
+                    continue
+                setattr(data, f"{_pfx}_voltage", _volt)
+                for _reg in (
+                    f"{_pfx}_power",
+                    f"{_pfx}_current_low",
+                    f"{_pfx}_soc",
+                    f"{_pfx}_soh",
+                    f"{_pfx}_temp",
+                    f"{_pfx}_charge_energy_today",
+                    f"{_pfx}_charge_energy_total",
+                    f"{_pfx}_discharge_energy_today",
+                    f"{_pfx}_discharge_energy_total",
+                ):
+                    _addr = self._find_register_by_name(_reg)
+                    if _addr is not None:
+                        setattr(data, _reg, self._get_register_value(_addr) or 0.0)
+                logger.debug(
+                    f"Battery {_bn}: {_volt}V "
+                    f"SOC={getattr(data, f'{_pfx}_soc', 'N/A')}% "
+                    f"P={getattr(data, f'{_pfx}_power', 0):.0f}W"
+                )
+
             # BMS Information (SPH HU and other models with BMS monitoring)
             # Registers 1082-1120 contain detailed battery management system data
             bms_attrs = [

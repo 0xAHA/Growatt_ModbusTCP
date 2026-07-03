@@ -4,6 +4,34 @@
 
 ---
 
+## v1.0.0
+
+Issues: #338
+
+- **New: Multi-battery channel support — Battery 2, 3, 4 (VPP V2.01/V2.03):**
+  Per VPP V2.03 specification, additional battery channels occupy mirrored 100-register blocks
+  at 31300–31399 (cluster 2), 31400–31499 (cluster 3), and 31500–31599 (cluster 4), with
+  identical layout to cluster 1 (31200–31299). All three extra channels are now fully implemented
+  across the register profiles, reading code, and HA sensor pipeline.
+
+  Each channel exposes 10 sensors per battery: Voltage, Current, Power, State of Charge, State of
+  Health, Temperature, Charge Energy Today, Charge Energy Total, Discharge Energy Today, Discharge
+  Energy Total. Sensors are disabled by default and only created when the channel's voltage register
+  returns a non-zero value at startup (reliable "battery connected" gate — avoids creating dead
+  entities for unpopulated channels).
+
+  Profiles updated:
+  - **WIT 29.9-50K-XHU**: Battery 2 (31300–31323) and Battery 3 (31400–31423) added — matches
+    the 3-channel (55A×3) hardware specification.
+  - **MOD TL3-XH**: Battery 3 (31400–31423) and Battery 4 (31500–31523) added — Battery 2
+    was already mapped; now complete for 4-channel configurations.
+  - **SPH, TL-XH, SPH-TL3**: Battery 2 register block expanded from 8 registers to the full
+    18-register set (added charge/discharge energy today/total, correct paired current registers,
+    SOH). Register addresses unchanged; names corrected (`battery2_charge_power` →
+    `battery2_charge_energy_today`, temperature moved from 31322 → 31323 per spec).
+
+---
+
 ## v0.9.10
 
 Issues: #333, #336, #337

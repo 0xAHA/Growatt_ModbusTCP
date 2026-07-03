@@ -1,3 +1,5 @@
+from .vpp_v201 import VPP_V201_BATTERY3, VPP_V201_BATTERY4
+
 # MOD-6000-15000TL3-XH (Three-phase hybrid with battery, 6-15kW)
 MOD_6000_15000TL3_XH = {
     'name': 'MOD TL3-XH Series',
@@ -228,12 +230,17 @@ MOD_6000_15000TL3_XH = {
         31309: {'name': 'battery2_discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31308, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Battery 2 State
-        31314: {'name': 'battery2_voltage', 'scale': 0.1, 'unit': 'V', 'signed': True},
+        31314: {'name': 'battery2_voltage', 'scale': 0.1, 'unit': 'V', 'signed': True,
+                'desc': 'Battery 2 voltage (0 = not connected)'},
         31315: {'name': 'battery2_current_high', 'scale': 1, 'unit': '', 'pair': 31316},
         31316: {'name': 'battery2_current_low', 'scale': 1, 'unit': '', 'pair': 31315, 'combined_scale': 0.1, 'combined_unit': 'A', 'signed': True},
         31317: {'name': 'battery2_soc', 'scale': 1, 'unit': '%'},
         31318: {'name': 'battery2_soh', 'scale': 1, 'unit': '%'},
         31323: {'name': 'battery2_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+
+        # Battery clusters 3 and 4 (VPP V2.03 spec, gate: batteryN_voltage > 0)
+        **VPP_V201_BATTERY3,
+        **VPP_V201_BATTERY4,
 
         # === V2.01 VPP ADDITIONAL REGISTERS (31100+ range) ===
         # Per VPP 2.01 protocol spec (same layout as MID — confirmed on MID via #245 scan):

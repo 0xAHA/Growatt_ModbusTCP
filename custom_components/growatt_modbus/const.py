@@ -721,6 +721,12 @@ SENSOR_DEVICE_MAP = {
         'bms_module_num', 'bms_battery_count',
         'bms_max_soc', 'bms_min_soc',
         'bms_gauge_rm', 'bms_gauge_fcc', 'bms_fw_version', 'bms_delta_volt',
+        # Multi-battery channels (VPP V2.01/V2.03, 31300/31400/31500)
+        *(f"battery{n}_{f}" for n in (2, 3, 4) for f in (
+            'voltage', 'current', 'power', 'soc', 'soh', 'temp',
+            'charge_energy_today', 'charge_energy_total',
+            'discharge_energy_today', 'discharge_energy_total',
+        )),
     },
 }
 
