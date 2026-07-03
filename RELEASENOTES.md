@@ -21,6 +21,8 @@ Issues: #338
   entities for unpopulated channels).
 
   Profiles updated:
+  - **WIT 4-15kW**: Battery 2 (31300–31323) added — commercial installations commonly pair two
+    battery stacks.
   - **WIT 29.9-50K-XHU**: Battery 2 (31300–31323) and Battery 3 (31400–31423) added — matches
     the 3-channel (55A×3) hardware specification.
   - **MOD TL3-XH**: Battery 3 (31400–31423) and Battery 4 (31500–31523) added — Battery 2
