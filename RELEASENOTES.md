@@ -4,6 +4,38 @@
 
 ---
 
+## v1.0.2
+
+Issues: #336
+
+- **Fix: Grid Import Energy Today/Total uses formula instead of hardware register when register reads 0 (Issue #336 follow-up):**
+  The hardware-path gate for SPH/XH hybrid models had an `energy_to_user_today > 0` guard.
+  When the register legitimately read 0 (no grid import yet that day — common early morning),
+  the guard evaluated `False` and the code fell through to the broken formula:
+  `load + export − energy_today`. On MOD-XH and other XH hybrids, `energy_today` is MPPT DC
+  yield rather than AC output, so the formula produces a non-zero result that rises during
+  morning load and then declines as PV output overtakes consumption — a characteristic
+  curve entirely unrelated to actual grid import.
+
+  Fix: removed the `> 0` guard. The hardware register is now used unconditionally for
+  SPH/XH profiles; zero is a valid reading meaning no grid import has occurred yet today.
+  Same fix applied to the `grid_import_energy_total` (lifetime) sensor.
+
+- **Fix: Grid Energy Today/Total (net grid) shows wrong negative value on XH hybrids (Issue #336 follow-up):**
+  The `grid_energy_today` and `grid_energy_total` net sensors were independently re-deriving
+  grid import using the same broken formula (`load + export − energy_today`) rather than
+  reading the hardware `energy_to_user_today/total` registers directly. This meant even
+  after `grid_import_energy_total` was fixed to report 740.3 kWh from hardware, the net
+  sensor was still computing `327.5 − 1058.5 = −731 kWh` instead of the correct
+  `327.5 − 740.3 = −412.8 kWh`.
+
+  Fix: for SPH and XH hybrid profiles, the net sensors now source their import component
+  from `energy_to_user_today/total` (the same hardware register the import sensors use),
+  not from the formula. Non-hybrid models (MIN, MIC, etc.) continue to use the formula,
+  which is correct for those architectures.
+
+---
+
 ## v1.0.1
 
 Issues: #339, #340

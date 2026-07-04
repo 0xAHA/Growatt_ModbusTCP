@@ -1457,42 +1457,46 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
             
             
             elif self._sensor_key == "grid_energy_today":
-                # Combined grid energy: positive=export, negative=import
-                # Net grid energy = export - import
+                # Net grid energy = export − import. Positive = net export for the day.
                 export_energy = getattr(data, "energy_to_grid_today", 0)
-                load_energy = getattr(data, "load_energy_today", 0)
-                solar_energy = getattr(data, "energy_today", 0)
-                
-                # Import = load - solar + export
-                import_energy = max(0, load_energy - solar_energy + export_energy)
-                
-                # Net: positive when more export than import
+
+                # SPH / XH hybrids: use the hardware bidirectional meter directly.
+                # The formula (load + export − energy_today) is wrong on these models
+                # because energy_today is MPPT DC yield, not AC output. Issue #336.
+                if is_sph_family or is_xh_hybrid:
+                    import_energy = getattr(data, "energy_to_user_today", 0)
+                else:
+                    load_energy = getattr(data, "load_energy_today", 0)
+                    solar_energy = getattr(data, "energy_today", 0)
+                    import_energy = max(0, load_energy - solar_energy + export_energy)
+
                 net_energy = export_energy - import_energy
-                
-                # Apply inversion if configured
+
                 if invert_grid_power:
                     net_energy = -net_energy
-                
+
                 raw_value = round(net_energy, 2)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
-            
+
             elif self._sensor_key == "grid_energy_total":
-                # Combined grid energy: positive=export, negative=import
-                # Net grid energy = export - import
+                # Net grid energy = export − import. Positive = net export lifetime.
                 export_energy = getattr(data, "energy_to_grid_total", 0)
-                load_energy = getattr(data, "load_energy_total", 0)
-                solar_energy = getattr(data, "energy_total", 0)
-                
-                # Import = load - solar + export
-                import_energy = max(0, load_energy - solar_energy + export_energy)
-                
-                # Net: positive when more export than import
+
+                # SPH / XH hybrids: use the hardware bidirectional meter directly.
+                # The formula is unreliable on hybrid models because energy_total
+                # includes battery cycling losses. Issue #336.
+                if is_sph_family or is_xh_hybrid:
+                    import_energy = getattr(data, "energy_to_user_total", 0)
+                else:
+                    load_energy = getattr(data, "load_energy_total", 0)
+                    solar_energy = getattr(data, "energy_total", 0)
+                    import_energy = max(0, load_energy - solar_energy + export_energy)
+
                 net_energy = export_energy - import_energy
-                
-                # Apply inversion if configured
+
                 if invert_grid_power:
                     net_energy = -net_energy
-                
+
                 raw_value = round(net_energy, 2)
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
 
@@ -1508,18 +1512,19 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 energy_to_user_today = getattr(data, "energy_to_user_today", 0)
                 has_hardware_import = (
                     hasattr(data, "energy_from_grid_today") or
-                    ((is_sph_family or is_xh_hybrid) and energy_to_user_today > 0)
+                    (is_sph_family or is_xh_hybrid)
                 )
 
                 if has_hardware_import:
-                    # Hardware energy registers are accumulated by the inverter's internal
-                    # bidirectional power meter, independent of CT clamp orientation.
-                    # energy_to_user_today always correctly measures grid import regardless
-                    # of CT direction — do NOT swap based on invert_grid_power (Issue #211).
-                    raw_value = energy_to_user_today if energy_to_user_today > 0 else getattr(data, "energy_from_grid_today", 0)
+                    # Hardware bidirectional meter — do NOT gate on > 0.
+                    # A zero reading is valid (no grid import yet today); gating on > 0
+                    # caused the broken formula path to fire on hybrid profiles mid-day,
+                    # producing values that rise then fall as PV output increases. Issue #336.
+                    # energy_from_grid_today takes priority if present; fall back to energy_to_user_today.
+                    raw_value = getattr(data, "energy_from_grid_today", energy_to_user_today)
                 else:
-                    # No hardware import register - must calculate.
-                    # This works for non-hybrid inverters (MIN, etc.) where energy_today = AC output.
+                    # No hardware import register — calculate from load/solar/export.
+                    # Valid for non-hybrid inverters (MIN, etc.) where energy_today = AC output.
                     load_energy = getattr(data, "load_energy_today", 0)
                     solar_energy = getattr(data, "energy_today", 0)
                     export_energy = getattr(data, "energy_to_grid_today", 0)
@@ -1537,18 +1542,16 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 energy_to_user_total = getattr(data, "energy_to_user_total", 0)
                 has_hardware_import = (
                     hasattr(data, "energy_from_grid_total") or
-                    ((is_sph_family or is_xh_hybrid) and energy_to_user_total > 0)
+                    (is_sph_family or is_xh_hybrid)
                 )
 
                 if has_hardware_import:
-                    # Hardware energy registers are accumulated by the inverter's internal
-                    # bidirectional power meter, independent of CT clamp orientation.
-                    # energy_to_user_total always correctly measures grid import regardless
-                    # of CT direction — do NOT swap based on invert_grid_power (Issue #211).
-                    raw_value = energy_to_user_total if energy_to_user_total > 0 else getattr(data, "energy_from_grid_total", 0)
+                    # Hardware bidirectional meter — do NOT gate on > 0 (same fix as daily sensor).
+                    # energy_from_grid_total takes priority if present; fall back to energy_to_user_total.
+                    raw_value = getattr(data, "energy_from_grid_total", energy_to_user_total)
                 else:
-                    # No hardware import register - must calculate.
-                    # This works for non-hybrid inverters (MIN, etc.).
+                    # No hardware import register — calculate from load/solar/export.
+                    # Valid for non-hybrid inverters (MIN, etc.).
                     load_energy = getattr(data, "load_energy_total", 0)
                     solar_energy = getattr(data, "energy_total", 0)
                     export_energy = getattr(data, "energy_to_grid_total", 0)
