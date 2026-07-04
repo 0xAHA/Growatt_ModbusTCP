@@ -68,11 +68,22 @@ def _extract_sensor_definitions(src: str) -> set:
 
 
 def _extract_device_map_keys(src: str) -> set:
-    """Return all sensor keys present inside SENSOR_DEVICE_MAP in const.py."""
+    """Return all sensor keys present inside SENSOR_DEVICE_MAP in const.py.
+
+    Generator/comprehension expressions (``*(f"..." for n in (...) for f in (...))``)
+    are stripped before extraction to prevent their f-string literal components
+    (e.g. ``'voltage'``, ``'soc'``) from being misidentified as standalone sensor keys.
+    """
     m = re.search(r"SENSOR_DEVICE_MAP\s*=\s*\{(.+?)^\}", src, re.DOTALL | re.MULTILINE)
     if not m:
         return set()
-    return set(re.findall(r"'([a-z][a-z0-9_]+)'", m.group(1)))
+    body = m.group(1)
+    # Strip star-expansion generator expressions that use f-strings, e.g.:
+    #   *(f"battery{n}_{f}" for n in (2, 3, 4) for f in ('voltage', ...)),
+    # The block starts with *(f" and ends on the line that closes with )),
+    body = re.sub(r'\*\(f"[^"]*(?:\{[^}]*\}[^"]*)*".*?^\s*\)\),', '', body,
+                  flags=re.DOTALL | re.MULTILINE)
+    return set(re.findall(r"'([a-z][a-z0-9_]+)'", body))
 
 
 def _extract_group_members(src: str) -> set:
