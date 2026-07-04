@@ -4,6 +4,44 @@
 
 ---
 
+## v1.0.1
+
+Issues: #339, #340
+
+- **Fix: Battery SOC permanently stuck at 0% after a single VPP read failure (Issue #340):**
+  The optional VPP register range (31000+) was latched permanently into a skip-list after a
+  single transient read failure. Any inverter that returned a timeout or exception on first boot
+  (e.g. network hiccup, slow inverter startup) would never attempt to read VPP battery registers
+  again for the entire session, leaving `battery_soc` at 0% until a Home Assistant restart.
+
+  Two-part fix:
+  1. **Time-based retry** — the skip-list is now a dict keyed by range address with a
+     `(fail_time, fail_count)` value. Failed ranges are retried after 300 seconds. A `WARNING`
+     is logged on the first failure; subsequent failures within the window log at `DEBUG`.
+  2. **SOC cache** — within the retry window, the last known-good SOC value is served instead
+     of 0.0. The `WARNING` message explicitly says the cached value is being used and will
+     recover automatically.
+
+- **New: Dry contact relay controls (Issue #339):**
+  SPH and MIN TL-X/TL-XH inverters have a hardware dry contact output (relay) that can be
+  triggered when PV output crosses a configurable power threshold. The V1.39 protocol exposes
+  this via four registers: three writable controls in the holding register range and one
+  read-only state register in the input register range.
+
+  New controls (appear automatically when the profile contains the registers):
+  - **Dry Contact Enable** (reg 3016) — select entity: `Disabled` / `Enabled`
+  - **Dry Contact On Rate** (reg 3017) — number entity: 0.0–100.0%, step 0.1% — power
+    threshold at which the relay closes
+  - **Dry Contact Off Rate** (reg 3019) — number entity: 0.0–100.0%, step 0.1% — power
+    threshold at which the relay opens
+  - **Dry Contact State** (reg 3119) — diagnostic sensor (disabled by default): `Off` / `On` —
+    current relay state
+
+  Profiles updated: SPH 3-6kW, SPH 7-10kW, SPH 8-10kW HU, SPH-TL3 3-10kW, MIN 3-6kW,
+  MIN 7-10kW (and their corresponding V2.01 variants which inherit automatically).
+
+---
+
 ## v1.0.0
 
 Issues: #338

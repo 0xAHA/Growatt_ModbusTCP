@@ -94,6 +94,9 @@ MIN_3000_6000TL_X = {
         # Fault Codes
         3105: {'name': 'fault_code', 'scale': 1, 'unit': '', 'desc': 'Main fault code'},
         3106: {'name': 'warning_code', 'scale': 1, 'unit': '', 'desc': 'Main warning code'},
+
+        # Dry Contact State (V1.39 input register — 0=Off, 1=On)
+        3119: {'name': 'dry_contact_state', 'scale': 1, 'unit': '', 'desc': 'Dry contact relay current state: 0=Off, 1=On'},
     },
     'holding_registers': {
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
@@ -103,6 +106,16 @@ MIN_3000_6000TL_X = {
         # Export limitation fallback rate (V1.39 §3000, TL-X and TL-XH group)
         3000: {'name': 'export_limit_failed_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
                'desc': 'Fallback output power rate applied when export limitation control fails'},
+
+        # Dry Contact Control (hardware: relay closure triggered by power threshold)
+        3016: {'name': 'dry_contact_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Dry contact function enable: 0=Disabled, 1=Enabled'},
+        3017: {'name': 'dry_contact_on_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Power rate to close relay (raw ×0.1%, range 0.0–100.0%)'},
+        3019: {'name': 'dry_contact_off_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Power rate to open relay (raw ×0.1%, range 0.0–100.0%)'},
 
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},
@@ -233,6 +246,9 @@ MIN_7000_10000TL_X = {
         3106: {'name': 'warning_code', 'scale': 1, 'unit': '', 'desc': 'Main warning code'},
         3107: {'name': 'fault_subcode', 'scale': 1, 'unit': '', 'desc': 'Fault subcode'},
         3108: {'name': 'warning_subcode', 'scale': 1, 'unit': '', 'desc': 'Warning subcode'},
+
+        # Dry Contact State (V1.39 input register — 0=Off, 1=On)
+        3119: {'name': 'dry_contact_state', 'scale': 1, 'unit': '', 'desc': 'Dry contact relay current state: 0=Off, 1=On'},
     },
     'holding_registers': {
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
@@ -250,6 +266,16 @@ MIN_7000_10000TL_X = {
         # Export limitation fallback rate (V1.39 §3000, TL-X and TL-XH group)
         3000: {'name': 'export_limit_failed_power_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
                'desc': 'Fallback output power rate applied when export limitation control fails'},
+
+        # Dry Contact Control (hardware: relay closure triggered by power threshold)
+        3016: {'name': 'dry_contact_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Dry contact function enable: 0=Disabled, 1=Enabled'},
+        3017: {'name': 'dry_contact_on_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Power rate to close relay (raw ×0.1%, range 0.0–100.0%)'},
+        3019: {'name': 'dry_contact_off_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Power rate to open relay (raw ×0.1%, range 0.0–100.0%)'},
 
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},

@@ -151,6 +151,9 @@ SPH_TL3_3000_10000 = {
         1061: {'name': 'load_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1060, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1062: {'name': 'load_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1063},
         1063: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1062, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Dry Contact State (V1.39 input register — 0=Off, 1=On)
+        3119: {'name': 'dry_contact_state', 'scale': 1, 'unit': '', 'desc': 'Dry contact relay current state: 0=Off, 1=On'},
     },
     'holding_registers': {
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
@@ -316,6 +319,17 @@ SPH_TL3_3000_10000 = {
         1088: {'name': 'grid_first_time_period_9_enable', 'scale': 1, 'unit': '', 'access': 'RW',
                'values': {0: 'Disabled', 1: 'Enabled'},
                'desc': 'Enable Grid First slot 9'},
+
+        # Dry Contact Control (hardware: relay closure triggered by power threshold)
+        # Registers 3016-3019 are V1.39 TL-X/TL-XH; present on BH/BH-UP variants.
+        3016: {'name': 'dry_contact_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Dry contact function enable: 0=Disabled, 1=Enabled'},
+        3017: {'name': 'dry_contact_on_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Power rate to close relay (raw ×0.1%, range 0.0–100.0%)'},
+        3019: {'name': 'dry_contact_off_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Power rate to open relay (raw ×0.1%, range 0.0–100.0%)'},
 
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},

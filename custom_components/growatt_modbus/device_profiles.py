@@ -98,6 +98,8 @@ TEMPERATURE_SENSORS: Set[str] = {
 
 STATUS_SENSORS: Set[str] = {
     "status", "grid_connection_status", "last_update", "derating_mode", "fault_code", "warning_code",
+    # Dry contact relay state (read-only, SPH/MIN TL-X/TL-XH)
+    "dry_contact_state",
     # WIT debug/safety registers (read-only, disabled by default)
     "ntognd_detect", "nonstd_vac_enable", "enable_spec_set", "fast_mppt_enable",
 }

@@ -1008,6 +1008,14 @@ SENSOR_DEFINITIONS = {
         "icon": "mdi:alert",
         "attr": "warning_code",
     },
+    "dry_contact_state": {
+        "name": "Dry Contact State",
+        "icon": "mdi:electric-switch",
+        "attr": "dry_contact_state",
+        "disabled_by_default": True,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "value_map": {0: "Off", 1: "On"},
+    },
 
     # Safety/compliance read-only diagnostic registers 235-238 (Issue #282).
     # These are installer/grid-compliance controls. Writing them is intentionally

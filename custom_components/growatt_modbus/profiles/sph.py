@@ -224,6 +224,17 @@ SPH_3000_6000 = {
         1087: {'name': 'grid_first_time_period_9_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 9 end (hex-packed)'},
         1088: {'name': 'grid_first_time_period_9_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 9'},
 
+        # Dry Contact Control (hardware: relay closure triggered by power threshold)
+        # Registers 3016-3019 are V1.39 TL-X/TL-XH; present on BH/BH-UP variants.
+        3016: {'name': 'dry_contact_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Dry contact function enable: 0=Disabled, 1=Enabled'},
+        3017: {'name': 'dry_contact_on_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Power rate to close relay (raw ×0.1%, range 0.0–100.0%)'},
+        3019: {'name': 'dry_contact_off_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Power rate to open relay (raw ×0.1%, range 0.0–100.0%)'},
+
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},
         236: {'name': 'nonstd_vac_enable', 'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Grade1, 2=Grade2 — non-standard VAC'},
@@ -443,6 +454,16 @@ SPH_7000_10000 = {
         1087: {'name': 'grid_first_time_period_9_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 9 end (hex-packed)'},
         1088: {'name': 'grid_first_time_period_9_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 9'},
 
+        # Dry Contact Control (hardware: relay closure triggered by power threshold)
+        3016: {'name': 'dry_contact_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Dry contact function enable: 0=Disabled, 1=Enabled'},
+        3017: {'name': 'dry_contact_on_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Power rate to close relay (raw ×0.1%, range 0.0–100.0%)'},
+        3019: {'name': 'dry_contact_off_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Power rate to open relay (raw ×0.1%, range 0.0–100.0%)'},
+
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},
         236: {'name': 'nonstd_vac_enable', 'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Grade1, 2=Grade2 — non-standard VAC'},
@@ -562,6 +583,16 @@ SPH_8000_10000_HU = {
                    0: 'Disabled',
                    1: 'Enabled'
                }},
+
+        # Dry Contact Control (hardware: relay closure triggered by power threshold)
+        3016: {'name': 'dry_contact_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Dry contact function enable: 0=Disabled, 1=Enabled'},
+        3017: {'name': 'dry_contact_on_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Power rate to close relay (raw ×0.1%, range 0.0–100.0%)'},
+        3019: {'name': 'dry_contact_off_rate', 'scale': 0.1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Power rate to open relay (raw ×0.1%, range 0.0–100.0%)'},
     }
 }
 
@@ -622,6 +653,9 @@ SPH_3000_6000_V201 = {
         3076: {'name': 'load_energy_today_low_mod', 'scale': 1, 'unit': '', 'pair': 3075, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         3077: {'name': 'load_energy_total_high_mod', 'scale': 1, 'unit': '', 'pair': 3078, 'maps_to': 'load_energy_total'},
         3078: {'name': 'load_energy_total_low_mod', 'scale': 1, 'unit': '', 'pair': 3077, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Dry Contact State (V1.39 input register — 0=Off, 1=On)
+        3119: {'name': 'dry_contact_state', 'scale': 1, 'unit': '', 'desc': 'Dry contact relay current state: 0=Off, 1=On'},
 
         # === V2.01 REGISTERS (31000+ range) ===
         **VPP_V201_STATUS,
@@ -751,6 +785,9 @@ SPH_7000_10000_V201 = {
         3076: {'name': 'load_energy_today_low_mod', 'scale': 1, 'unit': '', 'pair': 3075, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         3077: {'name': 'load_energy_total_high_mod', 'scale': 1, 'unit': '', 'pair': 3078, 'maps_to': 'load_energy_total'},
         3078: {'name': 'load_energy_total_low_mod', 'scale': 1, 'unit': '', 'pair': 3077, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # Dry Contact State (V1.39 input register — 0=Off, 1=On)
+        3119: {'name': 'dry_contact_state', 'scale': 1, 'unit': '', 'desc': 'Dry contact relay current state: 0=Off, 1=On'},
 
         # === V2.01 REGISTERS (31000+ range) ===
         **VPP_V201_STATUS,

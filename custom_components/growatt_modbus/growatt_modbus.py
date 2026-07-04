@@ -317,6 +317,12 @@ class GrowattData:
     batt_first_charge_stopped_soc: int = 0     # SOC % to stop charging in Battery First mode (register 3048)
     grid_first_discharge_stopped_soc: int = 0  # SOC % to stop discharging in Grid First mode (register 3067)
 
+    # Dry Contact (SPH/MIN TL-X/TL-XH — V1.39 registers 3016/3017/3019/3119)
+    dry_contact_state: int = 0       # input reg 3119: current relay state (0=Off, 1=On)
+    dry_contact_enable: int = 0      # holding reg 3016: function enable (0=Disabled, 1=Enabled)
+    dry_contact_on_rate: int = 0     # holding reg 3017: close relay power threshold (raw ×0.1%)
+    dry_contact_off_rate: int = 0    # holding reg 3019: open relay power threshold (raw ×0.1%)
+
     time_period_1_enable: int = 0     # 0=Disabled, 1=Enabled
     time_period_1_start: int = 0      # hex-packed (hours*256+minutes, e.g. 06:00 = 0x0600 = 1536)
     time_period_1_end: int = 0        # hex-packed
@@ -423,15 +429,20 @@ class GrowattModbus:
         # Cache for raw register data
         self._register_cache = {}
 
-        # Track failed optional register ranges to avoid repeated warnings
-        # Format: set of (start_addr, count) tuples
-        self._failed_optional_ranges = set()
+        # Track failed optional register ranges with timestamps for retry.
+        # Format: dict mapping (start_addr, count) → (first_fail_time, fail_count)
+        # Entries expire after _OPTIONAL_RANGE_RETRY_SECONDS and are retried.
+        self._failed_optional_ranges: dict = {}
 
         # Track VPP holding register addresses that failed once this session.
         # These are optional VPP-range registers (30000+) that some firmware variants
         # don't implement.  After the first failure we skip them rather than retrying
         # every poll and accumulating transaction-ID mismatches.
         self._failed_optional_holding_addrs: set = set()
+
+        # Last successfully read battery SOC — used to hold value if VPP range is
+        # temporarily unavailable rather than reporting a misleading 0%.
+        self._cached_battery_soc: Optional[float] = None
 
         # WIT control rate limiting (v0.4.6) - track last write time per register
         # Prevents oscillation and unstable control behavior
@@ -1209,19 +1220,34 @@ class GrowattModbus:
                     31200 <= min_addr_block <= 31224
                 )
 
-                # Check if this range already failed - skip silently if optional
+                # Check if this range recently failed — skip if within retry window
+                _OPTIONAL_RANGE_RETRY_SECONDS = 300
                 range_key = (min_addr_block, count_block)
                 if not is_wit_critical_range and range_key in self._failed_optional_ranges:
-                    logger.debug(f"Skipping known-failed optional VPP range ({min_addr_block}-{max_addr_block})")
-                    continue
+                    _fail_time, _fail_count = self._failed_optional_ranges[range_key]
+                    if time.time() - _fail_time < _OPTIONAL_RANGE_RETRY_SECONDS:
+                        logger.debug(f"Skipping known-failed optional VPP range ({min_addr_block}-{max_addr_block}), retry in {int(_OPTIONAL_RANGE_RETRY_SECONDS - (time.time() - _fail_time))}s")
+                        continue
+                    # Retry window expired — remove entry and fall through to re-read
+                    logger.debug(f"Retrying previously failed optional VPP range ({min_addr_block}-{max_addr_block})")
+                    del self._failed_optional_ranges[range_key]
 
                 logger.debug(f"Reading 31000 sub-range ({min_addr_block}-{max_addr_block}, {count_block} registers)")
                 registers = self.read_input_registers(min_addr_block, count_block, log_errors=is_wit_critical_range)
                 if registers is None:
-                    # Only mark as permanently failed if it's truly optional
+                    # Only track as failed if it's truly optional
                     if not is_wit_critical_range:
-                        self._failed_optional_ranges.add(range_key)
-                        logger.debug(f"Optional VPP range not supported ({min_addr_block}-{max_addr_block}) - will use 3000-range data instead")
+                        _prev = self._failed_optional_ranges.get(range_key)
+                        _fail_count = (_prev[1] + 1) if _prev else 1
+                        self._failed_optional_ranges[range_key] = (time.time(), _fail_count)
+                        if _fail_count == 1:
+                            logger.warning(
+                                f"Optional VPP range ({min_addr_block}-{max_addr_block}) failed — "
+                                f"battery sensors may be temporarily unavailable. "
+                                f"Will retry in {_OPTIONAL_RANGE_RETRY_SECONDS}s."
+                            )
+                        else:
+                            logger.debug(f"Optional VPP range ({min_addr_block}-{max_addr_block}) still failing (attempt {_fail_count}) - using 3000-range data")
                     else:
                         # Critical WIT battery range - keep trying, log warning
                         logger.warning(f"Failed to read critical WIT battery range ({min_addr_block}-{max_addr_block}) - will retry next poll")
@@ -1639,7 +1665,12 @@ class GrowattModbus:
                 data.fault_code = int(self._get_register_value(fault_addr) or 0)
             if warning_addr:
                 data.warning_code = int(self._get_register_value(warning_addr) or 0)
-            
+
+            # Dry Contact State (input reg 3119 — SPH/MIN TL-X/TL-XH)
+            dry_contact_state_addr = self._find_register_by_name('dry_contact_state')
+            if dry_contact_state_addr:
+                data.dry_contact_state = int(self._get_register_value(dry_contact_state_addr) or 0)
+
             logger.debug(f"Read data: PV={data.pv_total_power}W, AC={data.ac_power}W, Battery={getattr(data, 'battery_soc', 'N/A')}%, Temp={data.inverter_temp}°C")
             
         except Exception as e:
@@ -2339,6 +2370,16 @@ class GrowattModbus:
             value = self._get_register_value_with_fallback('battery_soc')
             if value is not None:
                 data.battery_soc = value
+                self._cached_battery_soc = value
+            elif self._cached_battery_soc is not None:
+                # VPP range unavailable (latched after failure) — use last known value
+                # to avoid reporting a misleading 0% to battery control consumers.
+                data.battery_soc = self._cached_battery_soc
+                logger.warning(
+                    "battery_soc register unavailable — reporting last cached value %.1f%%. "
+                    "Will recover automatically when VPP range retries.",
+                    self._cached_battery_soc,
+                )
             else:
                 data.battery_soc = 0.0
 
@@ -2738,6 +2779,23 @@ class GrowattModbus:
                                  data.export_limit_failed_power_rate * 0.1)
             except Exception as e:
                 logger.debug(f"Could not read export_limit_failed_power_rate register 3000: {e}")
+
+        # --- Dry Contact Controls (holding 3016/3017/3019, SPH/MIN TL-X/TL-XH) ---
+        # Read as a 4-register block (3016–3019); index 2 (reg 3018 = tl_xh_priority_mode) is skipped.
+        if any(reg in holding_map for reg in [3016, 3017, 3019]):
+            try:
+                dc_regs = self.read_holding_registers(3016, 4)
+                if dc_regs is not None and len(dc_regs) >= 4:
+                    if 3016 in holding_map:
+                        data.dry_contact_enable = int(dc_regs[0])
+                    if 3017 in holding_map:
+                        data.dry_contact_on_rate = int(dc_regs[1])
+                    if 3019 in holding_map:
+                        data.dry_contact_off_rate = int(dc_regs[3])
+                    logger.debug("[DRY CONTACT CTRL] enable=%d on_rate=%d off_rate=%d",
+                                 data.dry_contact_enable, data.dry_contact_on_rate, data.dry_contact_off_rate)
+            except Exception as e:
+                logger.debug(f"Could not read dry contact control registers 3016-3019: {e}")
 
         # --- SPF Off-Grid Controls --- Read if present in profile
         # Read registers 1, 2, 8 (output config, charge config, AC input mode)

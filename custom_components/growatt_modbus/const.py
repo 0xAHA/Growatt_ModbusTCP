@@ -520,6 +520,28 @@ WRITABLE_REGISTERS = {
         'desc': 'Fallback output power rate applied when export limitation control fails (0–100%)'
     },
 
+    # SPH / MIN TL-X / TL-XH: dry contact relay controls (V1.39 §3016-3019)
+    'dry_contact_enable': {
+        'register': 3016,
+        'scale': 1,
+        'options': {0: 'Disabled', 1: 'Enabled'},
+        'desc': 'Dry contact function enable'
+    },
+    'dry_contact_on_rate': {
+        'register': 3017,
+        'scale': 0.1,
+        'valid_range': (0, 1000),
+        'unit': '%',
+        'desc': 'Power rate to close relay (0.0–100.0%)'
+    },
+    'dry_contact_off_rate': {
+        'register': 3019,
+        'scale': 0.1,
+        'valid_range': (0, 1000),
+        'unit': '%',
+        'desc': 'Power rate to open relay (0.0–100.0%)'
+    },
+
     # MOD GEN4 power rate limits for priority modes
     # Scan #228 confirmed: 3036=100 (GridFirstDischargePowerRate), 3047=80 (BatFirstPowerRate)
     'grid_first_discharge_power_rate': {
@@ -638,6 +660,8 @@ SENSOR_DEVICE_MAP = {
         'battery_derating_mode',  # Battery-related status on inverter
         # SPF Off-Grid fan speeds
         'inverter_fan_speed',
+        # Dry contact relay state (read-only, SPH/MIN TL-X/TL-XH)
+        'dry_contact_state',
         # WIT debug/safety registers (read-only, disabled by default)
         'ntognd_detect', 'nonstd_vac_enable', 'enable_spec_set', 'fast_mppt_enable',
     },
