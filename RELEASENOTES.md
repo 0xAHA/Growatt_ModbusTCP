@@ -4,6 +4,47 @@
 
 ---
 
+## v1.0.3
+
+Issues: #337, #341, #342
+
+- **Fix: SPH 3-6kW (DTC 3502) still auto-detects as `sph_8000_10000_hu` due to floating PV3 input (Issue #337):**
+  The v1.0.2 detection reorder (check PV3 before reg 1086) was correct but incomplete.
+  On 2-string SPH 3-6kW inverters the unconnected PV3 input floats at ~0.1 V, so legacy
+  register 11 reads raw `1`. The `> 0` threshold treated this residual as "PV3 present",
+  triggering the HU branch.
+
+  Two-part fix:
+  1. **Trust V2.01 when readable** — if the V2.01 PV3 register (31018) returns any value
+     (including 0), that response is authoritative and the legacy reg-11 fallback is skipped
+     entirely. A V2.01 unit with no PV3 correctly returns `0`; reg-11 is never consulted.
+  2. **Noise-floor threshold on reg-11** — when the legacy fallback is still needed (V2.01
+     range not available), the threshold is raised from `> 0` to `> 30` (3 V at ×0.1 scale).
+     Floating inputs read ~1 raw; any genuinely energised PV string reads 300+ under daylight.
+
+- **Fix: Optional VPP range re-logs WARNING every ~5 minutes forever on single-battery SPH/MIN (Issue #341):**
+  The retry logic deleted the failure entry before re-reading the range. If the re-read
+  failed again, `.get()` returned `None` and the fail count reset to 1, re-triggering the
+  WARNING on every retry cycle. The "warn once, then DEBUG" intent was effectively unreachable
+  for permanently absent ranges (e.g. battery cluster-2/3/4 on a single-battery unit).
+
+  Fix: the entry is no longer deleted before the retry read. The existing count survives, so
+  subsequent failures increment past 1 and log at DEBUG only. The entry is cleared on a
+  successful read so the next genuine failure gets its own first-occurrence WARNING.
+
+- **Fix: TOU time writes cross-contaminate sibling registers on back-to-back writes (Issue #342):**
+  The atomic FC16 write for SPH and MOD TOU periods read sibling registers (the one not being
+  set) from `coordinator.data`, which is up to `scan_interval` (default 60 s) stale. Writing
+  start and then end within one poll window caused the end-write to read the old start from
+  cache and write it back, silently reverting the start. Predbat and other controllers that
+  program start+end ~1 s apart were consistently affected.
+
+  Fix: both `GrowattGenericTime` and `GrowattModTouTime` now perform a fresh hardware read of
+  the full register triple/pair immediately before the FC16 write. The cached data is used only
+  as a fallback if the fresh read fails.
+
+---
+
 ## v1.0.2
 
 Issues: #336

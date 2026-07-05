@@ -1228,9 +1228,12 @@ class GrowattModbus:
                     if time.time() - _fail_time < _OPTIONAL_RANGE_RETRY_SECONDS:
                         logger.debug(f"Skipping known-failed optional VPP range ({min_addr_block}-{max_addr_block}), retry in {int(_OPTIONAL_RANGE_RETRY_SECONDS - (time.time() - _fail_time))}s")
                         continue
-                    # Retry window expired — remove entry and fall through to re-read
+                    # Retry window expired — fall through to re-read.
+                    # Do NOT delete the entry here: the fail_count must survive so that
+                    # "warn once, then DEBUG" works correctly. If the re-read fails below,
+                    # _prev will find the existing entry and increment the count past 1,
+                    # suppressing the WARNING. The entry is cleared only on a successful read.
                     logger.debug(f"Retrying previously failed optional VPP range ({min_addr_block}-{max_addr_block})")
-                    del self._failed_optional_ranges[range_key]
 
                 logger.debug(f"Reading 31000 sub-range ({min_addr_block}-{max_addr_block}, {count_block} registers)")
                 registers = self.read_input_registers(min_addr_block, count_block, log_errors=is_wit_critical_range)
@@ -1253,6 +1256,9 @@ class GrowattModbus:
                         logger.warning(f"Failed to read critical WIT battery range ({min_addr_block}-{max_addr_block}) - will retry next poll")
                     # Don't return None - continue with what we have
                 else:
+                    # Range succeeded — clear any previous failure record so the
+                    # next failure is treated as fresh (warn again on first failure).
+                    self._failed_optional_ranges.pop(range_key, None)
                     # Populate cache
                     for i, value in enumerate(registers):
                         self._register_cache[min_addr_block + i] = value

@@ -812,23 +812,40 @@ async def async_refine_dtc_detection(
         # IMPORTANT: Check PV3 FIRST. Reg 1086 responds on ALL SPH models (returns battery SOC
         # on 3-6kW units), so the old order (1086 first) incorrectly matched 3-6kW as HU.
         if dtc_code == 3502:
-            # Check V2.01 PV3 voltage register (31018)
+            # Check V2.01 PV3 voltage register (31018).
+            # Noise-floor threshold: require raw > 30 (3 V at ×0.1 scale) to reject floating
+            # unconnected inputs, which return residual values of ~1 (0.1 V).
+            _PV3_NOISE_FLOOR = 30
             pv3_present = False
+            v201_pv3_readable = False
             result = await hass.async_add_executor_job(
                 client.read_input_registers, 31018, 1  # V2.01 PV3 voltage
             )
-            if result is not None and len(result) > 0 and result[0] > 0:
-                pv3_present = True
-                _LOGGER.debug("DTC 3502 refinement: PV3 present in V2.01 range (31018=%d)", result[0])
+            if result is not None and len(result) > 0:
+                v201_pv3_readable = True  # V2.01 range responds — its answer is authoritative
+                if result[0] > _PV3_NOISE_FLOOR:
+                    pv3_present = True
+                    _LOGGER.debug("DTC 3502 refinement: PV3 present in V2.01 range (31018=%d)", result[0])
+                else:
+                    _LOGGER.debug(
+                        "DTC 3502 refinement: V2.01 PV3 register readable but below noise floor "
+                        "(31018=%d, threshold=%d) — no PV3", result[0], _PV3_NOISE_FLOOR
+                    )
 
-            if not pv3_present:
-                # Fallback to legacy register 11 (base range PV3 voltage)
+            if not pv3_present and not v201_pv3_readable:
+                # V2.01 range not available — fall back to legacy register 11 with noise-floor
+                # threshold to reject floating inputs (which read ~1 raw on unconnected strings).
                 result = await hass.async_add_executor_job(
                     client.read_input_registers, 11, 1  # Legacy PV3 voltage
                 )
-                if result is not None and len(result) > 0 and result[0] > 0:
+                if result is not None and len(result) > 0 and result[0] > _PV3_NOISE_FLOOR:
                     pv3_present = True
                     _LOGGER.debug("DTC 3502 refinement: PV3 present in legacy range (reg11=%d)", result[0])
+                elif result is not None and len(result) > 0:
+                    _LOGGER.debug(
+                        "DTC 3502 refinement: legacy PV3 register below noise floor "
+                        "(reg11=%d, threshold=%d) — no PV3", result[0], _PV3_NOISE_FLOOR
+                    )
 
             if not pv3_present:
                 # 2-string inverter — definitely NOT HU (which is 3-string)

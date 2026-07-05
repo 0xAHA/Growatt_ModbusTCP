@@ -237,10 +237,25 @@ class GrowattGenericTime(CoordinatorEntity, TimeEntity):
             await self._write_single(register, raw_value, value)
             return
 
-        data = self.coordinator.data
-        current_start = int(getattr(data, start_name, 0) or 0) if data else 0
-        current_end = int(getattr(data, end_name, 0) or 0) if data else 0
-        current_enable = int(getattr(data, enable_name, 0) or 0) if data else 0
+        # Read the current [start, end, enable] triple fresh from hardware rather than
+        # trusting coordinator.data (which is up to scan_interval stale). Using cached
+        # values for sibling registers causes back-to-back writes within the same poll
+        # window to revert each other: the second write reads the old sibling value and
+        # writes it back, silently undoing the first write.
+        triple = await self.hass.async_add_executor_job(
+            self.coordinator.modbus_client.read_holding_registers, start_reg, 3
+        )
+        if triple is not None and len(triple) >= 3:
+            current_start, current_end, current_enable = int(triple[0]), int(triple[1]), int(triple[2])
+        else:
+            _LOGGER.warning(
+                "%s: could not read fresh register triple (reg %d) — falling back to cached data",
+                name, start_reg,
+            )
+            data = self.coordinator.data
+            current_start = int(getattr(data, start_name, 0) or 0) if data else 0
+            current_end = int(getattr(data, end_name, 0) or 0) if data else 0
+            current_enable = int(getattr(data, enable_name, 0) or 0) if data else 0
 
         new_start = raw_value if is_start else current_start
         new_end = raw_value if not is_start else current_end
@@ -369,18 +384,32 @@ class GrowattModTouTime(CoordinatorEntity, TimeEntity):
         Writing both registers in one Modbus FC16 call prevents the inverter from ever seeing
         a partial update (start changed but end not yet written), which can cause TOU reversion.
         """
-        data = self.coordinator.data
         period = self._period_def
 
+        # Read the current [start, end] pair fresh from hardware rather than trusting
+        # coordinator.data (stale by up to scan_interval). Stale siblings cause the second
+        # of two back-to-back writes in the same poll window to revert the first.
+        pair = await self.hass.async_add_executor_job(
+            self.coordinator.modbus_client.read_holding_registers, period["start_reg"], 2
+        )
+        if pair is not None and len(pair) >= 2:
+            current_start, current_end = int(pair[0]), int(pair[1])
+        else:
+            _LOGGER.warning(
+                "MOD TOU period %d: could not read fresh register pair (reg %d) — falling back to cached data",
+                self._period, period["start_reg"],
+            )
+            data = self.coordinator.data
+            current_start = int(getattr(data, period["start_field"], 0) if data else 0)
+            current_end = int(getattr(data, period["end_field"], 0) if data else 0)
+
         # Compute new start raw, preserving priority (bits 13-14) and enable (bit 15)
-        current_start = int(getattr(data, period["start_field"], 0) if data else 0)
         if self._is_start:
             new_start = (current_start & 0xE000) | ((value.hour << 8) | value.minute)
         else:
             new_start = current_start  # unchanged — keep current start when writing end
 
         # Compute new end raw (plain hex-packed)
-        current_end = int(getattr(data, period["end_field"], 0) if data else 0)
         if not self._is_start:
             new_end = (value.hour << 8) | value.minute
         else:
