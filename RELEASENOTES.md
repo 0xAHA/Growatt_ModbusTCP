@@ -4,6 +4,27 @@
 
 ---
 
+## v1.0.5
+
+Issues: #345
+
+- **Fix: SPF battery power stays wrong sign indefinitely after grid-to-battery transition (Issue #345):**
+  The SPF sign correction (issue #174) covers `CHARGING_STATES = {5,6,7,8,9,10}`, but the
+  inverter transitions through status **8** (Combine Charge+Bypass) only during the mode switch
+  itself. Once the transition completes, the inverter settles to status **12** (PV
+  Charge+Discharge), which was explicitly excluded as "ambiguous". With PV >> load in status 12,
+  the battery is unambiguously net-charging, but `battery_power` retains its incorrect negative
+  sign and no correction fires — leaving the sensor stuck at the wrong value until the
+  integration is reloaded.
+
+  Fix: status 12 is now resolved using a power-balance check rather than being skipped outright.
+  If PV power exceeds AC load by more than 200 W and `battery_power` is negative, the sign is
+  corrected (battery is net-charging). If load exceeds PV by more than 200 W and
+  `battery_power` is positive, it is also corrected (battery is net-discharging). Values within
+  the 200 W balance margin are left unchanged to avoid flip-flopping when PV ≈ load.
+
+---
+
 ## v1.0.4
 
 Issues: #346, #348, #350

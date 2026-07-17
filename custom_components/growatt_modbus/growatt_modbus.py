@@ -802,7 +802,6 @@ class GrowattModbus:
         CHARGING_STATES = {5, 6, 7, 8, 9, 10}
         # Discharging state: battery is supplying power — sign must be negative
         DISCHARGING_STATES = {2}
-        # Status 12 (PV Charge+Discharge) is ambiguous — skip correction
         # Status 0,1,3,4,11 are standby/fault/bypass — skip correction
 
         if status in CHARGING_STATES and battery_power < 0:
@@ -821,6 +820,29 @@ class GrowattModbus:
                 f"{-battery_power:.1f}W [issue #174]"
             )
             return -battery_power
+
+        # Status 12 (PV Charge+Discharge): hardware sign is unreliable in this settled
+        # off-grid state. Resolve direction from power balance: PV >> load means the
+        # battery must be net charging; load >> PV means the battery must be net discharging.
+        # A 200 W margin avoids flip-flopping when PV ≈ load.  Issue #345.
+        if status == 12:
+            pv_power = getattr(data, 'pv1_power', 0.0) + getattr(data, 'pv2_power', 0.0)
+            load_power = getattr(data, 'ac_power', 0.0)
+            BALANCE_MARGIN = 200.0
+            if pv_power > load_power + BALANCE_MARGIN and battery_power < 0:
+                logger.warning(
+                    "[SPF sign correction] Status 12 (PV Charge+Discharge): PV=%.0fW >> "
+                    "Load=%.0fW — battery is net charging, correcting %.1fW to %.1fW [issue #345]",
+                    pv_power, load_power, battery_power, -battery_power,
+                )
+                return -battery_power
+            if load_power > pv_power + BALANCE_MARGIN and battery_power > 0:
+                logger.warning(
+                    "[SPF sign correction] Status 12 (PV Charge+Discharge): Load=%.0fW >> "
+                    "PV=%.0fW — battery is net discharging, correcting %.1fW to %.1fW [issue #345]",
+                    load_power, pv_power, battery_power, -battery_power,
+                )
+                return -battery_power
 
         return battery_power
 
