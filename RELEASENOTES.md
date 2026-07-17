@@ -4,6 +4,48 @@
 
 ---
 
+## v1.0.4
+
+Issues: #346, #348, #350
+
+- **Fix: WIT Grid Import Energy jitters due to formula calculation instead of hardware registers (Issue #346):**
+  The grid import energy sensors (`grid_import_energy_today` / `_total`) use hardware registers
+  on SPH and XH-hybrid profiles, but for WIT inverters they fell through to the calculated
+  formula `max(0, load − solar + export)`. WIT profiles have dedicated `energy_to_user_today/total`
+  registers (8067-8078) that report hardware-measured grid import directly. The result was
+  artificial jitter as the formula's three inputs moved independently.
+
+  Fix: `"wit_" in inverter_series` added to the `has_hardware_import` check, routing WIT
+  models to the hardware-register path (same as SPH/XH) and bypassing the formula.
+
+- **Fix: MOD 6000-15000TL3-X shows wrong inverter status and spurious PV Energy Total sensor (Issue #348):**
+  Two bugs in the MOD X (grid-tied) profile:
+
+  1. **Status codes:** `MOD_6000_15000TL3_X` was erroneously included in `PROFILE_STATUS_MAP`
+     with value `'hybrid'`, causing status code `1` to display as *"Self-Test"* instead of
+     *"Normal"* on this purely grid-tied inverter. Removed; MOD X now uses the default
+     `STATUS_CODES` (0=Waiting, 1=Normal, 3=Fault).
+
+  2. **PV Energy Total sensor:** `PV_DC_ENERGY_SENSORS` (which includes `pv_energy_total`) was
+     included in MOD X's sensor group, but the MOD X register map has no backing registers for
+     that sensor (registers 91-92 are absent in the grid-tied profile). The result was a
+     permanently-zero entity. Excluded `PV_DC_ENERGY_SENSORS` from the MOD X sensor composition.
+
+- **Fix: Battery SOC freezes indefinitely on MIN TL-XH when VPP range is preferred (Issue #350):**
+  On MIN TL-XH the VPP protocol suffix (`_vpp`) is used on the 31000-range battery registers
+  (e.g. `battery_soc_vpp` at 31217) to prevent them overriding the authoritative 3000-range
+  registers. However, `_get_register_value_with_fallback('battery_soc')` with `preferred_range
+  = 'vpp'` only searches addresses ≥ 31000. Since no register named exactly `battery_soc`
+  exists in that range, it returned `None`, and the `_cached_battery_soc` last-known-good
+  value was served forever — freezing SOC for days with no recovery path.
+
+  Fix: after `_get_register_value_with_fallback` returns `None`, the code now iterates **all**
+  registers named `battery_soc` regardless of range and uses the first one that has a cached
+  value. This covers MIN TL-XH's register 3171 when VPP is the detected range, and ensures
+  the warning message only fires when no range at all can serve a value.
+
+---
+
 ## v1.0.3
 
 Issues: #337, #341, #342

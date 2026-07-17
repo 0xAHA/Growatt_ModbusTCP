@@ -1512,7 +1512,8 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 energy_to_user_today = getattr(data, "energy_to_user_today", 0)
                 has_hardware_import = (
                     hasattr(data, "energy_from_grid_today") or
-                    (is_sph_family or is_xh_hybrid)
+                    (is_sph_family or is_xh_hybrid) or
+                    "wit_" in inverter_series
                 )
 
                 if has_hardware_import:
@@ -1542,7 +1543,8 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
                 energy_to_user_total = getattr(data, "energy_to_user_total", 0)
                 has_hardware_import = (
                     hasattr(data, "energy_from_grid_total") or
-                    (is_sph_family or is_xh_hybrid)
+                    (is_sph_family or is_xh_hybrid) or
+                    "wit_" in inverter_series
                 )
 
                 if has_hardware_import:

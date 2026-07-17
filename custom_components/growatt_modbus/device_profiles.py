@@ -654,7 +654,8 @@ INVERTER_PROFILES = {
             PV3_SENSORS |
             THREE_PHASE_SENSORS |
             ENERGY_SENSORS |
-            PV_DC_ENERGY_SENSORS |
+            # PV_DC_ENERGY_SENSORS intentionally excluded: MOD X grid-tied profile has no
+            # pv_energy_total registers (91-92 absent), so the sensor would always read 0.
             PV_MPPT_TOTAL_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS

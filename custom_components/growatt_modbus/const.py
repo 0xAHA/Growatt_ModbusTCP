@@ -930,7 +930,7 @@ PROFILE_STATUS_MAP: dict[str, str] = {
     'SPH_TL3_3000_10000_V201':  'hybrid',
     # Hybrid — MOD three-phase
     'MOD_6000_15000TL3_XH': 'hybrid',
-    'MOD_6000_15000TL3_X':  'hybrid',
+    # MOD_6000_15000TL3_X is grid-tied (no battery) — uses default STATUS_CODES, not hybrid
     # Hybrid — WIT commercial
     'WIT_4000_15000TL3': 'hybrid',
     # Hybrid — MIN TL-XH

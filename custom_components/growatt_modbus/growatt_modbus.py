@@ -2374,16 +2374,29 @@ class GrowattModbus:
 
             # Battery SOC (use smart fallback if multiple ranges available)
             value = self._get_register_value_with_fallback('battery_soc')
+            # If preferred-range returns None (e.g. MIN TL-XH: VPP detected for other sensors
+            # but 'battery_soc' only exists at 3171 in the 3000-range), fall through to any
+            # address named 'battery_soc' so we never cache-freeze when VPP range is latched.
+            if value is None:
+                for _soc_addr in self._find_all_registers_by_name('battery_soc'):
+                    _soc_v = self._get_register_value(_soc_addr)
+                    if _soc_v is not None:
+                        value = _soc_v
+                        logger.debug(
+                            "battery_soc preferred-range miss — using fallback reg %d: %.1f%%",
+                            _soc_addr, value,
+                        )
+                        break
             if value is not None:
                 data.battery_soc = value
                 self._cached_battery_soc = value
             elif self._cached_battery_soc is not None:
-                # VPP range unavailable (latched after failure) — use last known value
-                # to avoid reporting a misleading 0% to battery control consumers.
+                # All register ranges unavailable — use last known value to avoid reporting
+                # 0% to battery control consumers. Recovers on next successful range read.
                 data.battery_soc = self._cached_battery_soc
                 logger.warning(
-                    "battery_soc register unavailable — reporting last cached value %.1f%%. "
-                    "Will recover automatically when VPP range retries.",
+                    "battery_soc unavailable across all register ranges — "
+                    "serving last cached value %.1f%%",
                     self._cached_battery_soc,
                 )
             else:
