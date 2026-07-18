@@ -4,6 +4,26 @@
 
 ---
 
+## v1.0.9
+
+Issues: #351
+
+- **Fix: Remaining transaction ID mismatches in shared connection mode (#351):**
+  With a persistent shared TCP connection, late RS485 responses from a previous slave's poll
+  could arrive in the adapter's buffer after the lock was released. When the next slave acquired
+  the lock and started reading, those stale bytes produced transaction ID mismatches
+  ("request ask for id=X but got id=Y"). Fix: the receive buffer is now flushed at the start
+  of every locked poll cycle, not just on reconnect.
+
+- **Fix: Shared connection lock timeout with slow/failing register blocks (#351):**
+  The 3000-range register block does not have the same skip-on-failure caching as the VPP 31000
+  range. A failing 3000-range chunk costs a full TCP timeout (10s) per chunk, and multiple
+  failing chunks could push the total poll time past the 30s lock timeout, causing the other
+  coordinator to log "Shared Modbus connection busy (lock timeout 30s)" and skip its poll.
+  `SHARED_LOCK_TIMEOUT` increased from 30s to 60s to accommodate realistic worst-case poll times.
+
+---
+
 ## v1.0.8
 
 Issues: #351

@@ -933,6 +933,11 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 )
                 return None
 
+            # Flush any stale bytes left in the adapter's TCP buffer by the
+            # previous slave's poll (late RS485 responses that arrived after the
+            # lock was released cause transaction ID mismatches on this slave's reads).
+            hub._flush_receive_buffer()
+
             self._client._battery_voltage_range = self.config_entry.options.get(
                 "battery_voltage_range", "Auto-detect"
             )
