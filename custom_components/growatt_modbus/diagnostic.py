@@ -65,7 +65,7 @@ UNIVERSAL_SCAN_RANGES = [
     # MIN/MOD extended data ranges (input registers FC03)
     {"name": "MIN/MOD Range 3000-3124",         "start": 3000, "count": 125, "group": "mod_extended"},
     {"name": "MOD Extended 3125-3249",          "start": 3125, "count": 125, "group": "mod_extended"},
-    {"name": "MOD Extended Input 3250-3374",    "start": 3250, "count": 125, "group": "mod_extended"},
+    {"name": "MOD/TL-XH Extended Input 3250-3374",    "start": 3250, "count": 125, "group": "mod_extended"},
     # Legacy holding registers — writable controls present on all grid-tied/hybrid models
     # (TOU schedule, charge/discharge control, AC charge enable, priority mode, etc.)
     {"name": "Legacy Holding 0-124",    "start": 0,    "count": 125, "group": "legacy",  "register_type": "holding"},
@@ -73,7 +73,7 @@ UNIVERSAL_SCAN_RANGES = [
     # MOD TL3-XH holding registers (FC04) — includes TOU schedule (3038-3045) and other settings
     {"name": "MOD Holding 3000-3124",           "start": 3000, "count": 125, "group": "mod_extended", "register_type": "holding"},
     {"name": "MOD Holding 3125-3249",           "start": 3125, "count": 125, "group": "mod_extended", "register_type": "holding"},
-    {"name": "MOD Extended Holding 3250-3374",  "start": 3250, "count": 125, "group": "mod_extended", "register_type": "holding"},
+    {"name": "MOD/TL-XH Extended Holding 3250-3374",  "start": 3250, "count": 125, "group": "mod_extended", "register_type": "holding"},
     # WIT/WIS battery range
     {"name": "WIT/WIS Battery Range 8000-8124", "start": 8000, "count": 125, "group": "wit"},
     # VPP Control holding registers (30100-30499) — system/AC/battery control settings
@@ -125,7 +125,7 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         # Range group selection (all enabled by default)
         vol.Optional("scan_legacy",       default=False): cv.boolean,  # Base 0-249 (all models)
         vol.Optional("scan_storage",      default=False): cv.boolean,  # Storage 1000-1124 (SPH/MIN battery)
-        vol.Optional("scan_mod_extended", default=False): cv.boolean,  # MIN/MOD 3000-3249
+        vol.Optional("scan_mod_extended", default=False): cv.boolean,  # MIN/MOD/TL-XH 3000-3374 (incl. backup box regs 3250-3374)
         vol.Optional("scan_wit",          default=False): cv.boolean,  # WIT/WIS 8000-8124
         vol.Optional("scan_vpp_control",  default=False): cv.boolean,  # VPP control 30100-30499
         vol.Optional("scan_vpp_data",     default=False): cv.boolean,  # VPP data 31000-31399
