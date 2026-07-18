@@ -38,15 +38,75 @@ INFO - DTC and model name detection failed, trying register-based detection...
 
 ## Valid DTC Codes
 
+DTC codes are read from holding register 30000 (VPP models) or register 43 (legacy models). Each code maps to a specific profile.
+
+### Legacy Protocol (register 43, no VPP support)
+
+| DTC Code | Model Series | Profile |
+|----------|-------------|---------|
+| 210 | MIC 2500-5500MTL-S | mic_2500_5500mtl_s |
+| 2049 | TL3-S 3000-15000 | tl3_s_3000_15000 |
+
+### SPF Series — Off-Grid (register 43)
+
+> ⚠️ Off-grid inverters will **reset** if VPP registers (30000+, 31000+) are accessed. The integration skips those ranges automatically when an SPF DTC is detected.
+
+| DTC Code | Model Series | Profile |
+|----------|-------------|---------|
+| 3400 | SPF 3000-6000 ES PLUS | spf_3000_6000_es_plus |
+| 3401 | SPF 3000-6000 ES PLUS (variant) | spf_3000_6000_es_plus |
+| 3402 | SPF 3000-6000 ES PLUS (variant) | spf_3000_6000_es_plus |
+| 3403 | SPF 3000-6000 ES PLUS (variant) | spf_3000_6000_es_plus |
+
+### SPH / SPA Series — Single-Phase Hybrid
+
+| DTC Code | Model Series | Profile |
+|----------|-------------|---------|
+| 3501 | SPH 3000-6000TL BL | sph_3000_6000_v201 |
+| 3502 | SPH 3000-6000TL BL-UP | sph_3000_6000_v201 |
+| 3503 | SPH 3000-6000TL HU | sph_3000_6000_v201 |
+| 3504 | SPH 3000-6000TL HUB | sph_3000_6000_v201 |
+| 3601 | SPH 4-10KTL3 BH-UP | sph_tl3_3000_10000_v201 |
+| 3701 | SPA 1000-3000TL BL | sph_3000_6000_v201 |
+| 3715 | SPA 3000-6000TL AU | sph_3000_6000_v201 |
+| 3716 | SPA 3000-6000TL AUB | sph_3000_6000_v201 |
+| 3725 | SPA 4-10KTL3 BH-UP | sph_tl3_3000_10000_v201 |
+| 3735 | SPA 3000-6000TL BL (VPP variant) | sph_3000_6000_v201 |
+| 21303 | SPH/SPM 8000-10000TL-HU | sph_8000_10000_hu |
+
+### SPE Series — Single-Phase Hybrid (SPF protocol, 8-12 kW)
+
+| DTC Code | Model Series | Profile |
+|----------|-------------|---------|
+| 64541 | SPE 8000-12000 ES | spe_8000_12000_es |
+
+### MIN / MIC Series — Single-Phase Grid-Tied / Hybrid
+
 | DTC Code | Model Series | Profile | Notes |
 |----------|-------------|---------|-------|
-| 3501 | SPH 3000-6000TL BL (legacy) | sph_3000_6000 | Pre-UP model, uses legacy profile |
-| 3502 | SPH 3000-6000TL BL -UP | sph_3000_6000_v201 | Upgraded model with V2.01 |
-| 3601 | SPH 4000-10000TL3 BH-UP | sph_tl3_3000_10000 | Three-phase hybrid |
-| 5100 | MIN 2500-6000TL-XH | min_3000_6000_tl_x | Single-phase hybrid |
-| 5200 | MIC/MIN 2500-6000TL-X | min_3000_6000_tl_x | Shared code |
-| 5201 | MIN 7000-10000TL-X | min_7000_10000_tl_x | Three PV strings |
-| 5400 | MOD-XH/MID-XH | mod_6000_15000tl3_xh | Three-phase, shared code |
+| 5100 | MIN 2500-6000TL-XH/XH2/XHE/XA | tl_xh_3000_10000_v201 | XH hybrid variant |
+| 5200 | MIC 600-3300TL-X/X2; MIN 2500-6000TL-X/X2 | min_3000_6000_tl_x_v201 | Refined by per-MPPT energy check |
+| 5201 | MIN 7-10KTL-X/X2 | min_7000_10000_tl_x_v201 | Three PV strings |
+
+### MOD / MID Series — Three-Phase Hybrid / Grid-Tied
+
+| DTC Code | Model Series | Profile | Notes |
+|----------|-------------|---------|-------|
+| 5400 | MOD 3-10KTL3-XH/BP; MID 11-30KTL3-XH; MID 8-15KTL3-XHL/JP | mod_6000_15000tl3_xh_v201 | Three-phase hybrid with battery |
+| 5401 | MOD 3-15KTL3-HU; MID 33-50KTL3-HU | mod_6000_15000tl3_xh_v201 | HU market variant |
+| 5001 | MID 17-25KTL3-X; MID 20-30KTL3-X2; MID 33-50KTL3-X2 | mid_15000_25000tl3_x_v201 | Grid-tied, no battery |
+| 5002 | MID 33-36KTL3-X(Pro.E); MID 3-33KTL3-X3; MOD 3-15KTL3-X; MOD 3-15KTL3-X2 | mid_15000_25000tl3_x_v201 | Grid-tied, no battery |
+| 5003 | MAC 30-70KTL3-X; MAC 15-36KTL3-XL; MAC 50-70KTL3-X2 | mid_15000_25000tl3_x_v201 | Best-effort mapping, no dedicated profile |
+
+### WIT / WIS Series — Three-Phase Commercial Hybrid
+
+| DTC Code | Model Series | Profile | Notes |
+|----------|-------------|---------|-------|
+| 5601 | WIT 29.9-50K-XHU | wit_29900_50000tl3_xhu | 4 MPPT trackers, 3 battery channels |
+| 5600 | WIT 50-100K-H/HE/HU/A/AE/AU; WIS 100K-AM | wit_29900_50000tl3_xhu | Interim: VPP 31200+ not available on 100K-HU hardware |
+| 5603 | WIT 4-15kW | wit_4000_15000tl3 | Residential three-phase hybrid |
+| 5800 | WIS 210K | mid_15000_25000tl3_x_v201 | Best-effort, uses MID profile |
+| 5801 | WIS 215K-AM | mid_15000_25000tl3_x_v201 | Best-effort, uses MID profile |
 
 ## How to View Logs in Home Assistant
 
