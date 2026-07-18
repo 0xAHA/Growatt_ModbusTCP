@@ -214,6 +214,18 @@ class GrowattData:
     extra_energy_today: float = 0.0   # kWh
     extra_energy_total: float = 0.0   # kWh
 
+    # Backup Box (Growatt ARK transfer switch, RS485 via TL-X/TL-XH inverter, input regs 3281-3342)
+    box_connect_flag: int = 0          # 0=Abnormal/absent, 1=Normal/connected (reg 3320)
+    box_bypass_status: int = 0         # 0=Off, 1=On (reg 3281)
+    box_work_mode: int = 0             # 0=Offgrid, 1=Ongrid, 2=Generator (reg 3282)
+    box_error_code: int = 0            # Error code 700-800 range (reg 3284)
+    box_warning_code: int = 0          # Warning code 700-800 range (reg 3285)
+    box_temperature: float = 0.0       # °C, scale 1, signed Int8 (reg 3286)
+    box_grid_voltage: float = 0.0      # V, scale 0.1 (reg 3287)
+    box_grid_power: float = 0.0        # W, scale 0.1, signed Int32 (regs 3289-3290)
+    box_load_power: float = 0.0        # W, scale 0.1, Uint32 (regs 3297-3298)
+    box_relay_status: int = 0          # 0=Not supported/comm error, 1=Open, 2=Close (reg 3342)
+
     # Temperatures
     inverter_temp: float = 0.0        # °C
     ipm_temp: float = 0.0             # °C

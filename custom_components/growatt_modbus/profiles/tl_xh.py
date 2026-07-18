@@ -102,6 +102,21 @@ TL_XH_3000_10000 = {
         104: {'name': 'derating_mode', 'scale': 1, 'unit': ''},
         105: {'name': 'fault_code', 'scale': 1, 'unit': ''},
         112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
+
+        # Backup Box (Growatt ARK transfer switch, RS485 at regs 3250-3374)
+        # Gate: reg 3320 (box_connect_flag) = 1 means backup box is present and communicating.
+        3281: {'name': 'box_bypass_status', 'scale': 1,   'unit': '',   'desc': '0=Off, 1=On'},
+        3282: {'name': 'box_work_mode',     'scale': 1,   'unit': '',   'desc': '0=Offgrid, 1=Ongrid, 2=Generator'},
+        3284: {'name': 'box_error_code',    'scale': 1,   'unit': '',   'desc': 'Error code (700-800 range)'},
+        3285: {'name': 'box_warning_code',  'scale': 1,   'unit': '',   'desc': 'Warning code (700-800 range)'},
+        3286: {'name': 'box_temperature',   'scale': 1,   'unit': '°C', 'signed': True, 'desc': 'NTC temperature, Int8, -40 to 100°C'},
+        3287: {'name': 'box_grid_voltage',  'scale': 0.1, 'unit': 'V',  'desc': 'Grid voltage'},
+        3289: {'name': 'box_grid_power_high', 'scale': 1, 'unit': '', 'pair': 3290, 'signed': True, 'desc': 'Grid power HIGH (Int32, positive=import)'},
+        3290: {'name': 'box_grid_power_low',  'scale': 1, 'unit': '', 'pair': 3289, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Grid power LOW'},
+        3297: {'name': 'box_load_power_high', 'scale': 1, 'unit': '', 'pair': 3298, 'desc': 'Load power HIGH (Uint32)'},
+        3298: {'name': 'box_load_power_low',  'scale': 1, 'unit': '', 'pair': 3297, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Load power LOW'},
+        3320: {'name': 'box_connect_flag',  'scale': 1,   'unit': '',   'desc': '0=Abnormal/absent, 1=Normal/connected'},
+        3342: {'name': 'box_relay_status',  'scale': 1,   'unit': '',   'desc': '0=Not supported/comm error, 1=Open, 2=Close'},
     },
     'holding_registers': {
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
@@ -389,6 +404,21 @@ MIN_TL_XH_3000_10000_V201 = {
 
         # Battery Cluster 2 — VPP_V201_BATTERY2 (31300–31303, 31314–31322)
         **VPP_V201_BATTERY2,
+
+        # Backup Box (Growatt ARK transfer switch, RS485 at regs 3250-3374)
+        # Gate: reg 3320 (box_connect_flag) = 1 means backup box is present and communicating.
+        3281: {'name': 'box_bypass_status', 'scale': 1,   'unit': '',   'desc': '0=Off, 1=On'},
+        3282: {'name': 'box_work_mode',     'scale': 1,   'unit': '',   'desc': '0=Offgrid, 1=Ongrid, 2=Generator'},
+        3284: {'name': 'box_error_code',    'scale': 1,   'unit': '',   'desc': 'Error code (700-800 range)'},
+        3285: {'name': 'box_warning_code',  'scale': 1,   'unit': '',   'desc': 'Warning code (700-800 range)'},
+        3286: {'name': 'box_temperature',   'scale': 1,   'unit': '°C', 'signed': True, 'desc': 'NTC temperature, Int8, -40 to 100°C'},
+        3287: {'name': 'box_grid_voltage',  'scale': 0.1, 'unit': 'V',  'desc': 'Grid voltage'},
+        3289: {'name': 'box_grid_power_high', 'scale': 1, 'unit': '', 'pair': 3290, 'signed': True, 'desc': 'Grid power HIGH (Int32, positive=import)'},
+        3290: {'name': 'box_grid_power_low',  'scale': 1, 'unit': '', 'pair': 3289, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Grid power LOW'},
+        3297: {'name': 'box_load_power_high', 'scale': 1, 'unit': '', 'pair': 3298, 'desc': 'Load power HIGH (Uint32)'},
+        3298: {'name': 'box_load_power_low',  'scale': 1, 'unit': '', 'pair': 3297, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Load power LOW'},
+        3320: {'name': 'box_connect_flag',  'scale': 1,   'unit': '',   'desc': '0=Abnormal/absent, 1=Normal/connected'},
+        3342: {'name': 'box_relay_status',  'scale': 1,   'unit': '',   'desc': '0=Not supported/comm error, 1=Open, 2=Close'},
     },
     'holding_registers': {
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},

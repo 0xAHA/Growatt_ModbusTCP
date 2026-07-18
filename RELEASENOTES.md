@@ -4,6 +4,33 @@
 
 ---
 
+## v1.0.7
+
+- **New: Backup Box support (Growatt ARK transfer switch, TL-XH/MIN TL-XH):**
+  The Growatt ARK backup box connects via RS485 to TL-X/TL-XH inverters and reports its status
+  through the inverter's Modbus interface at input registers 3281-3342.
+
+  Auto-detected via register 3320 (`bBoxConnectFlag`): when the backup box is present and
+  communicating, its sensors appear automatically — no config flow option required. If no backup
+  box is connected, the register reads 0 and no sensors are created.
+
+  Sensors added to TL-XH, TL-XH US, and MIN TL-XH profiles:
+  - **Backup Box Status** — Normal / Abnormal (diagnostic, disabled by default)
+  - **Backup Box Work Mode** — Off-Grid / On-Grid / Generator
+  - **Backup Box Bypass** — On / Off (bypass switch state)
+  - **Backup Box Temperature** — NTC sensor temperature (°C)
+  - **Backup Box Grid Voltage** — Grid voltage seen by the backup box (V)
+  - **Backup Box Grid Power** — Signed grid power (W, positive = import)
+  - **Backup Box Load Power** — Total load power behind the backup box (W)
+  - **Backup Box Error / Warning Code** — diagnostic, disabled by default
+  - **Backup Box Relay** — Open / Closed (diagnostic, disabled by default)
+
+  All sensors (except Status) are gated on `bBoxConnectFlag == 1` and appear only when the
+  backup box is connected. Sensors are assigned to a dedicated "Backup Box" HA device linked
+  to the parent inverter.
+
+---
+
 ## v1.0.6
 
 Issues: #349

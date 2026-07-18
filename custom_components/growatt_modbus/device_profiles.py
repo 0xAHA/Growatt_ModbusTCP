@@ -161,6 +161,21 @@ WIT_EXTRA_SENSORS: Set[str] = {
     "extra_energy_today", "extra_energy_total",
 }
 
+BACKUP_BOX_SENSORS: Set[str] = {
+    # Growatt ARK transfer switch, connected via RS485 to TL-X/TL-XH inverters.
+    # Sensors gated on box_connect_flag==1 (reg 3320); box_connect_flag itself is always shown.
+    "box_connect_flag",
+    "box_bypass_status",
+    "box_work_mode",
+    "box_error_code",
+    "box_warning_code",
+    "box_temperature",
+    "box_grid_voltage",
+    "box_grid_power",
+    "box_load_power",
+    "box_relay_status",
+}
+
 
 # ============================================================================
 # COMPOSITE SENSOR GROUPS
@@ -346,9 +361,9 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 10.0,
-        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS,
+        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS,
     },
-    
+
     "tl_xh_us_3000_10000": {
         "name": "TL-XH US 3000-10000",
         "description": "US hybrid single-phase inverter with battery (3-10kW)",
@@ -357,7 +372,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 10.0,
-        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS,
+        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS,
     },
 
     # TL-XH V2.01 VPP Protocol
@@ -370,7 +385,7 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
-        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS,
+        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS,
     },
 
     "tl_xh_us_3000_10000_v201": {
@@ -382,7 +397,7 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
-        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS,
+        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS,
     },
 
     # MIN TL-XH Hybrid - Uses MIN 3000+ range with VPP battery
@@ -407,7 +422,8 @@ INVERTER_PROFILES = {
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
             TEMPERATURE_SENSORS |
-            STATUS_SENSORS
+            STATUS_SENSORS |
+            BACKUP_BOX_SENSORS
         ),
     },
 

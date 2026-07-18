@@ -649,6 +649,7 @@ DEVICE_TYPE_SOLAR = "solar"
 DEVICE_TYPE_GRID = "grid"
 DEVICE_TYPE_LOAD = "load"
 DEVICE_TYPE_BATTERY = "battery"
+DEVICE_TYPE_BACKUPBOX = "backup_box"
 
 # Sensor to Device Mapping
 # Each sensor is assigned to a logical device for better organization
@@ -751,6 +752,20 @@ SENSOR_DEVICE_MAP = {
             'charge_energy_today', 'charge_energy_total',
             'discharge_energy_today', 'discharge_energy_total',
         )),
+    },
+
+    # Backup Box device — Growatt ARK transfer switch (TL-X/TL-XH only, regs 3281-3342)
+    DEVICE_TYPE_BACKUPBOX: {
+        'box_connect_flag',
+        'box_bypass_status',
+        'box_work_mode',
+        'box_error_code',
+        'box_warning_code',
+        'box_temperature',
+        'box_grid_voltage',
+        'box_grid_power',
+        'box_load_power',
+        'box_relay_status',
     },
 }
 
