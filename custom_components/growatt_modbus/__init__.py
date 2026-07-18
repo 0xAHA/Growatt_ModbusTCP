@@ -16,12 +16,14 @@ from .const import (
     CONF_DEVICE_STRUCTURE_VERSION,
     CONF_INVERTER_SERIES,
     CONF_REGISTER_MAP,
+    CONF_CONNECTION_TYPE,
     CURRENT_DEVICE_STRUCTURE_VERSION,
     WRITABLE_REGISTERS,
     DEVICE_TYPE_INVERTER,
 )
 from .coordinator import GrowattModbusCoordinator
 from .diagnostic import async_setup_services
+from .growatt_modbus import SharedModbusConnection
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,10 +35,11 @@ PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.S
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Growatt Modbus integration."""
     hass.data.setdefault(DOMAIN, {})
-    
+    hass.data[DOMAIN].setdefault("_connections", {})
+
     # Set up diagnostic service
     await async_setup_services(hass)
-    
+
     return True
 
 
@@ -218,7 +221,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info("Removing stale number entity %s (WIT export_limit_w reg 203 not writable)", _stale_export_eid)
         entity_registry.async_remove(_stale_export_eid)
 
-    coordinator = GrowattModbusCoordinator(hass, entry)
+    # Shared connection hub: all TCP entries on the same host:port share one ModbusTcpClient
+    # and a threading.Lock to serialize reads/writes and prevent RS485 cross-talk on the gateway.
+    # This is transparent for single-entry setups (hub refcount=1, no actual sharing).
+    hub: SharedModbusConnection | None = None
+    connection_type = entry.data.get(CONF_CONNECTION_TYPE, "tcp")
+    if connection_type == "tcp":
+        from homeassistant.const import CONF_HOST, CONF_PORT
+        host = entry.data.get(CONF_HOST, "")
+        port = entry.data.get(CONF_PORT, 502)
+        timeout = entry.options.get("timeout", 10)
+        hub_key = f"{host}:{port}"
+        connections = hass.data[DOMAIN].setdefault("_connections", {})
+        if hub_key not in connections:
+            connections[hub_key] = SharedModbusConnection(host=host, port=port, timeout=timeout)
+            _LOGGER.debug("Created shared Modbus connection hub for %s", hub_key)
+        hub = connections[hub_key]
+        hub.acquire_ref()
+        if hub._refcount > 1:
+            _LOGGER.info(
+                "Shared Modbus connection mode: entry %s joined hub for %s (refcount=%d) — "
+                "RS485 gateway cross-talk prevention active",
+                entry.entry_id, hub_key, hub._refcount,
+            )
+
+    coordinator = GrowattModbusCoordinator(hass, entry, hub=hub)
 
     await coordinator.async_config_entry_first_refresh()
 
@@ -278,7 +305,18 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         coordinator = hass.data[DOMAIN].pop(entry.entry_id)
-        await hass.async_add_executor_job(coordinator.modbus_client.disconnect)
+        hub = getattr(coordinator, '_hub', None)
+        if hub is not None:
+            # Release the hub reference; hub disconnects when refcount reaches 0
+            connections = hass.data[DOMAIN].get("_connections", {})
+            hub.release_ref()
+            if hub._refcount <= 0:
+                # Remove from registry — hub already disconnected in release_ref()
+                hub_key = f"{hub.host}:{hub.port}"
+                connections.pop(hub_key, None)
+                _LOGGER.debug("Shared Modbus connection hub for %s removed (no more users)", hub_key)
+        else:
+            await hass.async_add_executor_job(coordinator.modbus_client.disconnect)
 
     return unload_ok
 

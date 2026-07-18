@@ -61,6 +61,14 @@ DEFAULT_BAUDRATE = 9600
 CURRENT_DEVICE_STRUCTURE_VERSION = 2
 
 # ============================================================================
+# SHARED CONNECTION MODE
+# When two TCP entries share the same host:port, a single ModbusTcpClient is
+# reused with a threading.Lock to serialize reads and prevent RS485 cross-talk.
+# ============================================================================
+SHARED_LOCK_TIMEOUT = 30       # seconds to wait for shared bus lock before giving up
+DEFAULT_INTER_SLAVE_DELAY_MS = 50  # ms pause after each slave poll to let RS485 bus settle
+
+# ============================================================================
 # SENSOR TYPE CLASSIFICATIONS FOR OFFLINE BEHAVIOR
 # ============================================================================
 

@@ -18,6 +18,7 @@ Hardware Setup:
 
 import time
 import logging
+import threading
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple, Union
 from homeassistant.config_entries import ConfigEntry
@@ -389,12 +390,193 @@ class GrowattData:
     firmware_version: str = ""
     serial_number: str = ""
 
+class SharedModbusConnection:
+    """Single ModbusTcpClient shared across multiple GrowattModbus instances on the same host:port.
+
+    Serializes all Modbus transactions with a threading.Lock (because _fetch_data runs in
+    executor threads, not on the asyncio event loop).  Reference-counted so the TCP socket
+    stays open as long as at least one coordinator needs it.
+    """
+
+    def __init__(self, host: str, port: int, timeout: int = 10) -> None:
+        self.host = host
+        self.port = port
+        self._timeout = timeout
+        self._client: Optional['ModbusTcpClient'] = None
+        self._lock = threading.Lock()
+        self._refcount = 0
+        self._connected = False
+
+    # ------------------------------------------------------------------
+    # Reference counting
+    # ------------------------------------------------------------------
+
+    def acquire_ref(self) -> None:
+        self._refcount += 1
+
+    def release_ref(self) -> None:
+        self._refcount -= 1
+        if self._refcount <= 0:
+            self.disconnect()
+            self._client = None
+
+    # ------------------------------------------------------------------
+    # Connection lifecycle (call only while lock is held)
+    # ------------------------------------------------------------------
+
+    def ensure_connected(self) -> bool:
+        """Connect if not already open; flush stale bytes on a new connection."""
+        if self._client is None:
+            try:
+                self._client = ModbusTcpClient(host=self.host, port=self.port, timeout=self._timeout)
+            except TypeError:
+                self._client = ModbusTcpClient(self.host, self.port)
+                if hasattr(self._client, 'timeout'):
+                    self._client.timeout = self._timeout
+
+        try:
+            if hasattr(self._client, 'is_socket_open') and self._client.is_socket_open():
+                return True
+        except Exception:
+            pass
+
+        result = self._client.connect()
+        if result:
+            self._connected = True
+            self._flush_receive_buffer()
+        return result
+
+    def disconnect(self) -> None:
+        if self._client is not None:
+            try:
+                self._client.close()
+            except Exception:
+                pass
+            self._connected = False
+
+    def _flush_receive_buffer(self) -> None:
+        """Drain stale Modbus responses left in the adapter's TCP buffer after reconnect."""
+        sock = getattr(self._client, 'socket', None)
+        if sock is None:
+            transport = getattr(self._client, 'transport', None)
+            if transport is not None:
+                sock = getattr(transport, 'socket', None) or getattr(transport, '_sock', None)
+        if sock is None:
+            return
+        try:
+            original_timeout = sock.gettimeout()
+            sock.settimeout(0)
+            discarded = 0
+            try:
+                while True:
+                    chunk = sock.recv(4096)
+                    if not chunk:
+                        break
+                    discarded += len(chunk)
+            except (BlockingIOError, OSError):
+                pass
+            finally:
+                sock.settimeout(original_timeout)
+            if discarded:
+                logger.debug(
+                    "[SharedConn %s:%s] Flushed %d stale bytes from receive buffer after reconnect",
+                    self.host, self.port, discarded,
+                )
+        except Exception as exc:
+            logger.debug("[SharedConn %s:%s] Buffer flush failed (non-critical): %s", self.host, self.port, exc)
+
+    # ------------------------------------------------------------------
+    # Register access (slave_id passed per call, not stored on hub)
+    # ------------------------------------------------------------------
+
+    def read_input_registers(self, start: int, count: int, slave_id: int) -> Optional[list]:
+        if self._client is None:
+            return None
+        try:
+            try:
+                resp = self._client.read_input_registers(address=start, count=count, device_id=slave_id)
+            except TypeError:
+                try:
+                    resp = self._client.read_input_registers(address=start, count=count, slave=slave_id)
+                except TypeError:
+                    try:
+                        resp = self._client.read_input_registers(address=start, count=count, unit=slave_id)
+                    except TypeError:
+                        resp = self._client.read_input_registers(start, count)
+            if hasattr(resp, 'isError') and callable(resp.isError) and resp.isError():
+                return None
+            return resp.registers if hasattr(resp, 'registers') else None
+        except Exception as exc:
+            logger.debug("[SharedConn %s:%s] read_input_registers(%d, %d, slave=%d) error: %s",
+                         self.host, self.port, start, count, slave_id, exc)
+            return None
+
+    def read_holding_registers(self, start: int, count: int, slave_id: int) -> Optional[list]:
+        if self._client is None:
+            return None
+        try:
+            try:
+                resp = self._client.read_holding_registers(address=start, count=count, slave=slave_id)
+            except TypeError:
+                try:
+                    resp = self._client.read_holding_registers(address=start, count=count, unit=slave_id)
+                except TypeError:
+                    resp = self._client.read_holding_registers(address=start, count=count)
+            if hasattr(resp, 'isError') and callable(resp.isError) and resp.isError():
+                return None
+            return resp.registers if hasattr(resp, 'registers') else None
+        except Exception as exc:
+            logger.debug("[SharedConn %s:%s] read_holding_registers(%d, %d, slave=%d) error: %s",
+                         self.host, self.port, start, count, slave_id, exc)
+            return None
+
+    def write_register(self, register: int, value: int, slave_id: int) -> bool:
+        if self._client is None:
+            return False
+        try:
+            if value < 0:
+                value = value & 0xFFFF
+            try:
+                result = self._client.write_register(address=register, value=value, unit=slave_id)
+            except TypeError:
+                try:
+                    result = self._client.write_register(address=register, value=value, slave=slave_id)
+                except TypeError:
+                    try:
+                        result = self._client.write_register(address=register, value=value, device_id=slave_id)
+                    except TypeError:
+                        result = self._client.write_register(register, value)
+            return not (hasattr(result, 'isError') and callable(result.isError) and result.isError())
+        except Exception as exc:
+            logger.debug("[SharedConn %s:%s] write_register(%d, %d, slave=%d) error: %s",
+                         self.host, self.port, register, value, slave_id, exc)
+            return False
+
+    def write_registers(self, register: int, values: list, slave_id: int) -> bool:
+        if self._client is None:
+            return False
+        try:
+            try:
+                result = self._client.write_registers(address=register, values=values, slave=slave_id)
+            except TypeError:
+                try:
+                    result = self._client.write_registers(address=register, values=values, unit=slave_id)
+                except TypeError:
+                    result = self._client.write_registers(register, values)
+            return not (hasattr(result, 'isError') and callable(result.isError) and result.isError())
+        except Exception as exc:
+            logger.debug("[SharedConn %s:%s] write_registers(%d, slave=%d) error: %s",
+                         self.host, self.port, register, slave_id, exc)
+            return False
+
+
 class GrowattModbus:
     """Growatt MIN series Modbus client"""
     
     def __init__(self, connection_type='tcp', host='192.168.1.100', port=502,
              device='/dev/ttyUSB0', baudrate=9600, slave_id=1,
-             register_map='MIN_7000_10000TL_X', timeout=10, invert_battery_power=False):
+             register_map='MIN_7000_10000TL_X', timeout=10, invert_battery_power=False,
+             shared_conn: Optional['SharedModbusConnection'] = None):
         """
         Initialize Modbus connection
 
@@ -408,7 +590,10 @@ class GrowattModbus:
             register_map: Which register mapping to use (see const.py)
             timeout: Connection timeout in seconds (default: 10)
             invert_battery_power: Invert battery power sign for inverters with opposite convention (default: False)
+            shared_conn: Optional shared connection hub (TCP only). When set, all socket
+                operations are delegated to the hub and connect/disconnect become no-ops.
         """
+        self._shared_conn = shared_conn
         self.connection_type = connection_type
         self.slave_id = slave_id
         self.client: Optional[Union['ModbusTcpClient', 'ModbusSerialClient']] = None
@@ -538,6 +723,9 @@ class GrowattModbus:
     
     def connect(self) -> bool:
         """Establish connection to inverter"""
+        if self._shared_conn is not None:
+            # Connection is managed by the hub; _fetch_data calls hub.ensure_connected() directly.
+            return True
         try:
             # Check if already connected (prevents double-open and file descriptor leaks)
             if hasattr(self.client, 'is_socket_open'):
@@ -618,6 +806,9 @@ class GrowattModbus:
 
     def disconnect(self):
         """Close connection and release resources (critical for preventing file descriptor leaks)"""
+        if self._shared_conn is not None:
+            # Connection lifetime is managed by the hub.
+            return
         if self.client:
             try:
                 self.client.close()
@@ -679,14 +870,17 @@ class GrowattModbus:
             log_errors: If False, downgrade Modbus errors to DEBUG (for optional ranges expected to fail on some models)
         """
         self._enforce_read_interval()
-        
+
+        if self._shared_conn is not None:
+            return self._shared_conn.read_input_registers(start_address, count, self.slave_id)
+
         try:
             # Try keyword arguments with different parameter names for pymodbus versions
             try:
                 # Newer pymodbus uses device_id
                 response = self.client.read_input_registers(
-                    address=start_address, 
-                    count=count, 
+                    address=start_address,
+                    count=count,
                     device_id=self.slave_id
                 )
             except TypeError:
@@ -759,6 +953,10 @@ class GrowattModbus:
     def read_holding_registers(self, start_address: int, count: int) -> Optional[list]:
         """Read holding registers with error handling and slave_id compatibility fallback."""
         self._enforce_read_interval()
+
+        if self._shared_conn is not None:
+            return self._shared_conn.read_holding_registers(start_address, count, self.slave_id)
+
         try:
             try:
                 response = self.client.read_holding_registers(address=start_address, count=count, slave=self.slave_id)
@@ -1797,6 +1995,26 @@ class GrowattModbus:
 
                 logger.debug(f"[WIT CTRL] Rate limit check passed for register {register}")
 
+            # Shared connection path — acquire hub lock, delegate to hub
+            if self._shared_conn is not None:
+                from .const import SHARED_LOCK_TIMEOUT
+                acquired = self._shared_conn._lock.acquire(timeout=SHARED_LOCK_TIMEOUT)
+                if not acquired:
+                    raise ModbusWriteError(register, [value], "Shared connection busy (lock timeout on write)")
+                try:
+                    if not self._shared_conn.ensure_connected():
+                        raise ModbusWriteError(register, [value], "Could not connect to shared Modbus gateway")
+                    success = self._shared_conn.write_register(register, value, self.slave_id)
+                finally:
+                    self._shared_conn._lock.release()
+                if not success:
+                    raise ModbusWriteError(register, [value], "Shared connection write_register returned error")
+                logger.info(f"[WRITE] Successfully wrote value {value} → register {register} (shared conn)")
+                if register in self._wit_control_registers:
+                    self._wit_control_last_write[register] = time.time()
+                    self._check_wit_control_conflicts(register, value)
+                return True
+
             self._ensure_connection("[WRITE]")
 
             # ---- Perform actual write ---------------------------------------------
@@ -1948,6 +2166,23 @@ class GrowattModbus:
 
             if not values:
                 raise ModbusWriteError(register, values, "Cannot write empty values list")
+
+            # Shared connection path — acquire hub lock, delegate to hub
+            if self._shared_conn is not None:
+                from .const import SHARED_LOCK_TIMEOUT
+                acquired = self._shared_conn._lock.acquire(timeout=SHARED_LOCK_TIMEOUT)
+                if not acquired:
+                    raise ModbusWriteError(register, values, "Shared connection busy (lock timeout on write_registers)")
+                try:
+                    if not self._shared_conn.ensure_connected():
+                        raise ModbusWriteError(register, values, "Could not connect to shared Modbus gateway")
+                    success = self._shared_conn.write_registers(register, values, self.slave_id)
+                finally:
+                    self._shared_conn._lock.release()
+                if not success:
+                    raise ModbusWriteError(register, values, "Shared connection write_registers returned error")
+                logger.info(f"[WRITE_MULTI] Successfully wrote {len(values)} registers starting at {register} (shared conn)")
+                return True
 
             self._ensure_connection("[WRITE_MULTI]")
 

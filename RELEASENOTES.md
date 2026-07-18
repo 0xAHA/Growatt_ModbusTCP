@@ -4,6 +4,35 @@
 
 ---
 
+## v1.0.8
+
+Issues: #351
+
+- **New: Shared Modbus connection mode for multi-inverter RS485-to-TCP gateways (Issue #351):**
+  When two integration entries point at the same RS485-to-TCP gateway (identical host:port, different
+  slave IDs), the integration now automatically shares a single `ModbusTcpClient` TCP socket between
+  them instead of opening two independent connections.
+
+  **Why this matters:** Consumer gateways like the USR-DR164 accept both TCP connections but cannot
+  correctly demultiplex RS485 responses back to the right session under simultaneous load. The result
+  is transaction ID mismatches ("request ask for id=2 but got id=3") and corrupted readings as each
+  slave's response is delivered to the wrong TCP session.
+
+  **How it works:** Detection is automatic — no configuration required. At setup, if a second entry
+  shares the same host:port as an existing one, both coordinators use the same `SharedModbusConnection`
+  hub. All reads and writes are serialized through a `threading.Lock`, ensuring one slave's complete
+  request/response cycle finishes before the next begins. A 50ms inter-slave pause is added after
+  each poll to let the RS485 bus settle (configurable via `inter_slave_delay` option).
+
+  Recovery: if the connection drops mid-read, the lock is always released (via `finally` block) and
+  the hub reconnects + flushes stale buffer bytes on the next poll. Lock acquisitions time out after
+  30s to prevent a hung coordinator from blocking others indefinitely.
+
+  Serial connections are not affected (each serial device opens its own file handle; same-device
+  multi-slave serial setups are unusual and typically handled by the OS serial stack).
+
+---
+
 ## v1.0.7
 
 - **New: Backup Box support (Growatt ARK transfer switch, TL-XH/MIN TL-XH):**

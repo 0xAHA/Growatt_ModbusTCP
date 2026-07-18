@@ -30,11 +30,13 @@ from .const import (
     DEVICE_TYPE_LOAD,
     DEVICE_TYPE_BATTERY,
     DEVICE_TYPE_BACKUPBOX,
+    SHARED_LOCK_TIMEOUT,
+    DEFAULT_INTER_SLAVE_DELAY_MS,
 )
 
 from .const import REGISTER_MAPS
 
-from .growatt_modbus import GrowattModbus, GrowattData
+from .growatt_modbus import GrowattModbus, GrowattData, SharedModbusConnection
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,11 +99,13 @@ def test_connection(config: dict) -> dict:
 class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
     """Growatt Modbus data update coordinator."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry,
+                 hub: 'SharedModbusConnection | None' = None) -> None:
         """Initialize the coordinator."""
         self.entry = entry
         self.config = entry.data
         self.hass = hass
+        self._hub = hub  # Shared connection hub (TCP multi-entry same host:port)
 
         self._slave_id = entry.data[CONF_SLAVE_ID]
         
@@ -351,10 +355,17 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     slave_id=self.config[CONF_SLAVE_ID],
                     register_map=register_map,
                     timeout=timeout,
-                    invert_battery_power=invert_battery_power
+                    invert_battery_power=invert_battery_power,
+                    shared_conn=self._hub,
                 )
-                _LOGGER.debug("Initialized TCP Growatt client at %s:%s (invert_battery_power=%s)",
-                             self.config[CONF_HOST], self.config[CONF_PORT], invert_battery_power)
+                if self._hub:
+                    _LOGGER.debug(
+                        "Initialized TCP Growatt client at %s:%s (shared connection mode, invert_battery_power=%s)",
+                        self.config[CONF_HOST], self.config[CONF_PORT], invert_battery_power,
+                    )
+                else:
+                    _LOGGER.debug("Initialized TCP Growatt client at %s:%s (invert_battery_power=%s)",
+                                 self.config[CONF_HOST], self.config[CONF_PORT], invert_battery_power)
             else:  # serial
                 self._client = GrowattModbus(
                     connection_type="serial",
@@ -896,8 +907,60 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             self.data = GrowattData()
             return self.data
 
+    def _fetch_data_shared(self) -> GrowattData | None:
+        """Fetch data using the shared connection hub (holds hub lock for the full poll)."""
+        hub = self._hub
+        inter_slave_delay = self.config_entry.options.get(
+            "inter_slave_delay", DEFAULT_INTER_SLAVE_DELAY_MS
+        ) / 1000.0
+
+        acquired = hub._lock.acquire(timeout=SHARED_LOCK_TIMEOUT)
+        if not acquired:
+            _LOGGER.warning(
+                "Shared Modbus connection busy (lock timeout %ds) for %s:%s slave %s — skipping this poll",
+                SHARED_LOCK_TIMEOUT,
+                self.config.get(CONF_HOST),
+                self.config.get(CONF_PORT),
+                self.config.get(CONF_SLAVE_ID),
+            )
+            return None
+
+        try:
+            if not hub.ensure_connected():
+                _LOGGER.warning(
+                    "Shared Modbus connection could not connect to %s:%s",
+                    self.config.get(CONF_HOST), self.config.get(CONF_PORT),
+                )
+                return None
+
+            self._client._battery_voltage_range = self.config_entry.options.get(
+                "battery_voltage_range", "Auto-detect"
+            )
+            delay_s = self.config_entry.options.get("modbus_delay", 250) / 1000.0
+            self._client._default_min_read_interval = delay_s
+            if not self._client._backed_off:
+                self._client.min_read_interval = delay_s
+
+            data = self._client.read_all_data()
+            if data is not None and not self._serial_number:
+                self._read_device_identification()
+
+            time.sleep(inter_slave_delay)
+            return data
+
+        except Exception as err:
+            _LOGGER.warning("Error during shared data fetch for slave %s: %s",
+                            self.config.get(CONF_SLAVE_ID), err)
+            return None
+
+        finally:
+            hub._lock.release()
+
     def _fetch_data(self) -> GrowattData | None:
         """Fetch data from the inverter (runs in executor)."""
+        if self._hub is not None:
+            return self._fetch_data_shared()
+
         max_retries = 3
         retry_delay = 3  # seconds - increased from 2
 
