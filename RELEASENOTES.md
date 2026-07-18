@@ -4,6 +4,26 @@
 
 ---
 
+## v1.0.6
+
+Issues: #349
+
+- **Fix: WIT 50-100K-H/HE/HU/A/AE/AU (DTC 5600) auto-detected as MID profile instead of WIT (Issue #349):**
+  DTC 5600 covers the large commercial WIT range but was incorrectly routed to
+  `mid_15000_25000tl3_x_v201` in the DTC map. The result was a completely wrong sensor set,
+  -2738.6°C battery temperature, and broken controls for WIT 100K-HU hardware.
+
+  Fix: DTC 5600 now routes to `wit_29900_50000tl3_xhu` (the WIT 29.9-50K-XHU profile) as an
+  interim. This immediately restores correct PV string sensors (4 strings, registers 3-18), all
+  8000-range battery sensors (SOC, SOH, voltage, current), and grid/load energy registers.
+
+  Note: VPP battery cluster registers 31200-31399 return "Illegal Function" on WIT 100K-HU
+  hardware (confirmed via register scan). `battery_power` and `battery_temp` will show as
+  unavailable rather than garbage values. A dedicated WIT 100K-HU profile addressing those
+  sensors is planned once additional register data is confirmed (tracked in issue #349).
+
+---
+
 ## v1.0.5
 
 Issues: #345
