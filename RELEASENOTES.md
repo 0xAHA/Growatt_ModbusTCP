@@ -4,6 +4,22 @@
 
 ---
 
+## v1.0.11
+
+Issues: #336
+
+- **Fix: backup box sensors now appear on MOD/MID hybrid inverters (#336):**
+  The MOD 10KTL3-XH-BP and related -XH variants support the Growatt ARK backup box
+  (transfer switch) via registers 3281-3342. These registers were present in the TL-XH
+  profile but missing from the MOD profile, so no backup box sensors appeared in HA even
+  when the box was physically connected (reg 3320=1). Field scan from ledermueller confirmed
+  live data on a MOD 10KTL3-XH-BP (box_temperature=33°C, box_grid_voltage=234.0V,
+  box_load_power=1089.8W). The fix adds the full 3281-3342 block to MOD_6000_15000TL3_XH
+  and enables BACKUP_BOX_SENSORS for the `mod_6000_15000tl3_xh`,
+  `mod_6000_15000tl3_xh_v201`, and `mid_11000_30000tl3_xh_v201` profiles.
+
+---
+
 ## v1.0.10
 
 Issues: #351
