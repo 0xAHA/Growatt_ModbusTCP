@@ -2498,10 +2498,13 @@ class GrowattModbus:
                 data.energy_to_user_total = self._get_register_value(addr) or 0.0
             
             # Energy to grid
-            addr = self._find_register_by_name('energy_to_grid_today_low')
+            # Prefer 32-bit pair (_low suffix); fall back to standalone single register.
+            # SPE uses a single 16-bit register for today (Protocol V0.26 reg 45).
+            addr = self._find_register_by_name('energy_to_grid_today_low') or \
+                   self._find_register_by_name('energy_to_grid_today')
             if addr:
                 data.energy_to_grid_today = self._get_register_value(addr) or 0.0
-            
+
             addr = self._find_register_by_name('energy_to_grid_total_low')
             if addr:
                 data.energy_to_grid_total = self._get_register_value(addr) or 0.0

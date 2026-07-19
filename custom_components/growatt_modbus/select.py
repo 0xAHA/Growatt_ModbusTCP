@@ -86,6 +86,14 @@ async def async_setup_entry(
         if register_num not in holding_registers:
             continue  # Skip if register not in this profile
 
+        # Profile-specific filter: only_profiles restricts to named maps; not_profiles excludes them
+        _only = control_config.get('only_profiles')
+        if _only and register_map_name not in _only:
+            continue
+        _not = control_config.get('not_profiles')
+        if _not and register_map_name in _not:
+            continue
+
         # allow_grid_charge is handled by GrowattModAllowGridChargeSelect below
         if control_name == 'allow_grid_charge':
             continue

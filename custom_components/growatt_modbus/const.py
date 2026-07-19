@@ -149,6 +149,7 @@ WRITABLE_REGISTERS = {
     },
     'export_limit_power': {
         'register': 123,
+        'not_profiles': ['SPE_8000_12000_ES'],  # SPE reg 123 = export_min_soc (different semantic)
         'scale': 0.1,  # Store as 0-1000, display as 0-100.0%
         'valid_range': (0, 1000),  # 0 = 0%, 1000 = 100%
         'unit': '%'
@@ -341,6 +342,93 @@ WRITABLE_REGISTERS = {
         'unit': 'V/%',  # Unit depends on battery_type
         'desc': 'Grid to Battery: SOC level to switch back from utility to battery mode',
         'battery_dependent': True
+    },
+
+    # SPE 8000-12000 ES Grid-Tie Export Controls (confirmed working via nicauswu field data, Issue #322)
+    # These registers are SPE-only (only_profiles guard prevents cross-profile contamination).
+    'spe_grid_export_enable': {
+        'register': 115,
+        'only_profiles': ['SPE_8000_12000_ES'],
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {0: 'Disabled', 1: 'Enabled'},
+        'desc': 'Grid export enable/disable',
+    },
+    'spe_battery_export_enable': {
+        'register': 118,
+        'only_profiles': ['SPE_8000_12000_ES'],
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {0: 'Disabled', 1: 'Enabled'},
+        'desc': 'Battery-to-grid export enable/disable',
+    },
+    'spe_export_limit_power': {
+        'register': 119,
+        'only_profiles': ['SPE_8000_12000_ES'],
+        'scale': 0.1,
+        'valid_range': (0, 120),
+        'unit': 'kW',
+        'desc': 'Grid export power limit (0-12kW, stored as 0-120 × 0.1 kW)',
+    },
+    'spe_output_priority': {
+        'register': 116,
+        'only_profiles': ['SPE_8000_12000_ES'],
+        'scale': 1,
+        'valid_range': (0, 2),
+        'options': {0: 'Charge First', 1: 'Load First', 2: 'Feed First'},
+        'desc': 'Output priority (uwLoadFirst): charge first / load first / feed first',
+    },
+    'spe_feed_range': {
+        'register': 117,
+        'only_profiles': ['SPE_8000_12000_ES'],
+        'scale': 1,
+        'valid_range': (0, 3),
+        'options': {0: 'Asia', 1: 'Europe', 2: 'South America', 3: 'South Africa'},
+        'desc': 'Grid compliance region (uwFeedRange)',
+    },
+    'spe_battery_export_max_current': {
+        'register': 120,
+        'only_profiles': ['SPE_8000_12000_ES'],
+        'scale': 1,
+        'valid_range': (0, 400),
+        'unit': 'A',
+        'desc': 'Max battery current for grid export (uwBatFeedCurr): 0-400 A per Protocol V0.26',
+    },
+    'spe_bat_feed_vloss': {
+        'register': 121,
+        'only_profiles': ['SPE_8000_12000_ES'],
+        'scale': 0.1,
+        'valid_range': (420, 540),
+        'unit': 'V',
+        'desc': 'Battery voltage loss point to stop export (uwBatFeedVLoss): raw 420-540 = 42-54V',
+    },
+    'spe_bat_feed_vback': {
+        'register': 122,
+        'only_profiles': ['SPE_8000_12000_ES'],
+        'scale': 0.1,
+        'valid_range': (440, 560),
+        'unit': 'V',
+        'desc': 'Battery voltage back point to resume export (uwBatFeedVBack): raw 440-560 = 44-56V',
+    },
+    # SPE reg 123 = export min SOC. Separate from SPH reg 123 = export_limit_power (%).
+    # The not_profiles guard on export_limit_power prevents cross-contamination.
+    # Protocol V0.26 valid range is 5-90, not 0-100.
+    'spe_export_min_soc': {
+        'register': 123,
+        'only_profiles': ['SPE_8000_12000_ES'],
+        'scale': 1,
+        'valid_range': (5, 90),
+        'unit': '%',
+        'desc': 'Min battery SOC to allow export (uwBatFeedSocLoss): 5-90% per Protocol V0.26',
+    },
+    # Protocol V0.26 valid range is 15-100.
+    'spe_export_back_soc': {
+        'register': 124,
+        'only_profiles': ['SPE_8000_12000_ES'],
+        'scale': 1,
+        'valid_range': (15, 100),
+        'unit': '%',
+        'desc': 'SOC back point to resume export (uwBatFeedSocBack): 15-100% per Protocol V0.26',
     },
 
     'discharge_power_rate': {

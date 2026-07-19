@@ -102,6 +102,14 @@ async def async_setup_entry(
         if register_num not in holding_registers:
             continue  # Skip if register not in this profile
 
+        # Profile-specific filter: only_profiles restricts to named maps; not_profiles excludes them
+        _only = control_config.get('only_profiles')
+        if _only and register_map_name not in _only:
+            continue
+        _not = control_config.get('not_profiles')
+        if _not and register_map_name in _not:
+            continue
+
         # VPP export limit requires live confirmation that the inverter responds to 30200-30201
         if control_name == 'vpp_export_limit_power_rate':
             if coordinator.data is None or not coordinator.data.vpp_export_limit_available:

@@ -25,6 +25,10 @@ Register Layout Notes (from Issue #212 register scan analysis):
   * Regs 92-97: Generator registers — SPE has no generator input, all zero
 - offgrid_protocol flag prevents reading VPP registers (30000+) which return garbage on this firmware
 
+Grid-Tie Export Controls (confirmed via nicauswu field data, Issue #322):
+- Holding regs 115-124 control grid-tied export behaviour (not present on SPF)
+- Cross-referenced against Off-Grid Protocol V0.26 (docs/developer/protocol-offgrid.md)
+
 DTC Identification:
 - This device returned DTC 64541 (unknown, not in standard mapping) in the Issue #212 scan
 - Auto-detection falls back to legacy range analysis for this device
@@ -55,6 +59,28 @@ for _addr in (36, 37):
 # SPE has no generator input port — these registers are all zero and inapplicable.
 for _addr in (92, 93, 94, 95, 96, 97):
     _spe_input_regs.pop(_addr, None)
+
+# ── Add grid export energy registers (SPE grid-tied, not present in SPF) ─────
+# Reg 44 = DTC (Device Type Code) per Off-Grid Protocol V0.26 — NOT overridden here.
+# Reg 45 = Export to Grid Today — single 16-bit register (scale 0.1 kWh) per V0.26.
+#   Nicauswu's implementation also reads this as a standalone register. Max 6553.5 kWh
+#   is sufficient for daily totals.
+# Regs 46/47 = Export to Grid Total — 32-bit pair, combined scale 0.1 kWh per V0.26.
+_spe_input_regs.update({
+    45: {
+        'name': 'energy_to_grid_today', 'scale': 0.1, 'unit': 'kWh',
+        'desc': 'Grid export energy today (single 16-bit register). Protocol V0.26 reg 45.',
+    },
+    46: {
+        'name': 'energy_to_grid_total_high', 'scale': 1, 'unit': '', 'pair': 47,
+        'desc': 'Grid export energy total (HIGH word). Protocol V0.26 reg 46.',
+    },
+    47: {
+        'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 46,
+        'combined_scale': 0.1, 'combined_unit': 'kWh',
+        'desc': 'Grid export energy total (LOW word). Protocol V0.26 reg 47.',
+    },
+})
 
 # ── Remap energy registers: SPF names are semantically wrong for SPE ──────────
 
@@ -123,10 +149,13 @@ SPE_8000_12000_ES = {
     'description': 'Single-phase hybrid inverter with battery storage (8-12kW)',
     'notes': (
         'Uses SPF-compatible 0-97 register range with key remapping. '
+        'Reg 45 = grid export energy today (single 16-bit, 0.1 kWh). '
+        'Regs 46/47 = grid export energy total (32-bit pair). '
         'Regs 64/65 = grid import energy (not AC discharge), '
         'Regs 85-88 = load energy today/total (not operational discharge). '
         'Regs 36/37 (ac_input_power) excluded — produces 429GW overflow. '
-        'No generator input. PV register validation pending daytime scan.'
+        'No generator input. '
+        'Grid-tie controls at holding regs 115-124 (confirmed via Issue #322, Protocol V0.26).'
     ),
     # NOTE: offgrid_protocol refers to the REGISTER LAYOUT (SPF-style 0-97),
     # not the inverter's grid capability. The SPE supports grid-tied operation
@@ -139,6 +168,66 @@ SPE_8000_12000_ES = {
         # entity values seen in Issue #212 scan (charge_current, battery_type,
         # ac_input_mode, output_config, charge_config all reading correctly).
         **SPF_3000_6000_ES_PLUS['holding_registers'],
+
+        # ── SPE grid-tie export controls ──────────────────────────────────────
+        # All confirmed via nicauswu field data (Issue #322).
+        # Cross-referenced against Off-Grid Protocol V0.26 holding register table.
+        # Ranges and names from V0.26 unless noted.
+
+        # 115: uwFeedEn — grid feed enable
+        115: {'name': 'spe_grid_export_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+              'desc': 'Grid export enable (uwFeedEn): 0=Disabled, 1=Enabled',
+              'values': {0: 'Disabled', 1: 'Enabled'}},
+
+        # 116: uwLoadFirst — output priority: charge first / load first / feed first
+        116: {'name': 'spe_output_priority', 'scale': 1, 'unit': '', 'access': 'RW',
+              'desc': 'Output priority (uwLoadFirst): 0=Charge first, 1=Load first, 2=Feed first',
+              'values': {0: 'Charge First', 1: 'Load First', 2: 'Feed First'}},
+
+        # 117: uwFeedRange — grid compliance region
+        117: {'name': 'spe_feed_range', 'scale': 1, 'unit': '', 'access': 'RW',
+              'desc': 'Grid compliance region (uwFeedRange): 0=Asia, 1=Europe, 2=S.America, 3=S.Africa',
+              'values': {0: 'Asia', 1: 'Europe', 2: 'South America', 3: 'South Africa'}},
+
+        # 118: uwBatFeedEn — battery-to-grid export enable
+        118: {'name': 'spe_battery_export_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+              'desc': 'Battery-to-grid export enable (uwBatFeedEn): 0=Disabled, 1=Enabled',
+              'values': {0: 'Disabled', 1: 'Enabled'}},
+
+        # 119: uwFeedPow — feed power limit (0-120 raw = 0-12.0 kW)
+        119: {'name': 'spe_export_limit_power', 'scale': 0.1, 'unit': 'kW', 'access': 'RW',
+              'valid_range': (0, 120),
+              'desc': 'Grid export power limit (uwFeedPow): 0-12 kW (raw 0-120, scale 0.1)'},
+
+        # 120: uwBatFeedCurr — max battery current for grid export (0-400 A per V0.26)
+        # NOTE: nicauswu had this as 0-100; protocol V0.26 states 0-400.
+        # Pending validation from nicauswu register scan.
+        120: {'name': 'spe_battery_export_max_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
+              'valid_range': (0, 400),
+              'desc': 'Max battery current for grid export (uwBatFeedCurr): 0-400 A (Protocol V0.26)'},
+
+        # 121: uwBatFeedVLoss — battery voltage at which export stops (420-540, units: 0.1V = 42-54V)
+        121: {'name': 'spe_bat_feed_vloss', 'scale': 0.1, 'unit': 'V', 'access': 'RW',
+              'valid_range': (420, 540),
+              'desc': 'Battery voltage loss point to stop export (uwBatFeedVLoss): 42-54V (raw 420-540)'},
+
+        # 122: uwBatFeedVBack — battery voltage at which export resumes (440-560, units: 0.1V = 44-56V)
+        122: {'name': 'spe_bat_feed_vback', 'scale': 0.1, 'unit': 'V', 'access': 'RW',
+              'valid_range': (440, 560),
+              'desc': 'Battery voltage back point to resume export (uwBatFeedVBack): 44-56V (raw 440-560)'},
+
+        # 123: uwBatFeedSocLoss — minimum SOC to allow export (5-90 %)
+        # NOTE: SPH reg 123 = export_limit_power (%). WRITABLE_REGISTERS carries
+        # not_profiles=['SPE_8000_12000_ES'] on that entry to prevent cross-contamination.
+        # Protocol V0.26 valid range is 5-90 (not 0-100 as nicauswu had).
+        123: {'name': 'spe_export_min_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+              'valid_range': (5, 90),
+              'desc': 'Min battery SOC to allow export (uwBatFeedSocLoss): 5-90% (Protocol V0.26)'},
+
+        # 124: uwBatFeedSocBack — SOC hysteresis to re-enable export (15-100 %)
+        124: {'name': 'spe_export_back_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+              'valid_range': (15, 100),
+              'desc': 'SOC back point to resume export (uwBatFeedSocBack): 15-100% (Protocol V0.26)'},
     },
 }
 
