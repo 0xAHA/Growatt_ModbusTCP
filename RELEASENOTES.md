@@ -4,6 +4,19 @@
 
 ---
 
+## v1.0.12
+
+Issues: #351
+
+- **Fix: eliminate repeated "Skipping..." debug log messages during suppression windows (#351):**
+  After the first failure of the 3000-range block (or a VPP optional range), the integration
+  suppresses retries for 5 minutes. During this window it previously logged a debug message on
+  every single poll ("Skipping 3000-range block... retry in Xs"), producing hundreds of
+  identical log lines over a session. The skip is now silent — the initial failure warning and
+  the "Retrying..." message at the end of each suppression window provide all necessary context.
+
+---
+
 ## v1.0.11
 
 Issues: #336

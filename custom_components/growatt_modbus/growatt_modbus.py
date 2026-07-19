@@ -1328,10 +1328,6 @@ class GrowattModbus:
             if _3000_prev:
                 _3000_fail_time, _3000_fail_count = _3000_prev
                 if time.time() - _3000_fail_time < _3000_RETRY_S:
-                    logger.debug(
-                        f"Skipping 3000-range block (failed {_3000_fail_count}x, "
-                        f"retry in {int(_3000_RETRY_S - (time.time() - _3000_fail_time))}s)"
-                    )
                     _3000_skip = True
                 else:
                     logger.debug(f"Retrying previously failed 3000-range block (3000-{max_3000_addr})")
@@ -1497,7 +1493,6 @@ class GrowattModbus:
                 if not is_wit_critical_range and range_key in self._failed_optional_ranges:
                     _fail_time, _fail_count = self._failed_optional_ranges[range_key]
                     if time.time() - _fail_time < _OPTIONAL_RANGE_RETRY_SECONDS:
-                        logger.debug(f"Skipping known-failed optional VPP range ({min_addr_block}-{max_addr_block}), retry in {int(_OPTIONAL_RANGE_RETRY_SECONDS - (time.time() - _fail_time))}s")
                         continue
                     # Retry window expired — fall through to re-read.
                     # Do NOT delete the entry here: the fail_count must survive so that
