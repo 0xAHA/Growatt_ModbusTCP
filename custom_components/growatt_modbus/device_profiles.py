@@ -686,7 +686,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
-        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS,
+        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS,
     },
 
     "mod_6000_15000tl3_xh_v201": {
@@ -698,7 +698,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
-        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS,
+        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS,
     },
 
     # MID 11-30KTL3-XH / MID 8-15KTL3-XHL/JP — three-phase commercial hybrid
@@ -716,7 +716,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 30.0,
-        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS,
+        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS,
     },
 
     # ========================================================================
