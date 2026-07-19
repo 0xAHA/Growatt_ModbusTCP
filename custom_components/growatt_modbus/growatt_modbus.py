@@ -1317,63 +1317,102 @@ class GrowattModbus:
             addrs_3000 = sorted([addr for addr in addresses if 3000 <= addr < 4000])
             max_3000_addr = max(addrs_3000)
             count_3000 = (max_3000_addr - 3000) + 1
+            _3000_key = ('3000_block', count_3000)
+            _3000_RETRY_S = 300
 
-            # Check if we need to split the read (max 125 registers per read)
-            if count_3000 > 125:
-                # Split into contiguous blocks
-                logger.debug(f"Splitting 3000 range into blocks (total range: 3000-{max_3000_addr}, {count_3000} registers)")
-
-                blocks = []
-                current_block = [addrs_3000[0]]
-                for addr in addrs_3000[1:]:
-                    if addr - current_block[-1] <= 10:  # Group if gap is small
-                        current_block.append(addr)
-                    else:
-                        blocks.append(current_block)
-                        current_block = [addr]
-                blocks.append(current_block)
-
-                # Read each block separately
-                for block in blocks:
-                    min_addr_block = min(block)
-                    max_addr_block = max(block)
-                    count_block = (max_addr_block - min_addr_block) + 1
-
-                    # Further split if block still exceeds 125 registers
-                    if count_block > 125:
-                        # Read in 125-register chunks
-                        for chunk_start in range(min_addr_block, max_addr_block + 1, 125):
-                            chunk_count = min(125, max_addr_block - chunk_start + 1)
-                            logger.debug(f"Reading 3000 sub-chunk ({chunk_start}-{chunk_start+chunk_count-1}, {chunk_count} registers)")
-                            registers = self.read_input_registers(chunk_start, chunk_count)
-                            if registers is None:
-                                logger.warning(f"Failed to read 3000 chunk ({chunk_start}-{chunk_start+chunk_count-1})")
-                            else:
-                                for i, value in enumerate(registers):
-                                    self._register_cache[chunk_start + i] = value
-                    else:
-                        logger.debug(f"Reading 3000 sub-range ({min_addr_block}-{max_addr_block}, {count_block} registers)")
-                        registers = self.read_input_registers(min_addr_block, count_block)
-                        if registers is None:
-                            logger.warning(f"Failed to read 3000 block ({min_addr_block}-{max_addr_block})")
-                        else:
-                            for i, value in enumerate(registers):
-                                addr = min_addr_block + i
-                                self._register_cache[addr] = value
-                                # Log load_energy registers specifically
-                                if addr in [3075, 3076, 3077, 3078]:
-                                    logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Cached 3000 range: reg {addr} = {value}")
-            else:
-                # Single read is sufficient
-                logger.debug(f"Reading 3000 range (3000-{max_3000_addr}, {count_3000} registers)")
-                registers = self.read_input_registers(3000, count_3000)
-                if registers is None:
-                    logger.warning("Failed to read 3000 register block (extended data may be unavailable)")
-                    # Don't return None - continue with what we have
+            # Skip-on-failure: after the first failure, suppress retries for 5 minutes.
+            # This prevents log flooding when an inverter simply doesn't support this range
+            # (e.g. one model in a two-inverter setup where only one uses 3000-range registers).
+            _3000_prev = self._failed_optional_ranges.get(_3000_key)
+            _3000_skip = False
+            if _3000_prev:
+                _3000_fail_time, _3000_fail_count = _3000_prev
+                if time.time() - _3000_fail_time < _3000_RETRY_S:
+                    logger.debug(
+                        f"Skipping 3000-range block (failed {_3000_fail_count}x, "
+                        f"retry in {int(_3000_RETRY_S - (time.time() - _3000_fail_time))}s)"
+                    )
+                    _3000_skip = True
                 else:
-                    # Populate cache
-                    for i, value in enumerate(registers):
-                        self._register_cache[3000 + i] = value
+                    logger.debug(f"Retrying previously failed 3000-range block (3000-{max_3000_addr})")
+
+            if not _3000_skip:
+                _3000_any_fail = False
+                _3000_any_ok = False
+
+                # Check if we need to split the read (max 125 registers per read)
+                if count_3000 > 125:
+                    # Split into contiguous blocks
+                    logger.debug(f"Splitting 3000 range into blocks (total range: 3000-{max_3000_addr}, {count_3000} registers)")
+
+                    blocks = []
+                    current_block = [addrs_3000[0]]
+                    for addr in addrs_3000[1:]:
+                        if addr - current_block[-1] <= 10:  # Group if gap is small
+                            current_block.append(addr)
+                        else:
+                            blocks.append(current_block)
+                            current_block = [addr]
+                    blocks.append(current_block)
+
+                    # Read each block separately
+                    for block in blocks:
+                        min_addr_block = min(block)
+                        max_addr_block = max(block)
+                        count_block = (max_addr_block - min_addr_block) + 1
+
+                        # Further split if block still exceeds 125 registers
+                        if count_block > 125:
+                            # Read in 125-register chunks
+                            for chunk_start in range(min_addr_block, max_addr_block + 1, 125):
+                                chunk_count = min(125, max_addr_block - chunk_start + 1)
+                                logger.debug(f"Reading 3000 sub-chunk ({chunk_start}-{chunk_start+chunk_count-1}, {chunk_count} registers)")
+                                registers = self.read_input_registers(chunk_start, chunk_count)
+                                if registers is None:
+                                    _3000_any_fail = True
+                                    logger.debug(f"3000 sub-chunk failed ({chunk_start}-{chunk_start+chunk_count-1})")
+                                else:
+                                    _3000_any_ok = True
+                                    for i, value in enumerate(registers):
+                                        self._register_cache[chunk_start + i] = value
+                        else:
+                            logger.debug(f"Reading 3000 sub-range ({min_addr_block}-{max_addr_block}, {count_block} registers)")
+                            registers = self.read_input_registers(min_addr_block, count_block)
+                            if registers is None:
+                                _3000_any_fail = True
+                                logger.debug(f"3000 sub-range failed ({min_addr_block}-{max_addr_block})")
+                            else:
+                                _3000_any_ok = True
+                                for i, value in enumerate(registers):
+                                    addr = min_addr_block + i
+                                    self._register_cache[addr] = value
+                                    if addr in [3075, 3076, 3077, 3078]:
+                                        logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Cached 3000 range: reg {addr} = {value}")
+                else:
+                    # Single read is sufficient
+                    logger.debug(f"Reading 3000 range (3000-{max_3000_addr}, {count_3000} registers)")
+                    registers = self.read_input_registers(3000, count_3000)
+                    if registers is None:
+                        _3000_any_fail = True
+                    else:
+                        _3000_any_ok = True
+                        for i, value in enumerate(registers):
+                            self._register_cache[3000 + i] = value
+
+                # Update failure tracking based on outcome
+                if _3000_any_fail and not _3000_any_ok:
+                    _prev = self._failed_optional_ranges.get(_3000_key)
+                    _count = (_prev[1] + 1) if _prev else 1
+                    self._failed_optional_ranges[_3000_key] = (time.time(), _count)
+                    if _count == 1:
+                        logger.warning(
+                            f"Failed to read 3000 register block (extended data may be unavailable). "
+                            f"Will suppress and retry in {_3000_RETRY_S}s."
+                        )
+                    else:
+                        logger.debug(f"3000 register block still failing (attempt {_count})")
+                elif _3000_any_ok:
+                    self._failed_optional_ranges.pop(_3000_key, None)
 
         # Read 8000 range if needed - WIT/WIS battery/storage data
         if has_8000_range:

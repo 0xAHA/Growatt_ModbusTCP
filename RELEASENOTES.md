@@ -4,6 +4,26 @@
 
 ---
 
+## v1.0.10
+
+Issues: #351
+
+- **Fix: Remaining transaction ID mismatches in shared connection mode (#351):**
+  A single buffer flush after acquiring the lock cleared bytes already in the TCP buffer,
+  but RS485 bytes still in transit through the gateway arrived milliseconds later — after
+  the flush but before the first request, causing the occasional TID mismatch that survived
+  v1.0.9. Fix: double-flush with a 30ms pause between flushes, giving in-flight RS485
+  bytes time to arrive so the second flush catches them.
+
+- **Fix: 3000-range register block warning flood in multi-inverter setups (#351):**
+  In a setup with two different inverter models (e.g. SPH + MOD), the 3000-range register
+  block may be defined for one profile but consistently rejected by the other inverter.
+  Every failed read logged a WARNING every ~70 seconds. Fix: the 3000-range block now uses
+  the same skip-on-failure caching as the VPP 31000+ blocks — the first failure logs a
+  WARNING once, then the block is skipped silently for 5 minutes before retrying.
+
+---
+
 ## v1.1.0
 
 Issues: #322
