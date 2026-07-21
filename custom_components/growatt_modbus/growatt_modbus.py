@@ -1892,7 +1892,10 @@ class GrowattModbus:
             
             # Battery Data (if available - storage/hybrid models)
             self._read_battery_data(data)
-            
+
+            # Backup Box Data (Growatt ARK transfer switch, regs 3281-3342)
+            self._read_backup_box_data(data)
+
             # Temperatures
             inverter_temp_addr = self._find_register_by_name('inverter_temp')
             ipm_temp_addr = self._find_register_by_name('ipm_temp')
@@ -2995,6 +2998,63 @@ class GrowattModbus:
 
         except Exception as e:
             logger.debug(f"Battery data not available: {e}")
+
+    def _read_backup_box_data(self, data: GrowattData) -> None:
+        """Populate backup box (Growatt ARK) fields from cached 3000-range registers."""
+        try:
+            # Connection flag — must be read first so sensors.py deferred mechanism
+            # can gate the remaining 8 conditional sensors on box_connect_flag == 1.
+            addr = self._find_register_by_name('box_connect_flag')
+            if addr is None:
+                return  # Profile has no backup box registers — skip entirely
+            value = self._get_register_value(addr)
+            if value is not None:
+                data.box_connect_flag = int(value)
+
+            for attr, reg_name in (
+                ('box_bypass_status', 'box_bypass_status'),
+                ('box_work_mode',     'box_work_mode'),
+                ('box_error_code',    'box_error_code'),
+                ('box_warning_code',  'box_warning_code'),
+                ('box_relay_status',  'box_relay_status'),
+            ):
+                a = self._find_register_by_name(reg_name)
+                if a is not None:
+                    v = self._get_register_value(a)
+                    if v is not None:
+                        setattr(data, attr, int(v))
+
+            for attr, reg_name in (
+                ('box_temperature',   'box_temperature'),
+                ('box_grid_voltage',  'box_grid_voltage'),
+            ):
+                a = self._find_register_by_name(reg_name)
+                if a is not None:
+                    v = self._get_register_value(a)
+                    if v is not None:
+                        setattr(data, attr, float(v))
+
+            # 32-bit paired: call _get_register_value on the _low address
+            for attr, low_name in (
+                ('box_grid_power', 'box_grid_power_low'),
+                ('box_load_power', 'box_load_power_low'),
+            ):
+                a = self._find_register_by_name(low_name)
+                if a is not None:
+                    v = self._get_register_value(a)
+                    if v is not None:
+                        setattr(data, attr, float(v))
+
+            if data.box_connect_flag:
+                logger.debug(
+                    "Backup box: connect=%d bypass=%d mode=%d temp=%.0f°C "
+                    "grid=%.0fW load=%.0fW relay=%d",
+                    data.box_connect_flag, data.box_bypass_status, data.box_work_mode,
+                    data.box_temperature, data.box_grid_power, data.box_load_power,
+                    data.box_relay_status,
+                )
+        except Exception as e:
+            logger.debug(f"Backup box data not available: {e}")
 
     def _read_device_info(self, data: GrowattData) -> None:
         """Read device info from holding registers"""

@@ -1517,8 +1517,10 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
             if protocol_ver >= 201:
                 detection["reasoning"].append(f"  → VPP Protocol V{protocol_str} - supports advanced features")
 
-    # If DTC detected model, skip other detection logic
-    if detection["confidence"] == "Very High":
+    # If DTC detected model, skip other detection logic.
+    # Also returns when confidence was downgraded to "High" by proto_ver==0 — a matched DTC
+    # always wins over register heuristics regardless of protocol version confidence.
+    if detection.get("dtc_code") and detection.get("profile_key"):
         return detection
     
     # Check register ranges (only successful reads with non-zero values)

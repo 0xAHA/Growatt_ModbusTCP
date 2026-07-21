@@ -4,6 +4,33 @@
 
 ---
 
+## v1.0.13
+
+Issues: #352
+
+- **Fix: backup box sensors now appear on MIN/TL-XH inverters (#352):**
+  All 9 backup box sensors (`box_bypass_status`, `box_work_mode`, `box_error_code`,
+  `box_warning_code`, `box_temperature`, `box_grid_voltage`, `box_grid_power`,
+  `box_load_power`, `box_relay_status`) were missing from Home Assistant despite the
+  hardware reporting live data. Root cause: `read_all_data()` cached the 3000-range
+  registers correctly but had no code to map them into the `GrowattData` dataclass fields —
+  all 10 `box_*` fields remained permanently at their default value of 0. Adds a new
+  `_read_backup_box_data()` method that populates all backup box fields from the register
+  cache using the existing `_find_register_by_name` / `_get_register_value` pattern.
+  Only `box_connect_flag` must be non-zero for the other 8 conditional sensors to appear;
+  `box_connect_flag` itself is always created so its value is always visible.
+
+- **Fix: diagnostic scanner correctly identifies MIN/TL-XH when DTC confidence is downgraded (#352):**
+  The DTC-based detection correctly identifies a MIN 4200TL-XH as `tl_xh_3000_10000_v201`
+  (DTC 5100 → "Very High" confidence). However, when register 30099 reads 0 (legacy
+  protocol), confidence is downgraded to "High" to indicate the legacy profile variant should
+  be used. The early-return guard checked `confidence == "Very High"` and therefore missed
+  the downgraded case, allowing register heuristics to overwrite the correct DTC result with
+  "MOD 6000-15000TL3-XH (Hybrid)". Fixed by checking `detection.get("dtc_code") and
+  detection.get("profile_key")` instead — any matched DTC always wins over heuristics.
+
+---
+
 ## v1.0.12
 
 Issues: #351
