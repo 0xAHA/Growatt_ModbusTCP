@@ -951,6 +951,24 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 self._client.min_read_interval = delay_s
 
             data = self._client.read_all_data()
+            if data is None:
+                # The connection may be silently dead: pymodbus sync clients never
+                # clear their socket on receive timeouts, so is_socket_open() stays
+                # True and ensure_connected() would reuse the dead socket on every
+                # poll until HA restarts. Force a real reconnect and retry once.
+                hub.reset("poll returned no data")
+                if hub.ensure_connected():
+                    _LOGGER.info(
+                        "Reconnected to %s:%s — retrying poll for slave %s",
+                        self.config.get(CONF_HOST), self.config.get(CONF_PORT),
+                        self.config.get(CONF_SLAVE_ID),
+                    )
+                    data = self._client.read_all_data()
+                    if data is None:
+                        # Still failing — drop the socket so the next scheduled poll
+                        # starts from a clean connect instead of a stale session.
+                        hub.reset("retry poll returned no data")
+
             if data is not None and not self._serial_number:
                 self._read_device_identification()
 
@@ -960,6 +978,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         except Exception as err:
             _LOGGER.warning("Error during shared data fetch for slave %s: %s",
                             self.config.get(CONF_SLAVE_ID), err)
+            hub.reset("exception during poll")
             return None
 
         finally:
