@@ -1017,6 +1017,58 @@ SENSOR_DEFINITIONS = {
         "value_map": {0: "Off", 1: "On"},
     },
 
+    # Insulation resistance, DC injection and leakage current (ISO/DCI/GFCI)
+    # Registers 3087-3091 (V1.39 / VPP 2.01 3000-range inverters: MIN, TL-XH, MOD, WIT)
+    "pv_iso": {
+        "name": "Insulation Resistance",
+        "icon": "mdi:omega",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": "kΩ",
+        "attr": "pv_iso",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "disabled_by_default": True,
+    },
+    "dci_r": {
+        "name": "DC Injection Current",
+        "icon": "mdi:current-dc",
+        "device_class": SensorDeviceClass.CURRENT,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricCurrent.MILLIAMPERE,
+        "attr": "dci_r",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "disabled_by_default": True,
+    },
+    "dci_s": {
+        "name": "DC Injection Current (S-Phase)",
+        "icon": "mdi:current-dc",
+        "device_class": SensorDeviceClass.CURRENT,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricCurrent.MILLIAMPERE,
+        "attr": "dci_s",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "disabled_by_default": True,
+    },
+    "dci_t": {
+        "name": "DC Injection Current (T-Phase)",
+        "icon": "mdi:current-dc",
+        "device_class": SensorDeviceClass.CURRENT,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricCurrent.MILLIAMPERE,
+        "attr": "dci_t",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "disabled_by_default": True,
+    },
+    "gfci": {
+        "name": "Leakage Current",
+        "icon": "mdi:leak",
+        "device_class": SensorDeviceClass.CURRENT,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfElectricCurrent.MILLIAMPERE,
+        "attr": "gfci",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "disabled_by_default": True,
+    },
+
     # Safety/compliance read-only diagnostic registers 235-238 (Issue #282).
     # These are installer/grid-compliance controls. Writing them is intentionally
     # blocked by the integration — see release notes for safety rationale.

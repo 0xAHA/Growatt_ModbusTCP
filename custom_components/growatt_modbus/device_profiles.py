@@ -102,6 +102,8 @@ STATUS_SENSORS: Set[str] = {
     "dry_contact_state",
     # WIT debug/safety registers (read-only, disabled by default)
     "ntognd_detect", "nonstd_vac_enable", "enable_spec_set", "fast_mppt_enable",
+    # Insulation/leakage diagnostics (ISO/DCI/GFCI — reg 3087-3091, disabled by default)
+    "pv_iso", "dci_r", "dci_s", "dci_t", "gfci",
 }
 
 THREE_PHASE_SENSORS: Set[str] = {

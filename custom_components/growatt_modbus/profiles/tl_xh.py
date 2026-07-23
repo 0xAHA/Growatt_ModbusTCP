@@ -330,6 +330,9 @@ MIN_TL_XH_3000_10000_V201 = {
 
         # Diagnostics
         3086: {'name': 'derating_mode', 'scale': 1, 'unit': '', 'desc': 'Derating status'},
+        3087: {'name': 'pv_iso', 'scale': 1, 'unit': 'kΩ', 'desc': 'PV insulation resistance'},
+        3088: {'name': 'dci_r', 'scale': 0.1, 'unit': 'mA', 'desc': 'DC injection current (R-phase / single-phase)'},
+        3091: {'name': 'gfci', 'scale': 1, 'unit': 'mA', 'desc': 'Residual/leakage current (GFCI)'},
         3092: {'name': 'bus_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'DC bus voltage'},
 
         # Temperatures

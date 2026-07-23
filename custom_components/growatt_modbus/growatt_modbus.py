@@ -266,6 +266,11 @@ class GrowattData:
     derating_mode: int = 0
     fault_code: int = 0
     warning_code: int = 0
+    pv_iso: float = 0.0          # kΩ — PV insulation resistance (reg 3087)
+    dci_r: float = 0.0           # mA — DC injection R-phase (reg 3088)
+    dci_s: float = 0.0           # mA — DC injection S-phase (reg 3089, 3-phase only)
+    dci_t: float = 0.0           # mA — DC injection T-phase (reg 3090, 3-phase only)
+    gfci: float = 0.0            # mA — residual/leakage current (reg 3091)
     # Safety/compliance diagnostic registers 235-238 (read-only, Issue #282)
     ntognd_detect: int = 0           # reg 235 — NToGND grounding protection detection
     nonstd_vac_enable: int = 0       # reg 236 — non-standard VAC enable
@@ -1961,6 +1966,20 @@ class GrowattModbus:
                 data.fault_code = int(self._get_register_value(fault_addr) or 0)
             if warning_addr:
                 data.warning_code = int(self._get_register_value(warning_addr) or 0)
+
+            # Insulation resistance, DC injection and leakage current (ISO/DCI/GFCI)
+            for _attr, _reg in (
+                ('pv_iso', 'pv_iso'),
+                ('dci_r',  'dci_r'),
+                ('dci_s',  'dci_s'),
+                ('dci_t',  'dci_t'),
+                ('gfci',   'gfci'),
+            ):
+                _a = self._find_register_by_name(_reg)
+                if _a is not None:
+                    _v = self._get_register_value(_a)
+                    if _v is not None:
+                        setattr(data, _attr, float(_v))
 
             # Dry Contact State (input reg 3119 — SPH/MIN TL-X/TL-XH)
             dry_contact_state_addr = self._find_register_by_name('dry_contact_state')

@@ -130,7 +130,12 @@ MOD_6000_15000TL3_XH = {
         
         # Battery Diagnostics
         3086: {'name': 'battery_derating_mode', 'scale': 1, 'unit': ''},
-        
+        3087: {'name': 'pv_iso', 'scale': 1, 'unit': 'kΩ', 'desc': 'PV insulation resistance'},
+        3088: {'name': 'dci_r', 'scale': 0.1, 'unit': 'mA', 'desc': 'DC injection current (R-phase)'},
+        3089: {'name': 'dci_s', 'scale': 0.1, 'unit': 'mA', 'desc': 'DC injection current (S-phase)'},
+        3090: {'name': 'dci_t', 'scale': 0.1, 'unit': 'mA', 'desc': 'DC injection current (T-phase)'},
+        3091: {'name': 'gfci', 'scale': 1, 'unit': 'mA', 'desc': 'Residual/leakage current (GFCI)'},
+
         # Battery - Discharge/Charge Energy (3000 range - PRIMARY for MOD XH)
         # Note: Order is discharge first, then charge (different from VPP which is charge first)
         3125: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 3126, 'desc': 'Battery discharge energy today (primary source for MOD XH)'},

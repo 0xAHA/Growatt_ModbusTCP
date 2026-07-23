@@ -4,6 +4,44 @@
 
 ---
 
+## v1.0.14
+
+Issues: #355  |  PR: #354
+
+- **Fix: shared TCP connection never recovers from silent connection drop (#354):**
+  Since v1.0.8, all TCP entries route through `SharedModbusConnection`. On a silent drop
+  (Wi-Fi blip, NAT timeout, dongle power cycle — no FIN/RST delivered), pymodbus's sync
+  client never clears its socket object, so `is_socket_open()` kept returning True and
+  `ensure_connected()` reused the dead socket indefinitely. The pre-shared-mode path
+  self-healed because it disconnected and reconnected on every poll; shared mode had no
+  equivalent recovery path. Fix (contributed by jekmanis/PR #354):
+  - `SharedModbusConnection.reset()` force-closes the socket so the next
+    `ensure_connected()` opens a real new connection including stale-buffer flush.
+  - `_fetch_data_shared()` now calls `reset()` + reconnect + one retry when a poll
+    returns no data; if the retry also fails, calls `reset()` again so the next scheduled
+    poll starts from a clean socket.
+  - Write methods (`write_register`/`write_registers`) now call `disconnect()` on
+    transport-level exceptions so writes also self-heal via `ensure_connected()`.
+
+- **New: Insulation resistance, DC injection and leakage current sensors (#355):**
+  Three safety-diagnostic registers (3087-3091 in the V1.39/VPP 3000-range) are now
+  exposed as disabled-by-default diagnostic sensors on all profiles that have them:
+  MIN (grid-tied V2.01), MIN TL-XH, MOD 6000-15000TL3-XH, MID 11-30KTL3-XH.
+  | Sensor | Register | Scale | Unit | Notes |
+  |---|---|---|---|---|
+  | Insulation Resistance | 3087 | 1 | kΩ | PV string isolation to earth |
+  | DC Injection Current | 3088 | 0.1 | mA | R-phase (only phase on single-phase models) |
+  | DC Injection Current (S-Phase) | 3089 | 0.1 | mA | Three-phase models only |
+  | DC Injection Current (T-Phase) | 3090 | 0.1 | mA | Three-phase models only |
+  | Leakage Current | 3091 | 1 | mA | GFCI / residual current |
+
+  All five are disabled by default and marked diagnostic. Enable via
+  Settings → Devices & Services → Growatt Modbus → your device → the sensor.
+  Particularly useful for correlating RCD / GFCI nuisance trips with the live leakage
+  current and insulation resistance values the inverter already measures internally.
+
+---
+
 ## v1.0.13
 
 Issues: #352
