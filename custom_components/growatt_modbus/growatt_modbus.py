@@ -454,6 +454,21 @@ class SharedModbusConnection:
                 pass
             self._connected = False
 
+    def reset(self, reason: str = "") -> None:
+        """Force-close the socket so the next ensure_connected() does a real reconnect.
+
+        pymodbus sync clients never clear their socket after a silent connection loss
+        (receive timeouts don't trigger close(), and connection_lost() is a no-op for
+        sync clients), so is_socket_open() keeps returning True and ensure_connected()
+        would reuse the dead socket forever. Without this, only an HA restart recovers
+        a wedged connection.
+        """
+        logger.warning(
+            "[SharedConn %s:%s] Resetting connection%s",
+            self.host, self.port, f": {reason}" if reason else "",
+        )
+        self.disconnect()
+
     def _flush_receive_buffer(self) -> None:
         """Drain stale Modbus responses left in the adapter's TCP buffer after reconnect."""
         sock = getattr(self._client, 'socket', None)
@@ -550,6 +565,9 @@ class SharedModbusConnection:
         except Exception as exc:
             logger.debug("[SharedConn %s:%s] write_register(%d, %d, slave=%d) error: %s",
                          self.host, self.port, register, value, slave_id, exc)
+            # An exception here is transport-level (register-level refusals come back
+            # as isError() responses) — drop the socket so the next call reconnects.
+            self.disconnect()
             return False
 
     def write_registers(self, register: int, values: list, slave_id: int) -> bool:
@@ -567,6 +585,9 @@ class SharedModbusConnection:
         except Exception as exc:
             logger.debug("[SharedConn %s:%s] write_registers(%d, slave=%d) error: %s",
                          self.host, self.port, register, slave_id, exc)
+            # An exception here is transport-level (register-level refusals come back
+            # as isError() responses) — drop the socket so the next call reconnects.
+            self.disconnect()
             return False
 
 
