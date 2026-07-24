@@ -103,7 +103,7 @@ STATUS_SENSORS: Set[str] = {
     # WIT debug/safety registers (read-only, disabled by default)
     "ntognd_detect", "nonstd_vac_enable", "enable_spec_set", "fast_mppt_enable",
     # Insulation/leakage diagnostics (ISO/DCI/GFCI — reg 3087-3091, disabled by default)
-    "pv_iso", "dci_r", "dci_s", "dci_t", "gfci",
+    "pv_iso", "dci_r", "gfci",
 }
 
 THREE_PHASE_SENSORS: Set[str] = {
@@ -112,6 +112,8 @@ THREE_PHASE_SENSORS: Set[str] = {
     "ac_current_r", "ac_current_s", "ac_current_t",  # Phase currents
     "ac_power_r", "ac_power_s", "ac_power_t",  # Phase powers
     "ac_frequency",
+    # S/T-phase DC injection — only meaningful on 3-phase inverters (reg 3089/3090)
+    "dci_s", "dci_t",
 }
 
 SYSTEM_OUTPUT_SENSORS: Set[str] = {
