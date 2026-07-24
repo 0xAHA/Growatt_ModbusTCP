@@ -179,15 +179,17 @@ SPE_8000_12000_ES = {
               'desc': 'Grid export enable (uwFeedEn): 0=Disabled, 1=Enabled',
               'values': {0: 'Disabled', 1: 'Enabled'}},
 
-        # 116: uwLoadFirst — output priority: charge first / load first / feed first
+        # 116: uwLoadFirst — output priority in SUB mode (LCD acronyms confirmed via Issue #322)
+        # BLU=Battery-Load-Utility, LBU=Load-Battery-Utility, LUB=Load-Utility-Battery
         116: {'name': 'spe_output_priority', 'scale': 1, 'unit': '', 'access': 'RW',
-              'desc': 'Output priority (uwLoadFirst): 0=Charge first, 1=Load first, 2=Feed first',
-              'values': {0: 'Charge First', 1: 'Load First', 2: 'Feed First'}},
+              'desc': 'PV Energy Priority in SUB Mode (uwLoadFirst): 0=BLU, 1=LBU, 2=LUB',
+              'values': {0: 'BLU', 1: 'LBU', 2: 'LUB'}},
 
-        # 117: uwFeedRange — grid compliance region
-        117: {'name': 'spe_feed_range', 'scale': 1, 'unit': '', 'access': 'RW',
-              'desc': 'Grid compliance region (uwFeedRange): 0=Asia, 1=Europe, 2=S.America, 3=S.Africa',
-              'values': {0: 'Asia', 1: 'Europe', 2: 'South America', 3: 'South Africa'}},
+        # 117: uwFeedRange — grid compliance region (firmware-determined, read-only on most units)
+        # nicauswu reports value 7 (South Africa Alt) — write attempts rejected by firmware
+        117: {'name': 'spe_feed_range', 'scale': 1, 'unit': '', 'access': 'R',
+              'desc': 'Grid compliance region (uwFeedRange): 0=Asia, 1=Europe, 2=S.America, 3=S.Africa, 7=S.Africa (Alt). Firmware-determined; writes may be rejected.',
+              'values': {0: 'Asia', 1: 'Europe', 2: 'South America', 3: 'South Africa', 7: 'South Africa (Alt)'}},
 
         # 118: uwBatFeedEn — battery-to-grid export enable
         118: {'name': 'spe_battery_export_enable', 'scale': 1, 'unit': '', 'access': 'RW',
@@ -199,12 +201,11 @@ SPE_8000_12000_ES = {
               'valid_range': (0, 120),
               'desc': 'Grid export power limit (uwFeedPow): 0-12 kW (raw 0-120, scale 0.1)'},
 
-        # 120: uwBatFeedCurr — max battery current for grid export (0-400 A per V0.26)
-        # NOTE: nicauswu had this as 0-100; protocol V0.26 states 0-400.
-        # Pending validation from nicauswu register scan.
+        # 120: uwBatFeedCurr — max battery current for grid export
+        # Protocol V0.26 states 0-400 A; nicauswu confirmed hardware cap at 280 A on SPE 12000ES
         120: {'name': 'spe_battery_export_max_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
-              'valid_range': (0, 400),
-              'desc': 'Max battery current for grid export (uwBatFeedCurr): 0-400 A (Protocol V0.26)'},
+              'valid_range': (0, 280),
+              'desc': 'Max battery current for grid export (uwBatFeedCurr): 0-280 A (hardware cap confirmed on SPE 12000ES)'},
 
         # 121: uwBatFeedVLoss — battery voltage at which export stops (420-540, units: 0.1V = 42-54V)
         121: {'name': 'spe_bat_feed_vloss', 'scale': 0.1, 'unit': 'V', 'access': 'RW',

@@ -4,6 +4,43 @@
 
 ---
 
+## v1.1.0
+
+Issues: #322
+
+- **New: SPE 8000-12000 ES grid-tie export controls:**
+  Full grid-tie export control suite for the SPE 8000-12000 ES, validated via field data
+  from nicauswu (Issue #322). All controls are SPE-only (gated by `only_profiles` guard).
+
+  **Select controls:**
+  | Control | Register | Options |
+  |---|---|---|
+  | PV Energy Priority (SUB Mode) | 116 | BLU / LBU / LUB |
+  | Grid Export Enable | 115 | Disabled / Enabled |
+  | Battery Export Enable | 118 | Disabled / Enabled |
+  | Grid Compliance Region | 117 | Asia / Europe / South America / South Africa / South Africa (Alt) |
+
+  **Number controls:**
+  | Control | Register | Range | Unit |
+  |---|---|---|---|
+  | Grid Export Power Limit | 119 | 0–12 | kW |
+  | Max Battery Export Current | 120 | 0–280 | A |
+  | Battery Export Stop Voltage | 121 | 42–54 | V |
+  | Battery Export Resume Voltage | 122 | 44–56 | V |
+  | Min Battery SOC to Export | 123 | 5–90 | % |
+  | Battery SOC Resume Export | 124 | 15–100 | % |
+
+  **Corrections based on field validation:**
+  - Output priority labels corrected to LCD acronyms: BLU (Battery-Load-Utility),
+    LBU (Load-Battery-Utility), LUB (Load-Utility-Battery)
+  - Grid compliance region (reg 117) expanded to include value 7 (South Africa Alt)
+    which appears on some hardware. This register is firmware-determined and writes
+    may be rejected by the inverter.
+  - Max battery export current capped at 280 A (hardware limit confirmed on SPE 12000ES;
+    protocol spec states 0–400 A)
+
+---
+
 ## v1.0.14
 
 Issues: #355  |  PR: #354
