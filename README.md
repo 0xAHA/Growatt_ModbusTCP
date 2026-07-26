@@ -4,6 +4,8 @@
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
 ![Version](https://img.shields.io/badge/Version-1.1.0-blue.svg)
+![GitHub All Releases](https://shields.io)
+![HACS Downloads](https://shields.io)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
