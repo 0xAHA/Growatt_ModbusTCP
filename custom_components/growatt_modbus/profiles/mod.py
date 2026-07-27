@@ -402,6 +402,8 @@ MOD_6000_15000TL3_XH = {
         # EMS / grid-charge controls (3046-3049) — NOT TOU slots
         3047: {'name': 'batt_first_charge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
                'valid_range': (1, 100), 'desc': 'Charge power rate when Battery First mode (1-100%)'},
+        3048: {'name': 'batt_first_charge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100), 'desc': 'SOC to stop charging - Battery First mode (DO1.0+ firmware; replaces reg 1091 which is dead on this firmware)'},
         3049: {'name': 'allow_grid_charge', 'scale': 1, 'unit': '', 'access': 'RW',
                'desc': 'Allow Grid Charge — must be Enabled (1) for TOU writes to persist (GEN4)'},
 
@@ -426,6 +428,10 @@ MOD_6000_15000TL3_XH = {
                'desc': 'TOU Period 9 start: bit15=enable, bit13-14=priority, bit8-12=hour, bit0-7=min'},
         3059: {'name': 'mod_tou_9_end',   'scale': 1, 'unit': '', 'access': 'RW',
                'desc': 'TOU Period 9 end: bit8-12=hour, bit0-7=min'},
+
+        # Grid First discharge SOC limit (DO1.0+ firmware; reg 1071 is dead on this firmware)
+        3067: {'name': 'grid_first_discharge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (1, 100), 'desc': 'SOC to stop discharging - Grid First mode (DO1.0+ firmware; confirmed by Rohde2026 and TimOsth)'},
 
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},
