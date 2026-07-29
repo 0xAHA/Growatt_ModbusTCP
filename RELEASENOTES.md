@@ -49,6 +49,12 @@ Issues: #343
 
 Issues: #322
 
+- **New: SPE 8000-12000 ES grid-tie export sensors:**
+  Added grid export energy sensors for the SPE 8000-12000 ES single-phase hybrid inverter:
+  - **Energy to Grid Today** — input reg 45, single 16-bit register, 0.1 kWh resolution
+    (confirmed per Off-Grid Protocol V0.26; prior implementation incorrectly used a 32-bit pair)
+  - **Energy to Grid Total** — input regs 46/47, 32-bit pair, 0.1 kWh resolution
+
 - **New: SPE 8000-12000 ES grid-tie export controls:**
   Full grid-tie export control suite for the SPE 8000-12000 ES, validated via field data
   from nicauswu (Issue #322). All controls are SPE-only (gated by `only_profiles` guard).
@@ -79,6 +85,11 @@ Issues: #322
     may be rejected by the inverter.
   - Max battery export current capped at 280 A (hardware limit confirmed on SPE 12000ES;
     protocol spec states 0–400 A)
+
+- **Fix: profile-specific writable register filtering:**
+  Register 123 is `export_limit_power` on SPH/XH but `export_min_soc` on SPE. A new
+  `only_profiles` / `not_profiles` filter on `WRITABLE_REGISTERS` entries prevents
+  cross-profile contamination. The filter is applied in both `number.py` and `select.py`.
 
 ---
 
@@ -193,42 +204,6 @@ Issues: #351
   Every failed read logged a WARNING every ~70 seconds. Fix: the 3000-range block now uses
   the same skip-on-failure caching as the VPP 31000+ blocks — the first failure logs a
   WARNING once, then the block is skipped silently for 5 minutes before retrying.
-
----
-
-## v1.1.0
-
-Issues: #322
-
-- **New: SPE 8000-12000 ES grid-tie export sensors (#322):**
-  Added grid export energy sensors for the SPE 8000-12000 ES single-phase hybrid inverter:
-  - **Energy to Grid Today** — input reg 45, single 16-bit register, 0.1 kWh resolution
-    (confirmed per Off-Grid Protocol V0.26; prior implementation incorrectly used a 32-bit pair)
-  - **Energy to Grid Total** — input regs 46/47, 32-bit pair, 0.1 kWh resolution
-
-- **New: SPE 8000-12000 ES grid-tie controls (#322):**
-  Added ten writable holding registers for SPE grid-tied export configuration:
-  | Register | Name | Description |
-  |----------|------|-------------|
-  | 115 | Grid Export Enable | Enable/disable grid feed |
-  | 116 | Output Priority | Charge First / Load First / Feed First |
-  | 117 | Feed Range | Grid compliance region (Asia/Europe/S.America/S.Africa) |
-  | 118 | Battery Export Enable | Enable battery-to-grid export |
-  | 119 | Export Power Limit | Max export power (0–12 kW) |
-  | 120 | Battery Export Max Current | Max battery current for export (0–400 A) |
-  | 121 | Battery Feed Voltage Loss | Voltage at which export stops (42–54V) |
-  | 122 | Battery Feed Voltage Back | Voltage to resume export (44–56V) |
-  | 123 | Export Min SOC | Minimum SOC to allow export (5–90%) |
-  | 124 | Export Back SOC | SOC to resume export after stopping (15–100%) |
-
-  All controls are SPE-specific and will not appear on other profiles.
-  Valid ranges are taken from Off-Grid Protocol V0.26; some differ from nicauswu's original
-  implementation (regs 120, 123, 124) and are pending field validation.
-
-- **Fix: profile-specific writable register filtering (#322):**
-  Register 123 is `export_limit_power` on SPH/XH but `export_min_soc` on SPE. A new
-  `only_profiles` / `not_profiles` filter on `WRITABLE_REGISTERS` entries prevents
-  cross-profile contamination. The filter is applied in both `number.py` and `select.py`.
 
 ---
 
