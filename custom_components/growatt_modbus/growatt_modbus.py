@@ -963,7 +963,7 @@ class GrowattModbus:
                     )
                     self._track_read_failure()
                     return None
-                logger.info("Successfully read %d registers from %d", len(registers), start_address)
+                logger.debug("Successfully read %d registers from %d", len(registers), start_address)
                 self._track_read_success()
                 return registers
 
@@ -1346,12 +1346,23 @@ class GrowattModbus:
             _3000_key = ('3000_block', count_3000)
             _3000_RETRY_S = 300
 
+            # The 3000 range is "optional" only for profiles that ALSO read a base range
+            # (0-874). For MIN/MOD-family profiles it is the only input range defined, so a
+            # failure here means the poll produced no data at all. Suppressing retries in
+            # that case leaves _register_cache empty for 5 minutes, every field below decodes
+            # to 0, and the coordinator publishes an all-zero reading as if the inverter were
+            # healthy — sensors read 0 instead of going unavailable, and none of the
+            # reconnect/backoff paths run because the poll "succeeded" (Issue: overnight
+            # Waiting->Normal transition never picked up until a manual reload).
+            _3000_is_primary = not has_base_range
+
             # Skip-on-failure: after the first failure, suppress retries for 5 minutes.
             # This prevents log flooding when an inverter simply doesn't support this range
             # (e.g. one model in a two-inverter setup where only one uses 3000-range registers).
+            # Never applied when the range is primary — see above.
             _3000_prev = self._failed_optional_ranges.get(_3000_key)
             _3000_skip = False
-            if _3000_prev:
+            if _3000_prev and not _3000_is_primary:
                 _3000_fail_time, _3000_fail_count = _3000_prev
                 if time.time() - _3000_fail_time < _3000_RETRY_S:
                     _3000_skip = True
@@ -1422,6 +1433,18 @@ class GrowattModbus:
                             self._register_cache[3000 + i] = value
 
                 # Update failure tracking based on outcome
+                if _3000_any_fail and not _3000_any_ok and _3000_is_primary:
+                    # Primary range failed completely — there is no data to report. Return
+                    # None so the coordinator marks the inverter offline, increments its
+                    # failure counter and runs its reconnect/backoff path, rather than
+                    # publishing zeros as a healthy reading.
+                    logger.warning(
+                        "Failed to read primary 3000 register block (3000-%d) — "
+                        "reporting poll as failed",
+                        max_3000_addr
+                    )
+                    return None
+
                 if _3000_any_fail and not _3000_any_ok:
                     _prev = self._failed_optional_ranges.get(_3000_key)
                     _count = (_prev[1] + 1) if _prev else 1
@@ -1554,6 +1577,19 @@ class GrowattModbus:
                     # Populate cache
                     for i, value in enumerate(registers):
                         self._register_cache[min_addr_block + i] = value
+
+        # Safety net: if every range failed or was suppressed the cache is empty and every
+        # field below would decode to 0. Returning that as valid data makes the coordinator
+        # read a dead link as a healthy inverter reporting zeros — entities stay "available"
+        # showing 0, _consecutive_failures never increments, and no reconnect or adaptive
+        # backoff ever runs, so the state persists until a manual reload.
+        if not self._register_cache:
+            logger.warning(
+                "[%s@%s] No registers read this poll (all ranges failed or suppressed) — "
+                "reporting poll as failed",
+                self.register_map['name'], self.connection_id
+            )
+            return None
 
         # Now extract values using the register map
         try:

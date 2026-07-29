@@ -4,6 +4,47 @@
 
 ---
 
+## v1.1.1
+
+Issues: #343
+
+- **Fix: MIN/MOD inverters stuck reporting all zeros until manual reload (regression in v1.0.10):**
+  On profiles whose input registers live entirely in the 3000 range — every MIN and
+  MOD-family profile — a single failed read of that block put it into the 5-minute
+  "optional range" suppression window introduced in v1.0.10 (#351). Because the 3000 range
+  is the *only* input range on these profiles, suppression left the register cache empty
+  and every value decoded to 0. `read_all_data()` returned that zeroed result instead of
+  `None`, so the coordinator treated the poll as successful: entities stayed *available*
+  showing 0, the failure counter never incremented, and no reconnect or adaptive backoff
+  ever ran. The state re-armed every 300 s and persisted indefinitely — only reloading the
+  integration recovered it. Most visible as the overnight Waiting → Normal transition not
+  being picked up in the morning.
+
+  Three changes:
+  - Retry suppression is no longer applied when the 3000 range is a profile's primary
+    (only) input range. Multi-inverter setups keep the anti-log-flood behaviour.
+  - A total failure of a primary range now returns `None`, so the coordinator marks the
+    inverter offline and runs its reconnect/backoff path.
+  - Added a universal guard: an empty register cache after all reads reports the poll as
+    failed rather than publishing zeros as valid data.
+
+  **Behaviour change:** on a genuine communication failure, sensors now go *unavailable*
+  rather than reading 0. This is the correct Home Assistant semantic — the statistics
+  engine ignores unavailable states but records 0 as a real measurement, which previously
+  polluted energy history with false zeros.
+
+- **Fix: MOD charge/discharge SOC controls on DO1.0 firmware (#343):**
+  Added holding registers 3048 (`batt_first_charge_stopped_soc`) and 3067
+  (`grid_first_discharge_stopped_soc`) to the MOD 6000-15000TL3-XH profile. Registers
+  1091 and 1071 are dead on DO1.0 firmware — writes are accepted but have no effect,
+  and the whole 1060-1099 range reads back zeros. The 3000-range equivalents work
+  correctly. Confirmed by @Rohde2026 and @TimOsth.
+
+- Per-block "Successfully read N registers" logging moved from INFO to DEBUG. It fired on
+  every register block of every poll, burying genuine warnings in the HA log.
+
+---
+
 ## v1.1.0
 
 Issues: #322
