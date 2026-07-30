@@ -4,6 +4,45 @@
 
 ---
 
+## v1.1.2
+
+Issues: #348
+
+- **Fix: MIN TL-XH status reported as "Self-Test" instead of "Normal":**
+  A normally-operating MIN TL-XH showed its status as *Self-Test*. Reported by @uspino2
+  (MIN 6000TL-XH) — the same root cause as the MOD5000TL3-X report earlier in #348, which
+  was fixed for MOD only in v1.0.4.
+
+  There are two separate status registers with different meanings:
+
+  | Register | Name | Semantics |
+  |---|---|---|
+  | 0 (or 3000 on V201 profiles) | `inverter_status` | 0=Waiting, **1=Normal**, 3=Fault |
+  | 31000 | `equipment_status` | 0=Waiting, **1=Self-Test**, 5=PV On-Grid, … |
+
+  The `status` sensor renders `inverter_status`, but chose its decode table from
+  `PROFILE_STATUS_MAP` based on inverter *type* rather than on which register the value
+  actually came from. All TL-XH profiles were listed as `hybrid`, so value `1` — plainly
+  documented as *Normal* in each profile's own register definition — was decoded through
+  the hybrid table as *Self-Test*.
+
+  Fix: removed the five MIN TL-XH profiles from `PROFILE_STATUS_MAP` so they use the
+  standard codes their registers actually carry (`TL_XH_3000_10000`,
+  `TL_XH_US_3000_10000`, `TL_XH_3000_10000_V201`, `TL_XH_US_3000_10000_V201`,
+  `MIN_TL_XH_3000_10000_V201`).
+
+  **Known remaining issue:** the same mismatch exists for every other profile still mapped
+  to `hybrid` — SPH, SPH-TL3, MOD-XH and WIT all read `inverter_status` from register 0
+  with standard semantics documented. Those are deliberately left unchanged for now: there
+  are no field reports for them, and WIT/SPH-TL3 document an extra `5=Standby` state that
+  the standard table doesn't contain, so switching them blind would replace one wrong label
+  with another. If your SPH/MOD-XH/WIT status looks wrong, please open an issue with what
+  ShinePhone reports alongside it — that's the field data needed to fix it properly. The
+  correct long-term fix is to select the code table by register provenance, mirroring how
+  `grid_connection_status` already gates on `equipment_status_valid`.
+
+---
+
 ## v1.1.1
 
 Issues: #343

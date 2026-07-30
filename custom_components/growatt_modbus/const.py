@@ -1045,18 +1045,37 @@ PROFILE_STATUS_MAP: dict[str, str] = {
     # MOD_6000_15000TL3_X is grid-tied (no battery) — uses default STATUS_CODES, not hybrid
     # Hybrid — WIT commercial
     'WIT_4000_15000TL3': 'hybrid',
-    # Hybrid — MIN TL-XH
-    'TL_XH_3000_10000':          'hybrid',
-    'TL_XH_US_3000_10000':       'hybrid',
-    'TL_XH_3000_10000_V201':     'hybrid',
-    'TL_XH_US_3000_10000_V201':  'hybrid',
-    'MIN_TL_XH_3000_10000_V201': 'hybrid',
+    # MIN TL-XH profiles are deliberately absent — see note below (Issue #348).
     # Hybrid — SPA / SPE
     'SPA_3000_6000_TL_BL': 'hybrid',
     'SPE_8000_12000_ES':   'hybrid',
     # Off-grid — SPF / SPE uses SPF codes
     'SPF_3000_6000_ES_PLUS': 'spf',
 }
+
+# Why the MIN TL-XH profiles are NOT in the map above (Issue #348)
+# ----------------------------------------------------------------
+# The `status` sensor renders `data.status`, which is read from the register named
+# `inverter_status` — address 0 on TL_XH_*, address 3000 on MIN_TL_XH_3000_10000_V201.
+# Those registers carry the STANDARD semantics (0=Waiting, 1=Normal, 3=Fault), as their
+# own profile `desc` strings state. HYBRID_STATUS_CODES describes a different register
+# entirely — VPP reg 31000 (`equipment_status`) / legacy reg 1000 (uwSysWorkMode) — where
+# 1 means Self-Test.
+#
+# Mapping TL-XH to 'hybrid' therefore decoded a perfectly normal inverter (value 1) as
+# "Self-Test". Same root cause as the MOD_6000_15000TL3_X report earlier in #348: the code
+# family was being chosen by inverter *type* rather than by which register the value came
+# from. Confirmed in the field by uspino2 (MIN 6000TL-XH) and GreenThumb91 (MOD5000TL3-X).
+#
+# KNOWN REMAINING ISSUE: the same mismatch is present for every other profile still mapped
+# to 'hybrid' above — SPH, SPH-TL3, MOD-XH, WIT all read `inverter_status` from reg 0 with
+# standard semantics documented. They are left as-is pending field confirmation, because:
+#   - no user reports exist for those families yet, and
+#   - WIT and SPH-TL3 document an extra `5=Standby` state absent from STATUS_CODES, so
+#     switching them would render "Unknown (5)" where 'hybrid' currently shows something.
+# The correct long-term fix is to select the code table by register provenance (hybrid codes
+# only when the value came from 31000/1000), mirroring how `grid_connection_status` in
+# sensor.py already gates on `equipment_status_valid`.
 
 
 DERATING_CODES = {
