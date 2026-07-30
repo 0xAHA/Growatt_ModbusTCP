@@ -4,6 +4,56 @@
 
 ---
 
+## v1.1.3
+
+Issues: #348
+
+- **Fix: status reported as "Self-Test" instead of "Normal" on SPH, SPH-TL3, MOD-XH and WIT:**
+  Completes the fix started in v1.0.4 (MOD X) and v1.1.2 (MIN TL-XH). Field-confirmed by
+  @Fyntiker (WIT 8k-HU) and @Husplace (MOD 6000TL3-HU EU), both showing *Self-Test* in Home
+  Assistant while ShinePhone reported *Normal*.
+
+  `HYBRID_STATUS_CODES` never described the register the `status` sensor actually renders.
+  The sensor shows `data.status`, populated from the register named `inverter_status` —
+  address 0 on every hybrid family, 3000 on MIN TL-XH V201 — and every one of those profiles
+  documents it as `0=Waiting, 1=Normal, 3=Fault`. The hybrid table describes two *different*
+  registers that never reach `data.status`:
+
+  | Register | Name | Goes to |
+  |---|---|---|
+  | 31000 | `equipment_status` | `data.equipment_status` |
+  | 1000 | `system_work_mode` | not read as status (except SPA — see below) |
+
+  So value `1` — plainly *Normal* — was decoded through the hybrid table as *Self-Test*. The
+  code family was being chosen by inverter **type** rather than by which register the value
+  came from.
+
+  `PROFILE_STATUS_MAP` is now near-empty by design. Profiles are only listed when their
+  status genuinely does not come from reg 0/3000 with standard semantics:
+
+  | Profile | Table | Why |
+  |---|---|---|
+  | `SPA_3000_6000_TL_BL` | `hybrid` | Defines no `inverter_status`; falls back to min_addr = reg 1000 (`system_work_mode`), which really is the hybrid register |
+  | `SPF_3000_6000_ES_PLUS` | `spf` | Reg 0 carries SPF semantics |
+  | `SPE_8000_12000_ES` | `spf` | **Changed from `hybrid`** — SPE inherits SPF's input registers wholesale, so reg 0 is SPF semantics, not hybrid |
+  | everything else | standard | Reg 0/3000, standard semantics |
+
+- **Fix: SPE status codes were being decoded with the hybrid table:**
+  Found while tracing the above. `SPE_8000_12000_ES` inherits `SPF_3000_6000_ES_PLUS`'s
+  `input_registers` (including `inverter_status` at reg 0 with SPF meanings) but was mapped
+  to `hybrid`. An SPE in PV Charge (value 5) displayed as *PV On-Grid*; Discharge (2) showed
+  as *Reserved*. Now uses the SPF table.
+
+- **Added `5 = Standby` to `STATUS_CODES`:**
+  WIT and SPH-TL3 both document this state on register 0. Without it those families would
+  have rendered `Unknown (5)` after moving off the hybrid table. Harmless for families that
+  never emit it.
+
+  If you have an SPH, MOD-XH, WIT or SPE, your status sensor should now match what ShinePhone
+  reports. Please open an issue if it doesn't.
+
+---
+
 ## v1.1.2
 
 Issues: #348
