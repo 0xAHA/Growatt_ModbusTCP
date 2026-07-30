@@ -4,6 +4,43 @@
 
 ---
 
+## v1.1.4
+
+Issues: #358
+
+- **Fix: false "Write reversion detected" warnings when a write lands mid-poll:**
+  Reported with a full root-cause analysis by @alanmk (SPH 3600 driven by Predbat, which
+  writes every 5 minutes). Any controller that writes on a fixed cadence eventually collides
+  with an in-flight poll and trips this.
+
+  `_fetch_data()` assembles its snapshot over several seconds. A write landing during that
+  window is not reflected in the snapshot, so the detector compared the tracked value
+  against registers read *before* the write and reported the pre-write value as a
+  "reversion". Worse, the entry was popped on that first mismatch, so the write was never
+  re-checked and could never be vindicated — a guaranteed false alarm, plus the
+  once-per-session persistent notification.
+
+  The signature was distinctive: every false warning reported an age of 0–2 seconds, and the
+  "reverted to" value was always the previous locally-written value. HA recorder history
+  confirmed the writes had actually held.
+
+  Three changes:
+  - **Poll timestamping.** `_async_update_data()` now records `poll_start` before the reads
+    begin. Any tracked write newer than that is left pending and evaluated on the next poll,
+    which genuinely post-dates it.
+  - **Debounce.** A write must mismatch on two consecutive polls before being reported. A
+    real cloud or firmware revert persists; a timing artefact vanishes on the next poll.
+  - **Expiry raised and scaled.** The old flat 120 s could not confirm a genuine reversion
+    even at the 60 s default, since confirmation can now need three cycles. It is now
+    `max(240 s, 4 × scan interval)`, so slow-polling setups get their reversions confirmed
+    rather than silently expired. Based on the configured interval, not the temporary
+    offline slow-poll interval.
+
+  Genuine cloud overrides are still detected — they persist across polls and are reported on
+  the second mismatch, with an accurate age.
+
+---
+
 ## v1.1.3
 
 Issues: #348

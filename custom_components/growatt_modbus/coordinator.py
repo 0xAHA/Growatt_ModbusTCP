@@ -40,6 +40,12 @@ from .growatt_modbus import GrowattModbus, GrowattData, SharedModbusConnection
 
 _LOGGER = logging.getLogger(__name__)
 
+# Floor for how long a tracked write stays pending verification (Issue #358).
+# Must cover: one poll skipped for pre-dating the write, plus two consecutive mismatching
+# polls to satisfy the debounce — three cycles at the default 60 s scan interval.
+# The effective value scales with the configured interval; see _check_for_cloud_overrides.
+_WRITE_CHECK_EXPIRY_S = 240
+
 def test_connection(config: dict) -> dict:
     """Test the connection to the Growatt inverter (TCP or Serial)."""
     try:
@@ -186,8 +192,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self._midnight_grace_expires: datetime | None = None
 
         # Cloud override detection: tracks recently written register values
-        # Format: {register_address: (expected_value, write_timestamp, control_name)}
-        self._pending_write_checks: dict[int, tuple[int, float, str]] = {}
+        # Format: {register_address: (expected_value, write_timestamp, control_name, mismatch_count)}
+        # mismatch_count debounces the check — see _check_for_cloud_overrides (Issue #358).
+        self._pending_write_checks: dict[int, tuple[int, float, str, int]] = {}
         self._cloud_override_notified: bool = False  # Only notify once per session
 
         # WIT: saves register 122 (export_limit_mode) before disabling control authority (30100=0).
@@ -220,24 +227,60 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         _check_for_cloud_overrides() compares the tracked value against the fresh data.
         """
         import time as _time
-        self._pending_write_checks[register] = (expected_value, _time.time(), control_name)
+        self._pending_write_checks[register] = (expected_value, _time.time(), control_name, 0)
 
-    async def _check_for_cloud_overrides(self, data) -> None:
-        """Check if any recently written register values have been overridden by the cloud."""
+    async def _check_for_cloud_overrides(self, data, poll_start: float | None = None) -> None:
+        """Check if any recently written register values have been overridden by the cloud.
+
+        Two guards prevent false positives (Issue #358):
+
+        1. Snapshot staleness. `data` is assembled over several seconds by _fetch_data().
+           A write that lands mid-poll is not reflected in that snapshot, so comparing
+           against it reports the *pre-write* value as a "reversion". Any write newer than
+           poll_start is therefore left pending and evaluated on the next poll, which
+           genuinely post-dates it.
+
+        2. Debounce. A real cloud/firmware revert persists; a timing artefact does not.
+           An entry must mismatch on two consecutive polls before it is reported.
+
+        Without these, a controller writing on a fixed cadence (e.g. Predbat every 5 min)
+        eventually collides with an in-flight poll and produces a spurious warning whose
+        reported age is ~0 s — and because the entry was popped on first mismatch, the
+        write was never re-checked and never vindicated.
+        """
         if not self._pending_write_checks:
             return
 
         import time as _time
         current_time = _time.time()
         to_remove = []
+        to_update = {}
         overridden_controls = []
 
-        for register, (expected_value, write_time, control_name) in self._pending_write_checks.items():
+        for register, entry in self._pending_write_checks.items():
+            expected_value, write_time, control_name, mismatch_count = entry
             age = current_time - write_time
 
-            # Expire entries older than 120 seconds (roughly 2 poll cycles)
-            if age > 120:
+            # Expire stale entries. Must allow for: one poll skipped as pre-dating the
+            # write, then two consecutive mismatching polls to satisfy the debounce —
+            # three cycles. Scaled to the configured interval so slow pollers still get
+            # their reversions confirmed rather than silently expired; the old flat 120 s
+            # could not confirm a genuine reversion even at the 60 s default.
+            # Uses the *normal* interval, not self.update_interval, so the temporary
+            # offline slow-poll interval doesn't inflate this.
+            if age > max(_WRITE_CHECK_EXPIRY_S,
+                         4 * self._normal_update_interval.total_seconds()):
                 to_remove.append(register)
+                continue
+
+            # Guard 1: this snapshot's registers were read before the write landed.
+            # Leave the entry pending; the next poll will evaluate it fairly.
+            if poll_start is not None and write_time >= poll_start:
+                _LOGGER.debug(
+                    "Write check for '%s' deferred — write landed mid-poll "
+                    "(write_time %.3f >= poll_start %.3f); will verify on next poll",
+                    control_name, write_time, poll_start,
+                )
                 continue
 
             # Get current value from the freshly polled data
@@ -248,14 +291,24 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             if int(current_value) == expected_value:
                 # Write stuck — remove from tracking
                 to_remove.append(register)
+            elif mismatch_count == 0:
+                # Guard 2: first mismatch. Could still be a timing artefact — keep the
+                # entry and require the next poll to agree before reporting.
+                _LOGGER.debug(
+                    "Write check for '%s': expected %d but read %d (%.0fs after write) — "
+                    "awaiting confirmation on next poll before reporting",
+                    control_name, expected_value, int(current_value), age,
+                )
+                to_update[register] = (expected_value, write_time, control_name, 1)
             else:
-                # Value reverted — cloud override detected
+                # Mismatched on two consecutive polls — treat as a genuine reversion.
                 overridden_controls.append((control_name, expected_value, int(current_value), age))
                 to_remove.append(register)
 
         # Clean up tracked entries
         for reg in to_remove:
             self._pending_write_checks.pop(reg, None)
+        self._pending_write_checks.update(to_update)
 
         # Report overrides
         if overridden_controls:
@@ -643,6 +696,11 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             raise UpdateFailed("Growatt client not initialized")
 
         try:
+            # Timestamp taken BEFORE the reads begin. _check_for_cloud_overrides() uses it
+            # to tell "this snapshot pre-dates the write" apart from "the value genuinely
+            # reverted" — see Issue #358.
+            poll_start = time.time()
+
             # Run the blocking operations in executor
             data = await self.hass.async_add_executor_job(self._fetch_data)
 
@@ -850,7 +908,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 self._just_came_online_time = None
 
             # Check for cloud overrides on recently written registers
-            await self._check_for_cloud_overrides(data)
+            await self._check_for_cloud_overrides(data, poll_start)
 
             # Deliver pending clock-drift notification (populated by _check_inverter_clock
             # on the first successful poll; cleared immediately so it only fires once).
