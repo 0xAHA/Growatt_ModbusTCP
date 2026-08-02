@@ -927,6 +927,16 @@ PROFILE_DISPLAY_NAMES = {
         "v201": "spe_8000_12000_es",  # Only one variant
         "description": "Hybrid with battery (8-12kW)",
     },
+
+    # AC-Coupled Storage (no PV inputs)
+    # Was missing from this dict until v1.1.6 — the profile existed in INVERTER_PROFILES
+    # but had no display name, so it never appeared in the config-flow dropdown and could
+    # not be selected by anyone (Issue #360).
+    "SPA (AC Storage) 3-6kW": {
+        "base": "spa_3000_6000_tl_bl",
+        "v201": "spa_3000_6000_tl_bl",  # Only one variant
+        "description": "AC-coupled battery storage, no solar DC inputs",
+    },
 }
 
 

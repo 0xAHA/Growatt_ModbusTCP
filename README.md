@@ -1,17 +1,17 @@
-<a href="https://www.buymeacoffee.com/0xAHA" target="_blank"><img src="docs/images/qr-code-buymeacoffee.png" alt="Buy Me A Coffee QR code" width="130" align="right"></a>
+﻿<a href="https://www.buymeacoffee.com/0xAHA" target="_blank"><img src="docs/images/qr-code-buymeacoffee.png" alt="Buy Me A Coffee QR code" width="130" align="right"></a>
 
-# Growatt Modbus Integration for Home Assistant ☀️
+# Growatt Modbus Integration for Home Assistant â˜€ï¸
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-1.1.5-blue.svg)
+![Version](https://img.shields.io/badge/Version-1.1.6-blue.svg)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 
 <a href="https://www.buymeacoffee.com/0xAHA" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
 
-A native Home Assistant integration for Growatt solar inverters using **direct Modbus RTU/TCP communication**. Real-time data straight from your inverter — no cloud, no ShineWiFi, no dependency on Growatt's servers.
+A native Home Assistant integration for Growatt solar inverters using **direct Modbus RTU/TCP communication**. Real-time data straight from your inverter â€” no cloud, no ShineWiFi, no dependency on Growatt's servers.
 
-## 📖 [Full documentation → https://0xaha.github.io/Growatt_ModbusTCP/](https://0xaha.github.io/Growatt_ModbusTCP/)
+## ðŸ“– [Full documentation â†’ https://0xaha.github.io/Growatt_ModbusTCP/](https://0xaha.github.io/Growatt_ModbusTCP/)
 
 The documentation site covers supported models, sensor reference, inverter controls, energy dashboard setup, troubleshooting, and developer guides.
 
@@ -23,17 +23,17 @@ The documentation site covers supported models, sensor reference, inverter contr
 
 [![Install via HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=0xAHA&repository=Growatt_ModbusTCP&category=integration)
 
-1. Open **HACS** → **⋮ menu** → **Custom repositories**
+1. Open **HACS** â†’ **â‹® menu** â†’ **Custom repositories**
 2. Add URL `https://github.com/0xAHA/Growatt_ModbusTCP`, category: **Integration**
-3. Search **"Growatt Modbus"** in HACS → **Download**
+3. Search **"Growatt Modbus"** in HACS â†’ **Download**
 4. **Restart Home Assistant**
-5. **Settings** → **Devices & Services** → **Add Integration** → search **"Growatt Modbus"**
+5. **Settings** â†’ **Devices & Services** â†’ **Add Integration** â†’ search **"Growatt Modbus"**
 
 ### Manual
 
 1. Download the [latest release](https://github.com/0xAHA/Growatt_ModbusTCP/releases) and extract
 2. Copy `growatt_modbus/` into `config/custom_components/`
-3. Restart Home Assistant and add via **Settings** → **Devices & Services**
+3. Restart Home Assistant and add via **Settings** â†’ **Devices & Services**
 
 ---
 
@@ -58,11 +58,11 @@ The setup wizard runs auto-detection automatically for VPP-capable inverters. Fo
 
 ## License
 
-MIT License — see [LICENSE](LICENSE)
+MIT License â€” see [LICENSE](LICENSE)
 
 ---
 
-**Made with ☀️ and ☕ by [@0xAHA](https://github.com/0xAHA)**
+**Made with â˜€ï¸ and â˜• by [@0xAHA](https://github.com/0xAHA)**
 
 ---
 

@@ -1782,6 +1782,45 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         "responding_ranges": 0,
     }
 
+    # Take exclusive control of the gateway for the duration of the scan (Issue #360).
+    #
+    # Every TCP entry owns a SharedModbusConnection holding a persistent socket. The scanner
+    # opens its OWN client, so without this the gateway sees two concurrent sessions from HA
+    # (plus any third-party controller on the same bus). Cheap RS485-to-TCP adapters accept a
+    # very small number of sessions and mis-route or drop responses when exceeded — the
+    # symptom is every range in the scan failing with BrokenPipeError while the coordinator
+    # simultaneously goes unavailable.
+    #
+    # Holding the hub lock blocks coordinator polling, and reset() closes its socket, so only
+    # the scanner's connection exists while the scan runs. The lock is released in the finally
+    # below and the coordinator reconnects on its next poll.
+    _hub = None
+    _hub_locked = False
+    if connection_type == "tcp":
+        try:
+            _hub = (hass.data.get(DOMAIN, {}).get("_connections", {}) or {}).get(f"{host}:{port}")
+        except Exception:  # pragma: no cover — defensive; never block a scan on lookup
+            _hub = None
+
+    if _hub is not None:
+        _LOGGER.info(
+            "Pausing coordinator polling on %s:%s for the duration of the scan "
+            "(gateways typically allow only one session)", host, port
+        )
+        # Generous timeout: a poll in flight on a slow gateway can take tens of seconds.
+        _hub_locked = _hub._lock.acquire(timeout=60)
+        if not _hub_locked:
+            result["error"] = (
+                f"Could not pause polling on {host}:{port} within 60s — a poll appears to be "
+                f"stuck. Reload the integration and retry the scan."
+            )
+            return result
+        try:
+            # Drop the coordinator's socket so the scanner's is the only connection.
+            _hub.reset("register scan starting")
+        except Exception as err:
+            _LOGGER.debug("Hub reset before scan failed (continuing): %s", err)
+
     try:
         # Connect with appropriate client type
         if connection_type == "tcp":
@@ -2546,3 +2585,14 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         _LOGGER.error(f"Universal scan failed: {e}")
         result["error"] = str(e)
         return result
+
+    finally:
+        # Hand the gateway back to the coordinator. Must run on every exit path — an
+        # unreleased hub lock would stall polling until the integration was reloaded.
+        if _hub_locked:
+            try:
+                _hub.reset("register scan finished")
+            except Exception as err:
+                _LOGGER.debug("Hub reset after scan failed (non-critical): %s", err)
+            _hub._lock.release()
+            _LOGGER.info("Resumed coordinator polling on %s:%s after scan", host, port)

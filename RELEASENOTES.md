@@ -4,6 +4,41 @@
 
 ---
 
+## v1.1.6
+
+Issues: #360
+
+- **Fix: the SPA profile could not be selected at all:**
+  The SPA (AC-coupled storage) profile has existed since #249 with a full register map, but
+  it was never added to `PROFILE_DISPLAY_NAMES` — the dictionary that populates the profile
+  dropdown. It was therefore unreachable through the UI, and SPA owners had no way to select
+  it. Reported by @Xybertecnic, who correctly spotted that the option they expected wasn't
+  there.
+
+  **SPA (AC Storage) 3-6kW** now appears in the Inverter Series dropdown.
+
+- **Fix: running the Universal Register Scanner knocked the integration offline:**
+  Every TCP entry owns a `SharedModbusConnection` holding a persistent socket, but the
+  scanner opened its **own** client. The gateway therefore saw two concurrent sessions from
+  Home Assistant — plus any third-party controller on the same bus. Cheap RS485-to-TCP
+  adapters accept very few sessions and drop or mis-route responses when exceeded.
+
+  The symptom was distinctive and misleading: every range in the scan fails with
+  `BrokenPipeError`, the resulting CSV reports "No response" for everything, and all entities
+  go unavailable at the same moment — which reads like the inverter not supporting any
+  registers, when in fact the connection was simply being fought over.
+
+  The scanner now takes the hub lock for the duration of the scan and closes the
+  coordinator's socket first, so exactly one connection to the gateway exists while it runs.
+  Polling resumes automatically afterwards. If a poll is genuinely stuck, the scan now fails
+  with a clear message after 60 s instead of producing a CSV full of phantom failures.
+
+  **If you have previously submitted a scan showing everything as "No response", it is worth
+  re-running it on this version** — the earlier result may say more about connection
+  contention than about your inverter.
+
+---
+
 ## v1.1.5
 
 Issues: #361
