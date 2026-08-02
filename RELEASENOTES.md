@@ -4,6 +4,47 @@
 
 ---
 
+## v1.1.5
+
+Issues: #361
+
+- **Fix: VPP-only inverters aborted the poll before reading the range that works
+  (regression in v1.1.1):**
+  Surfaced by @Richardmarkink on a MIN 4200TL-XH2 with an APX HV2.0 battery. A register
+  scan showed the legacy ranges (0-124, 1000-1124, all of 3000+) returning *Illegal
+  Function* while the VPP ranges — 30000-30499 holding and 31000-31199 input — returned
+  live data.
+
+  v1.1.1 treated the 3000 range as a profile's sole data source whenever the profile had
+  no base range, and made a total failure there abort the poll. That is correct for plain
+  MIN/MOD profiles, but V2.01 profiles carry **both** 3000+ and 31000+. On hardware that
+  serves only the VPP range, the poll aborted before ever reaching 31000+ — so a profile
+  that would otherwise have produced partial data produced nothing.
+
+  Before v1.1.1 the 3000 failure was suppressed and 31000+ was still read. This restores
+  that fall-through while keeping the v1.1.1 behaviour where it belongs:
+
+  ```python
+  _3000_is_primary = not has_base_range and not has_31000_range
+  ```
+
+  The 3000 range is only the sole source when the profile has neither a base range nor a
+  VPP range. The empty-cache guard added in v1.1.1 remains the safety net for "every range
+  failed", so nothing can publish zeros as valid data.
+
+  Plain MIN/MOD profiles define no 31000 range, so they are unaffected and still fail fast
+  — the #357 fix is preserved.
+
+- **Note for MIN TL-XH2 owners:** auto-detection maps DTC 5100 to the
+  `tl_xh_3000_10000_v201` profile, which includes legacy base registers your hardware does
+  not serve — the poll fails and every entity goes unavailable. As a workaround, select
+  **MIN TL-XH 3000-10000 (V2.01)** manually; it reads the 3000+ and 31000+ ranges without
+  the base range, so PV, AC, grid, load and status should populate. Battery data will not:
+  the VPP battery range (31200+) does not respond on this hardware, and where it actually
+  lives is still unknown. A dedicated TL-XH2 profile is tracked in #361.
+
+---
+
 ## v1.1.4
 
 Issues: #358

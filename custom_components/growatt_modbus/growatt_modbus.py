@@ -1346,15 +1346,24 @@ class GrowattModbus:
             _3000_key = ('3000_block', count_3000)
             _3000_RETRY_S = 300
 
-            # The 3000 range is "optional" only for profiles that ALSO read a base range
-            # (0-874). For MIN/MOD-family profiles it is the only input range defined, so a
-            # failure here means the poll produced no data at all. Suppressing retries in
-            # that case leaves _register_cache empty for 5 minutes, every field below decodes
-            # to 0, and the coordinator publishes an all-zero reading as if the inverter were
-            # healthy — sensors read 0 instead of going unavailable, and none of the
-            # reconnect/backoff paths run because the poll "succeeded" (Issue: overnight
-            # Waiting->Normal transition never picked up until a manual reload).
-            _3000_is_primary = not has_base_range
+            # Is the 3000 range this profile's ONLY source of input data?
+            #
+            # If so, a total failure here means the poll produced nothing: suppressing
+            # retries would leave _register_cache empty for 5 minutes, every field below
+            # would decode to 0, and the coordinator would publish an all-zero reading as
+            # if the inverter were healthy — sensors reading 0 instead of going unavailable,
+            # with none of the reconnect/backoff paths running because the poll "succeeded"
+            # (the overnight Waiting->Normal transition never picked up until a manual
+            # reload — Issue #357).
+            #
+            # But it is NOT the only source when the profile also defines a base range
+            # (0-874) or a VPP range (31000+). V2.01 profiles carry both 3000+ and 31000+,
+            # and some hardware serves only the VPP range — notably MIN TL-XH2, where the
+            # entire 3000 block is dead while 31000-31199 returns live data (Issue #361).
+            # Treating 3000 as primary there aborted the poll before the working VPP range
+            # was ever read. The empty-cache guard further down is the correct safety net
+            # for "every range failed"; this flag only covers "the sole range failed".
+            _3000_is_primary = not has_base_range and not has_31000_range
 
             # Skip-on-failure: after the first failure, suppress retries for 5 minutes.
             # This prevents log flooding when an inverter simply doesn't support this range
