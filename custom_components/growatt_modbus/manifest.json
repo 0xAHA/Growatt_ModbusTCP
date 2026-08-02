@@ -1,4 +1,4 @@
-﻿{
+{
   "domain": "growatt_modbus",
   "name": "Growatt Modbus",
   "codeowners": ["@0xAHA"],
