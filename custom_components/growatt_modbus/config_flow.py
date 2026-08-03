@@ -878,9 +878,27 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                     options=new_options,
                 )
             
-            # Reload the integration to apply changes
-            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
-            
+            # Reload the integration to apply changes.
+            #
+            # The settings are already persisted by async_update_entry() above, so this
+            # reload is a convenience — not part of saving. It must not be allowed to fail
+            # the form: async_reload() raises OperationNotAllowed when the entry is in a
+            # non-recoverable state such as FAILED_UNLOAD (e.g. a poll wedged on an
+            # unresponsive gateway held the connection open past the unload timeout).
+            # Unguarded, that propagated to the UI as a bare "Unknown error" while the
+            # change had in fact been saved — leaving the user to retry a save that had
+            # already applied, on an entry that was now stuck (Issue #361).
+            try:
+                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            except Exception as err:
+                _LOGGER.warning(
+                    "Settings saved, but reloading the integration failed (%s). "
+                    "The new settings will take effect after a manual reload or an HA "
+                    "restart. If this persists the inverter is likely unreachable — check "
+                    "the connection before retrying.",
+                    err,
+                )
+
             return self.async_create_entry(title="", data=new_options)
 
         # Build options schema with current values

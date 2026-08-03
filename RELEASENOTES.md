@@ -4,6 +4,25 @@
 
 ---
 
+## v1.1.10
+
+Issues: #361
+
+- **Fix: "Unknown error" when saving options, on an entry that failed to reload:**
+  Reported by @Richardmarkink. Changing a setting saved the change, then failed the form
+  with a bare `Unknown error` — leaving the user to retry a save that had already applied.
+
+  The options flow reloads the integration after saving. That reload was unguarded, and
+  `async_reload()` raises `OperationNotAllowed` when the entry is in a non-recoverable state
+  such as `FAILED_UNLOAD` — which happens when a poll is wedged on an unresponsive gateway
+  and holds the connection past the unload timeout. The exception propagated to the UI.
+
+  The reload is a convenience, not part of saving: settings are already persisted before it
+  runs. It is now wrapped, and a failure logs a warning explaining that the settings are
+  saved and will apply after a manual reload or restart.
+
+---
+
 ## v1.1.9
 
 Issues: #361
