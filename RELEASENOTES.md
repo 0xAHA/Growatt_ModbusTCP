@@ -4,6 +4,44 @@
 
 ---
 
+## v1.1.7
+
+Issues: #363
+
+- **Fix: SPH status showing "Unknown (6)" — v1.1.3 regression:**
+  Reported by @darimar on an SPH-4600 (V2.01), who had to roll back to v1.1.0.
+
+  v1.1.3 moved SPH and SPH-TL3 off the hybrid status table along with MOD-XH, WIT and
+  TL-XH. That was correct for those three — all field-confirmed against ShinePhone — but
+  **SPH and SPH-TL3 had no field confirmation at all.** They were changed purely on the
+  strength of their register `desc` strings, which claim `0=Waiting, 1=Normal, 3=Fault`.
+
+  Those `desc` strings are wrong for SPH. The standard table has **no entry for 6**, so an
+  SPH reporting that state rendered as `Unknown (6)` — the hardware is plainly emitting
+  hybrid-range values (6 = "Bat On-Grid", a normal state for a hybrid running off battery
+  while grid-connected).
+
+  SPH and SPH-TL3 are restored to the hybrid table. The three field-confirmed families keep
+  the v1.1.3 behaviour:
+
+  | Family | Table | Basis |
+  |---|---|---|
+  | SPH ×5, SPH-TL3 ×2 | **hybrid** (restored) | #363 — value 6 cannot be represented otherwise |
+  | MOD-XH | standard | confirmed by @Husplace |
+  | WIT | standard | confirmed by @Fyntiker |
+  | MIN TL-XH | standard | confirmed by @uspino2 |
+  | SPA | hybrid | no `inverter_status` register; falls back to reg 1000 |
+  | SPF, SPE | spf | reg 0 carries SPF semantics |
+
+  If you rolled back because of this, v1.1.7 is safe to update to.
+
+  **Note on method:** a profile's `desc` string is documentation, not evidence — several are
+  inherited boilerplate never checked against hardware. Status-table changes now require a
+  user to report the raw register value alongside what ShinePhone shows. That requirement is
+  recorded in `const.py` so this isn't repeated.
+
+---
+
 ## v1.1.6
 
 Issues: #360

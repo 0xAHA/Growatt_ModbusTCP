@@ -1036,52 +1036,62 @@ SPF_STATUS_CODES = {
 # Maps register map keys to the status code family they use.
 # Keys absent from this dict use the default STATUS_CODES (grid-tied).
 PROFILE_STATUS_MAP: dict[str, str] = {
-    # SPA — the ONLY profile that genuinely needs 'hybrid'. It defines no `inverter_status`
-    # register, so the lookup in read_all_data() falls through to min_addr, which for SPA is
-    # register 1000 (`system_work_mode` / uwSysWorkMode) — the actual hybrid status register.
-    # Accidental, but correct. Do not "tidy" this without re-checking that fallback.
+    # SPH single-phase and three-phase — hybrid codes (Issue #363).
+    # These were removed in v1.1.3 on the strength of their register `desc` strings
+    # ("0=Waiting, 1=Normal, 3=Fault") without any field confirmation, and restored in
+    # v1.1.7 when darimar reported an SPH-4600 V2.01 rendering "Unknown (6)". The standard
+    # table has no entry for 6 at all, so the hardware is plainly emitting hybrid-range
+    # values and the profile `desc` strings are simply wrong for this family.
+    'SPH_3000_6000':       'hybrid',
+    'SPH_7000_10000':      'hybrid',
+    'SPH_8000_10000_HU':   'hybrid',
+    'SPH_3000_6000_V201':  'hybrid',
+    'SPH_7000_10000_V201': 'hybrid',
+    'SPH_TL3_3000_10000':       'hybrid',
+    'SPH_TL3_3000_10000_V201':  'hybrid',
+    # SPA — defines no `inverter_status` register at all, so the lookup in read_all_data()
+    # falls through to min_addr, which for SPA is register 1000 (`system_work_mode` /
+    # uwSysWorkMode) — the actual hybrid status register. Accidental, but correct.
+    # Do not "tidy" this without re-checking that fallback.
     'SPA_3000_6000_TL_BL': 'hybrid',
     # Off-grid — SPF codes.  SPE inherits SPF's input_registers wholesale (see spe.py:47),
     # including `inverter_status` at reg 0 with SPF semantics, so it must use the SPF table.
     'SPF_3000_6000_ES_PLUS': 'spf',
     'SPE_8000_12000_ES':     'spf',
-    # Every other profile reads `inverter_status` from reg 0/3000 with STANDARD semantics and
-    # is therefore deliberately absent from this map — see the note below (Issue #348).
+    # Absent (and field-confirmed as standard): MOD_6000_15000TL3_X / _XH,
+    # WIT_4000_15000TL3, and the five TL_XH / MIN_TL_XH profiles — see the note below.
 }
 
-# Why almost nothing is in the map above (Issue #348)
-# ---------------------------------------------------
-# HYBRID_STATUS_CODES does not describe the register the `status` sensor actually renders.
-#
-# The sensor renders `data.status`, which read_all_data() populates from the register named
-# `inverter_status` — address 0 on every hybrid family (SPH, SPH-TL3, MOD-XH, WIT, TL-XH),
-# address 3000 on MIN_TL_XH_3000_10000_V201. Every one of those profiles documents that
-# register as `0=Waiting, 1=Normal, 3=Fault` in its own `desc` string.
-#
-# The hybrid table describes two DIFFERENT registers, neither of which ever reaches
-# `data.status`:
+# How to decide a profile's entry here (Issues #348, #363)
+# --------------------------------------------------------
+# The `status` sensor renders `data.status`, which read_all_data() populates from the
+# register named `inverter_status` — address 0 on most families, 3000 on
+# MIN_TL_XH_3000_10000_V201. The hybrid table nominally describes two OTHER registers:
 #   - reg 31000 `equipment_status`  → data.equipment_status (see VPP_V201_STATUS)
 #   - reg 1000  `system_work_mode`  → not read into data.status on any profile except SPA
 #
-# So mapping a family to 'hybrid' decoded value 1 — plainly Normal — as "Self-Test".
-# The code family was being selected by inverter *type* rather than by which register the
-# value came from.
-#
-# Field-confirmed on four models across three families, HA vs ShinePhone in every case:
+# On MOD, WIT and TL-XH that distinction holds: their reg 0 really does carry the standard
+# 0/1/3 semantics, and mapping them to 'hybrid' rendered a normal inverter (value 1) as
+# "Self-Test". Those four are field-confirmed against ShinePhone:
 #   GreenThumb91  MOD5000TL3-X    (fixed v1.0.4)
-#   uspino2       MIN 6000TL-XH   (fixed v1.1.2, confirmed Normal after update)
+#   uspino2       MIN 6000TL-XH   (fixed v1.1.2)
 #   Fyntiker      WIT 8k-HU       (fixed v1.1.3)
 #   Husplace      MOD 6000TL3-HU  (fixed v1.1.3)
 #
-# Exceptions that DO belong in the map are listed above with their reasons: SPA (no
-# `inverter_status` register at all — falls back to reg 1000, genuinely hybrid) and
-# SPF/SPE (reg 0 carries SPF semantics, not standard).
+# On SPH it does NOT hold. v1.1.3 also removed SPH and SPH-TL3 on the strength of their
+# `desc` strings alone, with no field confirmation. darimar then reported an SPH-4600 V2.01
+# rendering "Unknown (6)" — and STATUS_CODES has no entry for 6 at all, so that hardware is
+# emitting hybrid-range values from reg 0 and the `desc` string is simply wrong (#363).
+# Restored to 'hybrid' in v1.1.7.
 #
-# If a future profile is added, decide its entry by asking "which register does
-# `inverter_status` resolve to, and what do that register's docs say?" — never by whether
-# the inverter has a battery. `grid_connection_status` in sensor.py demonstrates the same
-# principle: it gates on `equipment_status_valid` so it only applies VPP semantics when
-# reg 31000 was genuinely read.
+# THE LESSON: a profile's `desc` string is documentation, not evidence. Several are
+# inherited boilerplate that no one has checked against hardware. Do not move a family
+# between status tables on the strength of a `desc` — get a user to report the raw register
+# value alongside what ShinePhone shows, for at least two different operating states.
+#
+# `grid_connection_status` in sensor.py shows the robust alternative: it gates on
+# `equipment_status_valid`, so it only applies VPP semantics when reg 31000 was genuinely
+# read, rather than inferring from the profile at all.
 
 
 DERATING_CODES = {
