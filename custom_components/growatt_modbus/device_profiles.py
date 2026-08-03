@@ -937,7 +937,40 @@ PROFILE_DISPLAY_NAMES = {
         "v201": "spa_3000_6000_tl_bl",  # Only one variant
         "description": "AC-coupled battery storage, no solar DC inputs",
     },
+
+    # TL-XH (non-MIN variants)
+    # Missing from this dict until v1.1.9 (Issue #361). Auto-detection assigns
+    # tl_xh_3000_10000_v201 for DTC 5100, but with no display-name entry the options flow
+    # could not render it: get_display_name_for_profile() fell through to the profile's
+    # technical `name`, which is not a valid dropdown key, so vol.In() rejected the default
+    # and the user was locked out of changing ANY option ("value must be one of [...]").
+    "TL-XH (3-10kW)": {
+        "base": "tl_xh_3000_10000",
+        "v201": "tl_xh_3000_10000_v201",
+        "description": "Single-phase hybrid with battery, legacy 0-124 + VPP ranges",
+    },
+    "TL-XH US (3-10kW)": {
+        "base": "tl_xh_us_3000_10000",
+        "v201": "tl_xh_us_3000_10000_v201",
+        "description": "US single-phase hybrid with battery (split-phase)",
+    },
 }
+
+# Every INVERTER_PROFILES key MUST be reachable from PROFILE_DISPLAY_NAMES via 'base' or
+# 'v201'. A profile that isn't cannot be rendered by the options flow — see the TL-XH note
+# above. This has bitten twice (SPA in #360, TL-XH in #361), so assert it at import time
+# rather than waiting for a user to hit it.
+_ORPHANED_PROFILES = {
+    pid for pid in INVERTER_PROFILES
+    if not any(pid in (info["base"], info["v201"]) for info in PROFILE_DISPLAY_NAMES.values())
+}
+if _ORPHANED_PROFILES:  # pragma: no cover — guards a developer error, not runtime state
+    import logging as _logging
+    _logging.getLogger(__name__).warning(
+        "Profiles with no PROFILE_DISPLAY_NAMES entry — these cannot be selected or "
+        "reconfigured in the options flow: %s",
+        ", ".join(sorted(_ORPHANED_PROFILES)),
+    )
 
 
 def resolve_profile_alias(series: str) -> str:

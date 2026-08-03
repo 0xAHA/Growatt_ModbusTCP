@@ -4,6 +4,43 @@
 
 ---
 
+## v1.1.9
+
+Issues: #361
+
+- **Fix: auto-detected TL-XH inverters were locked out of the options flow entirely:**
+  Reported by @Richardmarkink. Opening **Configure** to change something unrelated — scan
+  interval, for example — failed to save with:
+
+  > value must be one of ['MIC (0.6-3.3kW)', … 'WIT (4-15kW)']
+
+  Auto-detection assigns `tl_xh_3000_10000_v201` for DTC 5100, but that profile had **no
+  entry in `PROFILE_DISPLAY_NAMES`**. The options form resolves the stored profile to a
+  display name to pre-select it; with no entry, the lookup fell through to the profile's
+  technical `name`, which isn't a valid dropdown key — so validation rejected the form
+  before any change could be saved. Every option was unreachable.
+
+  Four profiles were affected, all reachable via auto-detection:
+  `tl_xh_3000_10000`, `tl_xh_us_3000_10000`, `tl_xh_3000_10000_v201`,
+  `tl_xh_us_3000_10000_v201`.
+
+  Two new dropdown entries cover them — **TL-XH (3-10kW)** and **TL-XH US (3-10kW)**.
+
+- **Two guards so this cannot recur silently.** This was the same defect as the missing SPA
+  entry in v1.1.6, so an audit of all 32 profiles now runs at import and logs a warning for
+  any that no dropdown entry can reach (currently none). Separately, the options flow now
+  detects an unrenderable default and falls back to a valid one with a warning, rather than
+  presenting a form that cannot be saved. Your configured profile is not changed by that
+  fallback — only the value the form pre-selects.
+
+- **Note for MIN TL-XH2 owners — why solar still reads zero.** The `MIN TL-XH (V2.01)`
+  profile does not include the VPP PV register block (`31010-31017`), so PV is sourced from
+  the 3000-range registers your hardware does not serve. Battery works because that
+  profile's battery cluster is read from `31200+`, which does respond. This is not fixed by
+  a setting — it needs the dedicated TL-XH2 profile tracked in #361.
+
+---
+
 ## v1.1.8
 
 Issues: #361

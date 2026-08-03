@@ -900,6 +900,23 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
         # Convert current profile ID to display name for default
         current_display_name = get_display_name_for_profile(current_series)
 
+        # get_display_name_for_profile() falls back to the profile's technical `name` when
+        # the profile has no PROFILE_DISPLAY_NAMES entry. That value is not a valid dropdown
+        # key, so vol.In() below would reject the default and the user could not save ANY
+        # option change — locked out of scan interval, modbus delay, everything (Issue #361,
+        # where auto-detection assigned tl_xh_3000_10000_v201 for DTC 5100).
+        #
+        # The missing entries are added, but keep this guard: an unrenderable default should
+        # degrade to "profile shown as something else" rather than a dead options page.
+        if current_display_name not in available_profiles:
+            _LOGGER.warning(
+                "Profile '%s' has no display-name entry (resolved to '%s', which is not a "
+                "valid option). Falling back to the first available profile for the form "
+                "default — the configured profile is unchanged unless you select a new one.",
+                current_series, current_display_name,
+            )
+            current_display_name = next(iter(available_profiles), "MIN (7-10kW)")
+
         options_schema = vol.Schema({
             vol.Required(
                 "device_name",
