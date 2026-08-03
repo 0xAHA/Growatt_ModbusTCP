@@ -4,6 +4,42 @@
 
 ---
 
+## v1.1.8
+
+Issues: #361
+
+- **Fix: a dead base range aborted the poll even when the profile had other working ranges:**
+  Completes the fix started in v1.1.5. That release stopped the 3000 range from aborting a
+  poll when a VPP range was also available — but left the identical flaw in the base range,
+  which sits earlier in the read sequence. So on VPP-only hardware the poll still died before
+  reaching anything useful.
+
+  Reported by @Richardmarkink on a MIN 4200TL-XH2, who selected the MIN TL-XH (V2.01) profile
+  as suggested and still saw every entity unavailable.
+
+  That profile has 104 input registers, 101 of them at 3000+/31000+. But three legacy
+  stragglers — 91 and 92 (fallback PV energy) and 97 (boost temperature) — put registers below
+  875, so `has_base_range` was true. Base-range failure was unconditionally fatal, so the poll
+  returned `None` after failing to read 0-97 and never reached the 31000 block that works.
+
+  A base-range failure is now only fatal when the base range is the profile's **only** source
+  of input data. Profiles where that holds — MIC, MID-X, WIT, TL3-S and similar — are
+  unchanged and still fail fast. Where other ranges exist, the failure is logged as a warning
+  and the poll continues. The empty-cache guard from v1.1.1 still catches "every range failed".
+
+  **Trade-off worth knowing:** a profile with a genuinely dead base range but a working storage
+  or 3000 range will now publish partial data instead of going unavailable — real values for
+  the ranges that responded, zeros for the ones that did not. This matches how the storage,
+  3000, 8000 and 31000 ranges have always behaved; the base range was the sole exception.
+
+- **Note for MIN TL-XH2 owners:** this release should get you PV, AC, grid and status data via
+  the MIN TL-XH (V2.01) profile. **Battery sensors will still read zero.** That profile sources
+  battery values from 3000-range registers (3169/3170/3171/3176) which your hardware does not
+  serve, while its VPP equivalents at 31214/31217/31220 are deliberately suffix-blocked from
+  fallback. A dedicated TL-XH2 profile is in progress — see #361.
+
+---
+
 ## v1.1.7
 
 Issues: #363

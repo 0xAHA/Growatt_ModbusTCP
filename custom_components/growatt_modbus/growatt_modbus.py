@@ -1272,6 +1272,23 @@ class GrowattModbus:
         has_8000_range = any(8000 <= addr < 8200 for addr in addresses)
         has_31000_range = any(31000 <= addr < 32000 for addr in addresses)
 
+        # Is the base range this profile's ONLY source of input data?
+        #
+        # Same reasoning as _3000_is_primary below (Issue #361). A base-range failure was
+        # unconditionally fatal, which is right for MIC/MID-X/WIT/TL3-S where 0-874 is all
+        # there is — but wrong for hybrid profiles that also carry 3000+ and 31000+ ranges.
+        #
+        # MIN_TL_XH_3000_10000_V201 is the case that exposed it: 101 of its 104 input
+        # registers live at 3000+/31000+, but three legacy stragglers (91, 92 fallback PV
+        # energy and 97 boost_temp) make has_base_range true. On MIN TL-XH2 hardware, which
+        # serves only the VPP ranges, the poll died reading 0-97 and never reached the
+        # 31000 block that works — every entity unavailable despite live data being there.
+        #
+        # When other ranges exist, a base failure is now a warning and the poll continues.
+        # The empty-cache guard further down still catches "every range failed".
+        _base_is_primary = not (has_storage_range or has_3000_range
+                                or has_875_range or has_8000_range or has_31000_range)
+
         # Read base range (0-N) if needed — size trimmed to profile's actual max address.
         # Excludes 875-999 (WIT range handled separately).
         if has_base_range:
@@ -1279,7 +1296,7 @@ class GrowattModbus:
                 base_addrs = sorted(a for a in addresses if a < 875)
                 logger.debug("Reading base range sparse (%d registers, block_size=%d)",
                              len(base_addrs), _block_size)
-                if not _read_sparse(base_addrs, fatal=True):
+                if not _read_sparse(base_addrs, fatal=_base_is_primary):
                     return None
             else:
                 max_base_addr = max(a for a in addresses if a < 875)
@@ -1289,9 +1306,17 @@ class GrowattModbus:
                     chunk_count = min(125, base_count - chunk_start)
                     chunk_regs = self.read_input_registers(chunk_start, chunk_count)
                     if chunk_regs is None:
-                        logger.error("Failed to read base input register block (%d-%d)",
-                                     chunk_start, chunk_start + chunk_count - 1)
-                        return None
+                        if _base_is_primary:
+                            logger.error("Failed to read base input register block (%d-%d)",
+                                         chunk_start, chunk_start + chunk_count - 1)
+                            return None
+                        # Other ranges may still carry this profile's data — don't abort.
+                        logger.warning(
+                            "Failed to read base input register block (%d-%d) — continuing to "
+                            "other ranges (this profile also defines 3000+/31000+ registers)",
+                            chunk_start, chunk_start + chunk_count - 1
+                        )
+                        break
                     for i, value in enumerate(chunk_regs):
                         self._register_cache[chunk_start + i] = value
 
