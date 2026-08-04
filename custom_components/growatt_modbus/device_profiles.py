@@ -405,6 +405,29 @@ INVERTER_PROFILES = {
     },
 
     # MIN TL-XH Hybrid - Uses MIN 3000+ range with VPP battery
+    # Second-generation TL-XH. Serves ONLY the VPP ranges — legacy 0-124, 1000-1124 and
+    # the whole 3000+ block return Illegal Function, so the first-gen profile below reads
+    # battery and PV from addresses that do not exist on this hardware (Issue #361).
+    # Shares DTC 5100 with the first generation, so auto-detection cannot tell them apart:
+    # this is a manual-selection profile.
+    "min_tl_xh2_3000_10000_v201": {
+        "name": "MIN TL-XH2 3000-10000",
+        "description": "MIN series TL-XH2 hybrid with battery (3-10kW), VPP-only (30000+/31000+)",
+        "register_map": "MIN_TL_XH2_3000_10000_V201",
+        "phases": 1,
+        "has_pv3": True,  # 3-6kW: 2 strings, 7-10kW: 3 strings
+        "has_battery": True,
+        "max_power_kw": 10.0,
+        "protocol_version": "v2.01",
+        "sensors": (
+            BASIC_PV_SENSORS |
+            PV3_SENSORS |
+            BASIC_AC_SENSORS |
+            BATTERY_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
     "min_tl_xh_3000_10000_v201": {
         "name": "MIN TL-XH 3000-10000",
         "description": "MIN series TL-XH hybrid with battery (3-10kW) using 3000+ and 31000+ ranges",
@@ -953,6 +976,14 @@ PROFILE_DISPLAY_NAMES = {
         "base": "tl_xh_us_3000_10000",
         "v201": "tl_xh_us_3000_10000_v201",
         "description": "US single-phase hybrid with battery (split-phase)",
+    },
+    # Second-generation TL-XH — shares DTC 5100 with the first generation, so
+    # auto-detection cannot distinguish them. Select this manually if your legacy and
+    # 3000-range registers return Illegal Function (Issue #361).
+    "MIN TL-XH2 (3-10kW)": {
+        "base": "min_tl_xh2_3000_10000_v201",
+        "v201": "min_tl_xh2_3000_10000_v201",  # VPP-only; no legacy variant exists
+        "description": "Second-gen MIN TL-XH2 hybrid, VPP registers only",
     },
 }
 

@@ -4,6 +4,49 @@
 
 ---
 
+## v1.2.1
+
+Issues: #361
+
+- **New profile: MIN TL-XH2 (3-10kW)** — for second-generation TL-XH inverters.
+
+  The TL-XH2 serves **only** the VPP ranges. Legacy 0-124, storage 1000-1124 and the whole
+  3000+ block all return `Illegal Function`. The existing MIN TL-XH profile is therefore
+  structurally wrong for this hardware: it sources PV and battery from 3000-range addresses
+  that don't exist, so those entities stay empty even when the inverter is responding
+  normally.
+
+  Select **MIN TL-XH2 (3-10kW)** manually via *Configure → Inverter Series*. It shares
+  DTC 5100 with the first generation, so auto-detection cannot tell them apart — if your
+  logs show `Illegal Function` on the 3000-range registers, this is your profile.
+
+  **Every mapping was verified against the Growatt portal** by @Richardmarkink on a MIN
+  4200TL-XH2, rather than inferred from the V2.01 specification:
+
+  | Register | Confirmed against |
+  |---|---|
+  | 31011 / 31013 | portal MPPT1 6.3 A, MPPT2 6.7 A |
+  | 31109 | portal grid current L1 8.3 A |
+  | 31214 / 31217 | app battery voltage and SOC |
+  | 31058/31059 | total PV power — two scans an order of magnitude apart, 773.5 W vs 747 W computed and 2854.7 W vs 2843 W computed |
+
+  Two things that would have been wrong had this been built from the shared V2.01 blocks:
+
+  - **The PV block does not match `VPP_V201_PV2_INPUT`.** That block defines 31012/31013 as
+    PV1 *power* high/low; on TL-XH2 they are PV2 voltage and current. Unpacking it would
+    have reported PV2 voltage as PV1 power — a plausible-looking value that would have been
+    silently wrong. The PV registers are defined inline for that reason.
+  - **The battery registers are deliberately unsuffixed.** The first-gen profile names them
+    `battery_soc_vpp` and similar to stop them being used as fallbacks for its 3000-range
+    equivalents. TL-XH2 has no 3000 range, so these *are* the battery sensors — keeping the
+    suffixes would have left every battery entity empty.
+
+  PV3 (31014/31015) is included even though it reads zero on the 4200, which is a two-string
+  model. The 7-10 kW variants have three strings, and omitting it would silently lose a
+  string on every larger unit.
+
+---
+
 ## v1.2.0
 
 Issues: #360

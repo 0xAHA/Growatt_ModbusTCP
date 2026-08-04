@@ -458,6 +458,113 @@ MIN_TL_XH_3000_10000_V201 = {
     }
 }
 
+# ============================================================================
+# MIN TL-XH2 — second-generation, VPP-only (Issue #361)
+# ============================================================================
+#
+# The TL-XH2 serves ONLY the VPP ranges. Every legacy range — base 0-124, storage
+# 1000-1124 and the whole 3000+ block — returns Modbus "Illegal Function". The
+# first-generation MIN_TL_XH_3000_10000_V201 profile above is therefore unusable on
+# this hardware: its PV and battery sensors read from 3000-range addresses that do
+# not exist, and it carries three legacy registers (91, 92, 97) that made the poll
+# abort entirely before v1.1.8.
+#
+# Mapping verified against the Growatt portal by Richardmarkink on a MIN 4200TL-XH2
+# (DTC 5100, protocol V2.01), rather than assumed from the V2.01 spec blocks:
+#
+#   31011 = 6.3 A   portal MPPT1 current 6.3 A
+#   31013 = 6.9 A   portal MPPT2 current 6.7 A
+#   31109 = 8.3 A   portal grid current L1 8.3 A
+#   31214 = 404.3 V matched the app's battery voltage
+#   31217 = 75 %    matched the app's battery SOC
+#   31059           total PV power, confirmed on two scans an order of magnitude
+#                   apart: 773.5 W vs 747 W computed, 2854.7 W vs 2843 W computed
+#
+# NOTE ON THE PV BLOCK: this does NOT match VPP_V201_PV2_INPUT, which defines
+# 31012/31013 as PV1 power high/low. On TL-XH2 they are PV2 voltage and current.
+# Unpacking that shared block here would report PV2 voltage as PV1 power — a
+# plausible-looking value that would be silently wrong. Defined inline for that
+# reason; do not "simplify" it back to **VPP_V201_PV2_INPUT.
+#
+# PV3 (31014/31015) reads zero on the 4200 because it is a two-string model. The
+# 7-10 kW variants have three strings, so it is defined here rather than omitted —
+# otherwise every larger unit would silently lose a string.
+MIN_TL_XH2_3000_10000_V201 = {
+    'name': 'MIN TL-XH2 3000-10000',
+    'description': 'MIN series TL-XH2 hybrid with battery (3-10kW), VPP-only (30000+/31000+)',
+    'notes': (
+        'Second-generation TL-XH. Serves ONLY the VPP ranges — legacy 0-124, 1000-1124 '
+        'and 3000+ all return Illegal Function. PV block layout differs from '
+        'VPP_V201_PV2_INPUT and is defined inline. Verified against the Growatt portal '
+        'on a MIN 4200TL-XH2 (Issue #361).'
+    ),
+    'input_registers': {
+        # === Status (31000-31004) ===
+        **VPP_V201_STATUS,
+
+        # === PV strings — inline, NOT VPP_V201_PV2_INPUT (see note above) ===
+        31010: {'name': 'pv1_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'PV1 DC voltage'},
+        31011: {'name': 'pv1_current', 'scale': 0.1, 'unit': 'A', 'desc': 'PV1 DC current'},
+        31012: {'name': 'pv2_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'PV2 DC voltage'},
+        31013: {'name': 'pv2_current', 'scale': 0.1, 'unit': 'A', 'desc': 'PV2 DC current'},
+        31014: {'name': 'pv3_voltage', 'scale': 0.1, 'unit': 'V',
+                'desc': 'PV3 DC voltage (7-10kW models only; 0 on 2-string units)'},
+        31015: {'name': 'pv3_current', 'scale': 0.1, 'unit': 'A',
+                'desc': 'PV3 DC current (7-10kW models only; 0 on 2-string units)'},
+
+        # === Total PV power (32-bit) ===
+        # 31058 reads 0 while 31059 carries the value, consistent with a high/low pair.
+        # Treated as 32-bit so output above 6.5 kW cannot overflow a single register.
+        31058: {'name': 'pv_total_power_high', 'scale': 1, 'unit': '', 'pair': 31059,
+                'desc': 'Total PV power HIGH word'},
+        31059: {'name': 'pv_total_power_low', 'scale': 1, 'unit': '', 'pair': 31058,
+                'combined_scale': 0.1, 'combined_unit': 'W',
+                'desc': 'Total PV power LOW word (confirmed on two scans, Issue #361)'},
+
+        # === AC output / grid ===
+        31100: {'name': 'ac_power_high', 'scale': 1, 'unit': '', 'pair': 31101,
+                'desc': 'AC output power HIGH word'},
+        31101: {'name': 'ac_power_low', 'scale': 1, 'unit': '', 'pair': 31100,
+                'combined_scale': 0.1, 'combined_unit': 'W',
+                'desc': 'AC output power LOW word'},
+        31105: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'Grid frequency'},
+        31106: {'name': 'ac_voltage',   'scale': 0.1,  'unit': 'V',  'desc': 'Grid voltage'},
+        31109: {'name': 'ac_current',   'scale': 0.1,  'unit': 'A',  'desc': 'Grid current'},
+
+        # === Battery (cluster 1) ===
+        # Unsuffixed on purpose. The first-gen profile names these *_vpp to stop them
+        # being used as fallbacks for its 3000-range battery registers. TL-XH2 has no
+        # 3000 range, so these ARE the battery sensors — suffixing them here would
+        # leave every battery entity empty.
+        31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
+        31201: {'name': 'battery_power_low',  'scale': 1, 'unit': '', 'pair': 31200,
+                'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203},
+        31203: {'name': 'charge_energy_today_low',  'scale': 1, 'unit': '', 'pair': 31202,
+                'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31204: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 31205},
+        31205: {'name': 'charge_power_low',  'scale': 1, 'unit': '', 'pair': 31204,
+                'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207},
+        31207: {'name': 'discharge_energy_today_low',  'scale': 1, 'unit': '', 'pair': 31206,
+                'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31208: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31209},
+        31209: {'name': 'discharge_power_low',  'scale': 1, 'unit': '', 'pair': 31208,
+                'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31214: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'signed': True,
+                'desc': 'Battery voltage (verified against app, Issue #361)'},
+        31215: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True,
+                'desc': 'Battery current'},
+        31217: {'name': 'battery_soc', 'scale': 1, 'unit': '%',
+                'desc': 'Battery SOC (verified against app, Issue #361)'},
+        31222: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
+                'desc': 'Battery temperature'},
+    },
+    'holding_registers': {
+        **VPP_V201_HOLDING_1P,
+    },
+}
+
 # Export all TL-XH profiles
 TL_XH_REGISTER_MAPS = {
     'TL_XH_3000_10000': TL_XH_3000_10000,
@@ -465,4 +572,5 @@ TL_XH_REGISTER_MAPS = {
     'TL_XH_3000_10000_V201': TL_XH_3000_10000_V201,
     'TL_XH_US_3000_10000_V201': TL_XH_US_3000_10000_V201,
     'MIN_TL_XH_3000_10000_V201': MIN_TL_XH_3000_10000_V201,
+    'MIN_TL_XH2_3000_10000_V201': MIN_TL_XH2_3000_10000_V201,
 }
