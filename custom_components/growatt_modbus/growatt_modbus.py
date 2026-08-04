@@ -691,6 +691,18 @@ class GrowattModbus:
         self._fallback_min_read_interval = 1.0  # Safe fallback on errors
         self._backed_off = False  # Track if we've backed off
 
+        # User override for the maximum registers per Modbus request (Issue #360).
+        # None = use the profile's 'max_block_size', or dense 125-register reads if it has
+        # none. Set from the "Max Register Block Size" option by the coordinator.
+        #
+        # This is a property of the RS485 link, not of the inverter model, so it does not
+        # belong in the profile: at 9600 baud a 125-register response is ~265 ms of
+        # continuous serial data, and gateways with a shorter serial response window forward
+        # a truncated frame. The client then decodes garbage — "Unable to decode request"
+        # and unit-ID mismatches — and stays desynced. The same inverter on a faster or
+        # better-behaved gateway has no such limit.
+        self._block_size_override: int | None = None
+
         # Battery power scale auto-detection (WIT profile specific)
         self._battery_power_scale_override = None  # None = use profile default, 0.1 or 1.0 = detected scale
         self._battery_power_scale_samples = []  # Store validation samples
@@ -1232,7 +1244,10 @@ class GrowattModbus:
         # gaps and satisfies inverters that reject multi-register reads (e.g. MIC 2500-5500MTL-S).
         # Profiles without 'max_block_size' use the original dense mode (contiguous 0-to-max
         # range reads in 125-register chunks).
-        _raw_block_size = self.register_map.get('max_block_size')
+        # A user override takes precedence over the profile's own max_block_size, so a
+        # marginal RS485 link can be accommodated without changing the profile for everyone
+        # on that model (Issue #360).
+        _raw_block_size = self._block_size_override or self.register_map.get('max_block_size')
         _sparse_mode = _raw_block_size is not None
         _block_size = int(_raw_block_size) if _sparse_mode else 125
 

@@ -4,6 +4,48 @@
 
 ---
 
+## v1.2.0
+
+Issues: #360
+
+- **New: "Max Register Block Size" option — for gateways that truncate large reads:**
+  Some RS485-to-TCP gateways cannot deliver a large Modbus response intact. At 9600 baud a
+  125-register response is 253 bytes — roughly **265 ms** of continuous serial data — and a
+  gateway whose serial response window is shorter forwards a truncated frame. The client
+  then decodes garbage and the byte stream stays misaligned for every subsequent read.
+
+  The symptoms are distinctive once you know them:
+  - `ModbusIOException: Unable to decode request` in the log, in bulk
+  - `request ask for id=1 but received 0` (or other nonsense unit IDs)
+  - entities unavailable or stuck at zero, while the same inverter works fine from other
+    software that happens to read smaller blocks
+
+  Diagnosed on @Xybertecnic's SPA 10000TL3 BH-UP behind a PUSR gateway at 9600 baud, where
+  the measurements were unambiguous:
+
+  | Block size | Result |
+  |---|---|
+  | 125 (default) | every range "No response", 1593 decode errors |
+  | 25 | still failing — 1040 decode errors |
+  | **1** | **storage range returns 59 registers**, decode errors down to 112 |
+
+  **Settings → Devices & Services → Growatt Modbus → Configure → Max Register Block Size**
+  Options are Auto (default, unchanged behaviour), 50, 25, 10, or 1 register.
+
+  This is deliberately an option rather than a profile setting: the limit is a property of
+  your RS485 link, not of the inverter model. The same SPA on a faster or better-behaved
+  gateway has no such constraint, and baking a low value into the profile would slow down
+  everyone on that model to fix one person's cabling.
+
+  Lower values mean more requests per poll and a slower cycle — use the highest value that
+  works. `1` is the most compatible and the slowest.
+
+- **Confirmed: the SPA profile's register map is correct.** Once reads got through intact,
+  the existing mapping produced sensible values — battery 424.6 V, SOC 84 %, temperature
+  32 °C, work mode 6. No profile change was needed; the data was always there.
+
+---
+
 ## v1.1.10
 
 Issues: #361

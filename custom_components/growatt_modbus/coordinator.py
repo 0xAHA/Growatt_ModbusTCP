@@ -1003,6 +1003,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             self._client._battery_voltage_range = self.config_entry.options.get(
                 "battery_voltage_range", "Auto-detect"
             )
+            # 0 = "Auto" — defer to the profile's own max_block_size (Issue #360)
+            _bs = self.config_entry.options.get("max_block_size", 0)
+            self._client._block_size_override = int(_bs) if _bs else None
             delay_s = self.config_entry.options.get("modbus_delay", 250) / 1000.0
             self._client._default_min_read_interval = delay_s
             if not self._client._backed_off:
@@ -1079,6 +1082,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 self._client._battery_voltage_range = self.config_entry.options.get(
                     "battery_voltage_range", "Auto-detect"
                 )
+                # 0 = "Auto" — defer to the profile's own max_block_size (Issue #360)
+                _bs = self.config_entry.options.get("max_block_size", 0)
+                self._client._block_size_override = int(_bs) if _bs else None
                 delay_s = self.config_entry.options.get("modbus_delay", 250) / 1000.0
                 self._client._default_min_read_interval = delay_s
                 if not self._client._backed_off:

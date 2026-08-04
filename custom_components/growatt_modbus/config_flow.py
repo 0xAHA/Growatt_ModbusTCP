@@ -911,6 +911,7 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
         current_invert_battery = self.config_entry.options.get("invert_battery_power", False)
         current_bvr = self.config_entry.options.get("battery_voltage_range", "Auto-detect")
         current_modbus_delay = self.config_entry.options.get("modbus_delay", 250)
+        current_max_block_size = self.config_entry.options.get("max_block_size", 0)
 
         # Get user-friendly profiles
         available_profiles = get_available_profiles(legacy_only=False, friendly_names=True)
@@ -976,6 +977,20 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                 "modbus_delay",
                 default=current_modbus_delay
             ): vol.All(vol.Coerce(int), vol.Range(min=50, max=1000)),
+            # Registers per Modbus request. 0 = Auto (the profile decides).
+            # Lower this when the RS485 gateway truncates large responses — the symptom is
+            # "Unable to decode request" or unit-ID mismatch errors in the log, with
+            # entities unavailable or stuck at zero (Issue #360).
+            vol.Required(
+                "max_block_size",
+                default=current_max_block_size
+            ): vol.In({
+                0: "Auto (recommended)",
+                50: "50 registers",
+                25: "25 registers",
+                10: "10 registers",
+                1: "1 register (slowest, most compatible)",
+            }),
         })
 
         return self.async_show_form(
