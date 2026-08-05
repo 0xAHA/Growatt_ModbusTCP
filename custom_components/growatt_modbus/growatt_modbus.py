@@ -411,6 +411,13 @@ class SharedModbusConnection:
         self._lock = threading.Lock()
         self._refcount = 0
         self._connected = False
+        # Per-poll budget for transport-error recoveries (Issue #364). A block-level
+        # reset+retry (see read_input_registers/read_holding_registers) is cheap for the
+        # one-off silent connection loss it's meant to catch, but on a gateway that is
+        # genuinely down every block would trip it, turning one poll into a chain of full
+        # TCP reconnects. begin_poll() resets the budget once per poll cycle.
+        self._recoveries_this_poll = 0
+        self._max_recoveries_per_poll = 2
 
     # ------------------------------------------------------------------
     # Reference counting
@@ -418,6 +425,17 @@ class SharedModbusConnection:
 
     def acquire_ref(self) -> None:
         self._refcount += 1
+
+    def begin_poll(self) -> None:
+        """Reset the per-poll recovery budget. Call once per poll, before any reads."""
+        self._recoveries_this_poll = 0
+
+    def _begin_recovery(self) -> bool:
+        """True if a reset+retry is still within this poll's recovery budget."""
+        if self._recoveries_this_poll >= self._max_recoveries_per_poll:
+            return False
+        self._recoveries_this_poll += 1
+        return True
 
     def release_ref(self) -> None:
         self._refcount -= 1
@@ -512,43 +530,77 @@ class SharedModbusConnection:
     def read_input_registers(self, start: int, count: int, slave_id: int) -> Optional[list]:
         if self._client is None:
             return None
-        try:
+        # Issue #364: a block read can fail two structurally different ways.
+        #
+        # - Transport failure (raised exception: socket dropped, frame corruption). The
+        #   connection is suspect and pymodbus's sync client won't notice on its own
+        #   (see reset()'s docstring) — reset and retry once, budget permitting.
+        # - Protocol refusal (isError(), e.g. Illegal Function/Address). The device
+        #   answered and declined. The socket is healthy; several profiles legitimately
+        #   probe ranges their hardware rejects on every poll (#360, #361), so resetting
+        #   here would be a permanent tax rather than a recovery.
+        for attempt in (0, 1):
             try:
-                resp = self._client.read_input_registers(address=start, count=count, device_id=slave_id)
-            except TypeError:
                 try:
-                    resp = self._client.read_input_registers(address=start, count=count, slave=slave_id)
+                    resp = self._client.read_input_registers(address=start, count=count, device_id=slave_id)
                 except TypeError:
                     try:
-                        resp = self._client.read_input_registers(address=start, count=count, unit=slave_id)
+                        resp = self._client.read_input_registers(address=start, count=count, slave=slave_id)
                     except TypeError:
-                        resp = self._client.read_input_registers(start, count)
+                        try:
+                            resp = self._client.read_input_registers(address=start, count=count, unit=slave_id)
+                        except TypeError:
+                            resp = self._client.read_input_registers(start, count)
+            except Exception as exc:
+                if attempt == 0 and self._begin_recovery():
+                    logger.debug(
+                        "[SharedConn %s:%s] read_input_registers(%d, %d) transport error "
+                        "(%s) — resetting and retrying once",
+                        self.host, self.port, start, count, exc,
+                    )
+                    self.reset("transport error during block read")
+                    if self.ensure_connected():
+                        continue
+                logger.debug("[SharedConn %s:%s] read_input_registers(%d, %d, slave=%d) error: %s",
+                             self.host, self.port, start, count, slave_id, exc)
+                return None
+
             if hasattr(resp, 'isError') and callable(resp.isError) and resp.isError():
                 return None
             return resp.registers if hasattr(resp, 'registers') else None
-        except Exception as exc:
-            logger.debug("[SharedConn %s:%s] read_input_registers(%d, %d, slave=%d) error: %s",
-                         self.host, self.port, start, count, slave_id, exc)
-            return None
+        return None
 
     def read_holding_registers(self, start: int, count: int, slave_id: int) -> Optional[list]:
         if self._client is None:
             return None
-        try:
+        # Same transport-vs-protocol distinction as read_input_registers() above.
+        for attempt in (0, 1):
             try:
-                resp = self._client.read_holding_registers(address=start, count=count, slave=slave_id)
-            except TypeError:
                 try:
-                    resp = self._client.read_holding_registers(address=start, count=count, unit=slave_id)
+                    resp = self._client.read_holding_registers(address=start, count=count, slave=slave_id)
                 except TypeError:
-                    resp = self._client.read_holding_registers(address=start, count=count)
+                    try:
+                        resp = self._client.read_holding_registers(address=start, count=count, unit=slave_id)
+                    except TypeError:
+                        resp = self._client.read_holding_registers(address=start, count=count)
+            except Exception as exc:
+                if attempt == 0 and self._begin_recovery():
+                    logger.debug(
+                        "[SharedConn %s:%s] read_holding_registers(%d, %d) transport error "
+                        "(%s) — resetting and retrying once",
+                        self.host, self.port, start, count, exc,
+                    )
+                    self.reset("transport error during block read")
+                    if self.ensure_connected():
+                        continue
+                logger.debug("[SharedConn %s:%s] read_holding_registers(%d, %d, slave=%d) error: %s",
+                             self.host, self.port, start, count, slave_id, exc)
+                return None
+
             if hasattr(resp, 'isError') and callable(resp.isError) and resp.isError():
                 return None
             return resp.registers if hasattr(resp, 'registers') else None
-        except Exception as exc:
-            logger.debug("[SharedConn %s:%s] read_holding_registers(%d, %d, slave=%d) error: %s",
-                         self.host, self.port, start, count, slave_id, exc)
-            return None
+        return None
 
     def write_register(self, register: int, value: int, slave_id: int) -> bool:
         if self._client is None:
