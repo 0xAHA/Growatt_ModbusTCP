@@ -984,6 +984,12 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             return None
 
         try:
+            # Issue #364: reset the per-poll transport-error recovery budget before any
+            # reads happen, so block-level reset+retry (read_input_registers /
+            # read_holding_registers) gets a fresh allowance each poll instead of
+            # accumulating across cycles or never resetting.
+            hub.begin_poll()
+
             if not hub.ensure_connected():
                 _LOGGER.warning(
                     "Shared Modbus connection could not connect to %s:%s",
