@@ -4,6 +4,58 @@
 
 ---
 
+## v1.2.2
+
+Issues: #364, #361  |  PR: #365
+
+- **Fix: silent connection loss on a single block no longer leaves sensors stuck at zero
+  (PR #365 by @roman0803):**
+  Since v1.1.8 a failed base-range block on a hybrid profile returns partial data rather
+  than `None`. That is correct for permanently dead ranges, but it also meant the
+  reset-and-retry recovery from #354 never fired for a *transiently* failed block — that
+  check only triggers when the whole poll comes back empty, and a partially-successful poll
+  looks like a normal success.
+
+  The result: PV and AC sensors intermittently stuck at `0.0`, sometimes for many polls,
+  while grid and battery sensors from other ranges kept updating. No entity went
+  unavailable, so it read as "no sun" rather than a connection fault.
+
+  Block reads now distinguish two structurally different failures:
+
+  | Failure | Surfaces as | Action |
+  |---|---|---|
+  | Transport — socket dropped, frame corruption | raised exception | reset connection, retry once |
+  | Protocol — Illegal Function/Address | `isError()` | return no data, **no reset** |
+
+  That distinction matters: several profiles legitimately probe ranges their hardware
+  rejects on every poll (#360, #361), so resetting on a protocol refusal would be a
+  permanent tax rather than a recovery. A per-poll budget caps recoveries at two, so a
+  genuinely dead gateway cannot turn one poll into a chain of TCP reconnects.
+
+  Field-tested 24h+ across a version upgrade and two HA restarts, cross-checked against an
+  independent reading of the same inverter.
+
+- **Fix: MIN TL-XH2 AC Power reported 429,496,471 W (#361):**
+  The 31100/31101 pair was shipped unsigned in v1.2.1, so a negative reading surfaced as its
+  two's-complement value read as unsigned. Now marked signed.
+
+  **This mapping is still unconfirmed.** It was inferred from magnitude, and the V2.01
+  specification places AC power at 31102/31103 instead. The signed value now agrees with the
+  AC current reading, but if your AC Power disagrees with the Growatt portal, please say so
+  on #361.
+
+- **Fix: per-string PV power sensors read 0 when the profile has no power register (#361):**
+  MIN TL-XH2 reports per-string voltage and current plus a single combined total, with no
+  per-string power registers. PV1/PV2/PV3 Power therefore sat at 0 while their own voltage
+  and current sensors showed live values — which reads as a fault rather than a gap in the
+  register map.
+
+  Per-string power is now derived from voltage × current whenever the profile defines no
+  power register for that string. A real register always takes precedence, so no existing
+  profile changes behaviour.
+
+---
+
 ## v1.2.1
 
 Issues: #361

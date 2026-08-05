@@ -1753,6 +1753,20 @@ class GrowattModbus:
             if pv4_power_low_addr:
                 data.pv4_power = self._get_register_value(pv4_power_low_addr) or 0.0
 
+            # Derive per-string power where the profile has no power register for that
+            # string (Issue #361). Some hardware reports only per-string voltage and
+            # current plus a single combined total — MIN TL-XH2 is the first confirmed
+            # case. Without this the per-string power sensors sit at 0 while their own
+            # voltage and current sensors show live values, which reads as a fault
+            # rather than a gap in the register map.
+            for _pv in (1, 2, 3, 4):
+                if self._find_register_by_name(f'pv{_pv}_power_low'):
+                    continue  # real register present — never override it
+                _v = getattr(data, f'pv{_pv}_voltage', 0.0) or 0.0
+                _i = getattr(data, f'pv{_pv}_current', 0.0) or 0.0
+                if _v and _i:
+                    setattr(data, f'pv{_pv}_power', round(_v * _i, 1))
+
             # Total PV Power
             pv_total_addr = self._find_register_by_name('pv_total_power_low')
             if pv_total_addr:

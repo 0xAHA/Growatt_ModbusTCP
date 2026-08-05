@@ -522,11 +522,15 @@ MIN_TL_XH2_3000_10000_V201 = {
                 'desc': 'Total PV power LOW word (confirmed on two scans, Issue #361)'},
 
         # === AC output / grid ===
+        # Signed: this pair goes negative. Shipped unsigned in v1.2.1 and a negative
+        # reading surfaced as 429,496,471 W — the two's-complement value read as
+        # unsigned (Issue #361). The mapping itself is inferred from magnitude, not
+        # yet confirmed against the portal.
         31100: {'name': 'ac_power_high', 'scale': 1, 'unit': '', 'pair': 31101,
                 'desc': 'AC output power HIGH word'},
         31101: {'name': 'ac_power_low', 'scale': 1, 'unit': '', 'pair': 31100,
-                'combined_scale': 0.1, 'combined_unit': 'W',
-                'desc': 'AC output power LOW word'},
+                'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True,
+                'desc': 'AC output power LOW word (signed)'},
         31105: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'Grid frequency'},
         31106: {'name': 'ac_voltage',   'scale': 0.1,  'unit': 'V',  'desc': 'Grid voltage'},
         31109: {'name': 'ac_current',   'scale': 0.1,  'unit': 'A',  'desc': 'Grid current'},
