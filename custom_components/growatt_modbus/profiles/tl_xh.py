@@ -522,15 +522,30 @@ MIN_TL_XH2_3000_10000_V201 = {
                 'desc': 'Total PV power LOW word (confirmed on two scans, Issue #361)'},
 
         # === AC output / grid ===
-        # Signed: this pair goes negative. Shipped unsigned in v1.2.1 and a negative
-        # reading surfaced as 429,496,471 W — the two's-complement value read as
-        # unsigned (Issue #361). The mapping itself is inferred from magnitude, not
-        # yet confirmed against the portal.
-        31100: {'name': 'ac_power_high', 'scale': 1, 'unit': '', 'pair': 31101,
-                'desc': 'AC output power HIGH word'},
-        31101: {'name': 'ac_power_low', 'scale': 1, 'unit': '', 'pair': 31100,
+        # Active power — VPP 2.03 spec item 45. INT32 signed, 0.1 W.
+        # Positive = export to grid, Negative = import from grid.
+        #
+        # On a HYBRID this is net grid exchange, not raw inverter output: the firmware
+        # already subtracts battery and load. Same reasoning as the MID design note in
+        # mid.py (confirmed there against the #242 scan) — the Meter Power caveat applies
+        # only to grid-tied MID models with no battery, which this is not. So it maps to
+        # power_to_grid rather than ac_power.
+        #
+        # Shipped as unsigned ac_power in v1.2.1: a negative reading surfaced as
+        # 429,496,471 W, the two's-complement value read as unsigned (Issue #361).
+        31100: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 31101,
+                'desc': 'Active power HIGH (INT32 signed — net grid exchange on hybrid)'},
+        31101: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 31100,
                 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True,
-                'desc': 'AC output power LOW word (signed)'},
+                'desc': 'Active power LOW — positive=export, negative=import'},
+        # Reactive power (INT32, 0.1 VAR) — deliberately NOT named ac_power.
+        # mic.py and min.py currently label this pair ac_power_*_vpp with maps_to
+        # ac_power, which is wrong: it is VAR, not W. Not replicated here.
+        31102: {'name': 'ac_reactive_power_high', 'scale': 1, 'unit': '', 'pair': 31103,
+                'desc': 'Reactive power HIGH (INT32 signed)'},
+        31103: {'name': 'ac_reactive_power_low', 'scale': 1, 'unit': '', 'pair': 31102,
+                'combined_scale': 0.1, 'combined_unit': 'VAR', 'signed': True,
+                'desc': 'Reactive power LOW'},
         31105: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz', 'desc': 'Grid frequency'},
         31106: {'name': 'ac_voltage',   'scale': 0.1,  'unit': 'V',  'desc': 'Grid voltage'},
         31109: {'name': 'ac_current',   'scale': 0.1,  'unit': 'A',  'desc': 'Grid current'},

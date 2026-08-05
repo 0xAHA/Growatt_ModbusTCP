@@ -4,6 +4,38 @@
 
 ---
 
+## v1.2.3
+
+Issues: #361
+
+- **Fix: MIN TL-XH2 active power was exposed as AC Power instead of Grid Power:**
+  Register 31100/31101 is **Active Power** (INT32, 0.1 W, positive = export / negative =
+  import) per the VPP 2.03 specification. On a **hybrid** that is *net grid exchange*, not
+  raw inverter output — the firmware already subtracts battery and load. This is the same
+  distinction `mid.py` documents from the #242 scan: the "use Meter Power instead" caveat
+  applies only to grid-tied MID models with no battery.
+
+  v1.2.1 shipped it as `ac_power`, so the value appeared under **AC Power** when it belongs
+  under **Grid Power**. Now mapped to `power_to_grid`, and `GRID_SENSORS` added to the
+  profile so grid import/export entities are created.
+
+  **What changes for you:** the AC Power entity for this profile is replaced by Grid Power
+  import/export. A negative reading means importing — @Richardmarkink's −258.6 W was
+  258.6 W drawn from the grid while PV charged the battery, which is correct and now
+  labelled correctly.
+
+- **Added: reactive power (31102/31103)** as `ac_reactive_power`, in VAR.
+
+  Worth noting for other profiles: `mic.py` and `min.py` currently label this same pair
+  `ac_power_*_vpp` with `maps_to: 'ac_power'` and a VA unit. That is wrong — it is reactive
+  power in VAR, not apparent or active power. `mid.py` already has it right. The mislabel is
+  latent for most users (those profiles read AC power from their base or 3000 range and only
+  fall back to VPP if that fails), so it is left unchanged here rather than altered without
+  field confirmation — but if your AC Power looks wrong on a MIC or MIN and the legacy ranges
+  are failing, that is why.
+
+---
+
 ## v1.2.2
 
 Issues: #364, #361  |  PR: #365

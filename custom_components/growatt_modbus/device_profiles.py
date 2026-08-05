@@ -423,6 +423,7 @@ INVERTER_PROFILES = {
             BASIC_PV_SENSORS |
             PV3_SENSORS |
             BASIC_AC_SENSORS |
+            GRID_SENSORS |          # active power (31100/31101) = net grid exchange on hybrids
             BATTERY_SENSORS |
             STATUS_SENSORS
         ),
