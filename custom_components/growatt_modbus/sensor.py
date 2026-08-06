@@ -32,6 +32,7 @@ from .const import (
     get_entity_category,
 )
 from .coordinator import GrowattModbusCoordinator
+from .entity import GrowattEntity
 from .device_profiles import get_sensors_for_profile
 
 _LOGGER = logging.getLogger(__name__)
@@ -1366,10 +1367,8 @@ async def async_setup_entry(
         config_entry.async_on_unload(_remove_listener)
 
 
-class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
+class GrowattModbusSensor(GrowattEntity, SensorEntity):
     """Representation of a Growatt Modbus sensor."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -1379,16 +1378,17 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
         sensor_def: dict[str, Any],
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
+        # unique_key is the sensor key, preserving the existing unique ID exactly.
+        super().__init__(
+            coordinator,
+            config_entry,
+            sensor_key,
+            get_device_type_for_sensor(sensor_key),
+        )
 
-        self._config_entry = config_entry
         self._sensor_key = sensor_key
         self._sensor_def = sensor_def
         self._attr_name = sensor_def['name']
-        self._attr_unique_id = f"{config_entry.entry_id}_{sensor_key}"
-
-        # Determine which device this sensor belongs to
-        self._device_type = get_device_type_for_sensor(sensor_key)
 
         # Set entity category (None for main sensors, "diagnostic" for technical details)
         entity_category = get_entity_category(sensor_key)
@@ -1406,11 +1406,6 @@ class GrowattModbusSensor(CoordinatorEntity, SensorEntity):
             self._attr_icon = sensor_def["icon"]
         if sensor_def.get("disabled_by_default"):
             self._attr_entity_registry_enabled_default = False
-
-    @property
-    def device_info(self) -> dict[str, Any]:
-        """Return device information."""
-        return self.coordinator.get_device_info(self._device_type)
 
     @property
     def available(self) -> bool:

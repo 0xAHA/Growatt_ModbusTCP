@@ -18,6 +18,7 @@ from .const import (
     DEVICE_TYPE_INVERTER,
 )
 from .coordinator import GrowattModbusCoordinator
+from .entity import GrowattEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,10 +41,9 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class GrowattInverterOnlineSensor(CoordinatorEntity, BinarySensorEntity):
+class GrowattInverterOnlineSensor(GrowattEntity, BinarySensorEntity):
     """Binary sensor for inverter online status."""
 
-    _attr_has_entity_name = True
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -53,17 +53,11 @@ class GrowattInverterOnlineSensor(CoordinatorEntity, BinarySensorEntity):
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the binary sensor."""
-        super().__init__(coordinator)
+        # unique_key "inverter_online" preserves the existing unique ID exactly.
+        super().__init__(coordinator, config_entry, "inverter_online", DEVICE_TYPE_INVERTER)
 
-        self._config_entry = config_entry
         self._attr_name = "Inverter Online"
-        self._attr_unique_id = f"{config_entry.entry_id}_inverter_online"
         self._attr_icon = "mdi:solar-power-variant"
-
-    @property
-    def device_info(self) -> dict[str, Any]:
-        """Return device information."""
-        return self.coordinator.get_device_info(DEVICE_TYPE_INVERTER)
 
     @property
     def is_on(self) -> bool:
