@@ -4,6 +4,49 @@
 
 ---
 
+## v1.3.1 — PRE-RELEASE
+
+> ⚠️ **Pre-release. Please confirm the integration loads before this is promoted.**
+> These are internal plumbing changes that could not be verified locally — Home Assistant
+> is not installed in the development environment, so `py_compile` and the 188-unit
+> test suite are the only automated checks that ran. Neither can tell you whether the
+> integration still *starts*.
+
+Phase 3 of the quality plan. **No user-facing behaviour changes intended** — no sensor,
+entity ID, option or value should differ.
+
+- **Per-entry state moved to `runtime_data`.**
+  The coordinator now lives on the config entry itself rather than in the shared
+  `hass.data[DOMAIN]` dictionary. That dictionary held two unrelated things — the
+  coordinators *and* the cross-entry shared-connection registry — which is why code that
+  walked it needed a defensive "skip anything that isn't a coordinator" check.
+
+  `hass.data[DOMAIN]` now holds only `_connections`, which is genuinely cross-entry and
+  correctly belongs there. Two new helpers in `diagnostic.py` resolve coordinators for the
+  service handlers, which receive an entry id rather than an entry.
+
+  Closes the `runtime-data` and part of the `common-modules` Bronze rules.
+
+- **`PARALLEL_UPDATES` declared on every platform.**
+  `0` for sensor and binary_sensor: they read from one coordinator poll, so throttling them
+  achieves nothing. **`1` for number, select and time** — those *write*, and an RS485 bus
+  cannot carry concurrent transactions. That constraint is why `SharedModbusConnection`
+  holds a lock at all; declaring it stops HA issuing overlapping calls that would only
+  queue on that lock.
+
+### What to check after installing
+
+1. The integration loads and the inverter device appears.
+2. Your sensors have values.
+3. Controls (numbers, selects, time) still write successfully.
+4. The Universal Register Scanner service still runs — its coordinator lookup changed.
+5. Download Diagnostics still produces a file.
+
+If anything fails, roll back to v1.3.0 and say so on the issue tracker — a failure here
+affects everyone, not one profile.
+
+---
+
 ## v1.3.0 — Integration Quality Improvements
 
 No user-facing behaviour changes. This release adds a diagnostics download and a test

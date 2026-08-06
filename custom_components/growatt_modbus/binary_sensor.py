@@ -21,6 +21,9 @@ from .coordinator import GrowattModbusCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+# Read-only, coordinator-backed — see sensor.py.
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -28,7 +31,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Growatt Modbus binary sensors."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = config_entry.runtime_data
     
     entities = [
         GrowattInverterOnlineSensor(coordinator, config_entry),

@@ -16,6 +16,9 @@ from .growatt_modbus import ModbusWriteError
 
 _LOGGER = logging.getLogger(__name__)
 
+# Writable platform — serialise. See number.py for the reasoning.
+PARALLEL_UPDATES = 1
+
 # Controls that use hex-packed time encoding: register_value = hours*256 + minutes
 # e.g. 06:00 = 0x0600 = 1536, 22:00 = 0x1600 = 5632
 TIME_CONTROLS = {k for k in WRITABLE_REGISTERS if 'time_period' in k and k.endswith(('_start', '_end'))}
@@ -29,7 +32,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Growatt Modbus time entities."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = config_entry.runtime_data
 
     register_map_name = config_entry.data.get(CONF_REGISTER_MAP)
     from .const import REGISTER_MAPS

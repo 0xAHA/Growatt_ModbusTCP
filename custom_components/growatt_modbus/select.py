@@ -23,6 +23,9 @@ from .growatt_modbus import ModbusWriteError
 
 _LOGGER = logging.getLogger(__name__)
 
+# Writable platform — serialise. See number.py for the reasoning.
+PARALLEL_UPDATES = 1
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -30,7 +33,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Growatt Modbus select entities."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = config_entry.runtime_data
     
     # Get the register map for this inverter
     register_map_name = config_entry.data.get(CONF_REGISTER_MAP)

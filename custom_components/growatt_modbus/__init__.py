@@ -21,7 +21,7 @@ from .const import (
     WRITABLE_REGISTERS,
     DEVICE_TYPE_INVERTER,
 )
-from .coordinator import GrowattModbusCoordinator
+from .coordinator import GrowattConfigEntry, GrowattModbusCoordinator
 from .diagnostic import async_setup_services
 from .growatt_modbus import SharedModbusConnection
 
@@ -273,7 +273,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.info("Removing stale control_authority entity %s (register 30100 not responsive)", stale_eid)
             entity_registry.async_remove(stale_eid)
 
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    # Per-entry state lives on the entry itself. hass.data[DOMAIN] is now reserved
+    # solely for "_connections", the cross-entry shared-connection registry.
+    entry.runtime_data = coordinator
 
     # Pre-create the parent inverter device so sub-devices (solar, grid, load, battery)
     # can safely reference it via via_device before their sensors are added.
@@ -301,10 +303,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: GrowattConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        coordinator = hass.data[DOMAIN].pop(entry.entry_id)
+        # runtime_data is cleared by HA once unload succeeds; no pop needed.
+        coordinator = entry.runtime_data
         hub = getattr(coordinator, '_hub', None)
         if hub is not None:
             # Release the hub reference; hub disconnects when refcount reaches 0

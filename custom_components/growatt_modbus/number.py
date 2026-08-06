@@ -21,6 +21,12 @@ from .growatt_modbus import ModbusWriteError
 
 _LOGGER = logging.getLogger(__name__)
 
+# 1, not 0: these entities WRITE to the inverter. An RS485 bus cannot carry
+# concurrent transactions — that constraint is why SharedModbusConnection holds a
+# lock at all. Serialising at the platform level keeps HA from issuing overlapping
+# service calls that would only queue on that lock anyway.
+PARALLEL_UPDATES = 1
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -28,7 +34,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Growatt Modbus number entities."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = config_entry.runtime_data
     
     # Get the register map for this inverter
     register_map_name = config_entry.data.get(CONF_REGISTER_MAP)

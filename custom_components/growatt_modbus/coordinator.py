@@ -102,6 +102,16 @@ def test_connection(config: dict) -> dict:
         return {"success": False, "error": str(err)}
 
 
+# Typed config entry. `entry.runtime_data` holds this integration's coordinator,
+# replacing the shared hass.data[DOMAIN][entry_id] dict.
+#
+# The shared-connection registry stays in hass.data because it is genuinely
+# cross-entry — several entries on the same host:port share one hub — and
+# runtime_data is per-entry by definition. With the coordinators moved out,
+# hass.data[DOMAIN] now holds only "_connections", so the two are no longer mixed.
+type GrowattConfigEntry = ConfigEntry["GrowattModbusCoordinator"]
+
+
 class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
     """Growatt Modbus data update coordinator."""
 

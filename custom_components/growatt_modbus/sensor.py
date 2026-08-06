@@ -36,6 +36,10 @@ from .device_profiles import get_sensors_for_profile
 
 _LOGGER = logging.getLogger(__name__)
 
+# Entities read from a single coordinator poll rather than doing their own I/O, so
+# there is nothing to serialise — 0 disables HA's per-platform update throttle.
+PARALLEL_UPDATES = 0
+
 
 # ---------------------------------------------------------------------------
 # Template helpers for mechanically-uniform sensor groups
@@ -1260,7 +1264,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Growatt Modbus sensors."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = config_entry.runtime_data
     
     # Wait for first data to determine which sensors to create
     if coordinator.data is None:

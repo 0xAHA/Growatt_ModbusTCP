@@ -33,6 +33,31 @@ except ImportError:
 
 _LOGGER = logging.getLogger(__name__)
 
+
+def _coordinator_for_entry(hass: HomeAssistant, entry_id: str):
+    """Resolve a coordinator from a config entry id, or None.
+
+    Coordinators live on `entry.runtime_data` rather than in `hass.data[DOMAIN]`.
+    Service handlers receive only an entry id, so they resolve the entry first.
+
+    Returns None when the entry does not exist or is not loaded, which callers
+    already handle — previously that was expressed as "not in hass.data".
+    """
+    entry = hass.config_entries.async_get_entry(entry_id)
+    return getattr(entry, "runtime_data", None) if entry else None
+
+
+def _all_coordinators(hass: HomeAssistant):
+    """Every loaded Growatt coordinator, as (entry_id, coordinator) pairs.
+
+    Replaces iterating hass.data[DOMAIN], which also contained the "_connections"
+    registry and so needed a defensive hasattr() check on every item.
+    """
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        coordinator = getattr(entry, "runtime_data", None)
+        if coordinator is not None:
+            yield entry.entry_id, coordinator
+
 def _get_integration_version() -> str:
     """Get integration version from manifest.json."""
     try:
@@ -386,7 +411,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         config_entry_id = call.data.get("config_entry")
 
         if config_entry_id:
-            coordinator = hass.data.get(DOMAIN, {}).get(config_entry_id)
+            coordinator = _coordinator_for_entry(hass, config_entry_id)
             if not coordinator or not hasattr(coordinator, 'entry'):
                 _LOGGER.error("config_entry '%s' not found in Growatt Modbus integration", config_entry_id)
                 return
@@ -514,7 +539,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         # Find the config entry for this device
         config_entry_id = None
         for entry_id in device_entry.config_entries:
-            if entry_id in hass.data.get(DOMAIN, {}):
+            if _coordinator_for_entry(hass, entry_id) is not None:
                 config_entry_id = entry_id
                 break
 
@@ -523,7 +548,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError(f"No config entry found for device {device_id}")
 
         # Get the coordinator
-        coordinator = hass.data[DOMAIN][config_entry_id]
+        coordinator = _coordinator_for_entry(hass, config_entry_id)
 
         if not coordinator:
             _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
@@ -569,7 +594,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         # Find the config entry for this device
         config_entry_id = None
         for entry_id in device_entry.config_entries:
-            if entry_id in hass.data.get(DOMAIN, {}):
+            if _coordinator_for_entry(hass, entry_id) is not None:
                 config_entry_id = entry_id
                 break
 
@@ -578,7 +603,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError(f"No config entry found for device {device_id}")
 
         # Get the coordinator
-        coordinator = hass.data[DOMAIN][config_entry_id]
+        coordinator = _coordinator_for_entry(hass, config_entry_id)
 
         if not coordinator:
             _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
@@ -610,22 +635,19 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
             config_entry_id = None
             for entry_id in device_entry.config_entries:
-                if entry_id in hass.data.get(DOMAIN, {}):
+                if _coordinator_for_entry(hass, entry_id) is not None:
                     config_entry_id = entry_id
                     break
 
             if not config_entry_id:
                 raise ValueError(f"No config entry found for device {device_id}")
 
-            coordinator = hass.data[DOMAIN][config_entry_id]
+            coordinator = _coordinator_for_entry(hass, config_entry_id)
         else:
             # Use first available coordinator
-            if not hass.data.get(DOMAIN):
-                raise ValueError("No Growatt Modbus integrations found")
-
-            coordinator = next(iter(hass.data[DOMAIN].values()))
+            coordinator = next((c for _, c in _all_coordinators(hass)), None)
             if not coordinator:
-                raise ValueError("No coordinator found")
+                raise ValueError("No Growatt Modbus integrations found")
 
         # Check if inverter is online and producing
         if not coordinator.data:
@@ -820,7 +842,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         # Find the config entry for this device
         config_entry_id = None
         for entry_id in device_entry.config_entries:
-            if entry_id in hass.data.get(DOMAIN, {}):
+            if _coordinator_for_entry(hass, entry_id) is not None:
                 config_entry_id = entry_id
                 break
 
@@ -829,7 +851,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError(f"No config entry found for device {device_id}")
 
         # Get the coordinator
-        coordinator = hass.data[DOMAIN][config_entry_id]
+        coordinator = _coordinator_for_entry(hass, config_entry_id)
 
         if not coordinator:
             _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
@@ -1017,14 +1039,14 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         # Find the config entry for this device
         config_entry_id = None
         for entry_id in device_entry.config_entries:
-            if entry_id in hass.data.get(DOMAIN, {}):
+            if _coordinator_for_entry(hass, entry_id) is not None:
                 config_entry_id = entry_id
                 break
 
         if not config_entry_id:
             raise ValueError(f"No config entry found for device {device_id}")
 
-        coordinator = hass.data[DOMAIN][config_entry_id]
+        coordinator = _coordinator_for_entry(hass, config_entry_id)
         if not coordinator:
             _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
             raise ValueError(f"Coordinator not found for device {device_id}")
@@ -1122,14 +1144,14 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         # Find the config entry for this device
         config_entry_id = None
         for entry_id in device_entry.config_entries:
-            if entry_id in hass.data.get(DOMAIN, {}):
+            if _coordinator_for_entry(hass, entry_id) is not None:
                 config_entry_id = entry_id
                 break
 
         if not config_entry_id:
             raise ValueError(f"No config entry found for device {device_id}")
 
-        coordinator = hass.data[DOMAIN][config_entry_id]
+        coordinator = _coordinator_for_entry(hass, config_entry_id)
         if not coordinator:
             _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
             raise ValueError(f"Coordinator not found for device {device_id}")
@@ -1191,14 +1213,14 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         config_entry_id = None
         for entry_id in device_entry.config_entries:
-            if entry_id in hass.data.get(DOMAIN, {}):
+            if _coordinator_for_entry(hass, entry_id) is not None:
                 config_entry_id = entry_id
                 break
 
         if not config_entry_id:
             raise ValueError(f"No config entry found for device {device_id}")
 
-        coordinator = hass.data[DOMAIN][config_entry_id]
+        coordinator = _coordinator_for_entry(hass, config_entry_id)
         if not coordinator:
             raise ValueError(f"Coordinator not found for device {device_id}")
 
@@ -1867,27 +1889,25 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         if coordinator is not None:
             _LOGGER.info("Using pre-resolved coordinator from config entry — entity values will be included")
         else:
-            if hass.data.get(DOMAIN):
-                for entry_id, coord in hass.data[DOMAIN].items():
-                    if not coord or not hasattr(coord, 'entry'):
-                        continue
+            # _all_coordinators() yields only real coordinators, so the previous
+            # hasattr() guard against hitting the "_connections" registry is gone.
+            for entry_id, coord in _all_coordinators(hass):
+                entry_data = coord.entry.data
 
-                    entry_data = coord.entry.data
-
-                    # Match based on connection type
-                    if connection_type == "tcp":
-                        if (entry_data.get("connection_type") == "tcp" and
-                            entry_data.get("host") == host and
-                            entry_data.get("port", 502) == port):
-                            coordinator = coord
-                            _LOGGER.info(f"Auto-detected coordinator for {host}:{port} - entity values will be included")
-                            break
-                    else:  # serial
-                        if (entry_data.get("connection_type") == "serial" and
-                            entry_data.get("device") == device):
-                            coordinator = coord
-                            _LOGGER.info(f"Auto-detected coordinator for {device} - entity values will be included")
-                            break
+                # Match based on connection type
+                if connection_type == "tcp":
+                    if (entry_data.get("connection_type") == "tcp" and
+                        entry_data.get("host") == host and
+                        entry_data.get("port", 502) == port):
+                        coordinator = coord
+                        _LOGGER.info(f"Auto-detected coordinator for {host}:{port} - entity values will be included")
+                        break
+                else:  # serial
+                    if (entry_data.get("connection_type") == "serial" and
+                        entry_data.get("device") == device):
+                        coordinator = coord
+                        _LOGGER.info(f"Auto-detected coordinator for {device} - entity values will be included")
+                        break
 
             if not coordinator:
                 _LOGGER.info("No matching coordinator found - entity values will not be included in CSV")
