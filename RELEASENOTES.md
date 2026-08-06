@@ -4,7 +4,41 @@
 
 ---
 
-## v1.3.1 — PRE-RELEASE
+## v1.3.2 — PRE-RELEASE
+
+> ⚠️ **Pre-release.** Changes how every sensor entity is constructed. Please confirm the
+> integration loads and your sensors still have values before this is promoted.
+
+Completes the `common-modules` Bronze rule. **No user-facing behaviour changes intended.**
+
+- **New `GrowattEntity` base class.**
+  Every entity repeated the same three things: storing the config entry, composing a
+  unique ID as `{entry_id}_{key}`, and returning `coordinator.get_device_info(...)`.
+  That last one existed **22 times**, differing only in how the device type was derived.
+
+  Migrated so far: the sensor platform (one class, ~200 entity instances) and the binary
+  sensor. The 20 control classes in `number.py`, `select.py` and `time.py` are unchanged
+  and still inherit `CoordinatorEntity` directly — mixed inheritance is safe, and
+  splitting the migration keeps any failure diagnosable.
+
+  **Unique IDs are unchanged.** Each migrated class passes the same key it used before,
+  so the composed ID is byte-identical. That matters — `unique_id` is the anchor the
+  v0.6.7 entity-ID migration relies on, and changing it would orphan every entity.
+
+- **`available` is deliberately not shared.** Only the sensor platform overrides it,
+  gating on `coordinator.is_online` as well as `last_update_success` so sensors go
+  unavailable rather than holding stale values (#357). Controls should stay settable
+  while a read is failing, so `CoordinatorEntity`'s default is right for them.
+
+### What to check
+
+1. The integration loads and sensors have values.
+2. Entity IDs and history are intact — if unique IDs had changed, entities would appear
+   as new and lose their history. Spot-check one long-running energy sensor.
+
+---
+
+## v1.3.1
 
 > ⚠️ **Pre-release. Please confirm the integration loads before this is promoted.**
 > These are internal plumbing changes that could not be verified locally — Home Assistant
