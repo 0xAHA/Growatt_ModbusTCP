@@ -4,6 +4,59 @@
 
 ---
 
+## v1.3.0 — Integration Quality Improvements
+
+No user-facing behaviour changes. This release adds a diagnostics download and a test
+suite covering the logic that has caused the most regressions.
+
+- **New: Download Diagnostics**
+
+  *Settings → Devices & Services → Growatt Modbus → ⋮ → Download diagnostics*
+
+  One click produces a JSON file with the config entry and options, the selected
+  profile and register map, coordinator health (online state, consecutive failures,
+  whether slow-poll mode is active), client state (backoff, block size, suppressed
+  ranges), shared-connection state, and the current decoded values. Host, device path
+  and serial number are redacted automatically.
+
+  This does **not** replace the Universal Register Scanner. They answer different
+  questions: diagnostics reports what the integration currently *thinks*, and works
+  even when every read is failing; the scanner probes what the hardware actually
+  responds to, including registers outside the selected profile. Ask for diagnostics
+  first, and a scan when register discovery is needed.
+
+- **New: 188-test suite**, run in CI on every push and pull request.
+
+  Every case corresponds to a bug that reached users:
+
+  | Area | Guards against |
+  |---|---|
+  | Register decoding | v1.2.1 AC power reported as 429,496,471 W — a signed 32-bit value read unsigned (#361) |
+  | | Missing registers decoding as `0` instead of `None`, which made a dead link look like a healthy inverter (#357) |
+  | Range selection | The three separate ways "is this range fatal on failure?" has been wrong — #357, #361, #364 |
+  | Status codes | SPH rendering "Unknown (6)" after being moved off the hybrid table without field confirmation (#363) |
+  | | MOD/WIT/TL-XH showing "Self-Test" during normal operation (#348) |
+  | Profile registry | Profiles selectable by auto-detection but unrenderable in the options flow, which locked users out of every setting (#360, #361) |
+  | | Asymmetric 32-bit pairs and duplicate register names |
+  | Connection recovery | The transport-vs-protocol distinction and per-poll budget from PR #365 (#364) |
+
+  Home Assistant is not a test dependency — the protocol layer is HA-free, and the
+  suite runs in well under a second.
+
+- **Recorded, not fixed: four pre-existing profile issues** found by the new tests.
+  They are allowlisted with explanations so they cannot grow silently, but changing
+  which register feeds a sensor alters what users see and needs a field report first.
+
+  The one worth attention: on **SPH/SPM HU**, the BMS registers at 1086-1089
+  (`battery_soc`, `battery_voltage`, `battery_temp`) share names with the base
+  profile's 1013/1014/1040. Register lookup returns the first match and the base
+  block is spread first, so the BMS values — described in the profile as the *actual*
+  battery state of charge, and the reason the HU profile exists — appear to be
+  unreachable. **If you run an SPH/SPM HU, please check whether your battery SOC and
+  voltage match your BMS**, and open an issue either way.
+
+---
+
 ## v1.2.3
 
 Issues: #361

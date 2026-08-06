@@ -1,4 +1,4 @@
-name: Sensor Integrity Tests
+name: Tests
 
 on:
   push:
@@ -17,8 +17,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install pytest
-        run: pip install pytest
+      # Home Assistant is deliberately NOT installed. The protocol layer is
+      # HA-free, and tests/conftest.py stubs the one unused import so it stays
+      # that way — keeping the suite fast and the coupling visible.
+      - name: Install dependencies
+        run: pip install pytest pymodbus pyserial
 
-      - name: Run sensor integrity tests
+      - name: Run tests
         run: pytest tests/ -v
