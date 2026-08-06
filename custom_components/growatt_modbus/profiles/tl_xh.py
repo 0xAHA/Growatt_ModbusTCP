@@ -558,26 +558,44 @@ MIN_TL_XH2_3000_10000_V201 = {
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
         31201: {'name': 'battery_power_low',  'scale': 1, 'unit': '', 'pair': 31200,
                 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        # Energy counters. Per VPP 2.03 §2.2 rows 66-69, 31202/31204/31206/31208 are ALL
+        # energy in 0.1 kWh — daily and cumulative, charge and discharge. v1.2.1 mapped
+        # 31204 and 31208 as charge/discharge POWER in watts, inherited from the first-gen
+        # MIN TL-XH profile. Confirmed wrong against a field scan: those registers read
+        # 37.9 and 29.2, coherent as cumulative kWh on a system with 72.7 kWh lifetime
+        # generation, nonsensical as 37.9 W / 29.2 W (Issue #361).
         31202: {'name': 'charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31203},
         31203: {'name': 'charge_energy_today_low',  'scale': 1, 'unit': '', 'pair': 31202,
                 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31204: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 31205},
-        31205: {'name': 'charge_power_low',  'scale': 1, 'unit': '', 'pair': 31204,
-                'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31204: {'name': 'charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31205},
+        31205: {'name': 'charge_energy_total_low',  'scale': 1, 'unit': '', 'pair': 31204,
+                'combined_scale': 0.1, 'combined_unit': 'kWh',
+                'desc': 'Cumulative battery charge (VPP 2.03 row 67)'},
         31206: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31207},
         31207: {'name': 'discharge_energy_today_low',  'scale': 1, 'unit': '', 'pair': 31206,
                 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31208: {'name': 'discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31209},
-        31209: {'name': 'discharge_power_low',  'scale': 1, 'unit': '', 'pair': 31208,
-                'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        31208: {'name': 'discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31209},
+        31209: {'name': 'discharge_energy_total_low',  'scale': 1, 'unit': '', 'pair': 31208,
+                'combined_scale': 0.1, 'combined_unit': 'kWh',
+                'desc': 'Cumulative battery discharge (VPP 2.03 row 69)'},
         31214: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'signed': True,
-                'desc': 'Battery voltage (verified against app, Issue #361)'},
-        31215: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True,
-                'desc': 'Battery current'},
+                'desc': 'Battery voltage (INT16; verified against app, Issue #361)'},
+        # INT32 spanning 31215-31216, NOT a single register. Read as INT16 the value sits
+        # in the high word and decodes to ~0 — the same defect reported for WIT in #247,
+        # where -27.4 A appeared as -0.1 A. Verified here: battery power 2012 W over
+        # 403.7 V = 4.98 A, and 31216 reads 49 -> 4.9 A.
+        31215: {'name': 'battery_current_high', 'scale': 1, 'unit': '', 'pair': 31216},
+        31216: {'name': 'battery_current_low',  'scale': 1, 'unit': '', 'pair': 31215,
+                'combined_scale': 0.1, 'combined_unit': 'A', 'signed': True,
+                'desc': 'Battery current (INT32; positive=charging)'},
         31217: {'name': 'battery_soc', 'scale': 1, 'unit': '%',
                 'desc': 'Battery SOC (verified against app, Issue #361)'},
-        31222: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
-                'desc': 'Battery temperature'},
+        # Spec puts battery temperature at 31223, not 31222 — 31222 is the low word of the
+        # reserved UINT32 at 31221 and reads 0. NOTE: 31223 also reads 0 on the MIN
+        # 4200TL-XH2, while 31224 ("reserved for maximum battery temperature") reads 365
+        # -> 36.5 °C. Awaiting a field comparison before preferring 31224 (Issue #361).
+        31223: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
+                'desc': 'Battery temperature (VPP 2.03 row 78)'},
     },
     'holding_registers': {
         **VPP_V201_HOLDING_1P,

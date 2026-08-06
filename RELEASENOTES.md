@@ -4,7 +4,45 @@
 
 ---
 
-## v1.3.2 — PRE-RELEASE
+## v1.3.3
+
+Issues: #361
+
+- **Fix: four wrong register mappings in the MIN TL-XH2 profile.**
+  Checked against the Growatt VPP protocol specification and a field scan from
+  @Richardmarkink. Three of the four were inherited from the first-generation MIN TL-XH
+  profile rather than introduced by me, but all four shipped in v1.2.1.
+
+  | Register | Was | Actually |
+  |---|---|---|
+  | 31204/31205 | charge power (W) | **cumulative charge energy (kWh)** |
+  | 31208/31209 | discharge power (W) | **cumulative discharge energy (kWh)** |
+  | 31215 | battery current, single INT16 | **INT32 spanning 31215-31216** |
+  | 31222 | battery temperature | reserved — temperature is at **31223** |
+
+  The energy ones are unambiguous once the values are read as kWh: the field scan gives
+  4.0 and 5.3 kWh daily, 37.9 and 29.2 kWh cumulative, on a system with 72.7 kWh of
+  lifetime generation. As watts — 37.9 W, 29.2 W — they are nonsense.
+
+  The current one is the same defect reported for WIT in **#247**, where −27.4 A appeared
+  as −0.1 A. Reading an INT32 as INT16 returns only the high word, which is ~0 for any
+  normal current. Verified here: battery power 2012 W over 403.7 V is 4.98 A, and 31216
+  reads 49 → 4.9 A.
+
+- **Known gap: battery temperature may still read 0 on TL-XH2.** The specification puts it
+  at 31223, which is what this release uses — but that register reads 0 on the MIN
+  4200TL-XH2, while 31224 ("reserved for maximum battery temperature") reads 36.5 °C.
+  Mapping the reserved register on a hunch is how the earlier mistakes happened, so it is
+  left alone pending a comparison against the app.
+
+- **PV generation energy counters are not exposed over VPP at all.** The VPP input
+  register table ends at 31599 and contains only *battery* energy — there is no Etotal or
+  Etoday. That is why a scan taken while the inverter displayed 72.7 kWh / 7.5 kWh matched
+  no register. Those sensors cannot be provided for VPP-only hardware from this range.
+
+---
+
+## v1.3.2
 
 > ⚠️ **Pre-release.** Changes how every sensor entity is constructed. Please confirm the
 > integration loads and your sensors still have values before this is promoted.
