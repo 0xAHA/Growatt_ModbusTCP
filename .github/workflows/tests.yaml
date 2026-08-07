@@ -44,8 +44,12 @@ jobs:
         with:
           python-version: "3.13"
 
+      # pymodbus and pyserial are the integration's own manifest.json requirements.
+      # Home Assistant installs those itself at runtime, but the test harness does not —
+      # so without them config_flow.py fails at `import serial` and every test dies with
+      # a bare "Import error" from HA's platform loader.
       - name: Install Home Assistant test harness
-        run: pip install pytest-homeassistant-custom-component==0.13.316
+        run: pip install pytest-homeassistant-custom-component==0.13.316 pymodbus pyserial
 
       - name: Run tests
         run: pytest tests_ha/ -v
