@@ -19,6 +19,7 @@ Two pieces of setup make that layer directly testable:
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import sys
 import types
 from pathlib import Path
@@ -30,6 +31,12 @@ PKG = "growatt_under_test"
 
 
 def _stub_homeassistant() -> None:
+    # Step aside when a real Home Assistant is installed. Checking importability rather
+    # than "already imported" matters: pytest loads this conftest before anything touches
+    # HA, so an unconditional stub would shadow the real package for the whole session
+    # and break the tests_ha/ suite in confusing ways.
+    if importlib.util.find_spec("homeassistant") is not None:
+        return
     if "homeassistant" in sys.modules:
         return
     ha = types.ModuleType("homeassistant")
