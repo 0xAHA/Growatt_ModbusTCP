@@ -34,7 +34,7 @@ from .const import (
     DEFAULT_INTER_SLAVE_DELAY_MS,
 )
 
-from .const import REGISTER_MAPS
+from .const import REGISTER_MAPS, resolve_block_size
 
 from .growatt_modbus import GrowattModbus, GrowattData, SharedModbusConnection
 
@@ -1019,9 +1019,11 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             self._client._battery_voltage_range = self.config_entry.options.get(
                 "battery_voltage_range", "Auto-detect"
             )
-            # 0 = "Auto" — defer to the profile's own max_block_size (Issue #360)
-            _bs = self.config_entry.options.get("max_block_size", 0)
-            self._client._block_size_override = int(_bs) if _bs else None
+            # 0 = "Auto" — defer to the profile's own max_block_size (Issue #360).
+            # resolve_block_size() accepts both the label the options flow stores and the
+            # integers written by the broken v1.2.0-v1.3.4 selector.
+            _bs = resolve_block_size(self.config_entry.options.get("max_block_size"))
+            self._client._block_size_override = _bs or None
             delay_s = self.config_entry.options.get("modbus_delay", 250) / 1000.0
             self._client._default_min_read_interval = delay_s
             if not self._client._backed_off:

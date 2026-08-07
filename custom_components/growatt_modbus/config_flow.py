@@ -21,6 +21,8 @@ from .const import (
     CONF_DEVICE_PATH,
     CONF_BAUDRATE,
     CONF_INVERT_BATTERY_POWER,
+    BLOCK_SIZE_OPTIONS,
+    resolve_block_size,
     DEFAULT_PORT,
     DEFAULT_SLAVE_ID,
     DEFAULT_BAUDRATE,
@@ -911,7 +913,14 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
         current_invert_battery = self.config_entry.options.get("invert_battery_power", False)
         current_bvr = self.config_entry.options.get("battery_voltage_range", "Auto-detect")
         current_modbus_delay = self.config_entry.options.get("modbus_delay", 250)
-        current_max_block_size = self.config_entry.options.get("max_block_size", 0)
+        # Stored value may be an int from the broken v1.2.0-v1.3.4 selector; map it back
+        # to the label so the dropdown pre-selects correctly instead of showing blank.
+        _stored_block_size = self.config_entry.options.get("max_block_size")
+        _resolved_block_size = resolve_block_size(_stored_block_size)
+        current_max_block_size = next(
+            (label for label, size in BLOCK_SIZE_OPTIONS.items() if size == _resolved_block_size),
+            "Auto (recommended)",
+        )
 
         # Get user-friendly profiles
         available_profiles = get_available_profiles(legacy_only=False, friendly_names=True)
@@ -984,13 +993,7 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             vol.Required(
                 "max_block_size",
                 default=current_max_block_size
-            ): vol.In({
-                0: "Auto (recommended)",
-                50: "50 registers",
-                25: "25 registers",
-                10: "10 registers",
-                1: "1 register (slowest, most compatible)",
-            }),
+            ): vol.In(list(BLOCK_SIZE_OPTIONS)),
         })
 
         return self.async_show_form(

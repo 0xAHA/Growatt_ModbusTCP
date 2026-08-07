@@ -4,6 +4,46 @@
 
 ---
 
+## v1.3.5
+
+Issues: #360, #367
+
+- **Fix: the "Max Register Block Size" option could never be saved.**
+  Reported as two different symptoms: @Xybertecnic saw a dropdown with **nothing
+  selected** that failed when changed, and @tdalejandro found the option had **zero
+  effect** on read behaviour. Same cause.
+
+  The selector shipped in v1.2.0 as `vol.In({0: "Auto", 25: "25 registers", ...})` — a
+  dict keyed by integers, with `default=0`. It is now a list of string labels with a
+  label default, matching every other selector in the same form.
+
+  **The read path was always wired correctly.** `_block_size_override` reaches the
+  decoder exactly as intended; the option simply never got as far as being stored. That
+  is why the code inspection I offered on #367 looked right and the behaviour was still
+  wrong.
+
+  Existing entries do not need migrating — the resolver accepts both the label form and
+  any integer a previous version managed to persist.
+
+  **If you set this option on v1.2.0-v1.3.4, please set it again.** It almost certainly
+  did not take effect.
+
+- **On the exact mechanism:** two explanations fit — integer dict keys not round-tripping
+  through the frontend, or `default=0` being falsy so the field rendered unselected and a
+  Required field with no value refused to submit. I could not distinguish them without a
+  running Home Assistant, and the fix addresses both. Worth stating plainly rather than
+  asserting a cause I could not verify.
+
+  Notably `config_flow.py` also has an integer-keyed **baudrate** selector that has
+  shipped for many releases and appears to work — which is what makes the first
+  explanation doubtful. It is deliberately left alone.
+
+- **21 new tests** covering the option resolver and the selector's shape, including
+  integers from the broken versions and junk values falling back to Auto rather than
+  raising.
+
+---
+
 ## v1.3.4
 
 Issues: #367

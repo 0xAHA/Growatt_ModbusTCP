@@ -1033,6 +1033,41 @@ SPF_STATUS_CODES = {
     12: {'name': 'PV Charge+Discharge',  'desc': 'PV charging battery while discharging to load'},
 }
 
+# Registers per Modbus request, as offered in the options flow.
+#
+# The keys are what the form stores; the values are what the read path uses, with 0
+# meaning "defer to the profile's own max_block_size".
+#
+# Deliberately keyed by STRING. v1.2.0 declared this selector as vol.In({int: str}),
+# but Home Assistant's frontend submits select values as strings — so "25" never
+# matched the integer 25, validation failed, and the option could not be saved at all.
+# The symptom was a dropdown with nothing selected and a form that refused to submit
+# (#360, #367). Every other selector in this options flow uses a plain list of strings,
+# which is why they work.
+BLOCK_SIZE_OPTIONS: dict[str, int] = {
+    "Auto (recommended)": 0,
+    "50 registers": 50,
+    "25 registers": 25,
+    "10 registers": 10,
+    "1 register (slowest, most compatible)": 1,
+}
+
+
+def resolve_block_size(value) -> int:
+    """Resolve a stored max_block_size option to an integer.
+
+    Accepts the current string form, and the integers written by v1.2.0-v1.3.4 in the
+    rare case one was persisted before the validation failure, so existing entries do
+    not need migrating.
+    """
+    if isinstance(value, str):
+        return BLOCK_SIZE_OPTIONS.get(value, 0)
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 # Maps register map keys to the status code family they use.
 # Keys absent from this dict use the default STATUS_CODES (grid-tied).
 PROFILE_STATUS_MAP: dict[str, str] = {
