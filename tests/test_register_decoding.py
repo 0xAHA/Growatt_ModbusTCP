@@ -130,6 +130,52 @@ def test_register_absent_from_cache_returns_none_not_zero():
     assert client._get_register_value(400) is None
 
 
+def test_pair_with_missing_partner_returns_none_not_a_fabricated_value():
+    """Regression guard for Issue #367.
+
+    A truncated block read can capture a 32-bit value's high word and not its low word.
+    The decoder used to substitute 0 for the missing half, producing (high << 16) — a
+    high word of 10000 was published as 65,536,000 W of PV power and written into Home
+    Assistant's long-term statistics as if it were a real measurement.
+
+    The protocol defines UINT32/INT32 as "high word first, low word last" and every
+    32-bit register table entry declares a length of 2, so a missing partner can only
+    mean the read failed. It must decode to nothing.
+    """
+    regs = {
+        5: {"name": "pv1_power_high", "scale": 1, "pair": 6},
+        6: {"name": "pv1_power_low", "scale": 1, "pair": 5, "combined_scale": 0.1},
+    }
+    # High word arrived, low word did not — exactly the reported failure.
+    client = _client(regs, {5: 10000})
+    assert client._get_register_value(5) is None
+
+    # And the same when only the low word arrived.
+    assert _client(regs, {6: 1234})._get_register_value(6) is None
+
+
+def test_the_exact_reported_value_can_no_longer_be_produced():
+    """65,536,000 W from Issue #367 was (10000 << 16) * 0.1 with a missing low word."""
+    regs = {
+        5: {"name": "pv1_power_high", "scale": 1, "pair": 6},
+        6: {"name": "pv1_power_low", "scale": 1, "pair": 5, "combined_scale": 0.1},
+    }
+    assert _client(regs, {5: 10000})._get_register_value(5) != pytest.approx(65536000.0)
+
+
+def test_complete_pair_still_decodes_when_partner_is_zero():
+    """A partner genuinely READ as 0 is valid and must still decode.
+
+    The fix keys on absence from the cache, not on the value being falsy — a high word
+    of 0 is the normal case for any value below 65536.
+    """
+    regs = {
+        5: {"name": "power_high", "scale": 1, "pair": 6},
+        6: {"name": "power_low", "scale": 1, "pair": 5, "combined_scale": 0.1},
+    }
+    assert _client(regs, {5: 0, 6: 2500})._get_register_value(6) == pytest.approx(250.0)
+
+
 def test_register_not_in_profile_returns_none():
     client = _client({400: {"name": "pv1_voltage", "scale": 0.1}}, {999: 123})
     assert client._get_register_value(999) is None

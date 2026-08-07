@@ -4,6 +4,45 @@
 
 ---
 
+## v1.3.4
+
+Issues: #367
+
+- **Fix: a truncated read could fabricate physically impossible values and write them into
+  long-term statistics.**
+  Reported by @tdalejandro with unusually good evidence — `pv1_power` published as
+  **65,536,000 W**, `pv2_power` as **109,544,683 W**, and the same values recurring
+  byte-for-byte 14 hours apart. That repetition is what identified the cause.
+
+  Decoded as 32-bit pairs, two of the three impossible values had a low word of *exactly
+  zero*. The decoder was substituting `0` for a pair register missing from the read cache,
+  so a truncated block that captured the high word and not the low word decoded as
+  `high << 16` — a high word of 10000 becoming 65,536,000 W.
+
+  The protocol leaves no ambiguity here: `UINT32`/`INT32` are defined as "high word first,
+  low word last", and every 32-bit entry in the register table declares a length of 2. A
+  32-bit value always occupies both registers, so a missing partner cannot mean zero — it
+  means the read did not complete. The decoder now returns no value in that case.
+
+  This is protocol-level rather than profile-specific, so it applies to every 32-bit
+  register across every profile.
+
+  **What changes for you:** nothing, unless your gateway is truncating responses. Values
+  that previously appeared as millions of watts will now read 0 for that poll instead.
+  Still not ideal, but it no longer corrupts Energy Dashboard history — which is
+  permanent, and has to be repaired by hand.
+
+- **Note:** if you already have corrupted hourly statistics, Developer Tools → Statistics
+  can correct the affected means without touching the database.
+
+- **Known remaining:** five call sites in the WIT battery-power path use the same
+  substitution. They are not fixed here because in that code `pair_addr` may legitimately
+  be `None` — meaning the profile genuinely has no high word — which is a different case
+  from "the register exists but wasn't read". Separating those safely needs a WIT owner to
+  verify, given that path's history in #247 and #323.
+
+---
+
 ## v1.3.3
 
 Issues: #361

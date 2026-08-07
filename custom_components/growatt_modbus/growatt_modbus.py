@@ -1229,16 +1229,36 @@ class GrowattModbus:
                 scale = reg_info.get('scale', 1)
                 return raw_value * scale
             
+            # A 32-bit value ALWAYS occupies both registers — the protocol defines
+            # UINT32/INT32 as "high word first, low word last", and every 32-bit entry in
+            # the register table declares a length of 2. So a partner missing from the
+            # cache never means "zero"; it means the read did not complete.
+            #
+            # Substituting 0 here fabricated values out of data that never arrived. A
+            # truncated block that captured the high word but not the low word decoded as
+            # (high << 16): a high word of 10000 was published as 65,536,000 W of PV power,
+            # and went straight into Home Assistant's long-term statistics (Issue #367).
+            #
+            # Returning None instead lets the caller treat the value as unread.
+            partner_value = self._register_cache.get(pair_addr)
+            if partner_value is None:
+                logger.debug(
+                    "Register %d is a 32-bit pair with %d, but %d was not read — "
+                    "returning no value rather than assuming 0",
+                    address, pair_addr, pair_addr,
+                )
+                return None
+
             # Check which register is HIGH and which is LOW
             if address < pair_addr:
                 # Current address is HIGH, pair is LOW
                 high_value = raw_value
-                low_value = self._register_cache.get(pair_addr, 0)
+                low_value = partner_value
                 combined_scale = pair_info.get('combined_scale', 1)
             else:
                 # Current address is LOW, pair is HIGH
                 low_value = raw_value
-                high_value = self._register_cache.get(pair_addr, 0)
+                high_value = partner_value
                 combined_scale = reg_info.get('combined_scale', 1)
             
             # Combine 32-bit value
