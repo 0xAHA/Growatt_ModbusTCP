@@ -20,11 +20,11 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.growatt_modbus.const import BLOCK_SIZE_OPTIONS
 
+from .conftest import setup_entry
+
 
 async def _open_options(hass: HomeAssistant, entry):
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await setup_entry(hass, entry)
     return await hass.config_entries.options.async_init(entry.entry_id)
 
 

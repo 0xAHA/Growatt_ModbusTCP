@@ -14,11 +14,11 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.growatt_modbus.const import DOMAIN
 
+from .conftest import setup_entry
+
 
 async def test_entry_sets_up(hass: HomeAssistant, mock_entry, bypass_connection):
-    mock_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await setup_entry(hass, mock_entry)
     assert mock_entry.state is ConfigEntryState.LOADED
 
 
@@ -30,9 +30,7 @@ async def test_coordinator_is_on_runtime_data(
     `hass.data[DOMAIN]` should now hold only the cross-entry connection registry — the
     two used to be mixed, which is why code walking it needed a defensive check.
     """
-    mock_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await setup_entry(hass, mock_entry)
 
     assert getattr(mock_entry, "runtime_data", None) is not None
     assert mock_entry.entry_id not in hass.data.get(DOMAIN, {})
@@ -40,9 +38,7 @@ async def test_coordinator_is_on_runtime_data(
 
 async def test_entry_unloads(hass: HomeAssistant, mock_entry, bypass_connection):
     """The unload path can only fail on unload — a load test cannot reach it."""
-    mock_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await setup_entry(hass, mock_entry)
 
     assert await hass.config_entries.async_unload(mock_entry.entry_id)
     await hass.async_block_till_done()
@@ -51,9 +47,7 @@ async def test_entry_unloads(hass: HomeAssistant, mock_entry, bypass_connection)
 
 async def test_entry_reloads(hass: HomeAssistant, mock_entry, bypass_connection):
     """Reload is unload followed by setup, so it exercises both directions."""
-    mock_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await setup_entry(hass, mock_entry)
 
     assert await hass.config_entries.async_reload(mock_entry.entry_id)
     await hass.async_block_till_done()
@@ -66,9 +60,7 @@ async def test_entities_are_created(hass: HomeAssistant, mock_entry, bypass_conn
     A wrong base class shows up as entities silently not being created — the
     integration still loads, so a load check would pass.
     """
-    mock_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await setup_entry(hass, mock_entry)
 
     entities = [
         s for s in hass.states.async_all()
@@ -85,9 +77,7 @@ async def test_diagnostics_can_be_produced(
         async_get_config_entry_diagnostics,
     )
 
-    mock_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await setup_entry(hass, mock_entry)
 
     diagnostics = await async_get_config_entry_diagnostics(hass, mock_entry)
     assert "entry" in diagnostics

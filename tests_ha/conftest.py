@@ -49,13 +49,50 @@ def mock_entry() -> MockConfigEntry:
 
 @pytest.fixture
 def bypass_connection():
-    """Stop the coordinator opening a socket.
+    """Stop the integration touching a socket.
 
-    The config and options flows are what these tests exercise; letting them attempt a
-    real connection would make them slow and dependent on network behaviour.
+    Two reasons. The flows and lifecycle are what these tests exercise, so a real
+    connection would only add latency and flakiness — and `pytest-socket`, which ships
+    with the harness, blocks socket creation outright, so anything that reaches the
+    transport raises rather than merely being slow.
+
+    Patched at several levels because setup can reach the transport by more than one
+    route: the coordinator's poll, the shared hub's connect, and the client's own
+    connect used by device identification.
     """
-    with patch(
-        "custom_components.growatt_modbus.GrowattModbusCoordinator._fetch_data",
-        return_value=None,
+    with (
+        patch(
+            "custom_components.growatt_modbus.coordinator.GrowattModbusCoordinator._fetch_data",
+            return_value=None,
+        ),
+        patch(
+            "custom_components.growatt_modbus.growatt_modbus.SharedModbusConnection.ensure_connected",
+            return_value=True,
+        ),
+        patch(
+            "custom_components.growatt_modbus.growatt_modbus.SharedModbusConnection.disconnect",
+            return_value=None,
+        ),
+        patch(
+            "custom_components.growatt_modbus.growatt_modbus.GrowattModbus.connect",
+            return_value=True,
+        ),
+        patch(
+            "custom_components.growatt_modbus.growatt_modbus.GrowattModbus.disconnect",
+            return_value=None,
+        ),
     ):
         yield
+
+
+async def setup_entry(hass, entry) -> None:
+    """Set the entry up, failing with the reason rather than a bare False.
+
+    `async_setup` returns False and swallows the exception into ConfigEntryState, so a
+    plain `assert await ...` reports only "assert False" — useless in CI, where a log
+    round-trip costs minutes. Surfacing `entry.reason` makes one run diagnostic.
+    """
+    entry.add_to_hass(hass)
+    ok = await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert ok, f"setup failed — state={entry.state}, reason={entry.reason!r}"
