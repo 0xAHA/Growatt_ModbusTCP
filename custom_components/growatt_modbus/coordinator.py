@@ -975,6 +975,29 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             self.data = GrowattData()
             return self.data
 
+    def _apply_client_options(self) -> None:
+        """Push per-poll config-entry options onto the client.
+
+        Both fetch paths need this. It used to be duplicated inline in each, and the two
+        copies drifted: v1.3.5 fixed the block-size parsing in the shared path only, so
+        the direct path kept calling int() on the label the options flow now stores and
+        raised ValueError on every poll — taking every entity unavailable for anyone not
+        on a shared connection (Issue #367). One implementation, one place to fix.
+        """
+        opts = self.config_entry.options
+
+        self._client._battery_voltage_range = opts.get("battery_voltage_range", "Auto-detect")
+
+        # 0 = "Auto" — defer to the profile's own max_block_size (Issue #360).
+        # resolve_block_size() accepts both the label the options flow stores and the
+        # integers written by the broken v1.2.0-v1.3.4 selector.
+        self._client._block_size_override = resolve_block_size(opts.get("max_block_size")) or None
+
+        delay_s = opts.get("modbus_delay", 250) / 1000.0
+        self._client._default_min_read_interval = delay_s
+        if not self._client._backed_off:
+            self._client.min_read_interval = delay_s
+
     def _fetch_data_shared(self) -> GrowattData | None:
         """Fetch data using the shared connection hub (holds hub lock for the full poll)."""
         hub = self._hub
@@ -1016,18 +1039,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             time.sleep(0.030)
             hub._flush_receive_buffer()
 
-            self._client._battery_voltage_range = self.config_entry.options.get(
-                "battery_voltage_range", "Auto-detect"
-            )
-            # 0 = "Auto" — defer to the profile's own max_block_size (Issue #360).
-            # resolve_block_size() accepts both the label the options flow stores and the
-            # integers written by the broken v1.2.0-v1.3.4 selector.
-            _bs = resolve_block_size(self.config_entry.options.get("max_block_size"))
-            self._client._block_size_override = _bs or None
-            delay_s = self.config_entry.options.get("modbus_delay", 250) / 1000.0
-            self._client._default_min_read_interval = delay_s
-            if not self._client._backed_off:
-                self._client.min_read_interval = delay_s
+            self._apply_client_options()
 
             data = self._client.read_all_data()
             if data is None:
@@ -1097,16 +1109,8 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     _LOGGER.debug("All connection attempts failed")
                     return None
 
-                self._client._battery_voltage_range = self.config_entry.options.get(
-                    "battery_voltage_range", "Auto-detect"
-                )
-                # 0 = "Auto" — defer to the profile's own max_block_size (Issue #360)
-                _bs = self.config_entry.options.get("max_block_size", 0)
-                self._client._block_size_override = int(_bs) if _bs else None
-                delay_s = self.config_entry.options.get("modbus_delay", 250) / 1000.0
-                self._client._default_min_read_interval = delay_s
-                if not self._client._backed_off:
-                    self._client.min_read_interval = delay_s
+                self._apply_client_options()
+
                 data = self._client.read_all_data()
                 if data is not None:  # Success!
                     # Lazily read device identification on the first successful connection.

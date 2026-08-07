@@ -59,16 +59,31 @@ async def test_every_block_size_label_can_be_saved(
     assert mock_entry.options["max_block_size"] == label
 
 
-async def test_saved_block_size_reaches_the_read_path(
-    hass: HomeAssistant, mock_entry, bypass_connection
+class _StubClient:
+    """Minimal stand-in for GrowattModbus — only what _apply_client_options touches."""
+
+    def __init__(self):
+        self._battery_voltage_range = None
+        self._block_size_override = None
+        self._default_min_read_interval = None
+        self._backed_off = False
+        self.min_read_interval = None
+
+
+@pytest.mark.parametrize("label,expected", list(BLOCK_SIZE_OPTIONS.items()))
+async def test_saved_block_size_reaches_the_client(
+    hass: HomeAssistant, mock_entry, bypass_connection, label, expected
 ):
     """Saving is only half of it — the value must arrive at the client.
 
-    v1.2.0 wired this end correctly while the form end was broken, so verifying only the
-    wiring gave a false positive. This asserts the whole chain.
-    """
-    from custom_components.growatt_modbus.const import resolve_block_size
+    The previous version of this test called resolve_block_size() on the stored option
+    itself, which proved only that the helper works. It was a tautology, and it passed
+    happily while `_fetch_data` still did `int(_bs)` on the label and raised ValueError
+    on every poll for anyone not on a shared connection (#367).
 
+    This drives the coordinator's own code instead, which is the part that was broken.
+    Both fetch paths now route through `_apply_client_options`, so this covers both.
+    """
     result = await _open_options(hass, mock_entry)
     await hass.config_entries.options.async_configure(
         result["flow_id"],
@@ -81,12 +96,19 @@ async def test_saved_block_size_reaches_the_read_path(
             "invert_battery_power": False,
             "battery_voltage_range": "Auto-detect",
             "modbus_delay": 250,
-            "max_block_size": "25 registers",
+            "max_block_size": label,
         },
     )
     await hass.async_block_till_done()
 
-    assert resolve_block_size(mock_entry.options["max_block_size"]) == 25
+    coordinator = mock_entry.runtime_data
+    coordinator._client = _StubClient()
+
+    # The regression was an unhandled ValueError here, not a wrong value.
+    coordinator._apply_client_options()
+
+    # 0 ("Auto") means "defer to the profile", which is carried as None, not 0.
+    assert coordinator._client._block_size_override == (expected or None)
 
 
 async def test_options_form_opens_with_a_valid_default(
