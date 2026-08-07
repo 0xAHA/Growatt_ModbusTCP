@@ -4,6 +4,39 @@
 
 ---
 
+## v1.3.6
+
+Issues: #367
+
+**Update promptly if you set the Max Register Block Size option on v1.3.5.**
+
+- **Fix: saving the block-size option took every entity unavailable on some setups.**
+  v1.3.5 changed the options flow to store the block size as a label (`"25 registers"`)
+  and updated the parsing in the shared-connection path only. The other fetch path still
+  called `int()` on it, which raised `ValueError` on every poll. That includes
+  **"Auto (recommended)"** — a truthy string, so it never hit the fallback either.
+
+  The error was caught by the retry loop rather than crashing Home Assistant, so the
+  visible symptom was every sensor going unavailable with `Error during data fetch` in
+  the log. It triggered on *any* options save, because the field is required.
+
+  Affected: entries **not** using a shared connection — serial/RTU, or TCP entries that
+  don't share a host:port with another entry. Shared-connection setups were unaffected.
+
+  Reported by @tdalejandro, who diffed the two call sites and identified the exact cause.
+
+- **Internal: the two fetch paths no longer duplicate their option handling.**
+  The blocks were byte-identical apart from the two lines above, which is how they drifted
+  out of sync in the first place. Both now call one `_apply_client_options()`.
+
+- **Testing: replaced the test that should have caught this.**
+  The old one asserted `resolve_block_size(stored_value) == 25` — it called the helper on
+  its own output, proving only that the helper worked, and stayed green throughout. It now
+  drives the coordinator and checks what actually reaches the client, across every offered
+  block-size label.
+
+---
+
 ## v1.3.5
 
 Issues: #360, #367
