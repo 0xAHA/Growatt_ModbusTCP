@@ -114,6 +114,22 @@ SPH_TL3_3000_10000 = {
         1014: {'name': 'battery_soc', 'scale': 1, 'unit': '%'},
         1040: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
         1041: {'name': 'battery_type', 'scale': 1, 'unit': ''},
+
+        # BMS block (input registers) — V1.39 "BMS information 1082-1124". Already
+        # implemented identically in sph.py; the Homey Growatt app reads these same
+        # addresses on this hardware (#360).
+        #
+        # Note these are INPUT registers. The holding registers at 1083-1088 in this same
+        # profile are Grid First time periods — different function code, different
+        # meaning, same addresses. Do not consolidate them.
+        #
+        # Partial by design: SOC/voltage/current/temp also exist at 1086-1089 but are
+        # already provided above at 1013/1014/1040, and adding duplicates would make
+        # _find_register_by_name() resolution order-dependent.
+        1083: {'name': 'bms_status', 'scale': 1, 'unit': '', 'desc': 'Status from BMS'},
+        1085: {'name': 'bms_error', 'scale': 1, 'unit': '', 'desc': 'Error information from BMS'},
+        1095: {'name': 'bms_cycle_count', 'scale': 1, 'unit': '', 'desc': 'Cycle count from BMS'},
+        1096: {'name': 'bms_soh', 'scale': 1, 'unit': '%', 'desc': 'SOH (State of Health) from BMS'},
         
         # Power Flow
         # Per Growatt Modbus Protocol II V1.24:

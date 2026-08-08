@@ -603,7 +603,7 @@ INVERTER_PROFILES = {
         "has_pv3": False,
         "has_battery": True,
         "max_power_kw": 10.0,
-        "sensors": HYBRID_3P_SENSORS,
+        "sensors": HYBRID_3P_SENSORS | BMS_SENSORS,
     },
 
     # SPH-TL3 V2.01 VPP Protocol
@@ -616,7 +616,7 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
-        "sensors": HYBRID_3P_SENSORS,
+        "sensors": HYBRID_3P_SENSORS | BMS_SENSORS,
     },
 
     # ========================================================================
@@ -637,6 +637,9 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
+            # Every BMS sensor is gated on hasattr(), so only the four registers this
+            # profile actually defines (1083/1085/1095/1096) create entities (#360).
+            BMS_SENSORS |
             STATUS_SENSORS
         ),
     },

@@ -87,6 +87,17 @@ UNIVERSAL_SCAN_RANGES = [
     {"name": "Extended Range 125-249",   "start": 125,   "count": 125, "group": "legacy"},
     # Battery/storage range (SPH, SPM, MIN battery models)
     {"name": "Storage Range 1000-1124",  "start": 1000,  "count": 125, "group": "storage"},
+    # SPA second input block. The Growatt storage protocol splits these by type:
+    #
+    #   Storage (SPH type):  FC04 range 0~124,    1000~1124
+    #   Storage (SPA type):  FC04 range 1000~1124, 2000~2124
+    #
+    # So SPA has no input registers at 0-124 at all, and carries a second block at
+    # 2000-2124 that SPH does not. This scanner never covered 2000-2124, which is why
+    # SPA scans came back looking half-empty and why data visible in other tools had no
+    # address we could point at (#360). Harmless on non-SPA models — the range simply
+    # does not respond.
+    {"name": "SPA Extended 2000-2124",   "start": 2000,  "count": 125, "group": "storage"},
     # MIN/MOD extended data ranges (input registers FC03)
     {"name": "MIN/MOD Range 3000-3124",         "start": 3000, "count": 125, "group": "mod_extended"},
     {"name": "MOD Extended 3125-3249",          "start": 3125, "count": 125, "group": "mod_extended"},

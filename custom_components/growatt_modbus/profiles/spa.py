@@ -40,6 +40,25 @@ SPA_3000_6000_TL_BL = {
         1040: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
         1041: {'name': 'battery_type', 'scale': 1, 'unit': ''},
 
+        # BMS block (input registers) — documented in V1.39 as "BMS information 1082-1124".
+        #
+        # Added from the protocol rather than a scan: the same block is already
+        # implemented identically in sph.py, and the Homey Growatt app reads these exact
+        # addresses on this hardware. A user on #360 showed Battery Health 97%, cycle
+        # count 225 and BMS status 129 in Homey while Home Assistant had none of them —
+        # not a hardware limit, just registers we had never asked for.
+        #
+        # DELIBERATELY PARTIAL. The full block also defines SOC/voltage/current/temp at
+        # 1086-1089, and those are NOT added here: this profile already carries them at
+        # 1013/1014/1040/1088, field-verified by energy balance in #249. Adding the BMS
+        # copies would duplicate register 1088 outright (silently overriding a verified
+        # mapping, since a later dict key wins) and would give two registers the same
+        # name, making _find_register_by_name() resolution order-dependent.
+        1083: {'name': 'bms_status', 'scale': 1, 'unit': '', 'desc': 'Status from BMS'},
+        1085: {'name': 'bms_error', 'scale': 1, 'unit': '', 'desc': 'Error information from BMS'},
+        1095: {'name': 'bms_cycle_count', 'scale': 1, 'unit': '', 'desc': 'Cycle count from BMS'},
+        1096: {'name': 'bms_soh', 'scale': 1, 'unit': '%', 'desc': 'SOH (State of Health) from BMS'},
+
         # Battery Current (BMS) — signed 16-bit, ×0.01 A
         # Positive = charging, negative = discharging (HA standard convention).
         # Confirmed: reg 1088 = 1400 during 760W charge (÷54.3V = 14.0A ✓);
