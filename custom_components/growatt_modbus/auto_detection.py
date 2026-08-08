@@ -558,7 +558,10 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
     5200: DtcEntry(
         'MIC 600-3300TL-X/X2/X2(Pro); MIN 2500-6000TL-X/X2/X2(Pro)/X2(Pro.E)',
         'min_3000_6000_tl_x_v201',
-        ASSUMED, 'no device report; refined at runtime by testing registers 59-62',
+        ASSUMED, 'this DTC covers BOTH families in Growatt Table 3-1, so it cannot '
+                 'identify a model on its own — a runtime probe of registers 59-62 picks '
+                 'MIC vs MIN. That probe misassigned a MIN 5000TL-X2 to the MIC profile '
+                 '(#367) and was rebuilt; no confirmed MIC device report yet',
     ),
     5201: DtcEntry(
         'MIN 7-10KTL-X/X2/X2(E)', 'min_7000_10000_tl_x_v201',
@@ -1130,40 +1133,51 @@ async def async_refine_dtc_detection(
         elif dtc_code == 5200:
             _LOGGER.info("DTC 5200 detected - Testing registers 59-62 for MIC per-MPPT energy tracking")
 
-            # Test MIC-specific per-MPPT energy registers (59-62)
-            # MIC hardware: registers contain plausible energy values (high word typically 0-100)
-            # MIN hardware: registers may return garbage/system values (e.g., DTC code 5200)
-            mic_registers_found = False
+            # Test MIC-specific per-MPPT energy registers (59-62).
+            #
+            # DTC 5200 covers BOTH families in Growatt's own table ("MIC 600-3300TL-X/X2;
+            # MIN 2500-6000TL-X/X2"), so the code alone cannot separate them and this
+            # probe has to. On a MIC these hold per-MPPT energy *today*; on a MIN the
+            # same addresses hold something else.
+            #
+            # The previous version tested each pair as `high < 100 or (high == 0 and
+            # low > 0)` and stopped at the first pass. That accepts any non-zero 16-bit
+            # low word — up to 6553.5 kWh — as a plausible *daily* figure. A MIN 5000TL-X2
+            # (#367) read [0, 2] at 59-60, matched on the first test, and was assigned the
+            # MIC profile; its 61-62 held 1578.7 kWh (lifetime DC total, not a daily
+            # figure) and was never examined because the check had already short-circuited.
+            # The user lost 18 entities and saw a valid register rejected every poll by
+            # ENERGY_GUARD for looking implausible as a daily total — which it was.
+            #
+            # Now: read both pairs, and require every one to be plausible as a daily
+            # per-MPPT energy. A lifetime total or a garbage/system value fails the bound
+            # even when a sibling register looks reasonable.
+            MAX_PLAUSIBLE_DAILY_KWH = 200.0  # generous: 6 kW flat out for 24 h is ~144
 
-            # Check register 59-60 (PV1 energy today)
-            result = await hass.async_add_executor_job(
-                client.read_input_registers, 59, 2  # PV1 energy today (high/low)
+            def _read_energy_pair(regs):
+                """Return (combined_kwh, present). None kWh means unreadable."""
+                if regs is None or len(regs) != 2:
+                    return None, False
+                combined = (regs[0] << 16) | regs[1]
+                return combined * 0.1, True
+
+            pair_59, _ = _read_energy_pair(await hass.async_add_executor_job(
+                client.read_input_registers, 59, 2))
+            pair_61, _ = _read_energy_pair(await hass.async_add_executor_job(
+                client.read_input_registers, 61, 2))
+
+            readable = [v for v in (pair_59, pair_61) if v is not None]
+            # Zero is fine — an unused MPPT string reads 0 on a genuine MIC.
+            implausible = [v for v in readable if v > MAX_PLAUSIBLE_DAILY_KWH]
+            mic_registers_found = bool(readable) and not implausible and any(v > 0 for v in readable)
+
+            _LOGGER.info(
+                "MIC/MIN probe — reg 59-60 = %s kWh, reg 61-62 = %s kWh: %s",
+                f"{pair_59:.1f}" if pair_59 is not None else "unreadable",
+                f"{pair_61:.1f}" if pair_61 is not None else "unreadable",
+                "plausible per-MPPT daily energy → MIC" if mic_registers_found
+                else "not per-MPPT daily energy → MIN",
             )
-            if result is not None and len(result) == 2:
-                high_word = result[0]
-                low_word = result[1]
-                # Valid energy data: high word should be small (0-100 for reasonable energy values)
-                # MIN inverters return garbage (e.g., 5200 = DTC code) - reject these
-                if 0 < high_word < 100 or (high_word == 0 and low_word > 0):
-                    mic_registers_found = True
-                    _LOGGER.info(f"Register 59-60 (PV1 energy) = {high_word}/{low_word} - Valid MIC per-MPPT energy data detected")
-                elif high_word >= 100:
-                    _LOGGER.info(f"Register 59-60 = {high_word}/{low_word} - Invalid (garbage/system data, not energy)")
-
-            # Also check register 61-62 (PV2 energy today) for confirmation
-            if not mic_registers_found:
-                result = await hass.async_add_executor_job(
-                    client.read_input_registers, 61, 2  # PV2 energy today (high/low)
-                )
-                if result is not None and len(result) == 2:
-                    high_word = result[0]
-                    low_word = result[1]
-                    # Same validation: high word should be small for plausible energy
-                    if 0 < high_word < 100 or (high_word == 0 and low_word > 0):
-                        mic_registers_found = True
-                        _LOGGER.info(f"Register 61-62 (PV2 energy) = {high_word}/{low_word} - Valid MIC per-MPPT energy data detected")
-                    elif high_word >= 100:
-                        _LOGGER.info(f"Register 61-62 = {high_word}/{low_word} - Invalid (garbage/system data, not energy)")
 
             # If MIC per-MPPT registers found, this is a MIC inverter
             if mic_registers_found:

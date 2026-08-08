@@ -829,8 +829,13 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
         errors = {}
 
         if user_input is not None:
-            # Update options
-            new_options = {**user_input}
+            # Start from the stored options so keys the form does not expose survive.
+            #
+            # This used to be `{**user_input}`, which replaced the dict wholesale and
+            # silently destroyed anything absent from the schema. `inter_slave_delay` is
+            # read from options by the shared-connection path but has no UI field, so it
+            # reverted to its default every time any option was saved (#367).
+            new_options = {**self.config_entry.options, **user_input}
             
             # If profile changed, update config data too
             new_data = dict(self.config_entry.data)
