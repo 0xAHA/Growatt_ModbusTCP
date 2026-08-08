@@ -562,7 +562,11 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
     ),
     5201: DtcEntry(
         'MIN 7-10KTL-X/X2/X2(E)', 'min_7000_10000_tl_x_v201',
-        ASSUMED, 'no device report on this DTC',
+        CONFIRMED, "maintainer's MIN 10000TL-X, scan on v1.1.6 — DTC 5201 read from legacy "
+                   "holding 43. Note this unit has no VPP range (30000/30099 return Illegal "
+                   "Function), so the V2.01 key below is downgraded to min_7000_10000_tl_x "
+                   "by convert_to_legacy_profile(). It is the reference device most fixes "
+                   "are verified against",
     ),
 
     # -- MOD/MID-XH series --

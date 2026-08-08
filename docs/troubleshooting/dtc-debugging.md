@@ -103,7 +103,7 @@ These statuses live in `DTC_REGISTRY` in `auto_detection.py`, which is the singl
 |----------|-------------|---------|--------|
 | 5100 | MIN 2500-6000TL-XH/XH2/XHE/XA | tl_xh_3000_10000_v201 | ✅ Confirmed (#71) |
 | 5200 | MIC 600-3300TL-X/X2/X2(Pro); MIN 2500-6000TL-X/X2/X2(Pro)/X2(Pro.E) | min_3000_6000_tl_x_v201 | ⚠️ Unconfirmed — refined at runtime by per-MPPT energy check |
-| 5201 | MIN 7-10KTL-X/X2/X2(E) | min_7000_10000_tl_x_v201 | ⚠️ Unconfirmed |
+| 5201 | MIN 7-10KTL-X/X2/X2(E) | min_7000_10000_tl_x_v201 | ✅ Confirmed (MIN 10000TL-X, DTC from legacy holding 43) |
 
 ### MOD / MID / MAC Series — Three-Phase Hybrid / Grid-Tied
 
