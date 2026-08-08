@@ -4,6 +4,50 @@
 
 ---
 
+## v1.4.1
+
+Issues: #362
+
+Fixes a v1.4.0 regression and two older bugs it exposed. Reported by @as-wallpen, who
+noticed the symptom rather than the absence.
+
+- **Fix: MOD / MID Battery Temperature reported 0.0 °C instead of disappearing.**
+  v1.4.0 identified register 3176 as the DC-DC converter stage and removed it as a
+  battery reading, but the sensor kept being created and fell back to its default. The
+  result was worse than the bug being fixed: a dashboard showed a battery sitting at
+  freezing rather than a sensor that no longer existed.
+
+  The sensor's condition is `hasattr(data, 'battery_temp')`, which reads like "only if
+  the profile provides it" — but `battery_temp` is a dataclass field with a `0.0`
+  default, so the attribute always exists and the gate can never fail. It is now excluded
+  from the MOD/MID sensor sets, which is the only filter that actually applies.
+
+- **Fix: entity cleanup never ran, at all.** Three cleanup blocks were gated on
+  `coordinator.data.serial_number` being populated during setup. That check can never
+  pass: `async_config_entry_first_refresh()` deliberately does not contact the inverter
+  (#262) — it seeds an empty placeholder and defers the real poll to a background task
+  that runs after setup returns. So every removal was dead code, and had been since that
+  change. Two of the three predate v1.4.0.
+
+  The profile-based cleanups need no live data — whether a register is in the profile is
+  a static fact — so they now run unconditionally. The two VPP cleanups genuinely do need
+  a live read, and now run once on the first poll that reaches the inverter.
+
+  If you are on MOD/MID, the stale **Battery Temperature**, **Charge Stopped SOC** and
+  **Discharge Stopped SOC** entities will be removed on next startup.
+
+- **Fix: the profile-based cleanup read the wrong dictionary.** It looked for
+  `holding_registers` on the profile metadata, where the register map is only a name.
+  Resolved through `REGISTER_MAPS` now.
+
+- **Testing: 31 sensor conditions were found to be decorative.** A `hasattr()` gate is
+  only meaningful for attributes set dynamically; against a dataclass field it always
+  passes. Most are harmless, because the profiles listing them also define the register —
+  but they are now enumerated, and a test fails if a new one appears or an existing one
+  silently stops being one. Adding a gate that cannot fail is now a deliberate act.
+
+---
+
 ## v1.4.0
 
 Issues: #360, #362, #367

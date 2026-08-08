@@ -84,6 +84,19 @@ BATTERY2_SENSORS: Set[str] = {f"battery2_{f}" for f in _EXTRA_BATTERY_FIELDS}
 BATTERY3_SENSORS: Set[str] = {f"battery3_{f}" for f in _EXTRA_BATTERY_FIELDS}
 BATTERY4_SENSORS: Set[str] = {f"battery4_{f}" for f in _EXTRA_BATTERY_FIELDS}
 
+# Subtracted from a profile's sensor set when the hardware has no battery temperature
+# available over Modbus.
+#
+# Removing the register is not enough on its own. battery_temp's sensor condition is
+# `hasattr(data, 'battery_temp')`, and battery_temp is a GrowattData field with a 0.0
+# default — so the attribute always exists and the gate can never fail. The sensor gets
+# created regardless of whether any register populated it, and reports 0.0 °C.
+#
+# That is worse than a missing sensor: a dashboard shows a battery sitting at zero
+# degrees rather than an entity that no longer exists (#362). The sensor set is the only
+# hard filter available, so exclusion has to happen here.
+NO_BATTERY_TEMP: Set[str] = {"battery_temp"}
+
 BMS_SENSORS: Set[str] = {
     "bms_status", "bms_error", "bms_warn_info",
     "bms_max_current", "bms_cycle_count", "bms_soh",
@@ -721,7 +734,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
-        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS,
+        "sensors": (HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS) - NO_BATTERY_TEMP,
     },
 
     "mod_6000_15000tl3_xh_v201": {
@@ -733,7 +746,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
-        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS,
+        "sensors": (HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS) - NO_BATTERY_TEMP,
     },
 
     # MID 11-30KTL3-XH / MID 8-15KTL3-XHL/JP — three-phase commercial hybrid
@@ -751,7 +764,7 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 30.0,
-        "sensors": HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS,
+        "sensors": (HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS) - NO_BATTERY_TEMP,
     },
 
     # ========================================================================

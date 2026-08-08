@@ -4,7 +4,7 @@ Growatt Modbus Integration for Home Assistant
 import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
@@ -18,6 +18,7 @@ from .const import (
     CONF_REGISTER_MAP,
     CONF_CONNECTION_TYPE,
     CURRENT_DEVICE_STRUCTURE_VERSION,
+    REGISTER_MAPS,
     WRITABLE_REGISTERS,
     DEVICE_TYPE_INVERTER,
 )
@@ -250,29 +251,56 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await coordinator.async_config_entry_first_refresh()
 
-    # Remove stale VPP export limit entities if the inverter doesn't respond to these registers.
-    # Guard: only remove when the inverter actually connected (serial_number non-empty) —
-    # if the inverter was offline at startup we have an empty placeholder and can't know yet
-    # whether these registers are supported (Issue #255).
-    inverter_connected = coordinator.data is not None and bool(coordinator.data.serial_number)
-    if inverter_connected and not coordinator.data.vpp_export_limit_available:
-        entity_registry = er.async_get(hass)
-        for control_name in ('vpp_export_limit_enable', 'vpp_export_limit_power_rate'):
-            stale_uid = f"{entry.entry_id}_{control_name}"
-            for platform in ('select', 'number'):
-                stale_eid = entity_registry.async_get_entity_id(platform, DOMAIN, stale_uid)
-                if stale_eid:
-                    _LOGGER.info("Removing stale VPP export limit entity %s (register 30200/30201 not responsive)", stale_eid)
-                    entity_registry.async_remove(stale_eid)
+    # Cleanup that depends on LIVE data has to wait for a real poll.
+    #
+    # These blocks used to run here, gated on coordinator.data.serial_number being
+    # populated. They never fired. async_config_entry_first_refresh() deliberately does
+    # not contact the inverter (#262): it seeds an empty GrowattData() and schedules the
+    # real poll as a background task that runs *after* setup returns. So serial_number
+    # was always "" at this point, the guard was always False, and every one of these
+    # removals was dead code — silently, because a cleanup that does nothing looks
+    # exactly like a cleanup with nothing to do.
+    #
+    # Hooked to the coordinator instead, running once on the first poll that actually
+    # reached the inverter, then unsubscribing.
+    _vpp_cleanup_done = False
 
-    # Remove stale control_authority entity if the inverter doesn't respond to register 30100
-    if inverter_connected and not coordinator.data.vpp_control_authority_available:
-        entity_registry = er.async_get(hass)
-        stale_uid = f"{entry.entry_id}_control_authority"
-        stale_eid = entity_registry.async_get_entity_id("select", DOMAIN, stale_uid)
-        if stale_eid:
-            _LOGGER.info("Removing stale control_authority entity %s (register 30100 not responsive)", stale_eid)
-            entity_registry.async_remove(stale_eid)
+    @callback
+    def _cleanup_unsupported_vpp_entities() -> None:
+        nonlocal _vpp_cleanup_done
+        if _vpp_cleanup_done:
+            return
+        data = coordinator.data
+        # An empty placeholder means no successful poll yet — we cannot tell an
+        # unsupported register from an inverter that is simply offline (#255).
+        if data is None or not data.serial_number:
+            return
+        _vpp_cleanup_done = True
+
+        registry = er.async_get(hass)
+        if not data.vpp_export_limit_available:
+            for control_name in ('vpp_export_limit_enable', 'vpp_export_limit_power_rate'):
+                stale_uid = f"{entry.entry_id}_{control_name}"
+                for platform in ('select', 'number'):
+                    stale_eid = registry.async_get_entity_id(platform, DOMAIN, stale_uid)
+                    if stale_eid:
+                        _LOGGER.info(
+                            "Removing stale VPP export limit entity %s "
+                            "(register 30200/30201 not responsive)", stale_eid,
+                        )
+                        registry.async_remove(stale_eid)
+
+        if not data.vpp_control_authority_available:
+            stale_uid = f"{entry.entry_id}_control_authority"
+            stale_eid = registry.async_get_entity_id("select", DOMAIN, stale_uid)
+            if stale_eid:
+                _LOGGER.info(
+                    "Removing stale control_authority entity %s "
+                    "(register 30100 not responsive)", stale_eid,
+                )
+                registry.async_remove(stale_eid)
+
+    entry.async_on_unload(coordinator.async_add_listener(_cleanup_unsupported_vpp_entities))
 
     # Remove SOC-limit entities whose register is no longer in the profile.
     #
@@ -282,42 +310,54 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # the entities being created, but Home Assistant keeps previously-created entities
     # in its registry, where they would linger as unavailable and still look like the
     # control to reach for. Removing them points users at 3048/3067, which work.
-    if inverter_connected:
-        profile = get_profile(entry.data.get(CONF_INVERTER_SERIES, ""))
-        holding = (profile or {}).get("holding_registers", {})
-        defined = {reg.get("name") for reg in holding.values() if isinstance(reg, dict)}
-        entity_registry = er.async_get(hass)
-        for control_name in ("discharge_stopped_soc", "charge_stopped_soc"):
-            if control_name in defined:
-                continue
-            stale_uid = f"{entry.entry_id}_{control_name}"
-            stale_eid = entity_registry.async_get_entity_id("number", DOMAIN, stale_uid)
-            if stale_eid:
-                _LOGGER.info(
-                    "Removing %s — the register is not in this profile because writes to "
-                    "it have no effect on this hardware. Use Charge/Discharge Stopped SOC "
-                    "(registers 3048/3067) instead.",
-                    stale_eid,
-                )
-                entity_registry.async_remove(stale_eid)
+    # No connectivity guard here, deliberately. Whether a register is in the profile is a
+    # static fact about the selected profile — it needs no inverter and no poll. The
+    # guard these blocks originally copied exists for the VPP checks above, which cannot
+    # distinguish "unsupported" from "offline" without live data. Applying it here is
+    # what stopped this running at all on v1.4.0 (#362).
+    profile = get_profile(entry.data.get(CONF_INVERTER_SERIES, ""))
+    register_map = REGISTER_MAPS.get((profile or {}).get("register_map", ""), {})
+    holding = register_map.get("holding_registers", {})
+    defined = {reg.get("name") for reg in holding.values() if isinstance(reg, dict)}
+    entity_registry = er.async_get(hass)
+    for control_name in ("discharge_stopped_soc", "charge_stopped_soc"):
+        if control_name in defined:
+            continue
+        stale_uid = f"{entry.entry_id}_{control_name}"
+        stale_eid = entity_registry.async_get_entity_id("number", DOMAIN, stale_uid)
+        if stale_eid:
+            _LOGGER.info(
+                "Removing %s — the register is not in this profile because writes to "
+                "it have no effect on this hardware. Use Charge/Discharge Stopped SOC "
+                "(registers 3048/3067) instead.",
+                stale_eid,
+            )
+            entity_registry.async_remove(stale_eid)
 
-        # Battery Temperature on MOD/MID was register 3176, which #362 identified as
-        # Bdc1Temp1 — the DC-DC converter stage, not the pack. It now reports as DC-DC
-        # Temperature. The old entity would otherwise sit in the registry unavailable,
-        # still looking like a pack reading, and on these systems the BMS does not
-        # publish a cell temperature at all, so there is nothing for it to show.
-        inputs = (profile or {}).get("input_registers", {})
-        input_names = {reg.get("name") for reg in inputs.values() if isinstance(reg, dict)}
-        if "battery_temp" not in input_names:
-            stale_uid = f"{entry.entry_id}_battery_temp"
-            stale_eid = entity_registry.async_get_entity_id("sensor", DOMAIN, stale_uid)
-            if stale_eid:
-                _LOGGER.info(
-                    "Removing %s — register 3176 is the DC-DC converter temperature, not "
-                    "the battery (#362). It is now reported as DC-DC Temperature.",
-                    stale_eid,
-                )
-                entity_registry.async_remove(stale_eid)
+    # Battery Temperature on MOD/MID was register 3176, which #362 identified as
+    # Bdc1Temp1 — the DC-DC converter stage, not the pack. It now reports as DC-DC
+    # Temperature, and on these systems the BMS publishes no cell temperature at all, so
+    # there is nothing for the old entity to show.
+    #
+    # Removing it from the registry is necessary but NOT sufficient: the sensor platform
+    # recreates whatever its profile's sensor set lists, and battery_temp's condition
+    # `hasattr(data, 'battery_temp')` can never be False because battery_temp is a
+    # dataclass field with a 0.0 default. That is why v1.4.0 left it reporting 0.0 °C
+    # instead of removing it — a plausible-looking reading rather than a missing sensor.
+    # The real fix is dropping it from the MOD/MID sensor set in device_profiles.py;
+    # this removal only clears what earlier versions already registered.
+    inputs = register_map.get("input_registers", {})
+    input_names = {reg.get("name") for reg in inputs.values() if isinstance(reg, dict)}
+    if "battery_temp" not in input_names:
+        stale_uid = f"{entry.entry_id}_battery_temp"
+        stale_eid = entity_registry.async_get_entity_id("sensor", DOMAIN, stale_uid)
+        if stale_eid:
+            _LOGGER.info(
+                "Removing %s — register 3176 is the DC-DC converter temperature, not "
+                "the battery (#362). It is now reported as DC-DC Temperature.",
+                stale_eid,
+            )
+            entity_registry.async_remove(stale_eid)
 
     # Per-entry state lives on the entry itself. hass.data[DOMAIN] is now reserved
     # solely for "_connections", the cross-entry shared-connection registry.
