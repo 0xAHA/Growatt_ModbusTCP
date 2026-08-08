@@ -91,6 +91,21 @@ Prefer plain ASCII in commit messages and shell-adjacent content — hyphens rat
 em-dashes, straight quotes rather than curly. Non-ASCII in source files is fine *via the
 editing tools*, never via a shell redirect.
 
+**This matters more than it looks: `docs/` is published to GitHub Pages.** A file written
+with the wrong encoding does not just look odd in an editor — it renders as visible
+mojibake to every reader of the documentation site. The character is never the problem;
+the encoding is. Banning em-dashes would treat the symptom and still leave curly quotes,
+degree signs, arrows and accented names to break the same way.
+
+Check before committing anything written outside the editing tools:
+
+```bash
+# BOM (breaks JSON parsing, renders as a stray glyph in Markdown)
+python -c "print(open('FILE','rb').read()[:3] == b'\xef\xbb\xbf')"
+```
+
+Then grep for `â€`, `Ã¢`, `Â` — the signatures of UTF-8 read as Windows-1252.
+
 Also: `Get-Content -Raw` misreads UTF-8 and will show you mojibake that is not in the file.
 Verify encoding claims with `Grep` or Python, not PowerShell.
 
