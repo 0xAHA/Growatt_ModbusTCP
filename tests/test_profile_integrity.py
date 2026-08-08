@@ -167,6 +167,45 @@ def test_register_names_are_unique_within_a_map(map_key):
     assert not duplicates, f"{map_key}: duplicate register names: {duplicates}"
 
 
+def test_no_profile_defines_the_same_register_address_twice():
+    """Duplicate dict keys are invisible once the module is imported.
+
+    Python keeps the last value and discards the earlier one silently — no error, no
+    warning, and nothing left in the loaded map to inspect. So this has to read the
+    source, not REGISTER_MAPS: by the time the dict exists the evidence is gone.
+
+    tl_xh.py carried `3136: battery_bms_temp` alongside `3136: ac_charge_energy_total_low`
+    for a long time. The energy pair won, so the temperature mapping never existed at
+    runtime — no sensor, no dataclass field, nothing to notice. mod.py had already
+    recorded the same address as a "corrected from wrong battery_bms_temp mapping", but
+    the stale line survived here where it could not be seen.
+    """
+    import ast
+    from collections import Counter
+    from pathlib import Path
+
+    profiles_dir = Path(_dp.__file__).parent / "profiles"
+    problems: list[str] = []
+
+    for path in sorted(profiles_dir.glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Dict):
+                continue
+            addresses = [
+                k.value for k in node.keys
+                if isinstance(k, ast.Constant) and isinstance(k.value, int)
+            ]
+            for addr, count in Counter(addresses).items():
+                if count > 1:
+                    problems.append(
+                        f"{path.name} line {node.lineno}: register {addr} defined "
+                        f"{count} times — all but the last are silently discarded"
+                    )
+
+    assert not problems, "duplicate register addresses:\n  " + "\n  ".join(problems)
+
+
 def test_known_gap_allowlists_do_not_grow_stale():
     """Every allowlisted map must still exist, so the lists cannot rot unnoticed."""
     for map_key in {**KNOWN_ASYMMETRIC_PAIRS, **KNOWN_DUPLICATE_NAMES}:

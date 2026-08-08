@@ -344,8 +344,13 @@ MIN_TL_XH_3000_10000_V201 = {
         3105: {'name': 'fault_code', 'scale': 1, 'unit': '', 'desc': 'Main fault code'},
         3106: {'name': 'warning_code', 'scale': 1, 'unit': '', 'desc': 'Main warning code'},
 
-        # Battery Extended Diagnostics
-        3136: {'name': 'battery_bms_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery BMS/module temperature'},
+        # (Register 3136 was also defined here as 'battery_bms_temp'. It is the low word
+        # of the AC charge energy total pair 3135/3136, defined further down and confirmed
+        # against a real reading — the same correction mod.py records at its register 3135.
+        # Being a duplicate key in the same dict, the later definition always won, so
+        # 'battery_bms_temp' never existed at runtime: no sensor, no dataclass field, no
+        # way to notice. Removed. tests/test_profile_integrity.py now fails on duplicate
+        # register keys so a shadowed mapping can't hide again.)
 
         # === BATTERY STATE REGISTERS (3169-3176) - PRIMARY for MIN TL-XH ===
         # MIN TL-XH uses 3000+ range for battery state (not VPP 31200+ range)
