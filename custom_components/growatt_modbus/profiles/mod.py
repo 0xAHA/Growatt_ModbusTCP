@@ -335,13 +335,25 @@ MOD_6000_15000TL3_XH = {
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Max output power %'},
         30: {'name': 'modbus_address', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Modbus address 1-254'},
 
-        # Battery SOC charge/discharge limits — scan #228 confirms hardware responds (all Read OK)
-        1071: {'name': 'discharge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
-               'valid_range': (0, 100), 'desc': 'SOC level to stop battery discharge'},
+        # Battery SOC limits.
+        #
+        # 1071 (discharge_stopped_soc) and 1091 (charge_stopped_soc) are REMOVED —
+        # they exist on this hardware but do nothing. Writes are accepted and silently
+        # ignored, and the registers read back 0 forever:
+        #
+        #   #343  @Rohde2026 and @TimOsth, MOD DO1.0 — read back zeros; 3048/3067 work
+        #   #362  @as-wallpen, MID 25KTL3-XH DN1.0 — 0 on every poll despite months of
+        #         writes, while 3067 was proven to work by direct before/after measurement
+        #
+        # They were kept because scan #228 showed "all Read OK". That was a misreading on
+        # my part: a register answering with 0 *is* Read OK. It showed the address
+        # responds, never that the control takes effect — so there has never been
+        # evidence for these two, only evidence against.
+        #
+        # Use 3048 (batt_first_charge_stopped_soc) and 3067
+        # (grid_first_discharge_stopped_soc) instead; both are confirmed working.
         1090: {'name': 'charge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
                'valid_range': (0, 100), 'desc': 'Battery charge power rate limit (0-100%)'},
-        1091: {'name': 'charge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
-               'valid_range': (0, 100), 'desc': 'SOC level to stop battery charge'},
         1092: {'name': 'ac_charge_enable', 'scale': 1, 'unit': '', 'access': 'RW',
                'valid_range': (0, 1), 'desc': 'Enable charging from AC (grid)'},
 
@@ -429,9 +441,20 @@ MOD_6000_15000TL3_XH = {
         3059: {'name': 'mod_tou_9_end',   'scale': 1, 'unit': '', 'access': 'RW',
                'desc': 'TOU Period 9 end: bit8-12=hour, bit0-7=min'},
 
-        # Grid First discharge SOC limit (DO1.0+ firmware; reg 1071 is dead on this firmware)
+        # Discharge SOC floor. Replaces the dead register 1071 (see the note above).
+        #
+        # Named "grid_first" after the Growatt documentation, but that understates it.
+        # @as-wallpen demonstrated on DN1.0 (#362) that it governs on-grid discharge in
+        # self-consumption operation too, with every TOU period disabled and all
+        # priorities set to Load Priority: raising it above the current SOC made the
+        # inverter actively *charge* to reach it, and lowering it resumed discharge,
+        # ~2 minutes each way. So it is the discharge floor generally, not a
+        # mode-specific setting — which also means there is no separate on-grid
+        # register still to be found.
         3067: {'name': 'grid_first_discharge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
-               'valid_range': (1, 100), 'desc': 'SOC to stop discharging - Grid First mode (DO1.0+ firmware; confirmed by Rohde2026 and TimOsth)'},
+               'valid_range': (1, 100),
+               'desc': 'SOC to stop discharging. Applies in Load/self-consumption operation as '
+                       'well as Grid First (#362); firmware may enforce a higher floor than 1'},
 
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},

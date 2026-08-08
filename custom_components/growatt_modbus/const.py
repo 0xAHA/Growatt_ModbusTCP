@@ -670,12 +670,18 @@ WRITABLE_REGISTERS = {
         'unit': '%',
         'desc': 'SOC to stop charging when Battery First mode is active (V1.39)'
     },
+    # Named after the Growatt documentation, but the name understates it: #362 showed
+    # by direct before/after measurement that this also governs on-grid discharge in
+    # self-consumption operation, with all TOU periods disabled and every priority set
+    # to Load Priority. Treat it as the discharge floor generally.
     'grid_first_discharge_stopped_soc': {
         'register': 3067,
         'scale': 1,
         'valid_range': (1, 100),
         'unit': '%',
-        'desc': 'SOC to stop discharging when Grid First mode is active (V1.39: US model / firmware ZACA-08+)'
+        'desc': 'SOC to stop discharging. Applies to Load/self-consumption operation as well '
+                'as Grid First mode (#362). Note your firmware may enforce a higher minimum '
+                'than 1% and silently ignore lower values (V1.39: US model / firmware ZACA-08+)'
     },
 
     # MOD GEN4 grid-charge prerequisite gate (must be Enabled for TOU writes to persist)

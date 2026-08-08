@@ -22,6 +22,7 @@ from .const import (
     DEVICE_TYPE_INVERTER,
 )
 from .coordinator import GrowattConfigEntry, GrowattModbusCoordinator
+from .device_profiles import get_profile
 from .diagnostic import async_setup_services
 from .growatt_modbus import SharedModbusConnection
 
@@ -272,6 +273,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if stale_eid:
             _LOGGER.info("Removing stale control_authority entity %s (register 30100 not responsive)", stale_eid)
             entity_registry.async_remove(stale_eid)
+
+    # Remove SOC-limit entities whose register is no longer in the profile.
+    #
+    # 1071/1091 were dropped from the MOD/MID profile in #362: they exist on that
+    # hardware but do nothing — writes are accepted and silently ignored, and the
+    # registers read back 0 forever (#343, #362). Dropping them from the profile stops
+    # the entities being created, but Home Assistant keeps previously-created entities
+    # in its registry, where they would linger as unavailable and still look like the
+    # control to reach for. Removing them points users at 3048/3067, which work.
+    if inverter_connected:
+        profile = get_profile(entry.data.get(CONF_INVERTER_SERIES, ""))
+        holding = (profile or {}).get("holding_registers", {})
+        defined = {reg.get("name") for reg in holding.values() if isinstance(reg, dict)}
+        entity_registry = er.async_get(hass)
+        for control_name in ("discharge_stopped_soc", "charge_stopped_soc"):
+            if control_name in defined:
+                continue
+            stale_uid = f"{entry.entry_id}_{control_name}"
+            stale_eid = entity_registry.async_get_entity_id("number", DOMAIN, stale_uid)
+            if stale_eid:
+                _LOGGER.info(
+                    "Removing %s — the register is not in this profile because writes to "
+                    "it have no effect on this hardware. Use Charge/Discharge Stopped SOC "
+                    "(registers 3048/3067) instead.",
+                    stale_eid,
+                )
+                entity_registry.async_remove(stale_eid)
 
     # Per-entry state lives on the entry itself. hass.data[DOMAIN] is now reserved
     # solely for "_connections", the cross-entry shared-connection registry.

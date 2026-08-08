@@ -161,6 +161,12 @@ class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
             'max_output_power_rate': 'Max Output Power Rate',
             'vpp_export_limit_power_rate': 'VPP Export Limit Power Rate',
             'load_first_battery_minimum_soc': 'Load First Battery Minimum SOC',
+            # Register 3067. Growatt calls it "Grid First", but #362 demonstrated it
+            # also governs discharge in Load/self-consumption operation, so the mode
+            # prefix misleads more than it describes. The entity_id of existing
+            # installs is unaffected — that is fixed at creation from the unique_id.
+            'grid_first_discharge_stopped_soc': 'Discharge Stopped SOC',
+            'batt_first_charge_stopped_soc': 'Charge Stopped SOC (Battery First)',
         }
         friendly_name = friendly_overrides.get(control_name, control_name.replace('_', ' ').title())
         self._attr_name = friendly_name
