@@ -39,16 +39,31 @@ def _stub_homeassistant() -> None:
         return
     if "homeassistant" in sys.modules:
         return
+    # A package, not a plain module: submodules are imported as `homeassistant.core`,
+    # which only resolves if the parent declares a __path__.
     ha = types.ModuleType("homeassistant")
+    ha.__path__ = []  # namespace-package marker
+
     config_entries = types.ModuleType("homeassistant.config_entries")
 
     class ConfigEntry:  # noqa: D401 - stand-in for an unused annotation
         """Placeholder; never exercised by these tests."""
 
     config_entries.ConfigEntry = ConfigEntry
+
+    # auto_detection imports HomeAssistant for a type annotation only.
+    core = types.ModuleType("homeassistant.core")
+
+    class HomeAssistant:  # noqa: D401 - stand-in for an unused annotation
+        """Placeholder; never exercised by these tests."""
+
+    core.HomeAssistant = HomeAssistant
+
     ha.config_entries = config_entries
+    ha.core = core
     sys.modules["homeassistant"] = ha
     sys.modules["homeassistant.config_entries"] = config_entries
+    sys.modules["homeassistant.core"] = core
 
 
 def _bind_component_package() -> None:

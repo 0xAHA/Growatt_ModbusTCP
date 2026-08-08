@@ -15,7 +15,7 @@ import homeassistant.helpers.config_validation as cv
 
 from .const import DOMAIN, CONF_INVERTER_SERIES
 from .device_profiles import get_display_name_for_profile, get_profile
-from .auto_detection import convert_to_legacy_profile
+from .auto_detection import ASSUMED, CONFIRMED, DTC_REGISTRY, convert_to_legacy_profile
 
 # Import register maps for "Suggested Match" column
 try:
@@ -1438,31 +1438,13 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     def reg_exists(addr):
         return addr in register_data and register_data[addr]['status'] == 'success' and register_data[addr]['value'] is not None
 
-    # DTC code → (display name, profile key) — keep in sync with auto_detection.py dtc_map
-    _DTC_MAP = {
-        3501: ('SPH 3-6kW', 'sph_3000_6000_v201'),
-        3502: ('SPH 3-6kW', 'sph_3000_6000_v201'),
-        3503: ('SPH 3-6kW HU', 'sph_3000_6000_v201'),
-        3504: ('SPH 3-6kW HUB', 'sph_3000_6000_v201'),
-        3601: ('SPH-TL3 4-10kW', 'sph_tl3_3000_10000_v201'),
-        3701: ('SPA 1-3kW BL', 'sph_3000_6000_v201'),
-        3715: ('SPA 3-6kW AU', 'sph_3000_6000_v201'),
-        3716: ('SPA 3-6kW AUB', 'sph_3000_6000_v201'),
-        3725: ('SPA-TL3 4-10kW', 'sph_tl3_3000_10000_v201'),
-        3735: ('SPA 3-6kW BL', 'sph_3000_6000_v201'),
-        5001: ('MID 17-25KTL3-X / MID 20-30KTL3-X2', 'mid_15000_25000tl3_x_v201'),
-        5002: ('MID 33-36KTL3-X / MOD 3-15KTL3-X', 'mid_15000_25000tl3_x_v201'),
-        5003: ('MAC 30-70KTL3-X', 'mid_15000_25000tl3_x_v201'),
-        5100: ('TL-XH 3-10kW', 'tl_xh_3000_10000_v201'),
-        5200: ('MIN/MIC 2.5-6kW', 'min_3000_6000_tl_x_v201'),
-        5201: ('MIN 7-10kW', 'min_7000_10000_tl_x_v201'),
-        5400: ('MOD-XH/MID-XH', 'mod_6000_15000tl3_xh_v201'),
-        5600: ('WIS 100K-AM / WIT 50-100K-H/HE/HU/A/AE/AU (incl. US variants)', 'mid_15000_25000tl3_x_v201'),
-        5601: ('WIT 29.9-50K-XHU (commercial hybrid)', 'wit_29900_50000tl3_xhu'),
-        5603: ('WIT 4-15kW Hybrid', 'wit_4000_15000tl3'),
-        5800: ('WIS 210K', 'mid_15000_25000tl3_x_v201'),
-        5801: ('WIS 215K-AM', 'mid_15000_25000tl3_x_v201'),
-    }
+    # DTC lookup comes from auto_detection.DTC_REGISTRY — the single source of truth.
+    #
+    # This used to be a parallel dict with a "keep in sync with auto_detection.py"
+    # comment. It did not stay in sync: nine DTCs existed only in auto_detection, and
+    # 5600 disagreed outright — the scanner reported a MID profile while detection
+    # actually selected a WIT one. A comment is not a mechanism.
+    _DTC_MAP = {code: (e.model, e.profile) for code, e in DTC_REGISTRY.items()}
 
     # Check VPP DTC (holding 30000) first, then V1.39 DTC (holding 43) as fallback.
     # V1.39 grid-tied inverters (MIN TL-X etc.) return 0 from holding 30000 but carry
@@ -1485,9 +1467,30 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
             model_name, profile_key = _DTC_MAP[dtc_code]
             detection["model"] = f"{model_name} (DTC {dtc_code})"
             detection["profile_key"] = profile_key
-            detection["confidence"] = "Very High"
             detection["reasoning"].append(f"✓ DTC {dtc_code} matches: {model_name}")
-            detection["reasoning"].append("  → Auto-detection via DTC is most reliable method")
+
+            # Identifying the model from the DTC is reliable — it is read from the
+            # device. Whether the profile behind it suits that model is a separate
+            # question, and reporting one number for both overstated what we know:
+            # #360 was told "Very High" while running an SPH profile on SPA hardware,
+            # which gave it PV entities for MPPTs it does not physically have.
+            _entry = DTC_REGISTRY[dtc_code]
+            if _entry.provenance == CONFIRMED:
+                detection["confidence"] = "Very High"
+                detection["mapping_confirmed"] = True
+                detection["reasoning"].append(
+                    f"  → Profile mapping confirmed on real hardware ({_entry.evidence})"
+                )
+            else:
+                detection["confidence"] = "High (model) / UNCONFIRMED (profile)"
+                detection["mapping_confirmed"] = False
+                detection["reasoning"].append(
+                    f"  ⚠ Model identified, but this profile mapping is UNCONFIRMED: {_entry.evidence}"
+                )
+                detection["reasoning"].append(
+                    "  → Sensors may be missing, or present but meaningless. Attaching this "
+                    "scan to a GitHub issue is what turns the mapping into a confirmed one."
+                )
 
             # Apply protocol version downgrade BEFORE returning — mirrors actual HA detection.
             # Must check here (not in the standalone block below) because the early return at
