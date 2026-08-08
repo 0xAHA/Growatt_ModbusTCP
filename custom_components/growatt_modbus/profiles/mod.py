@@ -161,6 +161,20 @@ MOD_6000_15000TL3_XH = {
         3169: {'name': 'battery_voltage', 'scale': 0.01, 'unit': 'V', 'desc': 'Battery voltage (0.01V/unit; use VPP 31214 as primary — it overrides this via max-value selection)'},
         3170: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True, 'desc': 'Battery current (primary source for MOD XH)'},
         3171: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (primary source for MOD XH)'},
+        # 3176 is a real, independent sensor — do NOT remap it on a single sample.
+        #
+        # #362 initially reported it as a duplicate of register 93 (inverter_temp), both
+        # reading raw 545 in one scan. A paired reading over an evening cooldown refuted
+        # that: reg 93 fell 69.1 -> 63.0 °C over two hours while 3176 stayed flat at 49.
+        # They only *look* identical during the morning ramp, where they track within
+        # ~1.5 °C and the sign of the difference flips — so any single daytime sample is
+        # worthless for telling them apart.
+        #
+        # Still open: the absolute value looks too high for cells (49-59 °C reported on
+        # cabinets that are cool to the touch, discharging at ~0.04 C). It drifts with
+        # the inverter while sitting 15-20 °C below it at peak. Unresolved, not known to
+        # be wrong — needs a comparison against the BMS cell temperature shown in the
+        # Growatt portal before anyone changes it.
         3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature (primary source for MOD XH)'},
 
         # Battery Power (3000 range - separate charge/discharge registers)
