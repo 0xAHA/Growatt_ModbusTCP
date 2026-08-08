@@ -4,6 +4,99 @@
 
 ---
 
+## v1.4.0
+
+Issues: #360, #362, #367
+
+Includes everything from the v1.3.7 pre-release.
+
+> ### ⚠️ MOD / MID owners: three entity changes
+>
+> - **Battery Temperature is removed.** Register 3176 turned out to be `Bdc1Temp1` — the
+>   DC-DC converter stage inside the inverter, not the battery. It now appears as
+>   **DC-DC Temperature**. There is no replacement: on these systems the BMS does not
+>   publish a cell temperature over Modbus.
+> - **Charge Stopped SOC / Discharge Stopped SOC are removed.** Registers 1071 and 1091
+>   accept writes and silently ignore them on this hardware. Use **Charge Stopped SOC
+>   (Battery First)** and **Discharge Stopped SOC**, which are confirmed working.
+> - **"Grid First Discharge Stopped SOC" is now "Discharge Stopped SOC"** — the entity ID
+>   is unchanged, so automations keep working.
+>
+> The old entities are removed from the registry automatically on startup.
+
+### Data integrity
+
+- **Malformed Modbus responses are no longer written to the register cache** *(from
+  v1.3.7)*. Register blocks are stored positionally, so a short response — or a stale
+  frame belonging to a different request — had its words written onto registers they
+  never belonged to. The result was a plausible-looking wrong number: @tdalejandro
+  decoded their own corrupt readings and found the ASCII `"32ST"`, four characters of the
+  inverter's serial number, published as **85,893,614.8 W** of AC power. The non-shared
+  read path had checked response length since v1.3.5, but a hub is created for *every*
+  TCP entry, so that guard only ever covered serial/RTU users.
+
+  On a marginal gateway this converts polls that were silently producing wrong values
+  into polls that visibly fail, so your failure count may go **up**. That is the fix
+  working.
+
+- **The adaptive backoff never engaged on TCP connections** *(from v1.3.7)*. The shared
+  path returned before reaching the failure counters.
+
+### Detection
+
+- **MIN inverters were being detected as MIC.** DTC 5200 covers both families in
+  Growatt's own table, so a probe of registers 59-62 decides between them — and it
+  accepted any non-zero value as plausible daily energy. A MIN 5000TL-X2 matched on the
+  first test and ran on the MIC profile with 23 entities instead of 41, while a valid
+  register was rejected every poll for looking implausible as a daily total. Reported and
+  diagnosed by @tdalejandro.
+
+- **Unconfirmed profile mappings now say so.** Every DTC entry records whether its
+  mapping has been verified against real hardware. Previously any known DTC reported
+  "Very High" confidence, which conflated two different things: the DTC identifies the
+  *model* reliably, but the *profile* behind it may never have been tested. An SPA owner
+  was told Very High while running an SPH profile that gave PV entities to a device with
+  no solar inputs. Unconfirmed mappings now warn in the log and are marked in the
+  register scanner and the [DTC documentation](docs/troubleshooting/dtc-debugging.md).
+
+- **Added the MAX / MAX-X family** (DTC 5000, 5500, 5501, 5502), which was missing
+  entirely. Checked against Growatt VPP 2.03 Table 3-1.
+
+### New data
+
+- **SPA and SPH-TL3 gain BMS sensors**: State of Health, cycle count, BMS status and BMS
+  error (registers 1083/1085/1095/1096). These are documented V1.39 registers that were
+  simply never implemented for these profiles. **SOH is register 1096** — not 31218, as
+  previously stated on #360.
+
+- **The register scanner now covers 2000-2124.** The storage protocol gives SPA a second
+  input block there that SPH does not have, and no scan had ever included it.
+
+### Fixes
+
+- **Options no longer lost when saving.** The options flow replaced the stored dict with
+  whatever the form submitted, so any setting without a UI field — `inter_slave_delay` —
+  reverted to its default whenever any other option was changed.
+
+- **Register 3136 was defined twice in the MIN TL-XH profile.** Python keeps the last
+  value silently, so a temperature mapping had never existed at runtime. A test now
+  parses the profile sources to catch duplicate register addresses, which cannot be seen
+  after import.
+
+### Not changed, deliberately
+
+- **No plausibility bound on decoded values.** It was proposed as a second line of
+  defence, but after 48 hours on the response-length guard @tdalejandro measured zero
+  impossible values and recommended against the extra complexity. A stale frame that
+  happens to match the requested length would still slip through — that residual is now
+  accepted knowingly rather than unknowingly.
+
+- **`battery_temp` on MIN TL-XH.** The same register 3176 is very likely the DC-DC stage
+  there too, but no TL-XH owner has compared it against their BMS, and changing it on
+  another model's evidence is what this release exists to avoid.
+
+---
+
 ## v1.3.7 (pre-release)
 
 Issues: #367
