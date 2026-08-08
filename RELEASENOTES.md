@@ -39,6 +39,22 @@ Includes everything from the v1.3.7 pre-release.
   into polls that visibly fail, so your failure count may go **up**. That is the fix
   working.
 
+  **The guard checks `!= count`, not `< count`, and that turns out to be the whole
+  fix.** Every mismatch measured in the field came back **longer** than requested —
+  31 of them, 30 returning exactly 125 registers whatever was asked for. A length check
+  for *short* responses would have caught **none of them**. The failure is not a
+  truncated frame: it is a complete, valid response to an *earlier* request being
+  replayed to the current one. @tdalejandro proposed the `!=` and then measured the data
+  that showed it was doing all the work.
+
+- **Which gateways are affected.** Two independent setups now bracket this. A Waveshare
+  RS485 TO POE ETH (B) doing genuine Modbus-TCP-to-RTU translation showed **zero**
+  mismatches and 26 days of clean statistics from *before* the guard existed — so on good
+  hardware there was never anything to catch. A ShineWiFi-class serial bridge mismatches
+  roughly one poll in three. A persistent socket is not the cause: the clean setup uses
+  the same shared connection and the same 60 s interval. See
+  [RS485 gateways](docs/troubleshooting/rs485-gateways.md).
+
 - **The adaptive backoff never engaged on TCP connections** *(from v1.3.7)*. The shared
   path returned before reaching the failure counters.
 
