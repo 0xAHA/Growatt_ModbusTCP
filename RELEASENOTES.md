@@ -99,6 +99,28 @@ Includes everything from the v1.3.7 pre-release.
   parses the profile sources to catch duplicate register addresses, which cannot be seen
   after import.
 
+### Confirmed on hardware
+
+The integration-quality work from v1.3.0-v1.3.2 — the `runtime_data` migration, the
+shared entity base class, the diagnostics platform and `PARALLEL_UPDATES` — shipped as
+pre-releases because there was no way to verify it locally. A MID 25KTL3-XH owner ran the
+full checklist on a direct v1.3.0 → v1.3.7 upgrade ([#367](https://github.com/0xAHA/Growatt_ModbusTCP/issues/367)):
+
+- **89 of 89 sensors populated**, none unavailable, plus 9 number and 21 select entities
+- **Writes verified** — discharge rate 100 → 99 → 100, `verified_state` on both, value read
+  back in the same poll cycle, no reversion under `PARALLEL_UPDATES = 1`
+- **Register scanner** — 2300 registers across 17 ranges, 523 non-zero, zero read errors
+- **Diagnostics download** — 7235 bytes across client / coordinator / data / entry /
+  shared_connection
+- **Entity history intact**, which was the real risk in the entity refactor: `energy_total`
+  runs unbroken from 139.3 kWh on 9 July to 2512.7 kWh, monotonic, with no reset at the
+  upgrade point. The `unique_id`s really are byte-identical.
+
+One upgrade note from that report: Home Assistant returned 502 for roughly two minutes
+after restart on a large instance (~1100 entities) before coming back cleanly. Probably
+unrelated to this integration, but worth knowing before anyone reaches for a rollback too
+early.
+
 ### Not changed, deliberately
 
 - **No plausibility bound on decoded values.** It was proposed as a second line of
