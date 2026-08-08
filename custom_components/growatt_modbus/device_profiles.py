@@ -94,6 +94,10 @@ BMS_SENSORS: Set[str] = {
 
 TEMPERATURE_SENSORS: Set[str] = {
     "inverter_temp", "ipm_temp", "boost_temp",
+    # MOD/MID expose Bdc1Temp1 at register 3176 — the battery-side DC-DC stage. It was
+    # mapped as battery_temp until #362 identified it against ShineApp. Only appears
+    # where a profile actually defines the register, so this is a no-op elsewhere.
+    "dcdc_temp",
 }
 
 STATUS_SENSORS: Set[str] = {

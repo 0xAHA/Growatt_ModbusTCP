@@ -301,6 +301,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 )
                 entity_registry.async_remove(stale_eid)
 
+        # Battery Temperature on MOD/MID was register 3176, which #362 identified as
+        # Bdc1Temp1 — the DC-DC converter stage, not the pack. It now reports as DC-DC
+        # Temperature. The old entity would otherwise sit in the registry unavailable,
+        # still looking like a pack reading, and on these systems the BMS does not
+        # publish a cell temperature at all, so there is nothing for it to show.
+        inputs = (profile or {}).get("input_registers", {})
+        input_names = {reg.get("name") for reg in inputs.values() if isinstance(reg, dict)}
+        if "battery_temp" not in input_names:
+            stale_uid = f"{entry.entry_id}_battery_temp"
+            stale_eid = entity_registry.async_get_entity_id("sensor", DOMAIN, stale_uid)
+            if stale_eid:
+                _LOGGER.info(
+                    "Removing %s — register 3176 is the DC-DC converter temperature, not "
+                    "the battery (#362). It is now reported as DC-DC Temperature.",
+                    stale_eid,
+                )
+                entity_registry.async_remove(stale_eid)
+
     # Per-entry state lives on the entry itself. hass.data[DOMAIN] is now reserved
     # solely for "_connections", the cross-entry shared-connection registry.
     entry.runtime_data = coordinator

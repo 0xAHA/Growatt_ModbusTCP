@@ -353,7 +353,16 @@ MIN_TL_XH_3000_10000_V201 = {
         3169: {'name': 'battery_voltage', 'scale': 0.01, 'unit': 'V', 'desc': 'Battery voltage (primary source for MIN TL-XH)'},
         3170: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True, 'desc': 'Battery current (primary source for MIN TL-XH)'},
         3171: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (primary source for MIN TL-XH)'},
-        3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature (primary source for MIN TL-XH)'},
+        # UNVERIFIED on TL-XH. On MOD/MID this same address is Bdc1Temp1 — the DC-DC
+        # converter stage, not the battery — confirmed against ShineApp in #362, where it
+        # read ~52 °C on cabinets that were cool to the touch. Same address, same protocol
+        # generation, so this is very likely the same thing here.
+        #
+        # Deliberately left as battery_temp: no TL-XH owner has compared it against the
+        # BMS reading, and changing it on another model's evidence is the overreach that
+        # #362 nearly caused. To settle it, compare this against the battery temperature
+        # in ShineApp at the same minute — an exact match to Bdc1Temp1 confirms the rename.
+        3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature (primary source for MIN TL-XH) — see note above, likely Bdc1Temp1'},
 
         # === BATTERY ENERGY REGISTERS (3125-3136) ===
         # Battery energy today/total in fallback 3000 range (same layout as MOD series)

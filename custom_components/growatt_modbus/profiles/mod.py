@@ -161,21 +161,39 @@ MOD_6000_15000TL3_XH = {
         3169: {'name': 'battery_voltage', 'scale': 0.01, 'unit': 'V', 'desc': 'Battery voltage (0.01V/unit; use VPP 31214 as primary — it overrides this via max-value selection)'},
         3170: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'signed': True, 'desc': 'Battery current (primary source for MOD XH)'},
         3171: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (primary source for MOD XH)'},
-        # 3176 is a real, independent sensor — do NOT remap it on a single sample.
+        # 3176 is NOT a battery temperature. It is Bdc1Temp1 — the bidirectional DC-DC
+        # converter, i.e. the battery-side power stage inside the inverter (#362).
         #
-        # #362 initially reported it as a duplicate of register 93 (inverter_temp), both
-        # reading raw 545 in one scan. A paired reading over an evening cooldown refuted
-        # that: reg 93 fell 69.1 -> 63.0 °C over two hours while 3176 stayed flat at 49.
-        # They only *look* identical during the morning ramp, where they track within
-        # ~1.5 °C and the sign of the difference flips — so any single daytime sample is
-        # worthless for telling them apart.
+        # Confirmed by reading ShineApp and Home Assistant in the same minute, at an
+        # operating point where 3176 and reg 93 were 16 °C apart:
         #
-        # Still open: the absolute value looks too high for cells (49-59 °C reported on
-        # cabinets that are cool to the touch, discharging at ~0.04 C). It drifts with
-        # the inverter while sitting 15-20 °C below it at peak. Unresolved, not known to
-        # be wrong — needs a comparison against the BMS cell temperature shown in the
-        # Growatt portal before anyone changes it.
-        3176: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temperature (primary source for MOD XH)'},
+        #     App 13:22                 HA 13:21
+        #     Bdc1Temp1   51.9   <--    reg 3176   51.9
+        #     Temp2       68.0   <--    reg 93     68.0
+        #     BmsTemp1Bat  0.0
+        #
+        # That explains what looked like a bug: the reported ~52 °C on battery cabinets
+        # that are cool to the touch, and the register sitting flat through an evening
+        # while reg 93 shed six degrees — the DC-DC stage was idle while the AC side
+        # was still cooling.
+        #
+        # Getting here took two wrong turns worth remembering. It was first reported as
+        # a duplicate of reg 93 after both read raw 545 in one scan; a paired reading at
+        # a different operating point refuted that. Through the morning ramp the two
+        # track within ~1.5 °C and the sign of the difference flips, so a single daytime
+        # sample cannot separate them. Two registers agreeing at one moment proves
+        # nothing; two diverging at any moment proves they are independent.
+        #
+        # There is nothing to remap battery temperature TO. On the reporting system
+        # (APX HV pack, MID 25KTL3-XH) BmsTemp1Bat reads 0.0 while BmsStatus=4,
+        # BmsSoc=100 and BmsVbat=428.7 V — the BMS is communicating and simply does not
+        # publish a cell temperature. So MOD/MID has no battery temperature over Modbus,
+        # and inventing one from a nearby plausible register is exactly the trap this
+        # comment exists to prevent. (Bdc1Temp2 = 39.4 °C also exists; its address is
+        # unknown and deliberately not guessed.)
+        3176: {'name': 'dcdc_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
+               'desc': 'Bdc1Temp1 — bidirectional DC-DC converter temperature, NOT battery '
+                       'temperature (confirmed against ShineApp, #362)'},
 
         # Battery Power (3000 range - separate charge/discharge registers)
         # These follow the MIN TL-XH pattern for ARK battery systems
