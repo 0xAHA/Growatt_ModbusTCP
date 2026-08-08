@@ -4,6 +4,56 @@
 
 ---
 
+## v1.3.7 (pre-release)
+
+Issues: #367
+
+> **Pre-release.** This changes what happens when a Modbus read comes back malformed —
+> from "use it anyway" to "discard it". On a marginal RS485 gateway that will convert
+> polls that were *silently producing wrong values* into polls that visibly fail. That is
+> the correct trade, but the failure count in your log may go **up**. That is the fix
+> working, not a new fault.
+
+- **Fix: malformed responses were written into the register cache on all TCP setups.**
+  Register blocks are stored positionally — the first returned word is assumed to be the
+  block's start address. When a response came back short, or was a stale frame belonging
+  to a different request, its words were still written sequentially from the start
+  address, landing on registers they never belonged to.
+
+  The result was not a missing sensor but a *plausible-looking wrong number*. @tdalejandro
+  decoded their own corrupt readings and found `0x33325354` — the ASCII `"32ST"`, four
+  characters of the inverter's serial number — published as **85,893,614.8 W** of AC
+  power, and the firmware version string published as PV2 power. Because
+  `total_increasing` energy sensors are affected too, those values entered long-term
+  statistics.
+
+  The non-shared read path has validated response length since v1.3.5. The shared hub did
+  not — and since a hub is created for **every** TCP entry, not only ones genuinely
+  sharing a gateway, that guard in practice only ever protected serial/RTU users. The
+  exposed group was everyone on TCP.
+
+  Diagnosed by @tdalejandro, including the proposed fix, which is what shipped.
+
+- **A response *longer* than requested is now rejected too.**
+  The existing guard tested `< count`. An over-long response is an equally strong sign of
+  a misaligned or stale frame and costs nothing to catch, so the check is `!= count`.
+
+- **Fix: the adaptive backoff never engaged on TCP connections.**
+  The shared path returned before reaching the read-failure counters, so
+  `_consecutive_read_failures` never moved for any TCP entry and the slow-poll backoff
+  after repeated failures could not trigger. Found while fixing the above — the same
+  guard-on-one-path-only pattern.
+
+- **A detected misalignment now drains the receive buffer.**
+  A misaligned stream stays misaligned, which is why the corrupt values repeated
+  byte-for-byte instead of varying. Draining on detection gives the next read a clean
+  start rather than inheriting the same offset.
+
+- **Testing:** 15 new tests covering the guard, including the reporter's exact
+  serial-number frame. Verified by disabling the guard and confirming they fail.
+
+---
+
 ## v1.3.6
 
 Issues: #367

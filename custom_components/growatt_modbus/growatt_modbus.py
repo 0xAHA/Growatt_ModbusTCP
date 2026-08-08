@@ -527,6 +527,46 @@ class SharedModbusConnection:
     # Register access (slave_id passed per call, not stored on hub)
     # ------------------------------------------------------------------
 
+    def _validate_registers(self, resp, start: int, count: int) -> Optional[list]:
+        """Return the response's registers, or None if the frame cannot be trusted.
+
+        Callers write results into the register cache *positionally* — regs[0] is assumed
+        to be `start`, regs[1] to be `start + 1`, and so on across 11 call sites. So a
+        response whose length doesn't match the request is not a partial success to
+        salvage: every word in it lands on an address it does not belong to. That is how
+        string registers (a serial number, a firmware version string) ended up decoded and
+        published as instantaneous power — 0x33325354 is "32ST", four characters of the
+        reporter's serial number, shown as 85,893,614.8 W (#367).
+
+        The non-shared path has guarded this since v1.3.5, but every TCP entry goes through
+        the shared hub (a hub is created even for a single entry), so in practice the guard
+        only ever protected serial/RTU users — the ones least exposed to gateway framing
+        problems in the first place.
+
+        Length is compared with != rather than <: a response *longer* than requested is an
+        equally strong sign of a misaligned or stale frame, and costs nothing to catch.
+        """
+        if hasattr(resp, 'isError') and callable(resp.isError) and resp.isError():
+            return None
+
+        registers = resp.registers if hasattr(resp, 'registers') else None
+        if registers is None:
+            return None
+
+        if len(registers) != count:
+            logger.warning(
+                "[SharedConn %s:%s] Short/misaligned read at %d: got %d of %d registers — "
+                "discarding frame and flushing buffer",
+                self.host, self.port, start, len(registers), count,
+            )
+            # A misaligned stream stays misaligned — which is why the corrupt values
+            # repeat byte-for-byte rather than varying. Draining the buffer here gives the
+            # next read a clean start instead of inheriting the same offset.
+            self._flush_receive_buffer()
+            return None
+
+        return registers
+
     def read_input_registers(self, start: int, count: int, slave_id: int) -> Optional[list]:
         if self._client is None:
             return None
@@ -565,9 +605,7 @@ class SharedModbusConnection:
                              self.host, self.port, start, count, slave_id, exc)
                 return None
 
-            if hasattr(resp, 'isError') and callable(resp.isError) and resp.isError():
-                return None
-            return resp.registers if hasattr(resp, 'registers') else None
+            return self._validate_registers(resp, start, count)
         return None
 
     def read_holding_registers(self, start: int, count: int, slave_id: int) -> Optional[list]:
@@ -597,9 +635,7 @@ class SharedModbusConnection:
                              self.host, self.port, start, count, slave_id, exc)
                 return None
 
-            if hasattr(resp, 'isError') and callable(resp.isError) and resp.isError():
-                return None
-            return resp.registers if hasattr(resp, 'registers') else None
+            return self._validate_registers(resp, start, count)
         return None
 
     def write_register(self, register: int, value: int, slave_id: int) -> bool:
@@ -962,7 +998,15 @@ class GrowattModbus:
         self._enforce_read_interval()
 
         if self._shared_conn is not None:
-            return self._shared_conn.read_input_registers(start_address, count, self.slave_id)
+            registers = self._shared_conn.read_input_registers(start_address, count, self.slave_id)
+            # This used to return directly, bypassing the failure counters below — so
+            # _consecutive_read_failures never moved for any TCP entry and the adaptive
+            # backoff could not engage for them at all (#367).
+            if registers is None:
+                self._track_read_failure()
+            else:
+                self._track_read_success()
+            return registers
 
         try:
             # Try keyword arguments with different parameter names for pymodbus versions
@@ -1045,7 +1089,13 @@ class GrowattModbus:
         self._enforce_read_interval()
 
         if self._shared_conn is not None:
-            return self._shared_conn.read_holding_registers(start_address, count, self.slave_id)
+            registers = self._shared_conn.read_holding_registers(start_address, count, self.slave_id)
+            # Same bypass as read_input_registers above (#367).
+            if registers is None:
+                self._track_read_failure()
+            else:
+                self._track_read_success()
+            return registers
 
         try:
             try:
