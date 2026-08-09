@@ -139,7 +139,38 @@ Register 3176 was reported as a duplicate of register 93 after both read `545` i
 A paired reading at a different operating point refuted it. **Always ask for a second
 sample at a different operating point before remapping a register.**
 
-### 12. Mark a mapping CONFIRMED only with a citable device report
+### 12. A user-facing change isn't done until the docs say so
+
+`docs/` is published to GitHub Pages and is where users go before they open an issue.
+Nothing fails when it goes stale — no test, no build error, no warning — so it drifts
+silently while every other check stays green.
+
+The costly case is a feature that removes work for users. Ship a diagnostic that collects
+information automatically and the page still telling people to gather it by hand doesn't
+break; it just wastes their time indefinitely, and yours re-asking for what the tool
+already produces.
+
+Before calling a change complete, ask which page would now be wrong:
+
+| Change | Page to check |
+|---|---|
+| New diagnostic, service or scanner range | `troubleshooting/diagnostic-service.md`, `troubleshooting/raising-an-issue.md` |
+| New repair issue or user-visible warning | `troubleshooting/raising-an-issue.md` |
+| DTC or profile mapping | `troubleshooting/dtc-debugging.md`, `developer/protocol-vpp.md` — **both**, and they are test-enforced |
+| Register meaning or scale | the relevant `developer/protocol-*.md` |
+| New sensor or control | `controls/entity-reference.md` |
+| New supported model | `hardware/models.md`, `hardware/autodetection.md` |
+| Gateway or adapter finding | `troubleshooting/rs485-gateways.md` |
+
+Two things that make this fail quietly:
+
+- **A new page must be added to `mkdocs.yml` nav.** The build succeeds without it, so
+  nothing complains — the page is simply unreachable from the site navigation.
+- **The docs workflow only runs on `docs/**` and `mkdocs.yml` changes.** A release note
+  linking a doc page can go out before that page deploys, if the two land in separate
+  pushes.
+
+### 13. Mark a mapping CONFIRMED only with a citable device report
 
 `DTC_REGISTRY` in `auto_detection.py` records `CONFIRMED` or `ASSUMED` plus evidence.
 CONFIRMED means a real device on that DTC was seen running that profile, traceable to an
