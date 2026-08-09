@@ -31,14 +31,32 @@ Issues: #360, #362
   points at the cloud pushing settings *down* (remote control or a schedule set in the
   ShinePhone app), which is the part that actually overwrites local changes.
 
-- **SPA gains AC current, AC output power, inverter status and AC energy today/total.**
-  From the SPA extended range (2000-2124), which the model matrix previously recorded as
-  unconfirmed. **These are transcribed from the Growatt protocol and have not yet been
-  read on a device** — if you own a single-phase SPA, a scan of that range would confirm
-  or correct them in one pass.
+- **SPA gains AC current, output power, inverter status, AC energy today/total, and
+  inverter/IPM/boost temperature.** From the SPA extended range (2000-2124). The model
+  matrix recorded AC current and power as unconfirmed; the temperatures were absent
+  entirely, so an SPA reported no temperature of any kind — which looks like hardware
+  that doesn't measure it rather than registers nobody asked for.
+
+  **These come from the protocol and have not yet been read on a device.** If you own a
+  single-phase SPA, a scan of 2000-2124 would confirm or correct all of them in one pass.
 
   Verified values already in the profile were left alone: AC voltage and frequency keep
   their measured 1000-range registers rather than adopting the documented 2000-range ones.
+
+  Three-phase SPA-TL3 does not serve this range and is unaffected.
+
+- **A protocol coverage audit, and what it found.** These registers had been sitting in
+  our own extracted protocol reference the whole time, unmapped, because nothing fails
+  when a register is never requested — "we never asked for it" and "the hardware doesn't
+  report it" look identical from outside.
+
+  `tools/protocol_coverage.py` now reports registers the protocol documents that no
+  profile maps, so that gap is findable rather than waiting for someone to notice. It
+  compares addresses, not meanings, and a range a model doesn't serve shows as a gap that
+  isn't a defect — it's a place to look, not a defect list.
+
+  Also corrects the range summary, which called 2000-2124 "SPH extended". Every register
+  in it is SPA, and that mislabel pointed anyone checking at the wrong family.
 
 - **Fix: scanning a disabled integration fell back to default connection settings.**
   The documented procedure asks you to disable the integration before scanning, so the
