@@ -48,9 +48,18 @@ Set the work mode so it performs **Modbus TCP to RTU** conversion rather than pl
 
 One EW11A report ([#309](https://github.com/0xAHA/Growatt_ModbusTCP/issues/309)) showed all entities reading zero, but the same symptom followed the reporter onto a Waveshare adapter, so the gateway was not the cause. They resolved it with a Growatt WiLan-X2.
 
-### ✅ Growatt WiLan-X2 — known good
+### ✅ Growatt ShineWiLan-X2 — works, within limits
 
-Growatt's own dongle, which exposes Modbus directly. Reported working in [#309](https://github.com/0xAHA/Growatt_ModbusTCP/issues/309) after two third-party adapters had been ruled out. It also buffers roughly a month of data and re-synchronises after a power cut, which no generic serial server does.
+Growatt's own dongle. It exposes a **local Modbus TCP server on port 502 while keeping its cloud connection**, so you get local data in Home Assistant and the ShinePhone app at the same time — no need to choose. It also buffers data and re-synchronises after a power cut, which no generic serial server does.
+
+!!! warning "It must be the **-X2**"
+    The earlier ShineWiLan has **no Modbus TCP server** and cannot be used with this integration at all. Confirmed by a user who swapped modules. If you are buying or asking Growatt for one, the `-X2` suffix is the whole difference.
+
+**The one real limitation:** that local Modbus server is built for light polling, not sustained access from a full integration. A WIT owner saw the connection drop repeatedly under normal polling ([#308](https://github.com/0xAHA/Growatt_ModbusTCP/issues/308)), and WIT is the most register-hungry profile here.
+
+If you see intermittent drops on an X2, raise **scan_interval** before suspecting anything else — 60 s or more, and longer again on WIT. A dedicated RS485 adapter is the answer if you want fast polling; the X2 is the answer if you want one device doing both jobs.
+
+Working setups reported in [#309](https://github.com/0xAHA/Growatt_ModbusTCP/issues/309) (after two third-party adapters were ruled out) and [#336](https://github.com/0xAHA/Growatt_ModbusTCP/issues/336) on MOD/MID XH.
 
 ### ⚠️ PUSR / ShineWiFi-class serial bridges — replay stale frames
 
