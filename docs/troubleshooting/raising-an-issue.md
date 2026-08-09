@@ -22,6 +22,20 @@ Your **IP address, serial number and device path are removed automatically** bef
 
 Please paste log lines as text in a code block rather than a screenshot. Screenshots can't be searched, and the useful detail is often a register number or a count in the middle of a long line.
 
+!!! tip "Text beats a screenshot for anything made of characters"
+    This applies to more than logs, and it is the single thing that most often decides whether a report can be acted on at once or needs another round trip.
+
+    Text can be searched, quoted back to you, pasted into a test, and compared against the protocol tables. An image of text can only be read by eye, and long log lines and wide tables are frequently unreadable at the size they upload at.
+
+    | Instead of a screenshot of | Send |
+    |---|---|
+    | Log errors | The lines as text in a code block, or the downloaded log file |
+    | A register scan | The CSV itself — drag it into the comment box. It holds far more than the on-screen summary |
+    | Register or sensor values | The numbers typed out, ideally two readings taken at different operating points |
+    | An error message | The message text |
+
+    Screenshots remain the right choice for genuinely visual things: a settings page, the shape of a graph, a dialog that is behaving oddly, or a page from a manufacturer document. It is specifically **text inside an image** that costs time.
+
 !!! tip "Is there anything under Settings → Repairs?"
     The integration raises repair notices for problems it can detect itself, such as an inverter reverting your settings or a gateway returning malformed responses. If one is showing, say so — it usually names the cause outright.
 
