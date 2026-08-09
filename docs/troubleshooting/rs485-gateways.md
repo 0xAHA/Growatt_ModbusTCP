@@ -14,6 +14,16 @@ This integration uses `pymodbus`'s `ModbusTcpClient`, which speaks Modbus TCP wi
 
 That is a **mode setting**, not a hardware quality question. Check it before buying anything or blaming anything else.
 
+### Buying a gateway: check the feature, not the firmware version
+
+Two units from the same manufacturer, even with similar names, can be different product lines with separate firmware and separate behaviour. A version number that works for someone else tells you nothing about a different model.
+
+The question that *is* answerable from a product page:
+
+> Does it offer a genuine **Modbus TCP to RTU** mode with a configurable instruction timeout?
+
+If yes, it will probably work. If it only does transparent passthrough, it cannot work with this integration at all — regardless of build quality, price, or how well it performs for other protocols.
+
 ---
 
 ## Field-tested hardware
