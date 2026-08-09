@@ -40,6 +40,18 @@ Firmware V1.523, reported in [#367](https://github.com/0xAHA/Growatt_ModbusTCP/i
 
 Measured: zero short/misaligned reads, 89 sensors populated, two full register scans of 2300 registers across 17 ranges with no read errors, and **26 days of statistics from before the v1.3.7 guard existed with no corrupt values at all**. On this gateway there was never anything to catch.
 
+### ✅ Elfin EW11 / EW11A — known good
+
+Running on the maintainer's own MIN 10000TL-X without issue, and the reference setup most fixes in this integration are verified against. An Elfin EW11 also produced the register readings behind [#326](https://github.com/0xAHA/Growatt_ModbusTCP/issues/326).
+
+Set the work mode so it performs **Modbus TCP to RTU** conversion rather than plain transparent passthrough — see the section above for why that is the one setting that decides whether a gateway can work at all.
+
+One EW11A report ([#309](https://github.com/0xAHA/Growatt_ModbusTCP/issues/309)) showed all entities reading zero, but the same symptom followed the reporter onto a Waveshare adapter, so the gateway was not the cause. They resolved it with a Growatt WiLan-X2.
+
+### ✅ Growatt WiLan-X2 — known good
+
+Growatt's own dongle, which exposes Modbus directly. Reported working in [#309](https://github.com/0xAHA/Growatt_ModbusTCP/issues/309) after two third-party adapters had been ruled out. It also buffers roughly a month of data and re-synchronises after a power cut, which no generic serial server does.
+
 ### ⚠️ PUSR / ShineWiFi-class serial bridges — replay stale frames
 
 Reported in [#360](https://github.com/0xAHA/Growatt_ModbusTCP/issues/360) and [#367](https://github.com/0xAHA/Growatt_ModbusTCP/issues/367).
@@ -73,6 +85,8 @@ Reported in [#367](https://github.com/0xAHA/Growatt_ModbusTCP/issues/367). Repea
 On the PUSR unit in #367, 113 registers cost the same as 1 — every read landed in one of two clusters ~500 ms apart, which looks like an internal scheduling tick. Block size 1 would have meant ~113 requests of ~0.8 s each in place of a single 1.3 s read. **Block size 25 was kept.**
 
 **Careful measuring latency from logs.** A 15-18 s figure reported on #367 turned out to be the integration's own failure cycle — a 10 s timeout plus reset and retry — not gateway latency. Measure with raw sockets and the integration disabled.
+
+**Symptom survives a gateway swap?** Then the gateway is not the variable. One reporter saw every entity read zero on an EW11A, fitted a Waveshare, and got exactly the same result — which ruled out both adapters in a single step and pointed at the inverter side instead ([#309](https://github.com/0xAHA/Growatt_ModbusTCP/issues/309)). Swapping hardware is slow, but it is decisive in a way that reading logs often is not.
 
 **Running a register scan?** Disable the integration entry first (**⋮ → Disable**, don't delete), wait ~30 s, then scan. The scanner opens a second connection, and on a sensitive gateway that contends with the poller. A scan taken while polling came back with 9 successful reads out of 1304 rows, every range reporting "no response" on a device that was working fine.
 
