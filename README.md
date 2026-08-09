@@ -3,7 +3,7 @@
 # Growatt Modbus Integration for Home Assistant ☀️
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-1.5.0-blue.svg)
+[![Version](https://img.shields.io/github/v/release/0xAHA/Growatt_ModbusTCP?label=Version&color=blue)](https://github.com/0xAHA/Growatt_ModbusTCP/releases/latest)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/0xAHA/Growatt_ModbusTCP.svg?style=social)](https://github.com/0xAHA/Growatt_ModbusTCP)
 

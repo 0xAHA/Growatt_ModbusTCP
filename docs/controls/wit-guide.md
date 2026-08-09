@@ -643,8 +643,3 @@ Check entity: `switch.growatt_control_authority` (must be ON)
 - [WIT Profile Documentation](https://github.com/0xAHA/Growatt_ModbusTCP/blob/main/custom_components/growatt_modbus/profiles/wit.py)
 - [Supported Models](../hardware/models.md)
 - [VPP Protocol Overview](../developer/protocol-database.md)
-
----
-
-**Version**: 0.9.8
-**Last Updated**: 2026-06-30

@@ -852,10 +852,16 @@ If auto-detection fails, manually select correct profile:
 
 When preparing a release:
 
-1. **Update version numbers:**
-   - `manifest.json` - version field
-   - `README.md` - version badges
-   - `const.py` - VERSION constant (if exists)
+1. **Update the version in `manifest.json`.** That is the only place it is typed.
+
+   The badges in `README.md` and `docs/index.md` track the latest GitHub release through
+   shields.io, so they update themselves when a release is published — and they skip
+   pre-releases, so the site always advertises the newest version a visitor can actually
+   install.
+
+   **Do not replace them with a static badge.** `tests/test_docs_versioning.py` fails if
+   one reappears: a typed-in badge is correct for exactly one release and silently wrong
+   from then on.
 
 2. **Update documentation:**
    - `RELEASENOTES.md` - Add new version section

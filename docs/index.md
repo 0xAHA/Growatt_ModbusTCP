@@ -1,7 +1,7 @@
 # Growatt Modbus Integration
 
 ![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
-![Version](https://img.shields.io/badge/Version-0.9.8-blue.svg)
+[![Version](https://img.shields.io/github/v/release/0xAHA/Growatt_ModbusTCP?label=Version&color=blue)](https://github.com/0xAHA/Growatt_ModbusTCP/releases/latest)
 [![GitHub Issues](https://img.shields.io/github/issues/0xAHA/Growatt_ModbusTCP.svg)](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
 
 A native Home Assistant integration for Growatt solar inverters using **direct Modbus RTU/TCP communication**. Real-time data straight from your inverter — no cloud, no ShineWiFi, no dependency on Growatt's servers.
