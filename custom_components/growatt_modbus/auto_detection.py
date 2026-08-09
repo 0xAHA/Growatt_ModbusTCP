@@ -586,15 +586,21 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
     # These report VPP 2.01 registers (31100-31115 active) but grid-power
     # registers (3041-3044, 31112-31113) are always zero — no built-in CT at the
     # grid connection point.
+    # The MID models split cleanly across these two codes: 5001 is every MID, 5002 is
+    # every MOD. The last two MID entries fall at the top of the following page in
+    # Table 3-1 under a merged cell, so they read as belonging to 5002 unless you check
+    # where the merge starts — maintainer confirmed against the PDF that it runs from
+    # MID 17-25KTL3-X through MID 3-33KTL3-X3.
     5001: DtcEntry(
         'MID 17-25KTL3-X; MID 20-30KTL3-X2; MID 25-30KTL3-X2 Pro/X2 Pro.E; '
-        'MID 33-50KTL3-X2/X2 Pro/X2 Pro.E; MID 30-40KTL3-X',
+        'MID 33-50KTL3-X2/X2 Pro/X2 Pro.E; MID 30-40KTL3-X; '
+        'MID 33-36KTL3-X(Pro.E); MID 3-33KTL3-X3',
         'mid_15000_25000tl3_x_v201',
         CONFIRMED, 'issue #242',
     ),
     5002: DtcEntry(
-        'MID 33-36KTL3-X(Pro.E); MID 3-33KTL3-X3; MOD 3-15KTL3-X; MOD 3-15KTL3-X2(Pro); '
-        'MOD 12-20KTL3-X2; MOD 12-20KTL3-X2(E); MOD 3-33KTL3-X3',
+        'MOD 3-15KTL3-X; MOD 3-15KTL3-X2(Pro); MOD 12-20KTL3-X2; '
+        'MOD 12-20KTL3-X2(E); MOD 3-33KTL3-X3',
         'mid_15000_25000tl3_x_v201',
         ASSUMED, 'no device report on this DTC',
     ),
