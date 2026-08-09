@@ -4,6 +4,32 @@
 
 ---
 
+## v1.5.1
+
+Issues: #360
+
+- **Fix: the register scanner returned almost nothing on slower gateways.**
+  The scanner uses its own Modbus client, separate from the one that does the polling —
+  and unlike the poller it never paused between reads. It sent requests as fast as the
+  socket accepted them.
+
+  On an adapter that needs settling time between requests, that meant nearly every read in
+  the scan failed. The resulting CSV looked like a dead inverter, on a system whose sensors
+  were updating perfectly well a moment earlier. One user got two consecutive scans back
+  with a handful of usable rows out of more than a thousand.
+
+  The scan now paces itself using the same **Modbus delay** already configured for your
+  inverter, since that value is tuned to what your gateway tolerates. The pacing used is
+  recorded in the scan file so it is visible in any report.
+
+  Scans on slow links will take noticeably longer than before. That is the fix working —
+  the previous speed was the cause of the empty results.
+
+  Reported by @Xybertecnic, whose scans kept coming back empty while the integration itself
+  ran fine — a contradiction that turned out to be entirely our doing.
+
+---
+
 ## v1.5.0
 
 Issues: #360, #362, #367

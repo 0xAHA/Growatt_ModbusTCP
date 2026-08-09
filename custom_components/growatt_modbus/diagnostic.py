@@ -1342,12 +1342,20 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         supports_response=SupportsResponse.OPTIONAL,
     )
 
-def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk_size: int = 50, register_type: str = 'input') -> Dict[int, Dict[str, Any]]:
+def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk_size: int = 50, register_type: str = 'input', delay_s: float = 0.0) -> Dict[int, Dict[str, Any]]:
     """
     Read registers in chunks to avoid timeouts.
 
     Args:
         register_type: 'input' for input registers (default), 'holding' for holding registers
+        delay_s: pause between chunk reads, mirroring the poller's modbus_delay.
+
+    Pacing matters more than it looks. This uses a raw pymodbus client rather than
+    GrowattModbus, so none of the poller's rate limiting applies — without an explicit
+    pause, chunks are fired back to back as fast as the socket accepts them. A gateway
+    that needs settling time between requests then fails nearly every read, producing a
+    scan that looks like a dead inverter on a system whose entities are updating fine
+    (#360). The only pauses in the scanner used to be between whole ranges, never within.
 
     Returns dict mapping register address to: {
         'value': int or None,
@@ -1356,10 +1364,15 @@ def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk
     }
     """
     register_data = {}
+    first_chunk = True
 
     for chunk_start in range(0, count, chunk_size):
         chunk_count = min(chunk_size, count - chunk_start)
         chunk_address = start + chunk_start
+
+        if delay_s and not first_chunk:
+            time.sleep(delay_s)
+        first_chunk = False
 
         try:
             # Choose read method based on register type
@@ -1818,6 +1831,25 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         "responding_ranges": 0,
     }
 
+    # Pace the scan the way the poller paces itself.
+    #
+    # The scanner uses a raw pymodbus client, so GrowattModbus._enforce_read_interval()
+    # never runs and nothing throttles it. A user whose gateway needs settling time
+    # between requests would see their entities updating normally while every scan came
+    # back almost empty — the scan was hammering a link the poller was carefully spacing
+    # (#360).
+    #
+    # Taken from the entry's own modbus_delay when a device was selected, because that
+    # value is already tuned to what this gateway tolerates.
+    _scan_delay_ms = 250
+    if coordinator is not None:
+        try:
+            _scan_delay_ms = int(coordinator.config_entry.options.get("modbus_delay", 250))
+        except (AttributeError, TypeError, ValueError):
+            pass
+    _scan_delay_s = max(0.0, _scan_delay_ms / 1000.0)
+    _LOGGER.info("Register scan pacing: %d ms between reads", _scan_delay_ms)
+
     # Take exclusive control of the gateway for the duration of the scan (Issue #360).
     #
     # Every TCP entry owns a SharedModbusConnection holding a persistent socket. The scanner
@@ -1965,7 +1997,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         # SKIP VPP registers if OffGrid mode to prevent SPF power resets!
         # Always read firmware version (registers 9-11) - safe for all inverters
         _LOGGER.info("Reading firmware version (holding registers 9-11)...")
-        fw_registers = _read_registers_chunked(client, 9, 3, slave_id, chunk_size=3, register_type='holding')
+        fw_registers = _read_registers_chunked(client, 9, 3, slave_id, chunk_size=3, register_type='holding', delay_s=_scan_delay_s)
         if fw_registers:
             all_register_data.update(fw_registers)
 
@@ -1973,15 +2005,15 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             # Read V1.39 identification registers: holding 43 (DTC) and 3099 (DSP firmware code).
             # Legacy grid-tied inverters (MIN TL-X etc.) carry DTC at holding 43 rather than 30000.
             _LOGGER.info("Reading V1.39 identification registers (holding 43, 3099)...")
-            v139_dtc = _read_registers_chunked(client, 43, 1, slave_id, chunk_size=1, register_type='holding')
+            v139_dtc = _read_registers_chunked(client, 43, 1, slave_id, chunk_size=1, register_type='holding', delay_s=_scan_delay_s)
             if v139_dtc:
                 all_register_data.update(v139_dtc)
-            v139_dsp = _read_registers_chunked(client, 3099, 1, slave_id, chunk_size=1, register_type='holding')
+            v139_dsp = _read_registers_chunked(client, 3099, 1, slave_id, chunk_size=1, register_type='holding', delay_s=_scan_delay_s)
             if v139_dsp:
                 all_register_data.update(v139_dsp)
 
             _LOGGER.info("Reading identification registers (DTC code, protocol version)...")
-            id_registers = _read_registers_chunked(client, 30000, 100, slave_id, chunk_size=50, register_type='holding')
+            id_registers = _read_registers_chunked(client, 30000, 100, slave_id, chunk_size=50, register_type='holding', delay_s=_scan_delay_s)
             if id_registers:
                 all_register_data.update(id_registers)
                 dtc_found = 30000 in id_registers and id_registers[30000]['status'] == 'success' and id_registers[30000]['value']
@@ -1996,7 +2028,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                     # short pause before concluding there is no VPP DTC.
                     _LOGGER.info("  VPP DTC returned zero — retrying after 500 ms...")
                     time.sleep(0.5)
-                    id_registers_retry = _read_registers_chunked(client, 30000, 100, slave_id, chunk_size=50, register_type='holding')
+                    id_registers_retry = _read_registers_chunked(client, 30000, 100, slave_id, chunk_size=50, register_type='holding', delay_s=_scan_delay_s)
                     if id_registers_retry:
                         all_register_data.update(id_registers_retry)
                         dtc_found = 30000 in id_registers_retry and id_registers_retry[30000]['status'] == 'success' and id_registers_retry[30000]['value']
@@ -2015,7 +2047,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             if _leg_dtc_entry and _leg_dtc_entry.get('status') == 'success' and not _leg_dtc_entry.get('value'):
                 _LOGGER.info("  Legacy DTC (holding 43) returned zero — retrying after 1 s...")
                 time.sleep(1.0)
-                v139_dtc_retry = _read_registers_chunked(client, 43, 1, slave_id, chunk_size=1, register_type='holding')
+                v139_dtc_retry = _read_registers_chunked(client, 43, 1, slave_id, chunk_size=1, register_type='holding', delay_s=_scan_delay_s)
                 if v139_dtc_retry:
                     all_register_data.update(v139_dtc_retry)
         else:
@@ -2038,7 +2070,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
 
             _LOGGER.info(f"Scanning {range_name} ({reg_type}, block_size={block_size})...")
 
-            registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=block_size, register_type=reg_type)
+            registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=block_size, register_type=reg_type, delay_s=_scan_delay_s)
 
             if registers:
                 # Holding ranges go into a separate dict so they don't overwrite
@@ -2072,7 +2104,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
 
                 _LOGGER.info(f"Scanning {range_name}...")
 
-                registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=block_size, register_type='holding')
+                registers = _read_registers_chunked(client, start, count, slave_id, chunk_size=block_size, register_type='holding', delay_s=_scan_delay_s)
 
                 if registers:
                     all_register_data.update(registers)
@@ -2090,19 +2122,19 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         # and these reads are reliable. This avoids using the coordinator's client
         # (which races with the coordinator's own polling thread).
         _LOGGER.info("Re-reading identification registers (connection now settled)...")
-        _settled_fw = _read_registers_chunked(client, 9, 3, slave_id, chunk_size=3, register_type='holding')
+        _settled_fw = _read_registers_chunked(client, 9, 3, slave_id, chunk_size=3, register_type='holding', delay_s=_scan_delay_s)
         if _settled_fw:
             for _addr, _val in _settled_fw.items():
                 if _val.get('status') == 'success' and _val.get('value') is not None:
                     all_register_data[_addr] = _val
 
-        _settled_dtc43 = _read_registers_chunked(client, 43, 1, slave_id, chunk_size=1, register_type='holding')
+        _settled_dtc43 = _read_registers_chunked(client, 43, 1, slave_id, chunk_size=1, register_type='holding', delay_s=_scan_delay_s)
         if _settled_dtc43:
             _e43 = _settled_dtc43.get(43)
             if _e43 and _e43.get('status') == 'success':
                 all_register_data[43] = _e43
 
-        _settled_dsp = _read_registers_chunked(client, 3099, 1, slave_id, chunk_size=1, register_type='holding')
+        _settled_dsp = _read_registers_chunked(client, 3099, 1, slave_id, chunk_size=1, register_type='holding', delay_s=_scan_delay_s)
         if _settled_dsp:
             _edsp = _settled_dsp.get(3099)
             if _edsp and _edsp.get('status') == 'success':
@@ -2112,7 +2144,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         # that means the device doesn't support VPP registers at all).
         _vpp_prev = all_register_data.get(30000)
         if _vpp_prev and _vpp_prev.get('status') == 'success' and not _vpp_prev.get('value'):
-            _settled_vpp = _read_registers_chunked(client, 30000, 1, slave_id, chunk_size=1, register_type='holding')
+            _settled_vpp = _read_registers_chunked(client, 30000, 1, slave_id, chunk_size=1, register_type='holding', delay_s=_scan_delay_s)
             if _settled_vpp:
                 _evpp = _settled_vpp.get(30000)
                 if _evpp and _evpp.get('status') == 'success' and _evpp.get('value'):
@@ -2140,6 +2172,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             writer.writerow(["Connection Type", connection_type.upper()])
             writer.writerow(["Slave ID", slave_id])
             writer.writerow(["Block Size", block_size, "registers per Modbus request"])
+            writer.writerow(["Read Pacing", _scan_delay_ms, "ms between reads (from modbus_delay)"])
 
             # Add currently selected/configured profile (if coordinator found)
             if selected_profile_key and selected_profile_name:
