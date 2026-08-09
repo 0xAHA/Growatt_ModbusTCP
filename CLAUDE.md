@@ -162,6 +162,12 @@ Before calling a change complete, ask which page would now be wrong:
 | New supported model | `hardware/models.md`, `hardware/autodetection.md` |
 | Gateway or adapter finding | `troubleshooting/rs485-gateways.md` |
 
+**Prefer linking to a canonical source over copying it.** A page that restates something
+maintained elsewhere — release notes, a register table, a version number — is a second copy
+that has to be kept in step by hand, and it never is. Link to the source, or generate the
+page from it. Only duplicate when the copy is genuinely for a different audience, and then
+add a test that holds the two together.
+
 Two things that make this fail quietly:
 
 - **A new page must be added to `mkdocs.yml` nav.** The build succeeds without it, so
