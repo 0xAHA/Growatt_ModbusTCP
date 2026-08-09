@@ -103,5 +103,516 @@
       "title": "Growatt: RS485 gateway returning mismatched responses",
       "description": "The gateway at **{gateway}** answered **{percent}%** of requests with a frame that did not match the request — typically a complete response to an *earlier* request, replayed.\n\n**Your data is not affected.** These responses are detected and discarded rather than decoded, which is what this check is for. But the reads are lost, so sensors update less often than they should.\n\nThis is a gateway problem, not an inverter problem. Things that have helped others:\n\n- Set **Max Register Block Size** to 25 in the integration options.\n- Check the gateway is in **Modbus TCP to RTU** mode, not transparent passthrough.\n- If it has a TCP timeout setting, make sure it is enabled rather than disabled, so dead sessions are cleaned up.\n\nSee the linked guide for gateways known to work and the settings they use."
     }
+  },
+  "entity": {
+    "sensor": {
+      "ac_apparent_power": {
+        "name": "AC Apparent Power"
+      },
+      "ac_charge_energy_today": {
+        "name": "AC Charge Energy Today"
+      },
+      "ac_charge_energy_total": {
+        "name": "AC Charge Energy Total"
+      },
+      "ac_current": {
+        "name": "AC Current"
+      },
+      "ac_current_r": {
+        "name": "AC Current Phase R"
+      },
+      "ac_current_s": {
+        "name": "AC Current Phase S"
+      },
+      "ac_current_t": {
+        "name": "AC Current Phase T"
+      },
+      "ac_discharge_energy_today": {
+        "name": "AC Discharge Energy Today"
+      },
+      "ac_discharge_energy_total": {
+        "name": "AC Discharge Energy Total"
+      },
+      "ac_frequency": {
+        "name": "AC Frequency"
+      },
+      "ac_input_power": {
+        "name": "AC Input Power"
+      },
+      "ac_power": {
+        "name": "AC Power"
+      },
+      "ac_power_r": {
+        "name": "AC Power Phase R"
+      },
+      "ac_power_s": {
+        "name": "AC Power Phase S"
+      },
+      "ac_power_t": {
+        "name": "AC Power Phase T"
+      },
+      "ac_voltage": {
+        "name": "AC Voltage"
+      },
+      "ac_voltage_r": {
+        "name": "AC Voltage R"
+      },
+      "ac_voltage_rs": {
+        "name": "AC Voltage RS"
+      },
+      "ac_voltage_s": {
+        "name": "AC Voltage S"
+      },
+      "ac_voltage_st": {
+        "name": "AC Voltage ST"
+      },
+      "ac_voltage_t": {
+        "name": "AC Voltage T"
+      },
+      "ac_voltage_tr": {
+        "name": "AC Voltage TR"
+      },
+      "battery2_charge_energy_today": {
+        "name": "Battery 2 Charge Today"
+      },
+      "battery2_charge_energy_total": {
+        "name": "Battery 2 Charge Total"
+      },
+      "battery2_current": {
+        "name": "Battery 2 Current"
+      },
+      "battery2_discharge_energy_today": {
+        "name": "Battery 2 Discharge Today"
+      },
+      "battery2_discharge_energy_total": {
+        "name": "Battery 2 Discharge Total"
+      },
+      "battery2_power": {
+        "name": "Battery 2 Power"
+      },
+      "battery2_soc": {
+        "name": "Battery 2 State of Charge"
+      },
+      "battery2_soh": {
+        "name": "Battery 2 State of Health"
+      },
+      "battery2_temp": {
+        "name": "Battery 2 Temperature"
+      },
+      "battery2_voltage": {
+        "name": "Battery 2 Voltage"
+      },
+      "battery3_charge_energy_today": {
+        "name": "Battery 3 Charge Today"
+      },
+      "battery3_charge_energy_total": {
+        "name": "Battery 3 Charge Total"
+      },
+      "battery3_current": {
+        "name": "Battery 3 Current"
+      },
+      "battery3_discharge_energy_today": {
+        "name": "Battery 3 Discharge Today"
+      },
+      "battery3_discharge_energy_total": {
+        "name": "Battery 3 Discharge Total"
+      },
+      "battery3_power": {
+        "name": "Battery 3 Power"
+      },
+      "battery3_soc": {
+        "name": "Battery 3 State of Charge"
+      },
+      "battery3_soh": {
+        "name": "Battery 3 State of Health"
+      },
+      "battery3_temp": {
+        "name": "Battery 3 Temperature"
+      },
+      "battery3_voltage": {
+        "name": "Battery 3 Voltage"
+      },
+      "battery4_charge_energy_today": {
+        "name": "Battery 4 Charge Today"
+      },
+      "battery4_charge_energy_total": {
+        "name": "Battery 4 Charge Total"
+      },
+      "battery4_current": {
+        "name": "Battery 4 Current"
+      },
+      "battery4_discharge_energy_today": {
+        "name": "Battery 4 Discharge Today"
+      },
+      "battery4_discharge_energy_total": {
+        "name": "Battery 4 Discharge Total"
+      },
+      "battery4_power": {
+        "name": "Battery 4 Power"
+      },
+      "battery4_soc": {
+        "name": "Battery 4 State of Charge"
+      },
+      "battery4_soh": {
+        "name": "Battery 4 State of Health"
+      },
+      "battery4_temp": {
+        "name": "Battery 4 Temperature"
+      },
+      "battery4_voltage": {
+        "name": "Battery 4 Voltage"
+      },
+      "battery_charge_power": {
+        "name": "Battery Charge Power"
+      },
+      "battery_charge_today": {
+        "name": "Battery Charge Today"
+      },
+      "battery_charge_total": {
+        "name": "Battery Charge Total"
+      },
+      "battery_current": {
+        "name": "Battery Current"
+      },
+      "battery_discharge_power": {
+        "name": "Battery Discharge Power"
+      },
+      "battery_discharge_today": {
+        "name": "Battery Discharge Today"
+      },
+      "battery_discharge_total": {
+        "name": "Battery Discharge Total"
+      },
+      "battery_power": {
+        "name": "Battery Power"
+      },
+      "battery_soc": {
+        "name": "Battery SOC"
+      },
+      "battery_soh": {
+        "name": "Battery State of Health"
+      },
+      "battery_temp": {
+        "name": "Battery Temperature"
+      },
+      "battery_voltage": {
+        "name": "Battery Voltage"
+      },
+      "battery_voltage_bms": {
+        "name": "Battery Voltage BMS"
+      },
+      "bms_battery_count": {
+        "name": "BMS Battery Count"
+      },
+      "bms_constant_volt": {
+        "name": "BMS Constant Voltage"
+      },
+      "bms_cycle_count": {
+        "name": "BMS Cycle Count"
+      },
+      "bms_error": {
+        "name": "BMS Error"
+      },
+      "bms_max_cell_volt": {
+        "name": "BMS Max Cell Voltage"
+      },
+      "bms_max_current": {
+        "name": "BMS Max Current"
+      },
+      "bms_max_soc": {
+        "name": "BMS Max SOC"
+      },
+      "bms_min_cell_volt": {
+        "name": "BMS Min Cell Voltage"
+      },
+      "bms_min_soc": {
+        "name": "BMS Min SOC"
+      },
+      "bms_module_num": {
+        "name": "BMS Module Count"
+      },
+      "bms_soh": {
+        "name": "Battery State of Health"
+      },
+      "bms_status": {
+        "name": "BMS Status"
+      },
+      "bms_warn_info": {
+        "name": "BMS Warning"
+      },
+      "boost_temp": {
+        "name": "Boost Temperature"
+      },
+      "box_bypass_status": {
+        "name": "Backup Box Bypass"
+      },
+      "box_connect_flag": {
+        "name": "Backup Box Status"
+      },
+      "box_error_code": {
+        "name": "Backup Box Error Code"
+      },
+      "box_grid_power": {
+        "name": "Backup Box Grid Power"
+      },
+      "box_grid_voltage": {
+        "name": "Backup Box Grid Voltage"
+      },
+      "box_load_power": {
+        "name": "Backup Box Load Power"
+      },
+      "box_relay_status": {
+        "name": "Backup Box Relay"
+      },
+      "box_temperature": {
+        "name": "Backup Box Temperature"
+      },
+      "box_warning_code": {
+        "name": "Backup Box Warning Code"
+      },
+      "box_work_mode": {
+        "name": "Backup Box Work Mode"
+      },
+      "buck1_temp": {
+        "name": "Buck1 Temperature"
+      },
+      "buck2_temp": {
+        "name": "Buck2 Temperature"
+      },
+      "dcdc_temp": {
+        "name": "DC-DC Temperature"
+      },
+      "dci_r": {
+        "name": "DC Injection Current"
+      },
+      "dci_s": {
+        "name": "DC Injection Current (S-Phase)"
+      },
+      "dci_t": {
+        "name": "DC Injection Current (T-Phase)"
+      },
+      "derating_mode": {
+        "name": "Derating Mode"
+      },
+      "dry_contact_state": {
+        "name": "Dry Contact State"
+      },
+      "enable_spec_set": {
+        "name": "Appointed Spec Setting"
+      },
+      "energy_to_grid_today": {
+        "name": "Energy to Grid Today"
+      },
+      "energy_to_grid_total": {
+        "name": "Energy to Grid Total"
+      },
+      "energy_today": {
+        "name": "Energy Today"
+      },
+      "energy_total": {
+        "name": "Energy Total"
+      },
+      "extra_energy_today": {
+        "name": "Extra Energy Today"
+      },
+      "extra_energy_total": {
+        "name": "Extra Energy Total"
+      },
+      "extra_power_to_grid": {
+        "name": "Extra Power to Grid"
+      },
+      "fast_mppt_enable": {
+        "name": "Fast MPPT Enable"
+      },
+      "fault_code": {
+        "name": "Fault Code"
+      },
+      "generator_discharge_today": {
+        "name": "Generator Discharge Today"
+      },
+      "generator_discharge_total": {
+        "name": "Generator Discharge Total"
+      },
+      "generator_power": {
+        "name": "Generator Power"
+      },
+      "generator_voltage": {
+        "name": "Generator Voltage"
+      },
+      "gfci": {
+        "name": "Leakage Current"
+      },
+      "grid_connection_status": {
+        "name": "Grid Connection Status"
+      },
+      "grid_energy_today": {
+        "name": "Grid Energy Today"
+      },
+      "grid_energy_total": {
+        "name": "Grid Energy Total"
+      },
+      "grid_export_power": {
+        "name": "Grid Export Power"
+      },
+      "grid_frequency": {
+        "name": "Grid Frequency"
+      },
+      "grid_import_energy_today": {
+        "name": "Grid Import Energy Today"
+      },
+      "grid_import_energy_total": {
+        "name": "Grid Import Energy Total"
+      },
+      "grid_import_power": {
+        "name": "Grid Import Power"
+      },
+      "grid_power": {
+        "name": "Grid Power"
+      },
+      "grid_voltage": {
+        "name": "Grid Voltage"
+      },
+      "house_consumption": {
+        "name": "House Consumption"
+      },
+      "inverter_current": {
+        "name": "Inverter Current"
+      },
+      "inverter_fan_speed": {
+        "name": "Inverter Fan Speed"
+      },
+      "inverter_temp": {
+        "name": "Inverter Temperature"
+      },
+      "ipm_temp": {
+        "name": "IPM Temperature"
+      },
+      "last_update": {
+        "name": "Last Update"
+      },
+      "load_energy_today": {
+        "name": "Load Energy Today"
+      },
+      "load_energy_total": {
+        "name": "Load Energy Total"
+      },
+      "load_percentage": {
+        "name": "Load Percentage"
+      },
+      "mppt_fan_speed": {
+        "name": "MPPT Fan Speed"
+      },
+      "nonstd_vac_enable": {
+        "name": "Non-Standard VAC Enable"
+      },
+      "ntognd_detect": {
+        "name": "NToGND Detect"
+      },
+      "op_discharge_energy_today": {
+        "name": "Operational Discharge Energy Today"
+      },
+      "op_discharge_energy_total": {
+        "name": "Operational Discharge Energy Total"
+      },
+      "output_dc_voltage": {
+        "name": "Output DC Voltage"
+      },
+      "power_to_grid": {
+        "name": "Power to Grid"
+      },
+      "power_to_load": {
+        "name": "Power to Load"
+      },
+      "power_to_user": {
+        "name": "Power to User"
+      },
+      "priority_mode": {
+        "name": "Priority Mode"
+      },
+      "pv1_current": {
+        "name": "PV1 Current"
+      },
+      "pv1_energy_today": {
+        "name": "PV1 Energy Today"
+      },
+      "pv1_energy_total": {
+        "name": "PV1 Energy Total"
+      },
+      "pv1_power": {
+        "name": "PV1 Power"
+      },
+      "pv1_voltage": {
+        "name": "PV1 Voltage"
+      },
+      "pv2_current": {
+        "name": "PV2 Current"
+      },
+      "pv2_energy_today": {
+        "name": "PV2 Energy Today"
+      },
+      "pv2_energy_total": {
+        "name": "PV2 Energy Total"
+      },
+      "pv2_power": {
+        "name": "PV2 Power"
+      },
+      "pv2_voltage": {
+        "name": "PV2 Voltage"
+      },
+      "pv3_current": {
+        "name": "PV3 Current"
+      },
+      "pv3_energy_today": {
+        "name": "PV3 Energy Today"
+      },
+      "pv3_energy_total": {
+        "name": "PV3 Energy Total"
+      },
+      "pv3_power": {
+        "name": "PV3 Power"
+      },
+      "pv3_voltage": {
+        "name": "PV3 Voltage"
+      },
+      "pv4_current": {
+        "name": "PV4 Current"
+      },
+      "pv4_energy_today": {
+        "name": "PV4 Energy Today"
+      },
+      "pv4_energy_total": {
+        "name": "PV4 Energy Total"
+      },
+      "pv4_power": {
+        "name": "PV4 Power"
+      },
+      "pv4_voltage": {
+        "name": "PV4 Voltage"
+      },
+      "pv_energy_total": {
+        "name": "PV Energy Total"
+      },
+      "pv_iso": {
+        "name": "Insulation Resistance"
+      },
+      "pv_total_power": {
+        "name": "Solar Total Power"
+      },
+      "self_consumption": {
+        "name": "Self Consumption"
+      },
+      "self_consumption_percentage": {
+        "name": "Self Consumption Percentage"
+      },
+      "status": {
+        "name": "Status"
+      },
+      "system_output_power": {
+        "name": "System Output Power"
+      },
+      "warning_code": {
+        "name": "Warning Code"
+      }
+    }
   }
 }

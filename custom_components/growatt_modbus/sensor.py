@@ -1388,7 +1388,13 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
 
         self._sensor_key = sensor_key
         self._sensor_def = sensor_def
-        self._attr_name = sensor_def['name']
+
+        # Name comes from strings.json / translations/*.json under entity.sensor.<key>.name
+        # rather than from sensor_def['name'], so the 22 shipped languages can translate it.
+        # The English text there was generated from sensor_def['name'], so what users see is
+        # unchanged; tests_ha asserts every key has an entry, because a missing one leaves
+        # the entity with no name at all rather than falling back.
+        self._attr_translation_key = sensor_key
 
         # Set entity category (None for main sensors, "diagnostic" for technical details)
         entity_category = get_entity_category(sensor_key)
