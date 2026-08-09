@@ -41,7 +41,7 @@ Inverter startup detection:
 | 0–124 | V1.39 | Base holding and input registers (all models) |
 | 875–999 | V1.39 | WIT commercial registers |
 | 1000–1124 | V1.39 | SPH/SPA storage control |
-| 2000–2124 | V1.39 | SPH extended |
+| 2000–2124 | V1.39 | SPA extended (single-phase AC storage) |
 | 3000–3374 | V1.39 | MIN/MOD extended data |
 | 8000–8139 | V1.39 | WIT battery registers |
 | 30000–30099 | VPP | Device ID, rated parameters |
