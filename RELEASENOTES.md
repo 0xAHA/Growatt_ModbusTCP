@@ -4,6 +4,76 @@
 
 ---
 
+## v1.5.0
+
+Issues: #360, #362, #367
+
+> ### Some control entities are renamed
+>
+> Twelve number, select and time entities gain the sub-device they belong to in their
+> displayed name — **"Growatt Battery Work Mode"** rather than "Growatt Work Mode".
+>
+> **Nothing breaks.** Entity IDs live in Home Assistant's registry and do not change, so
+> automations, scripts, template sensors and dashboard cards keep working exactly as they
+> are. Only the label shown in the UI moves. If you search for a control by name and don't
+> recognise it, look for the sub-device word.
+>
+> This also fixes WIT inverters showing **"Growatt Growatt TOU Period 1 Start"** — the
+> device name was being applied twice.
+
+### Problems now surfaced in the UI instead of the log
+
+Two conditions used to leave users running a degraded setup with no way to know. Both now
+appear under **Settings → Repairs**.
+
+- **Settings being reverted.** Local changes that the inverter silently discards — usually
+  a ShineWiFi dongle restoring cloud settings, sometimes a prerequisite that isn't enabled.
+  Previously a notification that scrolled away; a repair persists until the cause is fixed.
+
+- **An RS485 gateway returning mismatched responses.** Some adapters answer a request with
+  a complete, valid response to an *earlier* one. Since v1.3.7 these are discarded, so your
+  data stays correct — but the reads are lost and the only evidence was a log line. One
+  reporter's gateway was doing this on roughly one poll in three and only found out by
+  reading logs. Raised once per session at 5% or more across at least 200 reads, with the
+  gateway address and rate, linking [the gateway guide](docs/troubleshooting/rs485-gateways.md).
+
+### Sensor names can now be translated
+
+All 169 sensor names moved out of Python and into the translation files. The integration
+already shipped 22 languages, but they only covered the setup and options screens — sensor
+names were hardcoded English regardless of your Home Assistant language. Other languages
+can now be contributed without touching code.
+
+English text is unchanged, and a test asserts that by comparing every string against the
+original definitions.
+
+### Model identification
+
+- **DTC 5001 and 5002 corrected.** `MID 33-36KTL3-X(Pro.E)` and `MID 3-33KTL3-X3` were
+  documented under 5002; they belong to 5001. In Growatt's table those two rows fall at the
+  top of the next page under a merged cell, so they read as 5002 unless you check where the
+  merge begins. The corrected split is also the sensible one — 5001 is every MID model,
+  5002 every MOD.
+
+- **The MAX / MAX-X family was missing** from the published protocol page along with DTC
+  3501 and 5401, and `3735` was named "SPA 3000-6000TL BL" where the specification says
+  "SPA 3000TL BL-UP". That page held its own copy of the table, a fourth alongside two code
+  modules and the troubleshooting page. All four now derive from one registry, three of them
+  enforced by tests.
+
+### Internal
+
+- **Every entity now shares one base class.** Twenty classes each carried their own unique
+  ID, device assignment and naming flag, and the copies had drifted into two conventions at
+  once. Consolidating them is what exposed the naming inconsistency above.
+
+- **Contributor documentation** gained twelve verification rules drawn from real defects —
+  check the protocol documents before inferring a register, state which register space you
+  mean, and treat "Read OK" as evidence the address responded rather than that the value
+  means anything.
+
+---
+
 ## v1.4.1
 
 Issues: #362
