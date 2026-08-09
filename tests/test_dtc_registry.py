@@ -174,6 +174,55 @@ def test_docs_flag_every_unconfirmed_mapping():
             assert "Confirmed" in row, f"DTC {dtc} is CONFIRMED in code but not shown as such in the docs"
 
 
+# ---------------------------------------------------------------------------
+# The VPP protocol page
+# ---------------------------------------------------------------------------
+#
+# docs/developer/protocol-vpp.md publishes its own DTC table, scoped to the VPP 2.03
+# Table 3-1 codes. It was a *fourth* copy alongside auto_detection.py, diagnostic.py and
+# dtc-debugging.md, and it had drifted: six codes missing (3501, 5401 and the whole
+# MAX/MAX-X family) and 3735 named "SPA 3000-6000TL BL" where the spec says
+# "SPA 3000TL BL-UP".
+
+VPP_PAGE = Path(__file__).parent.parent / "docs" / "developer" / "protocol-vpp.md"
+
+
+def _vpp_page_dtcs() -> set[int]:
+    """DTC codes from the leading column of the page's DTC tables.
+
+    Restricted to the known DTC values because the page also documents register tables
+    with numeric first columns, which a bare row match would sweep up.
+    """
+    text = VPP_PAGE.read_text(encoding="utf-8")
+    rows = {int(m) for m in re.findall(r"^\|\s*(\d{3,5})\s*\|", text, re.M)}
+    return rows & (TABLE_3_1 | {5603})
+
+
+@pytest.mark.parametrize("dtc", sorted(TABLE_3_1))
+def test_vpp_page_documents_every_table_3_1_code(dtc):
+    assert dtc in _vpp_page_dtcs(), (
+        f"DTC {dtc} is in VPP 2.03 Table 3-1 but missing from {VPP_PAGE.name}"
+    )
+
+
+def test_vpp_page_model_names_match_the_registry():
+    """A model name that drifts from the registry sends people looking for the wrong
+    device — which is how 3735 ended up documented as a model it isn't."""
+    text = VPP_PAGE.read_text(encoding="utf-8")
+    problems = []
+    for m in re.finditer(r"^\|\s*(\d{3,5})\s*\|\s*([^|]+?)\s*\|", text, re.M):
+        code = int(m.group(1))
+        if code not in DTC_REGISTRY:
+            continue
+        page_name = m.group(2).strip()
+        expected = DTC_REGISTRY[code].model
+        if page_name != expected:
+            problems.append(f"  {code}: page={page_name!r} registry={expected!r}")
+    assert not problems, (
+        f"{VPP_PAGE.name} model names differ from DTC_REGISTRY:\n" + "\n".join(problems)
+    )
+
+
 def test_spa_mappings_are_not_marked_confirmed():
     """Specific to #360, and the reason this file exists.
 

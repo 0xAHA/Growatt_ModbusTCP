@@ -29,32 +29,52 @@
 The DTC (Device Type Code) is stored at holding register 30000 and uniquely identifies
 the inverter model. The integration reads this at startup for automatic model detection.
 
-| DTC Code | Model |
-| --- | --- |
-| 3502 | SPH 3000-6000TL BL |
-| 3503 | SPH 3000-6000TL HU |
-| 3504 | SPH 3000-6000TL HUB |
-| 3601 | SPH 4000-10000TL3 BH-UP |
-| 3701 | SPA 1000-3000TL BL |
-| 3715 | SPA 3000-6000TL AU |
-| 3716 | SPA 3000-6000TL AUB |
-| 3725 | SPA 4000-10000TL3 BH-UP |
-| 3735 | SPA 3000-6000TL BL |
-| 5001 | MID 17–25KTL3-X / MID 20–30KTL3-X2 |
-| 5002 | MID 33–36KTL3-X(Pro.E) / MOD 3–15KTL3-X |
-| 5003 | MAC 30–70KTL3-X |
-| 5100 | MIN 2500-6000TL-XH/XH(P) |
-| 5200 | MIC/MIN 2500-6000TL-X/X2 |
-| 5201 | MIN 7000-10000TL-X/X2 |
-| 5400 | MOD-XH / MID-XH |
-| 5600 | WIS 100K-AM; WIT 50–100K-H/HE/HU/A/AE/AU; WIT 50–100K-H/HE/HU/A/AE/AU-US; WIT 28–55K-H/HE/HU/A/AE/AU-US L2 |
-| 5601 | WIT 29.9–50K-XHU (commercial hybrid with battery — confirmed via hardware scan Issue #338) |
-| 5800 | WIS 210K |
-| 5801 | WIS 215K-AM |
+This table is generated from `DTC_REGISTRY` in `auto_detection.py`, the single source of
+truth, and is checked against it by the test suite.
 
-| 5603 | WIT 4–15KTL3 (residential three-phase hybrid) — confirmed via live register read by community contributor (Issue #335); absent from V2.03 spec DTC table but follows V2.03 protocol structure |
+**Profile mapping** is a separate question from the DTC itself. The code is read from the
+device and identifies the model reliably; whether the profile it selects is *correct* for
+that model has, for most entries, never been verified against hardware. See
+[DTC Debugging](../troubleshooting/dtc-debugging.md) for what that means in practice.
 
-> **WIT residential models (4–15KTL3):** The VPP V2.03 spec (dated 2025.9.1) does **not** include the WIT 4–15KTL3 residential series in its DTC table. Only commercial WIT (50K–100K) models appear. DTC 5603 has been confirmed via live hardware register read (register 30000 = 5603 on a WIT 15KTL3) and protocol version register 30099 = 203 (V2.03), confirming the residential range follows V2.03 register structure despite the omission from the spec's device table.
+| DTC Code | Model | Profile mapping |
+| --- | --- | --- |
+| 3501 | SPH 3000-6000TL BL | ⚠️ Unconfirmed |
+| 3502 | SPH 3000-6000TL BL-UP | ✅ Confirmed |
+| 3503 | SPH 3000-6000TL HU | ⚠️ Unconfirmed |
+| 3504 | SPH 3000-6000TL HUB | ✅ Confirmed |
+| 3601 | SPH-TL3 4-10kW | ✅ Confirmed |
+| 3701 | SPA 1000-3000TL BL | ⚠️ Unconfirmed |
+| 3715 | SPA 3000-6000TL AU | ⚠️ Unconfirmed |
+| 3716 | SPA 3000-6000TL AUB | ⚠️ Unconfirmed |
+| 3725 | SPA-TL3 4-10kW | ⚠️ Unconfirmed |
+| 3735 | SPA 3000TL BL-UP | ⚠️ Unconfirmed |
+| 5001 | MID 17-25KTL3-X; MID 20-30KTL3-X2; MID 25-30KTL3-X2 Pro/X2 Pro.E; MID 33-50KTL3-X2/X2 Pro/X2 Pro.E; MID 30-40KTL3-X | ✅ Confirmed |
+| 5002 | MID 33-36KTL3-X(Pro.E); MID 3-33KTL3-X3; MOD 3-15KTL3-X; MOD 3-15KTL3-X2(Pro); MOD 12-20KTL3-X2; MOD 12-20KTL3-X2(E); MOD 3-33KTL3-X3 | ⚠️ Unconfirmed |
+| 5003 | MAC 30-70KTL3-X; MAC 15-36KTL3-XL; MAC 50-70KTL3-X2; MAC 30-36KTL3-XL2 | ⚠️ Unconfirmed |
+| 5000 | MAX 50-100KTL3 LV/MV | ⚠️ Unconfirmed |
+| 5500 | MAX 175-253KTL3-X HV | ⚠️ Unconfirmed |
+| 5501 | MAX 80-150KTL3-X LV/MV; MAX 100-150KYL3-X2 LV/MV | ⚠️ Unconfirmed |
+| 5502 | MAX 320-350KTL3-X | ⚠️ Unconfirmed |
+| 5100 | MIN 2500-6000TL-XH/XH2/XHE/XA | ✅ Confirmed |
+| 5200 | MIC 600-3300TL-X/X2/X2(Pro); MIN 2500-6000TL-X/X2/X2(Pro)/X2(Pro.E) | ⚠️ Unconfirmed |
+| 5201 | MIN 7-10KTL-X/X2/X2(E) | ✅ Confirmed |
+| 5400 | MOD 3-10KTL3-XH/BP; MID 11-30KTL3-XH; MID 8-15KTL3-XHL/JP | ✅ Confirmed |
+| 5401 | MOD 3-15KTL3-HU; MID 33-50KTL3-HU | ✅ Confirmed |
+| 5600 | WIS 100K-AM; WIT 50-100K-H/HE/HU/A/AE/AU (incl. -US); WIT 28-55K-H/HE/HU/A/AE/AU-US L2 | ⚠️ Unconfirmed |
+| 5601 | WIT 29.9-50K-XHU | ✅ Confirmed |
+| 5800 | WIS 210K | ⚠️ Unconfirmed |
+| 5801 | WIS 215K-AM | ⚠️ Unconfirmed |
+
+### Not in the spec table
+
+| DTC Code | Model | Profile mapping |
+| --- | --- | --- |
+| 5603 | WIT 4-15kW Hybrid | ✅ Confirmed |
+
+> **WIT residential models (4-15KTL3):** The VPP V2.03 spec (dated 2025.9.1) does **not** include the WIT 4-15KTL3 residential series in its DTC table — only commercial WIT (50K-100K) models appear. DTC 5603 was confirmed by a live register read (register 30000 = 5603 on a WIT 15KTL3, Issue #335) with protocol version register 30099 = 203, so the residential range follows V2.03 register structure despite being omitted from the spec's device table.
+
+**Non-VPP models** are not listed here. Legacy V1.39 devices (MIC 2500-5500MTL-S, TL3-S, SPH/SPM 8000-10000TL-HU), off-grid SPF (3400-3403) and SPE (64541) carry their DTC at holding register **43** rather than 30000. They appear in the [full DTC reference](../troubleshooting/dtc-debugging.md).
 
 ---
 
