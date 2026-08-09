@@ -70,7 +70,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class GrowattWitVppTouTime(CoordinatorEntity, TimeEntity):
+class GrowattWitVppTouTime(GrowattEntity, TimeEntity):
     """WIT VPP TOU period start or end time.
 
     Stores time as plain minutes since midnight (0–1439 start, 0–1440 end).
@@ -78,7 +78,6 @@ class GrowattWitVppTouTime(CoordinatorEntity, TimeEntity):
     Writes use FC16 — WIT inverter rejects FC06 on VPP holding registers.
     """
 
-    _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(
@@ -88,8 +87,12 @@ class GrowattWitVppTouTime(CoordinatorEntity, TimeEntity):
         period: int,
         is_start: bool,
     ) -> None:
-        super().__init__(coordinator)
-        self._config_entry = config_entry
+        super().__init__(
+            coordinator,
+            config_entry,
+            f"vpp_tou_p{period}_{'start' if is_start else 'end'}",
+            DEVICE_TYPE_BATTERY,
+        )
         self._period = period
         self._is_start = is_start
         offset = 0 if is_start else 1
@@ -98,13 +101,7 @@ class GrowattWitVppTouTime(CoordinatorEntity, TimeEntity):
 
         self._attr_icon = "mdi:clock-start" if is_start else "mdi:clock-end"
         label = "Start" if is_start else "End"
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} TOU Period {period} {label}"
-        self._attr_unique_id = f"{config_entry.entry_id}_vpp_tou_p{period}_{'start' if is_start else 'end'}"
-
-    @property
-    def device_info(self) -> dict[str, Any]:
-        return self.coordinator.get_device_info(DEVICE_TYPE_BATTERY)
+        self._attr_name = f"TOU Period {period} {label}"
 
     @property
     def native_value(self) -> dt_time | None:
@@ -313,7 +310,7 @@ class GrowattGenericTime(GrowattEntity, TimeEntity):
             await self.coordinator.async_request_refresh()
 
 
-class GrowattModTouTime(CoordinatorEntity, TimeEntity):
+class GrowattModTouTime(GrowattEntity, TimeEntity):
     """Time entity for MOD TL3-XH TOU period start/end registers.
 
     Start registers encode: bit15=enable, bit13-14=priority, bit8-12=hour, bit0-7=minute.

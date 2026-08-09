@@ -291,7 +291,7 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
 
 
 # Legacy class for backwards compatibility (remove in future version)
-class GrowattExportLimitPowerNumber(CoordinatorEntity, NumberEntity):
+class GrowattExportLimitPowerNumber(GrowattEntity, NumberEntity):
     """Number entity for export limit power percentage."""
 
     _attr_mode = NumberMode.SLIDER
@@ -307,19 +307,16 @@ class GrowattExportLimitPowerNumber(CoordinatorEntity, NumberEntity):
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the number entity."""
-        super().__init__(coordinator)
+        super().__init__(
+            coordinator,
+            config_entry,
+            "export_limit_power",
+            get_device_type_for_control('export_limit_power'),
+        )
 
-        self._config_entry = config_entry
-        self._attr_name = f"{config_entry.data['name']} Export Limit Power"
-        self._attr_unique_id = f"{config_entry.entry_id}_export_limit_power"
+        self._attr_name = "Export Limit Power"
         self._attr_icon = "mdi:speedometer"
 
-    @property
-    def device_info(self) -> dict[str, Any]:
-        """Return device information."""
-        # Determine device based on control type
-        device_type = get_device_type_for_control('export_limit_power')
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def native_value(self) -> float | None:
@@ -368,7 +365,7 @@ class GrowattExportLimitPowerNumber(CoordinatorEntity, NumberEntity):
             await self.coordinator.async_request_refresh()
 
 
-class GrowattActivePowerRateNumber(CoordinatorEntity, NumberEntity):
+class GrowattActivePowerRateNumber(GrowattEntity, NumberEntity):
     """Number entity for active power rate (max output power %)."""
 
     _attr_mode = NumberMode.SLIDER
@@ -384,19 +381,16 @@ class GrowattActivePowerRateNumber(CoordinatorEntity, NumberEntity):
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the number entity."""
-        super().__init__(coordinator)
+        super().__init__(
+            coordinator,
+            config_entry,
+            "active_power_rate",
+            get_device_type_for_control('active_power_rate'),
+        )
 
-        self._config_entry = config_entry
-        self._attr_name = f"{config_entry.data['name']} Active Power Rate"
-        self._attr_unique_id = f"{config_entry.entry_id}_active_power_rate"
+        self._attr_name = "Active Power Rate"
         self._attr_icon = "mdi:speedometer"
 
-    @property
-    def device_info(self) -> dict[str, Any]:
-        """Return device information."""
-        # Determine device based on control type (should go to Solar device)
-        device_type = get_device_type_for_control('active_power_rate')
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def native_value(self) -> float | None:
@@ -443,7 +437,7 @@ class GrowattActivePowerRateNumber(CoordinatorEntity, NumberEntity):
             await self.coordinator.async_request_refresh()
 
 
-class GrowattWitExportLimitWNumber(CoordinatorEntity, NumberEntity):
+class GrowattWitExportLimitWNumber(GrowattEntity, NumberEntity):
     """WIT VPP: Export limit in watts (holding register 203)."""
 
     _attr_mode = NumberMode.SLIDER
@@ -458,17 +452,15 @@ class GrowattWitExportLimitWNumber(CoordinatorEntity, NumberEntity):
         coordinator: GrowattModbusCoordinator,
         config_entry: ConfigEntry,
     ) -> None:
-        super().__init__(coordinator)
-        self._config_entry = config_entry
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} Export Limit (W)"
-        self._attr_unique_id = f"{config_entry.entry_id}_export_limit_w"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "export_limit_w",
+            get_device_type_for_control("export_limit_w"),
+        )
+        self._attr_name = "Export Limit (W)"
         self._attr_icon = "mdi:transmission-tower-export"
 
-    @property
-    def device_info(self) -> dict[str, Any]:
-        device_type = get_device_type_for_control("export_limit_w")
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def native_value(self) -> float | None:
@@ -502,7 +494,7 @@ class GrowattWitExportLimitWNumber(CoordinatorEntity, NumberEntity):
             _LOGGER.error("[WIT] Failed to write export_limit_w")
 
 
-class GrowattWitActivePowerRateNumber(CoordinatorEntity, NumberEntity):
+class GrowattWitActivePowerRateNumber(GrowattEntity, NumberEntity):
     """WIT VPP: Active power rate percent (holding register 201).
 
     WIT requires work_mode (202) to be written for charging/discharging.
@@ -521,17 +513,15 @@ class GrowattWitActivePowerRateNumber(CoordinatorEntity, NumberEntity):
         coordinator: GrowattModbusCoordinator,
         config_entry: ConfigEntry,
     ) -> None:
-        super().__init__(coordinator)
-        self._config_entry = config_entry
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} Active Power Rate (VPP %)"
-        self._attr_unique_id = f"{config_entry.entry_id}_active_power_rate_vpp"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "active_power_rate_vpp",
+            get_device_type_for_control("active_power_rate"),
+        )
+        self._attr_name = "Active Power Rate (VPP %)"
         self._attr_icon = "mdi:speedometer"
 
-    @property
-    def device_info(self) -> dict[str, Any]:
-        device_type = get_device_type_for_control("active_power_rate")
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def native_value(self) -> float | None:
@@ -590,7 +580,7 @@ class GrowattWitActivePowerRateNumber(CoordinatorEntity, NumberEntity):
 # WIT VPP-specific Number Entities (30xxx registers)
 # =============================================================================
 
-class GrowattWitVppPowerPercentNumber(CoordinatorEntity, NumberEntity):
+class GrowattWitVppPowerPercentNumber(GrowattEntity, NumberEntity):
     """WIT VPP: Power percentage for charge/discharge operations.
 
     This value is applied when Battery Mode is set to Charge or Discharge.
@@ -610,16 +600,14 @@ class GrowattWitVppPowerPercentNumber(CoordinatorEntity, NumberEntity):
         coordinator: GrowattModbusCoordinator,
         config_entry: ConfigEntry,
     ) -> None:
-        super().__init__(coordinator)
-        self._config_entry = config_entry
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} VPP Power Rate"
-        self._attr_unique_id = f"{config_entry.entry_id}_vpp_power_percent"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "vpp_power_percent",
+            get_device_type_for_control("active_power_rate"),
+        )
+        self._attr_name = "VPP Power Rate"
 
-    @property
-    def device_info(self) -> dict[str, Any]:
-        device_type = get_device_type_for_control("active_power_rate")
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def native_value(self) -> float | None:
@@ -632,7 +620,7 @@ class GrowattWitVppPowerPercentNumber(CoordinatorEntity, NumberEntity):
         _LOGGER.info("[WIT-VPP] Set power rate to %d%% (will apply on next mode change)", power_percent)
 
 
-class GrowattWitVppChargeCutoffSocNumber(CoordinatorEntity, NumberEntity):
+class GrowattWitVppChargeCutoffSocNumber(GrowattEntity, NumberEntity):
     """WIT VPP: Charge cutoff SOC (30404) - stop charging when SOC reaches this %."""
 
     _attr_mode = NumberMode.SLIDER
@@ -650,16 +638,14 @@ class GrowattWitVppChargeCutoffSocNumber(CoordinatorEntity, NumberEntity):
         coordinator: GrowattModbusCoordinator,
         config_entry: ConfigEntry,
     ) -> None:
-        super().__init__(coordinator)
-        self._config_entry = config_entry
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} Charge Cutoff SOC"
-        self._attr_unique_id = f"{config_entry.entry_id}_vpp_charge_cutoff_soc"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "vpp_charge_cutoff_soc",
+            get_device_type_for_control("work_mode"),
+        )
+        self._attr_name = "Charge Cutoff SOC"
 
-    @property
-    def device_info(self) -> dict[str, Any]:
-        device_type = get_device_type_for_control("work_mode")
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def native_value(self) -> float | None:
@@ -687,7 +673,7 @@ class GrowattWitVppChargeCutoffSocNumber(CoordinatorEntity, NumberEntity):
             _LOGGER.exception("[WIT-VPP] Failed to set charge cutoff SOC: %s", err)
 
 
-class GrowattWitVppDischargeCutoffSocNumber(CoordinatorEntity, NumberEntity):
+class GrowattWitVppDischargeCutoffSocNumber(GrowattEntity, NumberEntity):
     """WIT VPP: Discharge cutoff SOC (30405) - stop discharging when SOC drops to this %."""
 
     _attr_mode = NumberMode.SLIDER
@@ -705,16 +691,14 @@ class GrowattWitVppDischargeCutoffSocNumber(CoordinatorEntity, NumberEntity):
         coordinator: GrowattModbusCoordinator,
         config_entry: ConfigEntry,
     ) -> None:
-        super().__init__(coordinator)
-        self._config_entry = config_entry
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} Discharge Cutoff SOC"
-        self._attr_unique_id = f"{config_entry.entry_id}_vpp_discharge_cutoff_soc"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "vpp_discharge_cutoff_soc",
+            get_device_type_for_control("work_mode"),
+        )
+        self._attr_name = "Discharge Cutoff SOC"
 
-    @property
-    def device_info(self) -> dict[str, Any]:
-        device_type = get_device_type_for_control("work_mode")
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def native_value(self) -> float | None:
@@ -742,7 +726,7 @@ class GrowattWitVppDischargeCutoffSocNumber(CoordinatorEntity, NumberEntity):
             _LOGGER.exception("[WIT-VPP] Failed to set discharge cutoff SOC: %s", err)
 
 
-class GrowattWitVppTouPeriodsNumber(CoordinatorEntity, NumberEntity):
+class GrowattWitVppTouPeriodsNumber(GrowattEntity, NumberEntity):
     """WIT VPP: Number of active TOU periods (30411).
 
     Setting this to 0 disables TOU schedule and returns to self-consumption.
@@ -764,16 +748,14 @@ class GrowattWitVppTouPeriodsNumber(CoordinatorEntity, NumberEntity):
         coordinator: GrowattModbusCoordinator,
         config_entry: ConfigEntry,
     ) -> None:
-        super().__init__(coordinator)
-        self._config_entry = config_entry
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} TOU Active Periods"
-        self._attr_unique_id = f"{config_entry.entry_id}_vpp_tou_periods"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "vpp_tou_periods",
+            get_device_type_for_control("work_mode"),
+        )
+        self._attr_name = "TOU Active Periods"
 
-    @property
-    def device_info(self) -> dict[str, Any]:
-        device_type = get_device_type_for_control("work_mode")
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def native_value(self) -> float | None:
@@ -801,7 +783,7 @@ class GrowattWitVppTouPeriodsNumber(CoordinatorEntity, NumberEntity):
             _LOGGER.exception("[WIT-VPP] Failed to set TOU periods: %s", err)
 
 
-class GrowattWitVppTouPeriodNumber(CoordinatorEntity, NumberEntity):
+class GrowattWitVppTouPeriodNumber(GrowattEntity, NumberEntity):
     """WIT VPP TOU period power entity.
 
     Handles the power level for a single TOU period (+100 = full charge, -100 = full discharge).
@@ -826,20 +808,18 @@ class GrowattWitVppTouPeriodNumber(CoordinatorEntity, NumberEntity):
         period: int,
         slot: str = 'power',
     ) -> None:
-        super().__init__(coordinator)
-        self._config_entry = config_entry
+        super().__init__(
+            coordinator,
+            config_entry,
+            f"vpp_tou_p{period}_power",
+            get_device_type_for_control("work_mode"),
+        )
         self._period = period
         self._slot = 'power'
         self._register = 30412 + (period - 1) * 3 + 2  # power offset within the period triplet
         self._coordinator_attr = f"wit_vpp_tou_p{period}_power"
 
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} TOU Period {period} Power"
-        self._attr_unique_id = f"{config_entry.entry_id}_vpp_tou_p{period}_power"
-
-    @property
-    def device_info(self) -> dict[str, Any]:
-        return self.coordinator.get_device_info(get_device_type_for_control("work_mode"))
+        self._attr_name = f"TOU Period {period} Power"
 
     @property
     def native_value(self) -> float | None:

@@ -333,7 +333,7 @@ class GrowattGenericSelect(GrowattEntity, SelectEntity):
             await self.coordinator.async_request_refresh()
 
 
-class GrowattWitWorkModeSelect(CoordinatorEntity, SelectEntity):
+class GrowattWitWorkModeSelect(GrowattEntity, SelectEntity):
     """WIT VPP: Work mode / remote command (holding register 202)."""
 
     _attr_entity_category = EntityCategory.CONFIG
@@ -345,16 +345,14 @@ class GrowattWitWorkModeSelect(CoordinatorEntity, SelectEntity):
         coordinator: GrowattModbusCoordinator,
         config_entry: ConfigEntry,
     ) -> None:
-        super().__init__(coordinator)
-        self._config_entry = config_entry
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} Work Mode"
-        self._attr_unique_id = f"{config_entry.entry_id}_work_mode"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "work_mode",
+            get_device_type_for_control("work_mode"),
+        )
+        self._attr_name = "Work Mode"
 
-    @property
-    def device_info(self) -> dict[str, Any]:
-        device_type = get_device_type_for_control("work_mode")
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def current_option(self) -> str | None:
@@ -414,7 +412,7 @@ class GrowattWitWorkModeSelect(CoordinatorEntity, SelectEntity):
             _LOGGER.error("[WIT] Failed to write work_mode")
 
 
-class GrowattWitVppBatteryModeSelect(CoordinatorEntity, SelectEntity):
+class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
     """WIT VPP: Battery mode via VPP protocol registers (30xxx).
 
     This uses the correct VPP protocol registers for WIT inverters:
@@ -452,16 +450,14 @@ class GrowattWitVppBatteryModeSelect(CoordinatorEntity, SelectEntity):
         coordinator: GrowattModbusCoordinator,
         config_entry: ConfigEntry,
     ) -> None:
-        super().__init__(coordinator)
-        self._config_entry = config_entry
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} Battery Mode (VPP)"
-        self._attr_unique_id = f"{config_entry.entry_id}_vpp_battery_mode"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "vpp_battery_mode",
+            get_device_type_for_control("work_mode"),
+        )
+        self._attr_name = "Mode (VPP)"
 
-    @property
-    def device_info(self) -> dict[str, Any]:
-        device_type = get_device_type_for_control("work_mode")
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def current_option(self) -> str | None:
@@ -607,7 +603,7 @@ class GrowattWitVppBatteryModeSelect(CoordinatorEntity, SelectEntity):
             _LOGGER.exception("[WIT-VPP] Failed to set battery mode: %s", err)
 
 
-class GrowattWitVppTouDefaultModeSelect(CoordinatorEntity, SelectEntity):
+class GrowattWitVppTouDefaultModeSelect(GrowattEntity, SelectEntity):
     """WIT VPP: TOU default mode (behavior outside scheduled periods)."""
 
     _attr_entity_category = EntityCategory.CONFIG
@@ -621,16 +617,14 @@ class GrowattWitVppTouDefaultModeSelect(CoordinatorEntity, SelectEntity):
         coordinator: GrowattModbusCoordinator,
         config_entry: ConfigEntry,
     ) -> None:
-        super().__init__(coordinator)
-        self._config_entry = config_entry
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} TOU Default Mode"
-        self._attr_unique_id = f"{config_entry.entry_id}_vpp_tou_default_mode"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "vpp_tou_default_mode",
+            get_device_type_for_control("work_mode"),
+        )
+        self._attr_name = "TOU Default Mode"
 
-    @property
-    def device_info(self) -> dict[str, Any]:
-        device_type = get_device_type_for_control("work_mode")
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def current_option(self) -> str | None:
@@ -666,7 +660,7 @@ class GrowattWitVppTouDefaultModeSelect(CoordinatorEntity, SelectEntity):
             _LOGGER.exception("[WIT-VPP] Failed to set TOU default mode: %s", err)
 
 
-class GrowattModTouPriority(CoordinatorEntity, SelectEntity):
+class GrowattModTouPriority(GrowattEntity, SelectEntity):
     """Priority select for one MOD TL3-XH TOU period.
 
     Extracts bits 13-14 from the period's start register.
@@ -682,22 +676,20 @@ class GrowattModTouPriority(CoordinatorEntity, SelectEntity):
 
     def __init__(self, coordinator, config_entry, period_def: dict) -> None:
         """Initialize priority select."""
-        super().__init__(coordinator)
-        self._config_entry = config_entry
+        super().__init__(
+            coordinator,
+            config_entry,
+            f"mod_tou_{period_def['period']}_priority",
+            DEVICE_TYPE_BATTERY,
+        )
         self._period = period_def["period"]
         self._start_reg = period_def["start_reg"]
         self._end_reg = period_def["end_reg"]
         self._start_field = period_def["start_field"]
         self._end_field = period_def["end_field"]
 
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} TOU Period {self._period} Priority"
-        self._attr_unique_id = f"{config_entry.entry_id}_mod_tou_{self._period}_priority"
+        self._attr_name = f"TOU Period {self._period} Priority"
 
-    @property
-    def device_info(self):
-        """Return device information."""
-        return self.coordinator.get_device_info(DEVICE_TYPE_BATTERY)
 
     @property
     def current_option(self) -> str | None:
@@ -734,7 +726,7 @@ class GrowattModTouPriority(CoordinatorEntity, SelectEntity):
             await self.coordinator.async_request_refresh()
 
 
-class GrowattModTouEnable(CoordinatorEntity, SelectEntity):
+class GrowattModTouEnable(GrowattEntity, SelectEntity):
     """Enable/disable select for one MOD TL3-XH TOU period.
 
     Extracts bit 15 from the period's start register.
@@ -747,22 +739,20 @@ class GrowattModTouEnable(CoordinatorEntity, SelectEntity):
 
     def __init__(self, coordinator, config_entry, period_def: dict) -> None:
         """Initialize enable select."""
-        super().__init__(coordinator)
-        self._config_entry = config_entry
+        super().__init__(
+            coordinator,
+            config_entry,
+            f"mod_tou_{period_def['period']}_enable",
+            DEVICE_TYPE_BATTERY,
+        )
         self._period = period_def["period"]
         self._start_reg = period_def["start_reg"]
         self._end_reg = period_def["end_reg"]
         self._start_field = period_def["start_field"]
         self._end_field = period_def["end_field"]
 
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} TOU Period {self._period} Enable"
-        self._attr_unique_id = f"{config_entry.entry_id}_mod_tou_{self._period}_enable"
+        self._attr_name = f"TOU Period {self._period} Enable"
 
-    @property
-    def device_info(self):
-        """Return device information."""
-        return self.coordinator.get_device_info(DEVICE_TYPE_BATTERY)
 
     @property
     def current_option(self) -> str | None:
@@ -797,7 +787,7 @@ class GrowattModTouEnable(CoordinatorEntity, SelectEntity):
             await self.coordinator.async_request_refresh()
 
 
-class GrowattModAllowGridChargeSelect(CoordinatorEntity, SelectEntity):
+class GrowattModAllowGridChargeSelect(GrowattEntity, SelectEntity):
     """Select entity for the MOD GEN4 'Allow Grid Charge' gate (register 3049).
 
     This register must be set to Enabled (1) before TOU time slot registers
@@ -813,16 +803,14 @@ class GrowattModAllowGridChargeSelect(CoordinatorEntity, SelectEntity):
 
     def __init__(self, coordinator, config_entry) -> None:
         """Initialize the Allow Grid Charge select."""
-        super().__init__(coordinator)
-        self._config_entry = config_entry
-        entry_name = config_entry.data.get("name", config_entry.title)
-        self._attr_name = f"{entry_name} Allow Grid Charge"
-        self._attr_unique_id = f"{config_entry.entry_id}_allow_grid_charge"
+        super().__init__(
+            coordinator,
+            config_entry,
+            "allow_grid_charge",
+            DEVICE_TYPE_BATTERY,
+        )
+        self._attr_name = "Allow Grid Charge"
 
-    @property
-    def device_info(self):
-        """Return device information."""
-        return self.coordinator.get_device_info(DEVICE_TYPE_BATTERY)
 
     @property
     def current_option(self) -> str | None:
