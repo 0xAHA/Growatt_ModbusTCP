@@ -40,6 +40,9 @@ theme:
 plugins:
   - search
 
+extra_css:
+  - stylesheets/extra.css
+
 nav:
   - Home: index.md
   - Hardware:
@@ -53,6 +56,7 @@ nav:
     - Raising an Issue: troubleshooting/raising-an-issue.md
     - Diagnostic Service: troubleshooting/diagnostic-service.md
     - DTC Debugging: troubleshooting/dtc-debugging.md
+    - RS485 Gateways: troubleshooting/rs485-gateways.md
   - Developer:
     - Adding Sensors: developer/adding-sensors.md
     - New Profile Guide: developer/new-profile.md
@@ -74,3 +78,8 @@ markdown_extensions:
   - pymdownx.details
   - attr_list
   - md_in_html
+  # Renders :material-xxx: as inline SVG rather than an emoji glyph, so status icons
+  # look the same on every platform instead of inheriting the OS emoji font.
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg

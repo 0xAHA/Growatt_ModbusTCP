@@ -1,0 +1,66 @@
+/* DTC reference tables.
+ *
+ * The model column holds long semicolon-separated lists while the status column holds two
+ * short words, so the browser's automatic layout starves the status column and wraps
+ * "Confirmed" onto its own line under the icon. Fixed by giving the narrow columns an
+ * explicit share and letting the model column absorb the rest.
+ *
+ * Applied via a wrapper class rather than to all tables, because the register tables on
+ * the same pages have completely different proportions.
+ */
+
+.dtc-table table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* DTC code */
+.dtc-table th:nth-child(1),
+.dtc-table td:nth-child(1) {
+  width: 4.5rem;
+  white-space: nowrap;
+}
+
+/* Profile to select */
+.dtc-table th:nth-child(3),
+.dtc-table td:nth-child(3) {
+  width: 11rem;
+}
+
+/* Mapping status — icon and word must stay on one line */
+.dtc-table th:nth-child(4),
+.dtc-table td:nth-child(4) {
+  width: 9.5rem;
+  white-space: nowrap;
+}
+
+/* Model column takes whatever is left and wraps freely */
+.dtc-table td:nth-child(2) {
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Status icons.
+ *
+ * Rendered as inline SVG by pymdownx.emoji + material's to_svg generator, so they inherit
+ * currentColor and can be themed here rather than depending on the reader's emoji font.
+ */
+.dtc-ok svg {
+  fill: var(--md-typeset-color);
+  color: #2e7d32;
+  fill: currentColor;
+}
+
+.dtc-unknown svg {
+  color: #ef6c00;
+  fill: currentColor;
+}
+
+/* Dark scheme needs lighter variants to stay legible on the slate background. */
+[data-md-color-scheme="slate"] .dtc-ok svg {
+  color: #66bb6a;
+}
+
+[data-md-color-scheme="slate"] .dtc-unknown svg {
+  color: #ffa726;
+}

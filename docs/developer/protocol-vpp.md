@@ -37,40 +37,54 @@ device and identifies the model reliably; whether the profile it selects is *cor
 that model has, for most entries, never been verified against hardware. See
 [DTC Debugging](../troubleshooting/dtc-debugging.md) for what that means in practice.
 
-| DTC Code | Model | Profile mapping |
-| --- | --- | --- |
-| 3501 | SPH 3000-6000TL BL | ⚠️ Unconfirmed |
-| 3502 | SPH 3000-6000TL BL-UP | ✅ Confirmed |
-| 3503 | SPH 3000-6000TL HU | ⚠️ Unconfirmed |
-| 3504 | SPH 3000-6000TL HUB | ✅ Confirmed |
-| 3601 | SPH-TL3 4-10kW | ✅ Confirmed |
-| 3701 | SPA 1000-3000TL BL | ⚠️ Unconfirmed |
-| 3715 | SPA 3000-6000TL AU | ⚠️ Unconfirmed |
-| 3716 | SPA 3000-6000TL AUB | ⚠️ Unconfirmed |
-| 3725 | SPA-TL3 4-10kW | ⚠️ Unconfirmed |
-| 3735 | SPA 3000TL BL-UP | ⚠️ Unconfirmed |
-| 5001 | MID 17-25KTL3-X; MID 20-30KTL3-X2; MID 25-30KTL3-X2 Pro/X2 Pro.E; MID 33-50KTL3-X2/X2 Pro/X2 Pro.E; MID 30-40KTL3-X; MID 33-36KTL3-X(Pro.E); MID 3-33KTL3-X3 | ✅ Confirmed |
-| 5002 | MOD 3-15KTL3-X; MOD 3-15KTL3-X2(Pro); MOD 12-20KTL3-X2; MOD 12-20KTL3-X2(E); MOD 3-33KTL3-X3 | ⚠️ Unconfirmed |
-| 5003 | MAC 30-70KTL3-X; MAC 15-36KTL3-XL; MAC 50-70KTL3-X2; MAC 30-36KTL3-XL2 | ⚠️ Unconfirmed |
-| 5000 | MAX 50-100KTL3 LV/MV | ⚠️ Unconfirmed |
-| 5500 | MAX 175-253KTL3-X HV | ⚠️ Unconfirmed |
-| 5501 | MAX 80-150KTL3-X LV/MV; MAX 100-150KYL3-X2 LV/MV | ⚠️ Unconfirmed |
-| 5502 | MAX 320-350KTL3-X | ⚠️ Unconfirmed |
-| 5100 | MIN 2500-6000TL-XH/XH2/XHE/XA | ✅ Confirmed |
-| 5200 | MIC 600-3300TL-X/X2/X2(Pro); MIN 2500-6000TL-X/X2/X2(Pro)/X2(Pro.E) | ⚠️ Unconfirmed |
-| 5201 | MIN 7-10KTL-X/X2/X2(E) | ✅ Confirmed |
-| 5400 | MOD 3-10KTL3-XH/BP; MID 11-30KTL3-XH; MID 8-15KTL3-XHL/JP | ✅ Confirmed |
-| 5401 | MOD 3-15KTL3-HU; MID 33-50KTL3-HU | ✅ Confirmed |
-| 5600 | WIS 100K-AM; WIT 50-100K-H/HE/HU/A/AE/AU (incl. -US); WIT 28-55K-H/HE/HU/A/AE/AU-US L2 | ⚠️ Unconfirmed |
-| 5601 | WIT 29.9-50K-XHU | ✅ Confirmed |
-| 5800 | WIS 210K | ⚠️ Unconfirmed |
-| 5801 | WIS 215K-AM | ⚠️ Unconfirmed |
+<div class="dtc-table" markdown>
+
+| DTC | Model | Profile to select | Mapping |
+| --- | --- | --- | --- |
+| 3501 | SPH 3000-6000TL BL | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 3502 | SPH 3000-6000TL BL-UP | SPH (3-6kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
+| 3503 | SPH 3000-6000TL HU | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 3504 | SPH 3000-6000TL HUB | SPH (3-6kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
+| 3601 | SPH-TL3 4-10kW | SPH-TL3 (3-10kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
+| 3701 | SPA 1000-3000TL BL | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 3715 | SPA 3000-6000TL AU | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 3716 | SPA 3000-6000TL AUB | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 3725 | SPA-TL3 4-10kW | SPH-TL3 (3-10kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 3735 | SPA 3000TL BL-UP | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 5001 | MID 17-25KTL3-X; MID 20-30KTL3-X2; MID 25-30KTL3-X2 Pro/X2 Pro.E; MID 33-50KTL3-X2/X2 Pro/X2 Pro.E; MID 30-40KTL3-X; MID 33-36KTL3-X(Pro.E); MID 3-33KTL3-X3 | MID (15-25kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
+| 5002 | MOD 3-15KTL3-X; MOD 3-15KTL3-X2(Pro); MOD 12-20KTL3-X2; MOD 12-20KTL3-X2(E); MOD 3-33KTL3-X3 | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 5003 | MAC 30-70KTL3-X; MAC 15-36KTL3-XL; MAC 50-70KTL3-X2; MAC 30-36KTL3-XL2 | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 5000 | MAX 50-100KTL3 LV/MV | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 5500 | MAX 175-253KTL3-X HV | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 5501 | MAX 80-150KTL3-X LV/MV; MAX 100-150KYL3-X2 LV/MV | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 5502 | MAX 320-350KTL3-X | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 5100 | MIN 2500-6000TL-XH/XH2/XHE/XA | TL-XH (3-10kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
+| 5200 | MIC 600-3300TL-X/X2/X2(Pro); MIN 2500-6000TL-X/X2/X2(Pro)/X2(Pro.E) | MIN (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 5201 | MIN 7-10KTL-X/X2/X2(E) | MIN (7-10kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
+| 5400 | MOD 3-10KTL3-XH/BP; MID 11-30KTL3-XH; MID 8-15KTL3-XHL/JP | MOD Hybrid (6-15kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
+| 5401 | MOD 3-15KTL3-HU; MID 33-50KTL3-HU | MOD Hybrid (6-15kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
+| 5600 | WIS 100K-AM; WIT 50-100K-H/HE/HU/A/AE/AU (incl. -US); WIT 28-55K-H/HE/HU/A/AE/AU-US L2 | WIT (29.9-50kW XHU) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 5601 | WIT 29.9-50K-XHU | WIT (29.9-50kW XHU) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
+| 5800 | WIS 210K | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 5801 | WIS 215K-AM | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+
+</div>
+
+!!! note "SPA owners"
+    Every SPA code above resolves to an **SPH** profile, which is why the profile column
+    reads that way. SPH profiles include PV string sensors, and SPA hardware has no solar
+    DC inputs — so those entities will exist and read zero permanently. A dedicated SPA
+    profile is in progress ([#360](https://github.com/0xAHA/Growatt_ModbusTCP/issues/360)).
 
 ### Not in the spec table
 
-| DTC Code | Model | Profile mapping |
-| --- | --- | --- |
-| 5603 | WIT 4-15kW Hybrid | ✅ Confirmed |
+<div class="dtc-table" markdown>
+
+| DTC | Model | Profile to select | Mapping |
+| --- | --- | --- | --- |
+| 5603 | WIT 4-15kW Hybrid | WIT (4-15kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
+
+</div>
 
 > **WIT residential models (4-15KTL3):** The VPP V2.03 spec (dated 2025.9.1) does **not** include the WIT 4-15KTL3 residential series in its DTC table — only commercial WIT (50K-100K) models appear. DTC 5603 was confirmed by a live register read (register 30000 = 5603 on a WIT 15KTL3, Issue #335) with protocol version register 30099 = 203, so the residential range follows V2.03 register structure despite being omitted from the spec's device table.
 
