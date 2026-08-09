@@ -49,6 +49,21 @@ The setup wizard runs auto-detection automatically for VPP-capable inverters. Fo
 
 ---
 
+## Documentation
+
+| Page | What it covers |
+| --- | --- |
+| [Supported Models](https://0xaha.github.io/Growatt_ModbusTCP/hardware/models/) | Which profile matches your inverter |
+| [Auto-Detection](https://0xaha.github.io/Growatt_ModbusTCP/hardware/autodetection/) | How the profile is chosen, and how to override it |
+| [Entity Reference](https://0xaha.github.io/Growatt_ModbusTCP/controls/entity-reference/) | Every sensor and control, and what it means |
+| [Battery & Scheduling](https://0xaha.github.io/Growatt_ModbusTCP/controls/battery-scheduling/) | Charge/discharge limits and time-of-use periods |
+| [RS485 Gateways](https://0xaha.github.io/Growatt_ModbusTCP/troubleshooting/rs485-gateways/) | Which adapters work, and diagnosing one that doesn't |
+| [DTC Debugging](https://0xaha.github.io/Growatt_ModbusTCP/troubleshooting/dtc-debugging/) | Device type codes and profile mappings |
+| [Raising an Issue](https://0xaha.github.io/Growatt_ModbusTCP/troubleshooting/raising-an-issue/) | What to include so it can actually be diagnosed |
+| [Protocol Reference](https://0xaha.github.io/Growatt_ModbusTCP/developer/protocol-vpp/) | Register maps for V1.39, VPP and off-grid |
+
+---
+
 ## Support
 
 - **Issues & bug reports:** [GitHub Issues](https://github.com/0xAHA/Growatt_ModbusTCP/issues)
@@ -62,14 +77,27 @@ MIT License — see [LICENSE](LICENSE)
 
 ---
 
-**Made with ☀️ and ☕ by [@0xAHA](https://github.com/0xAHA)**
+## Thanks
+
+This integration is built almost entirely on evidence from people's own hardware. Register
+maps get confirmed because someone ran a scan at two different times of day; wrong mappings
+get found because someone noticed a battery reading 0.0 °C and said so; whole model
+families get supported because someone asked Growatt for a protocol document and shared it.
+
+Several of the most useful reports were people **correcting their own earlier findings**
+after measuring properly — which is what stopped working registers being "fixed" into
+broken ones.
+
+Contributions are credited where they're used: in the
+[release notes](https://github.com/0xAHA/Growatt_ModbusTCP/releases), in the issue each one
+came from, and in comments beside the registers they established. That keeps the credit
+attached to the thing it explains, rather than in a list that goes stale and quietly
+excludes whoever was added last.
+
+If you have an inverter model or gateway that isn't well covered,
+[a register scan](https://0xaha.github.io/Growatt_ModbusTCP/troubleshooting/diagnostic-service/)
+is the single most useful thing you can contribute.
 
 ---
 
-## Hardware Contributors
-
-The following community members contributed live hardware testing, field diagnostics, and official protocol documentation that directly shaped this integration:
-
-| Contributor | Hardware | Contribution |
-| --- | --- | --- |
-| [@Wojak129](https://github.com/Wojak129) | WIT 15KTL3 + DIY 32 kWh battery (EVE 314Ah / JK BMS) | DTC 5603 field-confirmation, VPP register scanning, safety limit discovery (reg 30201 fault trigger), official VPP protocol documentation obtained from Growatt service |
+**Made with ☀️ and ☕ by [@0xAHA](https://github.com/0xAHA)**
