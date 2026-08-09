@@ -4,6 +4,49 @@
 
 ---
 
+## v1.5.2
+
+Issues: #360
+
+- **Fix: scanning a disabled integration fell back to default connection settings.**
+  The documented procedure asks you to disable the integration before scanning, so the
+  poller stops competing with the scanner for the adapter. Disabling unloads the entry —
+  and the scan service looked for its connection details on the loaded entry, so selecting
+  your inverter no longer worked and the only way to scan was to retype the host and port.
+
+  That manual path started from defaults: slave ID 1, 250 ms pacing, 125-register blocks.
+  On a gateway tuned to smaller, slower reads, those requests fail — so every range reported
+  "no response" from hardware that had been polling perfectly a minute earlier. Following
+  the instructions was what triggered it, and v1.5.1's pacing fix could not help, because
+  the value it reads lives on the entry that disabling had just unloaded.
+
+  The scan now reads the connection, slave ID, **Modbus delay** and **block size** from the
+  stored entry whether or not it is loaded. Select your inverter under **Config entry**
+  rather than typing the host by hand — that is what carries your tuned settings into the
+  scan. An explicitly chosen block size still overrides the inherited one.
+
+  Reported by @Xybertecnic, whose scan came back empty on a disabled entry and full of data
+  the moment it was re-enabled.
+
+- **New profile: SPA-TL3 (AC Storage, 3-Phase) 4-10kW.**
+  Three-phase SPA inverters use the SPH-TL3 register layout, not the single-phase SPA one,
+  which reads a range this hardware does not serve — picking the only option with "SPA" in
+  its name left every entity unavailable.
+
+  SPA is AC-coupled and has no solar inputs, so running it on the SPH-TL3 profile instead
+  produced a full set of PV entities permanently reading zero. The new profile shares the
+  verified SPH-TL3 register map with those sensors removed, and **DTC 3725 now selects it
+  automatically**.
+
+  If your SPA-TL3 was auto-detected onto SPH-TL3, its PV sensors will disappear on upgrade.
+  They only ever reported zero.
+
+  Both dropdown entries now state their phase count — **SPA (AC Storage, 1-Phase) 3-6kW**
+  and **SPA-TL3 (AC Storage, 3-Phase) 4-10kW** — so the choice no longer depends on knowing
+  which register range your model serves.
+
+---
+
 ## v1.5.1
 
 Issues: #360

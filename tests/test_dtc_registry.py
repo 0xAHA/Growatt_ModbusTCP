@@ -223,15 +223,55 @@ def test_vpp_page_model_names_match_the_registry():
     )
 
 
-def test_spa_mappings_are_not_marked_confirmed():
+SPA_DTCS = (3701, 3715, 3716, 3725, 3735)
+
+
+@pytest.mark.parametrize("dtc", SPA_DTCS)
+def test_spa_mapped_to_an_sph_profile_is_never_confirmed(dtc):
     """Specific to #360, and the reason this file exists.
 
-    Every SPA code currently points at an SPH profile, which carries PV sensor groups
-    that SPA hardware cannot populate. Whatever else changes, none of these may claim
-    to be a confirmed mapping while that is still true.
+    SPA hardware is AC-coupled and has no MPPT inputs, so an SPH profile's PV sensor
+    groups can only ever read zero on it. A mapping like that may exist — for several
+    codes it is still the least-bad option, since a wrong register range takes every
+    entity offline while a wrong sensor set is merely cosmetic — but it may never claim
+    to be confirmed.
+
+    Stated as a rule rather than a fixed list of codes, so it covers SPA entries added
+    later. The original version asserted all five stay ASSUMED; that premise expired the
+    moment 3725 got a profile built on a register map verified against real hardware.
     """
-    for dtc in (3701, 3715, 3716, 3725, 3735):
-        assert DTC_REGISTRY[dtc].provenance == ASSUMED, (
-            f"DTC {dtc} is an SPA model mapped to {DTC_REGISTRY[dtc].profile!r}; "
-            f"it must not be marked CONFIRMED while SPA lacks a dedicated profile"
+    entry = DTC_REGISTRY[dtc]
+    if entry.profile.startswith("sph"):
+        assert entry.provenance == ASSUMED, (
+            f"DTC {dtc} is an SPA model mapped to the SPH profile {entry.profile!r}, "
+            f"which carries PV sensor groups its hardware cannot populate; "
+            f"it must not be marked CONFIRMED"
         )
+
+
+def test_spa_tl3_shares_the_verified_sph_tl3_register_map():
+    """The justification for calling 3725 confirmed is that its profile reads exactly
+    the registers the #360 device was observed to answer. If the two maps are ever
+    allowed to diverge, that justification is gone and nobody would notice.
+    """
+    spa_tl3 = INVERTER_PROFILES["spa_tl3_4000_10000_v201"]
+    sph_tl3 = INVERTER_PROFILES["sph_tl3_3000_10000_v201"]
+    assert spa_tl3["register_map"] == sph_tl3["register_map"], (
+        "spa_tl3_4000_10000_v201 no longer shares the SPH-TL3 register map, so DTC 3725 "
+        "can no longer be justified as CONFIRMED on the strength of #360"
+    )
+
+
+@pytest.mark.parametrize("key", ["spa_3000_6000_tl_bl", "spa_tl3_4000_10000_v201"])
+def test_spa_profiles_expose_no_pv_generation_sensors(key):
+    """The entire point of a dedicated SPA profile. A device with no MPPT inputs must
+    not be given PV entities — that is the #360 defect, and it is easy to reintroduce by
+    adding a sensor group that happens to contain one.
+
+    Checked against the PV groups rather than a "pv" name prefix: `pv_iso` (isolation
+    resistance) is a diagnostic that arrives via STATUS_SENSORS and is not an MPPT
+    reading, so a prefix match fails a profile that is in fact correct.
+    """
+    mppt = _dp.BASIC_PV_SENSORS | _dp.PV_DC_ENERGY_SENSORS | _dp.PV_MPPT_TOTAL_SENSORS
+    leaked = sorted(INVERTER_PROFILES[key]["sensors"] & mppt)
+    assert not leaked, f"{key} is AC-coupled but exposes PV generation sensors: {leaked}"

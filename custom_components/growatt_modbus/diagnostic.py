@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 
-from .const import DOMAIN, CONF_INVERTER_SERIES
+from .const import DOMAIN, CONF_INVERTER_SERIES, resolve_block_size
 from .device_profiles import get_display_name_for_profile, get_profile
 from .auto_detection import ASSUMED, CONFIRMED, DTC_REGISTRY, convert_to_legacy_profile
 
@@ -398,6 +398,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         offgrid_mode = call.data.get("offgrid_mode", False)
         block_size = call.data.get("block_size", 125)
 
+        # Overridden from the entry's own modbus_delay when one is selected below.
+        scan_delay_ms = 250
+
         # Build enabled scan groups from boolean flags.
         # If none are explicitly checked, scan everything (full scan is the default).
         # Check one or more to restrict the scan to those register ranges only.
@@ -422,22 +425,52 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         config_entry_id = call.data.get("config_entry")
 
         if config_entry_id:
-            coordinator = _coordinator_for_entry(hass, config_entry_id)
-            if not coordinator or not hasattr(coordinator, 'entry'):
+            # Resolve the entry itself, not the coordinator (#360).
+            #
+            # This path used to require `entry.runtime_data`, which exists only while the
+            # entry is loaded. The documented scan procedure tells users to DISABLE the
+            # integration first, to stop the poller contending with the scanner for the
+            # gateway — so following the instructions guaranteed this lookup failed, the
+            # service aborted, and the only way to get a scan at all was to re-enter the
+            # connection by hand. Doing that silently discarded the entry's tuned
+            # slave_id, modbus_delay and block size, and reverted to defaults that a
+            # marginal gateway cannot serve. The user then sees "no response" on every
+            # range from hardware that polls perfectly.
+            #
+            # `entry.data` and `entry.options` are persisted, so they are readable while
+            # the entry is disabled. The coordinator is now used only to enrich the CSV
+            # with profile and entity values, and its absence degrades that rather than
+            # failing the scan.
+            entry = hass.config_entries.async_get_entry(config_entry_id)
+            if entry is None:
                 _LOGGER.error("config_entry '%s' not found in Growatt Modbus integration", config_entry_id)
                 return
 
-            entry_data = coordinator.entry.data
+            entry_data = entry.data
             connection_type = entry_data.get("connection_type", "tcp")
             host = entry_data.get("host")
             port = entry_data.get("port", 502)
             device = entry_data.get("device")
             baudrate = entry_data.get("baudrate", 9600)
             slave_id = entry_data.get("slave_id", 1)
-            pre_resolved_coordinator = coordinator
+
+            # Pace the scan like the poller this gateway is known to tolerate.
+            try:
+                scan_delay_ms = int(entry.options.get("modbus_delay", 250))
+            except (AttributeError, TypeError, ValueError):
+                scan_delay_ms = 250
+
+            # Same for block size, unless the caller asked for a specific one. A gateway
+            # that needs 25-register reads will fail the 125-register service default.
+            if "block_size" not in call.data:
+                block_size = resolve_block_size(entry.options.get("max_block_size")) or block_size
+
+            pre_resolved_coordinator = _coordinator_for_entry(hass, config_entry_id)
             _LOGGER.info(
-                "Using config entry '%s' (%s) for register scan",
-                coordinator.entry.title, config_entry_id
+                "Using config entry '%s' (%s) for register scan: slave %s, %d ms pacing, "
+                "block size %s, coordinator %s",
+                entry.title, config_entry_id, slave_id, scan_delay_ms, block_size,
+                "loaded" if pre_resolved_coordinator else "not loaded (entry disabled)",
             )
         else:
             connection_type = call.data.get("connection_type", "tcp")
@@ -468,7 +501,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         # Run export in executor — pass pre-resolved coordinator if available
         result = await hass.async_add_executor_job(
-            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode, enabled_groups, pre_resolved_coordinator, block_size
+            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode, enabled_groups, pre_resolved_coordinator, block_size, scan_delay_ms
         )
         
         if result["success"]:
@@ -1807,7 +1840,7 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     return detection
 
 
-def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False, enabled_groups: set = None, coordinator=None, block_size: int = 125) -> dict:
+def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False, enabled_groups: set = None, coordinator=None, block_size: int = 125, scan_delay_ms: int = 250) -> dict:
     """
     Export all registers to CSV file with auto-detection (blocking).
 
@@ -1841,13 +1874,12 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
     #
     # Taken from the entry's own modbus_delay when a device was selected, because that
     # value is already tuned to what this gateway tolerates.
-    _scan_delay_ms = 250
-    if coordinator is not None:
-        try:
-            _scan_delay_ms = int(coordinator.config_entry.options.get("modbus_delay", 250))
-        except (AttributeError, TypeError, ValueError):
-            pass
-    _scan_delay_s = max(0.0, _scan_delay_ms / 1000.0)
+    #
+    # Resolved by the caller from `entry.options` rather than here from the coordinator:
+    # the coordinator does not exist while the entry is disabled, which is precisely the
+    # state the documented scan procedure asks users to put it in (#360).
+    _scan_delay_ms = max(0, int(scan_delay_ms))
+    _scan_delay_s = _scan_delay_ms / 1000.0
     _LOGGER.info("Register scan pacing: %d ms between reads", _scan_delay_ms)
 
     # Take exclusive control of the gateway for the duration of the scan (Issue #360).

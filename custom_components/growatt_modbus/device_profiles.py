@@ -657,6 +657,45 @@ INVERTER_PROFILES = {
         ),
     },
 
+    # SPA-TL3 shares the SPH-TL3 *register map* but not its sensor set.
+    #
+    # #360: an SPA-TL3 owner found the single-phase SPA profile left every entity
+    # unavailable, because that profile reads only 1000-1124 and this hardware does not
+    # serve that range. Switching to sph_tl3_3000_10000_v201 made the data flow, which
+    # establishes the register layout on real hardware.
+    #
+    # It does not make the device an SPH. SPA is AC-coupled and has no MPPT inputs at
+    # all, so the PV sensor groups that sph_tl3_3000_10000_v201 carries can only ever
+    # read zero. Reusing the map while dropping those groups is the whole point of this
+    # entry — the alternative considered was renaming the SPH-TL3 option to mention SPA,
+    # which would have made phantom PV entities the documented behaviour.
+    #
+    # ENERGY_SENSORS (energy_today/energy_total) is excluded for the same reason it is
+    # excluded from the single-phase SPA profile above: on the SPH map those count PV
+    # generation. Excluding a sensor that would have read zero costs nothing; including
+    # one is the defect being fixed here.
+    "spa_tl3_4000_10000_v201": {
+        "name": "SPA-TL3 (AC Storage) 4-10kW",
+        "description": "Three-phase AC-coupled battery storage, no solar DC inputs (VPP V2.01)",
+        "register_map": "SPH_TL3_3000_10000_V201",  # shared — see note above
+        "phases": 3,
+        "has_pv3": False,
+        "has_battery": True,
+        "max_power_kw": 10.0,
+        "protocol_version": "v2.01",
+        "sensors": (
+            THREE_PHASE_SENSORS |
+            GRID_SENSORS |
+            POWER_FLOW_SENSORS |
+            CONSUMPTION_SENSORS |
+            ENERGY_BREAKDOWN_SENSORS |
+            BATTERY_SENSORS |
+            BMS_SENSORS |
+            TEMPERATURE_SENSORS |
+            STATUS_SENSORS
+        ),
+    },
+
     # ========================================================================
     # SPF SERIES - Off-Grid Storage (Battery with AC Input/Output)
     # ========================================================================
@@ -976,10 +1015,23 @@ PROFILE_DISPLAY_NAMES = {
     # Was missing from this dict until v1.1.6 — the profile existed in INVERTER_PROFILES
     # but had no display name, so it never appeared in the config-flow dropdown and could
     # not be selected by anyone (Issue #360).
-    "SPA (AC Storage) 3-6kW": {
+    # Both entries say the phase count, because the only distinguishing fact an SPA owner
+    # can check without a scan is how many phases their unit has. #360 spent weeks on an
+    # SPA-TL3 owner picking the one option with "SPA" in it, which was the single-phase
+    # profile, which reads a register range their hardware does not serve.
+    #
+    # These are display names, not profile keys: the options flow stores the resolved key
+    # and derives the dropdown default from it via get_display_name_for_profile(), so
+    # renaming here cannot strand an existing selection.
+    "SPA (AC Storage, 1-Phase) 3-6kW": {
         "base": "spa_3000_6000_tl_bl",
         "v201": "spa_3000_6000_tl_bl",  # Only one variant
         "description": "AC-coupled battery storage, no solar DC inputs",
+    },
+    "SPA-TL3 (AC Storage, 3-Phase) 4-10kW": {
+        "base": "spa_tl3_4000_10000_v201",
+        "v201": "spa_tl3_4000_10000_v201",  # Only one variant
+        "description": "Three-phase AC-coupled battery storage, no solar DC inputs",
     },
 
     # TL-XH (non-MIN variants)

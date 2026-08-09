@@ -87,7 +87,7 @@ These statuses live in `DTC_REGISTRY` in `auto_detection.py`, which is the singl
 | 3701 | SPA 1000-3000TL BL | sph_3000_6000_v201 | ⚠️ Unconfirmed — SPH profile on SPA hardware |
 | 3715 | SPA 3000-6000TL AU | sph_3000_6000_v201 | ⚠️ Unconfirmed — SPH profile on SPA hardware |
 | 3716 | SPA 3000-6000TL AUB | sph_3000_6000_v201 | ⚠️ Unconfirmed — SPH profile on SPA hardware |
-| 3725 | SPA 4-10KTL3 BH-UP | sph_tl3_3000_10000_v201 | ⚠️ Unconfirmed — SPH profile on SPA hardware |
+| 3725 | SPA 4-10KTL3 BH-UP | spa_tl3_4000_10000_v201 | ✅ Confirmed — register layout verified on hardware |
 | 3735 | SPA 3000TL BL-UP | sph_3000_6000_v201 | ⚠️ Unconfirmed — SPH profile on SPA hardware |
 | 21303 | SPH/SPM 8000-10000TL-HU | sph_8000_10000_hu | ✅ Confirmed (scan #303) |
 

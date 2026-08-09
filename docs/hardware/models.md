@@ -51,6 +51,7 @@ When you add the integration, it attempts to identify your inverter automaticall
 | **MID 15000-25000TL3-X** | 15–25 kW | 2 | No | VPP + Legacy | Model name | ⚠️ | Grid-tied |
 | **MOD 6000-15000TL3-X** | 6–15 kW | 3 | No | VPP + Legacy | DTC 5400 | ⚠️ | Grid-tied; grid flow sensors require Growatt smart meter (GOSS-W / SPM-S) |
 | **MOD 6000-15000TL3-XH** | 6–15 kW | 3 | Yes | VPP + Legacy | DTC 5400 | ✅ | Battery monitoring only (control pending) |
+| **SPA-TL3 4000-10000** | 4–10 kW | None | Yes | VPP + Legacy | DTC 3725 | ✅ | AC-coupled storage only — no PV DC inputs. Shares the SPH-TL3 register map |
 | **SPH-TL3 3000-10000** | 3–10 kW | 2 | Yes | VPP + Legacy | DTC | ✅ | Tested: SPH 8000TL3 BH-UP |
 | **WIT 4000-15000TL3** | 4–15 kW | 2 | Yes | VPP v2.03 | DTC 5603 | ✅ | Advanced VPP control — DTC 5603 hardware-confirmed (Issue #335) |
 
@@ -208,7 +209,7 @@ If auto-detection fails (or you want to override), choose based on:
 | Select this | PV Strings | Power | When |
 |-------------|-----------|-------|------|
 | MIN TL-XH 3000-10000 | 2–3 | 3–10 kW | Battery hybrid (3–6kW: 2 strings, 7–10kW: 3 strings) |
-| SPA 3000-6000TL BL | None | 3–6 kW | AC-coupled battery storage only (no PV inputs) |
+| SPA (AC Storage, 1-Phase) 3-6kW | None | 3–6 kW | AC-coupled battery storage only (no PV inputs). **Single-phase only** — three-phase SPA-TL3 units must use the three-phase option below, which reads a different register range |
 | SPE 8000-12000 ES | 2 | 8–12 kW | Battery hybrid, peak shaving |
 | SPF 3000-6000 ES PLUS | 2 | 3–6 kW | Off-grid with battery |
 | SPH 3000-6000 | 2 | 3–6 kW | Battery hybrid |
@@ -222,6 +223,7 @@ If auto-detection fails (or you want to override), choose based on:
 | MID 15000-25000TL3-X | 2 | No | 15–25 kW | Grid-tied only |
 | MOD 6000-15000TL3-X | 3 | No | 6–15 kW | Grid-tied only; grid flow sensors require smart meter |
 | MOD 6000-15000TL3-XH | 3 | Yes | 6–15 kW | Hybrid with battery |
+| SPA-TL3 (AC Storage, 3-Phase) 4-10kW | None | Yes | 4–10 kW | AC-coupled battery storage only (no PV inputs) |
 | SPH-TL3 3000-10000 | 2 | Yes | 3–10 kW | Hybrid with battery |
 | WIT 4000-15000TL3 | 2 | Yes | 4–15 kW | Hybrid, advanced VPP control |
 

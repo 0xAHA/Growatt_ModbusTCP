@@ -496,12 +496,20 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
 
     # -- SPA series — AC-coupled storage, NO solar DC inputs --
     #
-    # Every entry below points at an SPH profile, which carries the PV sensor
-    # groups. SPA hardware has no MPPT inputs, so those entities exist and read
-    # zero permanently. The DTCs themselves are confirmed; the *mappings* are
-    # known to be wrong in kind and are pending a dedicated SPA profile (#360).
-    # Nothing currently maps to `spa_3000_6000_tl_bl`, so auto-detection can
-    # never select the one profile built for these devices.
+    # SPA hardware has no MPPT inputs, so any SPH profile's PV sensor groups exist
+    # and read zero permanently. 3725 is fixed (see below); the single-phase codes
+    # are knowingly left pointing at an SPH profile, because the failure modes are
+    # not symmetric:
+    #
+    #   wrong sensor set  -> phantom entities reading zero (cosmetic)
+    #   wrong register range -> every entity unavailable (total failure)
+    #
+    # `spa_3000_6000_tl_bl` reads only 1000-1124. Pointing a variant at it that does
+    # not serve that range trades a cosmetic fault for a total one, and #360 is a
+    # first-hand account of what that looks like. The profile was field-built from a
+    # single device (#249) whose own DTC was never captured, so there is no code below
+    # it can be attached to on evidence. These stay ASSUMED and stay put until a scan
+    # settles it; the profile remains selectable by hand from the dropdown.
     3701: DtcEntry(
         'SPA 1000-3000TL BL', 'sph_3000_6000_v201',
         ASSUMED, 'no device report; SPA mapped to an SPH profile — PV entities will be phantom (#360)',
@@ -514,9 +522,13 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
         'SPA 3000-6000TL AUB', 'sph_3000_6000_v201',
         ASSUMED, 'no device report; SPA mapped to an SPH profile — PV entities will be phantom (#360)',
     ),
+    # The one SPA code with hardware behind it. #360: the device reported 3725, failed
+    # completely on the single-phase SPA profile, and ran correctly on the SPH-TL3
+    # register map. spa_tl3_4000_10000_v201 reuses that exact map with the PV groups
+    # dropped, so this mapping reads the same registers the device is known to answer.
     3725: DtcEntry(
-        'SPA-TL3 4-10kW', 'sph_tl3_3000_10000_v201',
-        ASSUMED, 'DTC confirmed on hardware (#360) but the profile is SPH-TL3 — PV entities are phantom; awaiting a dedicated SPA-TL3 profile',
+        'SPA-TL3 4-10kW', 'spa_tl3_4000_10000_v201',
+        CONFIRMED, 'DTC and register layout both confirmed on hardware (#360); profile shares the verified SPH-TL3 map without the phantom PV sensor groups',
     ),
     3735: DtcEntry(
         'SPA 3000TL BL-UP', 'sph_3000_6000_v201',

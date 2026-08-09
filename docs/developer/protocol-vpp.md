@@ -49,7 +49,7 @@ that model has, for most entries, never been verified against hardware. See
 | 3701 | SPA 1000-3000TL BL | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
 | 3715 | SPA 3000-6000TL AU | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
 | 3716 | SPA 3000-6000TL AUB | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
-| 3725 | SPA-TL3 4-10kW | SPH-TL3 (3-10kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 3725 | SPA-TL3 4-10kW | SPA-TL3 (AC Storage, 3-Phase) 4-10kW | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
 | 3735 | SPA 3000TL BL-UP | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
 | 5001 | MID 17-25KTL3-X; MID 20-30KTL3-X2; MID 25-30KTL3-X2 Pro/X2 Pro.E; MID 33-50KTL3-X2/X2 Pro/X2 Pro.E; MID 30-40KTL3-X; MID 33-36KTL3-X(Pro.E); MID 3-33KTL3-X3 | MID (15-25kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
 | 5002 | MOD 3-15KTL3-X; MOD 3-15KTL3-X2(Pro); MOD 12-20KTL3-X2; MOD 12-20KTL3-X2(E); MOD 3-33KTL3-X3 | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |

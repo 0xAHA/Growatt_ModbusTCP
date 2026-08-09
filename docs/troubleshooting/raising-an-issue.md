@@ -43,10 +43,12 @@ If you can compare against another source — the ShinePhone app, the Growatt po
 
 Run the [Universal Register Scanner](diagnostic-service.md) and attach the CSV.
 
-!!! warning "Disable the integration before scanning"
+!!! warning "Disable the integration before scanning, and pick your device from the dropdown"
     **⋮ → Disable**, wait about 30 seconds, run the scan, then re-enable. Don't delete it.
 
     The scanner opens its own connection. If the integration is still polling, the two compete for the same adapter and most reads fail — producing a scan that looks like a broken inverter on a system that is working perfectly.
+
+    **In the scan service, select your inverter under "Config entry" rather than typing the host and port.** That is how the scan inherits the slave ID, Modbus delay and block size you already have working. Entering the connection by hand starts from defaults instead, which a sensitive adapter may not tolerate — the same empty-looking scan, from a different cause. Selecting the device works while it is disabled (v1.5.2 and later; on earlier versions it did not, which is why this note now exists).
 
 ### The connection drops, or entities go unavailable
 

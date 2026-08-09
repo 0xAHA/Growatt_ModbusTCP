@@ -99,6 +99,8 @@ On the PUSR unit in #367, 113 registers cost the same as 1 — every read landed
 
 **Running a register scan?** Disable the integration entry first (**⋮ → Disable**, don't delete), wait ~30 s, then scan. The scanner opens a second connection, and on a sensitive gateway that contends with the poller. A scan taken while polling came back with 9 successful reads out of 1304 rows, every range reporting "no response" on a device that was working fine.
 
+Then **select the entry under "Config entry" instead of typing host and port**, so the scan reuses the slave ID, Modbus delay and block size that already work on this gateway. Typing the connection by hand falls back to defaults — 125-register reads at 250 ms — which is exactly the request pattern the tuning existed to avoid, and it produces an equally empty scan for the opposite reason. Selecting a disabled entry is supported from v1.5.2; before that it silently forced the manual path.
+
 ---
 
 ## Does a persistent connection cause this?
