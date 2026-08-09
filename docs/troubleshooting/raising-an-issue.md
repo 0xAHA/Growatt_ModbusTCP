@@ -12,7 +12,7 @@ You don't need to fill in a long form. These two cover the majority of reports.
 
 **Settings → Devices & Services → Growatt Modbus → ⋮ → Download diagnostics**
 
-Attach the JSON file to your issue. It already contains almost everything that used to be asked for by hand: integration version, inverter model and profile, connection type, block size, poll interval, how many polls have failed, which register ranges responded, and the last full set of decoded values.
+Attach the JSON file to your issue. It contains almost everything needed to diagnose a problem: integration version, inverter model and profile, connection type, block size, poll interval, how many polls have failed, which register ranges responded, and the last full set of decoded values.
 
 Your **IP address, serial number and device path are removed automatically** before the file is written.
 
@@ -23,7 +23,7 @@ Your **IP address, serial number and device path are removed automatically** bef
 Please paste log lines as text in a code block rather than a screenshot. Screenshots can't be searched, and the useful detail is often a register number or a count in the middle of a long line.
 
 !!! tip "Is there anything under Settings → Repairs?"
-    Since v1.5.0 the integration raises repair notices for problems it can detect itself, such as an inverter reverting your settings or a gateway returning malformed responses. If one is showing, say so — it usually names the cause outright.
+    The integration raises repair notices for problems it can detect itself, such as an inverter reverting your settings or a gateway returning malformed responses. If one is showing, say so — it usually names the cause outright.
 
 ---
 
@@ -35,9 +35,9 @@ Different symptoms need different evidence. Find yours below.
 
 Say **which sensor**, **what it reads**, and **what you believe it should be** — the last part matters most, and it's the part most often left out.
 
-If you can compare against another source — the ShinePhone app, the Growatt portal, a utility meter — that comparison is the single most valuable thing you can provide. It has repeatedly settled questions that register tables could not, including one register everyone assumed was battery temperature that turned out to be the inverter's DC-DC converter stage.
+If you can compare against another source — the ShinePhone app, the Growatt portal, a utility meter — that comparison is the single most valuable thing you can provide. It settles questions that a register table cannot.
 
-**One reading proves very little.** Two registers can hold identical values by coincidence at one moment and diverge completely an hour later. If you're reporting that a value looks wrong, a second reading at a different time of day — or a different battery or solar state — turns a guess into evidence.
+**One reading proves very little.** Two values can look identical by coincidence at one moment and differ completely an hour later. A second reading at a different time of day, or at a different battery or solar state, turns a guess into evidence.
 
 ### A sensor is missing, or you think a register is mapped wrongly
 
@@ -46,7 +46,7 @@ Run the [Universal Register Scanner](diagnostic-service.md) and attach the CSV.
 !!! warning "Disable the integration before scanning"
     **⋮ → Disable**, wait about 30 seconds, run the scan, then re-enable. Don't delete it.
 
-    The scanner opens its own connection. If the integration is still polling, the two compete for the same adapter and the results are meaningless — one scan came back with 9 usable rows out of 1304 on a system that was working perfectly.
+    The scanner opens its own connection. If the integration is still polling, the two compete for the same adapter and most reads fail — producing a scan that looks like a broken inverter on a system that is working perfectly.
 
 ### The connection drops, or entities go unavailable
 
@@ -68,9 +68,9 @@ Attach a register scan (see above) and tell us the **exact model from the invert
 
 ## Things that genuinely help
 
-- **Correcting yourself.** Several of the most valuable reports have been people revisiting their own findings after measuring properly. It's never unwelcome — it has repeatedly stopped a working register being "fixed" into a broken one.
-- **Saying what you already ruled out**, and how. It prevents the same ground being covered twice.
-- **Telling us it's working.** Confirmation that a fix landed is what lets an issue close, and a report that something works on hardware nobody else has is genuinely useful data.
+- **Correcting yourself.** If a later measurement contradicts what you first reported, say so. It is never unwelcome, and it prevents a working register being "fixed" into a broken one.
+- **Saying what you already ruled out**, and how. It stops the same ground being covered twice.
+- **Telling us it's working.** Confirmation that a fix landed is what lets an issue close, and a report that something works on hardware nobody else has is useful in its own right.
 
 ## Things that slow it down
 
