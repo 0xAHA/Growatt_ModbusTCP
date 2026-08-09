@@ -160,6 +160,43 @@ def test_error_response_still_returns_none_without_flushing(reader, monkeypatch)
 # The regression, stated in the reporter's own terms
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# The counters behind the gateway repair issue
+# --------------------------------------------------------------------------
+#
+# tests/test_gateway_health.py pins the thresholds, but that mirrors the arithmetic. These
+# assert the tallies actually move, which is what feeds it.
+
+def test_good_read_increments_the_good_counter():
+    hub = _hub(_Response([10, 20, 30, 40]))
+    hub.read_input_registers(100, 4, 1)
+    assert (hub.good_reads, hub.malformed_reads) == (1, 0)
+
+
+def test_mismatched_read_increments_the_malformed_counter():
+    hub = _hub(_Response([10, 20]))
+    hub.read_input_registers(100, 4, 1)
+    assert (hub.good_reads, hub.malformed_reads) == (0, 1)
+
+
+def test_protocol_refusal_counts_as_neither():
+    """An Illegal Address reply is the device declining, not the gateway misbehaving.
+    Several profiles probe ranges their hardware rejects on every poll, so counting those
+    as malformed would flag a healthy gateway on every affected model."""
+    hub = _hub(_Response([], error=True))
+    hub.read_input_registers(100, 4, 1)
+    assert (hub.good_reads, hub.malformed_reads) == (0, 0)
+
+
+def test_counters_are_per_hub_not_global():
+    a = _hub(_Response([10, 20]))
+    b = _hub(_Response([10, 20, 30, 40]))
+    a.read_input_registers(100, 4, 1)
+    b.read_input_registers(100, 4, 1)
+    assert (a.good_reads, a.malformed_reads) == (0, 1)
+    assert (b.good_reads, b.malformed_reads) == (1, 0)
+
+
 def test_serial_number_frame_cannot_reach_the_register_cache():
     """0x33325354 = "32ST" — characters 9-12 of the reporter's serial number, which
     were published as 85,893,614.8 W of AC power.

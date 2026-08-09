@@ -7,9 +7,10 @@ from typing import Any, Dict
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_NAME
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.storage import Store
 
 from .const import (
@@ -207,6 +208,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self._pending_write_checks: dict[int, tuple[int, float, str, int]] = {}
         self._cloud_override_notified: bool = False  # Only notify once per session
 
+        # Gateway health: raised once per session when the RS485 adapter is answering a
+        # meaningful share of requests with the wrong frame (#367).
+        self._gateway_issue_raised: bool = False
+
         # WIT: saves register 122 (export_limit_mode) before disabling control authority (30100=0).
         # Disabling 30100 transiently resets reg 122 to 0; on older firmware it may not auto-restore.
         self._saved_export_limit_mode_wit: int = 0
@@ -337,30 +342,81 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 affected = ", ".join(
                     c[0].replace('_', ' ').title() for c in overridden_controls
                 )
+                # A repair issue rather than a persistent notification: it is translatable,
+                # dismissible, survives a restart, and appears under Settings → Repairs
+                # where users look for "something is wrong". A notification is a toast that
+                # scrolls away, which is a poor fit for a condition that persists until the
+                # user changes something on the inverter or the dongle.
                 try:
-                    await self.hass.services.async_call(
-                        "persistent_notification",
-                        "create",
-                        {
-                            "title": "Growatt: Write Reversion Detected",
-                            "message": (
-                                f"Local Modbus writes to **{affected}** were reverted shortly after being set.\n\n"
-                                f"**Common causes:**\n"
-                                f"- **ShineWiFi / ShineLink dongle** connected: the Growatt cloud server "
-                                f"may be restoring its own settings. Disconnect the dongle or disable "
-                                f"remote control in the ShinePhone/Growatt app.\n"
-                                f"- **Inverter firmware rejecting the value**: check that any prerequisite "
-                                f"settings are enabled (e.g. *Allow Grid Charge* must be Enabled before "
-                                f"MOD TOU schedules will persist).\n"
-                                f"- **Register read-only on this firmware**: the register may not be "
-                                f"writable on your specific model or firmware version — check the logs "
-                                f"for details and open an issue if the register should be writable."
-                            ),
-                            "notification_id": "growatt_cloud_override",
-                        },
+                    ir.async_create_issue(
+                        self.hass,
+                        DOMAIN,
+                        f"write_reversion_{self.config_entry.entry_id}",
+                        is_fixable=False,
+                        severity=ir.IssueSeverity.WARNING,
+                        translation_key="write_reversion",
+                        translation_placeholders={"controls": affected},
+                        learn_more_url=(
+                            "https://github.com/0xAHA/Growatt_ModbusTCP/blob/main/"
+                            "docs/troubleshooting/raising-an-issue.md"
+                        ),
                     )
                 except Exception as err:
-                    _LOGGER.debug("Could not create persistent notification: %s", err)
+                    _LOGGER.debug("Could not create repair issue: %s", err)
+
+    # A gateway is flagged once it has answered enough requests to judge, and is getting
+    # a meaningful share of them wrong. Both thresholds matter: a handful of bad frames
+    # during a reboot is normal, and 2 failures out of 3 reads says nothing.
+    _GATEWAY_MIN_SAMPLE = 200
+    _GATEWAY_BAD_FRACTION = 0.05
+
+    @callback
+    def _check_gateway_health(self) -> None:
+        """Raise a repair issue if the RS485 gateway is replaying stale frames.
+
+        Since v1.3.7 these frames are detected and discarded, so the data stays correct —
+        but the reads are still lost, and the only evidence is a log line. One reporter's
+        gateway was answering roughly one poll in three with a complete response to an
+        *earlier* request, and found out by reading logs (#367). Nobody else would.
+        """
+        hub = self._hub
+        if hub is None or self._gateway_issue_raised:
+            return
+
+        bad = getattr(hub, "malformed_reads", 0)
+        good = getattr(hub, "good_reads", 0)
+        total = bad + good
+        if total < self._GATEWAY_MIN_SAMPLE or not bad:
+            return
+        if bad / total < self._GATEWAY_BAD_FRACTION:
+            return
+
+        self._gateway_issue_raised = True
+        _LOGGER.warning(
+            "RS485 gateway at %s:%s answered %d of %d requests with a frame that did not "
+            "match the request (%.0f%%). Data is protected — these are discarded — but "
+            "the reads are lost. See docs/troubleshooting/rs485-gateways.md",
+            hub.host, hub.port, bad, total, 100 * bad / total,
+        )
+        try:
+            ir.async_create_issue(
+                self.hass,
+                DOMAIN,
+                f"gateway_malformed_frames_{self.config_entry.entry_id}",
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="gateway_malformed_frames",
+                translation_placeholders={
+                    "gateway": f"{hub.host}:{hub.port}",
+                    "percent": f"{100 * bad / total:.0f}",
+                },
+                learn_more_url=(
+                    "https://github.com/0xAHA/Growatt_ModbusTCP/blob/main/"
+                    "docs/troubleshooting/rs485-gateways.md"
+                ),
+            )
+        except Exception as err:
+            _LOGGER.debug("Could not create gateway repair issue: %s", err)
 
     def _get_register_map(self) -> str:
         """Get register map with migration support."""
@@ -919,6 +975,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
             # Check for cloud overrides on recently written registers
             await self._check_for_cloud_overrides(data, poll_start)
+
+            # Gateway health — cheap counter comparison, raises at most once per session
+            self._check_gateway_health()
 
             # Deliver pending clock-drift notification (populated by _check_inverter_clock
             # on the first successful poll; cleared immediately so it only fires once).

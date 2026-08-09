@@ -93,5 +93,15 @@
         }
       }
     }
+  },
+  "issues": {
+    "write_reversion": {
+      "title": "Growatt: settings are being reverted",
+      "description": "Local changes to **{controls}** were reverted shortly after being set, so the inverter is not keeping them.\n\nThe usual causes, in order of likelihood:\n\n- **A ShineWiFi or ShineLink dongle is connected.** Growatt's cloud restores its own settings over local changes, often within seconds. Disconnect the dongle, or disable remote control in the ShinePhone app.\n- **A prerequisite setting is not enabled.** On MOD inverters, *Allow Grid Charge* must be Enabled before time-of-use schedules will persist.\n- **The register is not writable on your firmware.** Some models accept the write and ignore it. The log has the register number if you want to report it.\n\nThis notice will not reappear until Home Assistant restarts."
+    },
+    "gateway_malformed_frames": {
+      "title": "Growatt: RS485 gateway returning mismatched responses",
+      "description": "The gateway at **{gateway}** answered **{percent}%** of requests with a frame that did not match the request — typically a complete response to an *earlier* request, replayed.\n\n**Your data is not affected.** These responses are detected and discarded rather than decoded, which is what this check is for. But the reads are lost, so sensors update less often than they should.\n\nThis is a gateway problem, not an inverter problem. Things that have helped others:\n\n- Set **Max Register Block Size** to 25 in the integration options.\n- Check the gateway is in **Modbus TCP to RTU** mode, not transparent passthrough.\n- If it has a TCP timeout setting, make sure it is enabled rather than disabled, so dead sessions are cleaned up.\n\nSee the linked guide for gateways known to work and the settings they use."
+    }
   }
 }

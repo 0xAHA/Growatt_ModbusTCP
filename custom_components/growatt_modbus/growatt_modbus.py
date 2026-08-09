@@ -419,6 +419,13 @@ class SharedModbusConnection:
         self._recoveries_this_poll = 0
         self._max_recoveries_per_poll = 2
 
+        # Lifetime tallies of frames this gateway answered correctly vs. answered with
+        # something that was not a reply to the question asked. Read by the coordinator to
+        # decide whether to raise a repair issue — a gateway can sit at a double-digit
+        # failure rate indefinitely and the only visible sign is log lines nobody reads.
+        self.good_reads = 0
+        self.malformed_reads = 0
+
     # ------------------------------------------------------------------
     # Reference counting
     # ------------------------------------------------------------------
@@ -563,8 +570,13 @@ class SharedModbusConnection:
             # repeat byte-for-byte rather than varying. Draining the buffer here gives the
             # next read a clean start instead of inheriting the same offset.
             self._flush_receive_buffer()
+            # Counted so the coordinator can surface a repair issue. Field reports put
+            # this at roughly one poll in three on an affected gateway, and the only way
+            # anyone noticed was by reading the log (#367).
+            self.malformed_reads += 1
             return None
 
+        self.good_reads += 1
         return registers
 
     def read_input_registers(self, start: int, count: int, slave_id: int) -> Optional[list]:
