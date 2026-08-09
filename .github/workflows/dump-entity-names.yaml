@@ -1,0 +1,60 @@
+# THROWAWAY. Delete once the entity translations are generated and committed.
+#
+# sensor.py imports homeassistant.components.sensor, so it cannot be imported on a
+# Windows dev machine. Generating the entity translation strings by parsing the source
+# instead would mean guessing at the templated definitions (_pv_string_sensors,
+# _phase_sensors), and a wrong or missing key leaves that entity with no name at all.
+#
+# This runs where Home Assistant is actually installed, imports the module properly, and
+# uploads the real definitions as an artifact.
+name: Dump entity names
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dump:
+    name: Dump SENSOR_DEFINITIONS names
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Home Assistant
+        run: pip install pytest-homeassistant-custom-component==0.13.316 pymodbus pyserial
+
+      - name: Dump names
+        run: |
+          python - <<'PY'
+          import importlib, json, sys
+
+          sys.path.insert(0, '.')
+          out = {}
+
+          for platform in ('sensor', 'binary_sensor'):
+              try:
+                  mod = importlib.import_module(f'custom_components.growatt_modbus.{platform}')
+              except Exception as exc:
+                  print(f'{platform}: import failed: {exc}')
+                  continue
+              for attr in ('SENSOR_DEFINITIONS', 'BINARY_SENSOR_DEFINITIONS', 'BINARY_SENSORS'):
+                  defs = getattr(mod, attr, None)
+                  if isinstance(defs, dict):
+                      names = {k: v['name'] for k, v in defs.items()
+                               if isinstance(v, dict) and v.get('name')}
+                      out[platform] = names
+                      print(f'{platform}.{attr}: {len(names)} names')
+                      break
+
+          with open('entity_names.json', 'w', encoding='utf-8') as fh:
+              json.dump(out, fh, indent=2, ensure_ascii=False, sort_keys=True)
+          print('total platforms dumped:', list(out))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: entity-names
+          path: entity_names.json
