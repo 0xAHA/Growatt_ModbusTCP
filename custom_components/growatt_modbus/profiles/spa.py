@@ -144,9 +144,14 @@ SPA_3000_6000_TL_BL = {
         # SPA EXTENDED RANGE 2000-2124 — "thirteen group for Storage power's SPA"
         # ============================================================================
         #
-        # UNVERIFIED ON HARDWARE. Transcribed from the Growatt protocol table posted on
-        # #360, which is the only description of this range we have. Scales and meanings
-        # are the document's; nobody has yet read these addresses on a device.
+        # UNVERIFIED ON HARDWARE. Scales and meanings are from the V1.39 protocol,
+        # documented in docs/developer/protocol-v139.md under "Thirteenth group — SPA
+        # storage (2000-2124)". Nobody has yet read these addresses on a device.
+        #
+        # These were mapped only after a user posted a photo of the same table on #360,
+        # months after the range was already extracted into our own reference. The
+        # information was checked in the whole time. Grep the reference before treating
+        # a screenshot as a discovery.
         #
         # They are added because they fill gaps this profile has carried since it was
         # built: AC current and AC output power were explicitly recorded as "not
@@ -161,6 +166,13 @@ SPA_3000_6000_TL_BL = {
         #
         # If you own a single-phase SPA, a scan of 2000-2124 would confirm or refute all
         # of this in one pass; the scanner has covered the range since v1.4.0.
+        #
+        # PARTIAL. The protocol documents roughly forty registers here; the ones below
+        # are those with an existing sensor behind them. Still unmapped and available:
+        # 2040/2041 (apparent power VA), 2057/2058 (work time total), 2097 (BatVolt_DSP),
+        # 2098/2099 (P/N bus voltage), 2102-2111 (extra-inverter and system energy),
+        # 2112-2115 (AC charge energy). Each needs a sensor definition, so they are left
+        # until there is a device to verify against.
         2000: {'name': 'status', 'scale': 1, 'unit': '',
                'desc': 'Inverter run state (0=waiting, 1=normal, 3=fault) — spec, unverified'},
 
@@ -195,6 +207,16 @@ SPA_3000_6000_TL_BL = {
         2056: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'pair': 2055,
                'combined_scale': 0.1, 'combined_unit': 'kWh',
                'desc': 'AC energy total (spec 0.1kWh, unverified)'},
+
+        # Temperatures. This profile had none at all before — an SPA reported no
+        # temperature of any kind, which read as "this hardware doesn't measure it"
+        # rather than "we never asked".
+        2093: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
+               'desc': 'Inverter temperature (spec 0.1C, unverified)'},
+        2094: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
+               'desc': 'IPM temperature (spec 0.1C, unverified)'},
+        2095: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
+               'desc': 'Boost temperature (spec 0.1C, unverified)'},
     },
     'holding_registers': {
         # Confirmed identical to SPH-TL3 from entity values in scan:

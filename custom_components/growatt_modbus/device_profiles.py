@@ -97,6 +97,11 @@ BATTERY4_SENSORS: Set[str] = {f"battery4_{f}" for f in _EXTRA_BATTERY_FIELDS}
 # hard filter available, so exclusion has to happen here.
 NO_BATTERY_TEMP: Set[str] = {"battery_temp"}
 
+# Same mechanism, different sensor. dcdc_temp reads register 3176 (Bdc1Temp1) on MOD/MID
+# and has no equivalent anywhere in the SPA ranges, so a profile that wants the ordinary
+# inverter/IPM/boost temperatures has to subtract it or ship a permanent 0.0 °C.
+NO_DCDC_TEMP: Set[str] = {"dcdc_temp"}
+
 BMS_SENSORS: Set[str] = {
     "bms_status", "bms_error", "bms_warn_info",
     "bms_max_current", "bms_cycle_count", "bms_soh",
@@ -654,6 +659,15 @@ INVERTER_PROFILES = {
             # out while discharging. Absent from SPA-TL3, which cannot reach that range.
             ENERGY_SENSORS |
             BATTERY_SENSORS |
+            # Inverter/IPM/boost temperature, registers 2093-2095. The profile carried
+            # no temperature sensor of any kind before, which looked like hardware that
+            # doesn't measure it rather than a gap in what we asked for.
+            #
+            # dcdc_temp is subtracted below: SPA has no register for it, and it is a
+            # GrowattData field, so a hasattr() gate cannot suppress it — the sensor
+            # would be created and publish 0.0 degrees forever. That is the v1.4.1
+            # battery-temp bug exactly, and the sensor set is the only hard filter.
+            (TEMPERATURE_SENSORS - NO_DCDC_TEMP) |
             # Every BMS sensor is gated on hasattr(), so only the four registers this
             # profile actually defines (1083/1085/1095/1096) create entities (#360).
             BMS_SENSORS |
