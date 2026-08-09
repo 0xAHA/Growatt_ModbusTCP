@@ -6,7 +6,39 @@
 
 ## v1.5.2
 
-Issues: #360
+Issues: #360, #362
+
+- **"Charge Stopped SOC (Battery First)" renamed to "Charge Stopped SOC".**
+  Register 3048 is documented as a Battery First setting, and the name said so — but it
+  governs charging under Load Priority too. Measured on a MID 25KTL3-XH with all nine TOU
+  periods disabled and every priority on Load Priority: charging stopped at exactly the
+  configured value with 10.8 kW of PV available and room in the battery, and resumed when
+  it was raised.
+
+  This is the same correction register 3067 received in v1.4.1, and it fails more quietly
+  than that one did. A discharge floor firing unexpectedly looks like the battery refusing
+  to supply the house. A charge ceiling firing just sends surplus to the grid — everything
+  reads plausibly and nothing looks wrong unless you ask why SOC stopped climbing.
+
+  Entity IDs are unchanged, so automations and dashboards keep working.
+
+  Reported and measured by @as-wallpen.
+
+- **The "settings are being reverted" notice no longer blames the dongle by itself.**
+  It named a connected ShineWiFi or ShineLink dongle as the most likely cause. A user
+  running one alongside this integration, still uploading to Growatt's cloud, has local
+  writes persisting overnight — so the dongle alone is not sufficient. The notice now
+  points at the cloud pushing settings *down* (remote control or a schedule set in the
+  ShinePhone app), which is the part that actually overwrites local changes.
+
+- **SPA gains AC current, AC output power, inverter status and AC energy today/total.**
+  From the SPA extended range (2000-2124), which the model matrix previously recorded as
+  unconfirmed. **These are transcribed from the Growatt protocol and have not yet been
+  read on a device** — if you own a single-phase SPA, a scan of that range would confirm
+  or correct them in one pass.
+
+  Verified values already in the profile were left alone: AC voltage and frequency keep
+  their measured 1000-range registers rather than adopting the documented 2000-range ones.
 
 - **Fix: scanning a disabled integration fell back to default connection settings.**
   The documented procedure asks you to disable the integration before scanning, so the

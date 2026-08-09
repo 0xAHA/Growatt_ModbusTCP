@@ -105,7 +105,7 @@ The **MOD** column below represents the **MOD TL3-XH** (hybrid, with battery). T
 | Status / Derating / Fault Codes | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 *HU variants only (SPH/SPM 8000-10000TL3-BH-HU)
-†AC voltage only (reg 1105, scale ×0.01); AC current/power and frequency not confirmed for SPA
+†SPA: AC voltage (reg 1105, ×0.01) and frequency (reg 1113, ×0.01) are confirmed against real readings. AC current and output power come from the SPA extended range (regs 2039, 2035/2036) and are **transcribed from the protocol but not yet seen on a device** — a scan of 2000-2124 from any single-phase SPA would settle them. Three-phase SPA-TL3 does not serve that range and uses the SPH-TL3 layout instead.
 
 ---
 

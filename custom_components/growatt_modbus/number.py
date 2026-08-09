@@ -171,7 +171,10 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
             # prefix misleads more than it describes. The entity_id of existing
             # installs is unaffected — that is fixed at creation from the unique_id.
             'grid_first_discharge_stopped_soc': 'Discharge Stopped SOC',
-            'batt_first_charge_stopped_soc': 'Charge Stopped SOC (Battery First)',
+            # Register 3048, and the same correction for the same reason (#362): measured
+            # to stop charging under Load Priority with all TOU periods disabled, so the
+            # "(Battery First)" suffix told users it could be ignored outside that mode.
+            'batt_first_charge_stopped_soc': 'Charge Stopped SOC',
         }
         friendly_name = friendly_overrides.get(control_name, control_name.replace('_', ' ').title())
         self._attr_name = friendly_name

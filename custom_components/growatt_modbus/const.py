@@ -663,12 +663,23 @@ WRITABLE_REGISTERS = {
         'unit': '%',
         'desc': 'Charge power rate when Battery First mode (1-100%)'
     },
+    # Same story as 3067 below, reported by the same user (#362) after the discharge
+    # finding made them check the symmetry: measured on DN1.0 with all nine TOU periods
+    # disabled and every priority on Load Priority, charging stopped at exactly this
+    # value with 10.8 kW of PV available and battery capacity spare. Raising it resumed
+    # charging within two minutes.
+    #
+    # This one fails more quietly than the discharge threshold. A discharge floor that
+    # fires unexpectedly looks like the battery refusing to supply the house. A charge
+    # ceiling that fires just sends surplus to the grid — every number stays plausible
+    # and nothing looks wrong unless you ask why SOC stopped climbing on a sunny day.
     'batt_first_charge_stopped_soc': {
         'register': 3048,
         'scale': 1,
         'valid_range': (0, 100),
         'unit': '%',
-        'desc': 'SOC to stop charging when Battery First mode is active (V1.39)'
+        'desc': 'SOC to stop charging. Applies to Load/self-consumption operation as well '
+                'as Battery First mode (#362) (V1.39)'
     },
     # Named after the Growatt documentation, but the name understates it: #362 showed
     # by direct before/after measurement that this also governs on-grid discharge in

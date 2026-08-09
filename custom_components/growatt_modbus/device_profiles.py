@@ -649,6 +649,10 @@ INVERTER_PROFILES = {
             GRID_SENSORS |
             POWER_FLOW_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
+            # Eac today/total, from registers 2053-2056 in the SPA extended range. An
+            # AC-coupled inverter has no solar to meter, but it does meter what it puts
+            # out while discharging. Absent from SPA-TL3, which cannot reach that range.
+            ENERGY_SENSORS |
             BATTERY_SENSORS |
             # Every BMS sensor is gated on hasattr(), so only the four registers this
             # profile actually defines (1083/1085/1095/1096) create entities (#360).
