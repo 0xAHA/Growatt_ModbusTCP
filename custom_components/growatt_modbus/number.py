@@ -17,6 +17,7 @@ from .const import (
     get_device_type_for_control,
 )
 from .coordinator import GrowattModbusCoordinator
+from .entity import GrowattEntity
 from .growatt_modbus import ModbusWriteError
 
 _LOGGER = logging.getLogger(__name__)
@@ -132,10 +133,10 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
+class GrowattGenericNumber(GrowattEntity, NumberEntity):
     """Generic number entity for any numeric control."""
 
-    _attr_has_entity_name = True
+    # has_entity_name comes from GrowattEntity, as do unique_id and device_info.
     _attr_mode = NumberMode.SLIDER
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -147,9 +148,13 @@ class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
         control_config: dict,
     ) -> None:
         """Initialize the number entity."""
-        super().__init__(coordinator)
+        super().__init__(
+            coordinator,
+            config_entry,
+            control_name,
+            get_device_type_for_control(control_name),
+        )
 
-        self._config_entry = config_entry
         self._control_name = control_name
         self._control_config = control_config
 
@@ -170,7 +175,6 @@ class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
         }
         friendly_name = friendly_overrides.get(control_name, control_name.replace('_', ' ').title())
         self._attr_name = friendly_name
-        self._attr_unique_id = f"{config_entry.entry_id}_{control_name}"
 
         # Set icon
         self._attr_icon = self._get_icon(control_name)
@@ -235,12 +239,6 @@ class GrowattGenericNumber(CoordinatorEntity, NumberEntity):
                     self._attr_native_step = scale
 
             self._attr_native_unit_of_measurement = unit
-
-    @property
-    def device_info(self) -> dict[str, Any]:
-        """Return device information."""
-        device_type = get_device_type_for_control(self._control_name)
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def native_value(self) -> float | None:

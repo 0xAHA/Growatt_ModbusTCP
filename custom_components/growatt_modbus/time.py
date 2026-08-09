@@ -12,6 +12,7 @@ from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN, WRITABLE_REGISTERS, CONF_REGISTER_MAP, get_device_type_for_control, DEVICE_TYPE_BATTERY, MOD_TOU_PERIODS
 from .coordinator import GrowattModbusCoordinator
+from .entity import GrowattEntity
 from .growatt_modbus import ModbusWriteError
 
 _LOGGER = logging.getLogger(__name__)
@@ -137,14 +138,14 @@ class GrowattWitVppTouTime(CoordinatorEntity, TimeEntity):
             _LOGGER.exception("[WIT-TOU] Period %d %s write error: %s", self._period, slot, err)
 
 
-class GrowattGenericTime(CoordinatorEntity, TimeEntity):
+class GrowattGenericTime(GrowattEntity, TimeEntity):
     """Time entity for inverter time period start/end controls.
 
     Hardware stores time as hex-packed bytes: hours*256 + minutes.
     e.g. 06:00 = 0x0600 = 1536, 22:00 = 0x1600 = 5632.
     """
 
-    _attr_has_entity_name = True
+    # has_entity_name comes from GrowattEntity, as do unique_id and device_info.
     _attr_entity_category = EntityCategory.CONFIG
     _attr_icon = "mdi:clock-outline"
 
@@ -156,19 +157,17 @@ class GrowattGenericTime(CoordinatorEntity, TimeEntity):
         control_config: dict,
     ) -> None:
         """Initialize the time entity."""
-        super().__init__(coordinator)
-        self._config_entry = config_entry
+        super().__init__(
+            coordinator,
+            config_entry,
+            control_name,
+            get_device_type_for_control(control_name),
+        )
         self._control_name = control_name
         self._control_config = control_config
 
         friendly_name = control_config.get('label') or control_name.replace('_', ' ').title()
         self._attr_name = friendly_name
-        self._attr_unique_id = f"{config_entry.entry_id}_{control_name}"
-
-    @property
-    def device_info(self) -> dict[str, Any]:
-        """Return device information."""
-        return self.coordinator.get_device_info(get_device_type_for_control(self._control_name))
 
     @property
     def native_value(self) -> dt_time | None:
@@ -336,8 +335,12 @@ class GrowattModTouTime(CoordinatorEntity, TimeEntity):
         is_start: bool,
     ) -> None:
         """Initialize the MOD TOU time entity."""
-        super().__init__(coordinator)
-        self._config_entry = config_entry
+        super().__init__(
+            coordinator,
+            config_entry,
+            f"mod_tou_{period_def['period']}_{'start' if is_start else 'end'}",
+            DEVICE_TYPE_BATTERY,
+        )
         self._period_def = period_def
         self._is_start = is_start
         self._period = period_def["period"]
@@ -350,13 +353,6 @@ class GrowattModTouTime(CoordinatorEntity, TimeEntity):
             self._register = period_def["end_reg"]
             self._data_field = period_def["end_field"]
             self._attr_name = f"TOU Period {self._period} End"
-
-        self._attr_unique_id = f"{config_entry.entry_id}_mod_tou_{self._period}_{'start' if is_start else 'end'}"
-
-    @property
-    def device_info(self) -> dict[str, Any]:
-        """Return device information."""
-        return self.coordinator.get_device_info(DEVICE_TYPE_BATTERY)
 
     @property
     def native_value(self) -> dt_time | None:

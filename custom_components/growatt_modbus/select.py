@@ -19,6 +19,7 @@ from .const import (
     MOD_TOU_PERIODS,
 )
 from .coordinator import GrowattModbusCoordinator
+from .entity import GrowattEntity
 from .growatt_modbus import ModbusWriteError
 
 _LOGGER = logging.getLogger(__name__)
@@ -194,10 +195,10 @@ async def async_setup_entry(
         config_entry.async_on_unload(_remove_vpp_listener)
 
 
-class GrowattGenericSelect(CoordinatorEntity, SelectEntity):
+class GrowattGenericSelect(GrowattEntity, SelectEntity):
     """Generic select entity for any control with options."""
 
-    _attr_has_entity_name = True
+    # has_entity_name comes from GrowattEntity, as do unique_id and device_info.
     _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(
@@ -208,16 +209,19 @@ class GrowattGenericSelect(CoordinatorEntity, SelectEntity):
         control_config: dict,
     ) -> None:
         """Initialize the select entity."""
-        super().__init__(coordinator)
+        super().__init__(
+            coordinator,
+            config_entry,
+            control_name,
+            get_device_type_for_control(control_name),
+        )
 
-        self._config_entry = config_entry
         self._control_name = control_name
         self._control_config = control_config
 
         # Generate friendly name (e.g., "output_config" -> "Output Config")
         friendly_name = control_name.replace('_', ' ').title()
         self._attr_name = friendly_name
-        self._attr_unique_id = f"{config_entry.entry_id}_{control_name}"
 
         # Set icon based on control type
         self._attr_icon = self._get_icon(control_name)
@@ -235,13 +239,6 @@ class GrowattGenericSelect(CoordinatorEntity, SelectEntity):
             'battery_type': 'mdi:battery',
         }
         return icon_map.get(control_name, 'mdi:tune')
-
-    @property
-    def device_info(self) -> dict[str, Any]:
-        """Return device information."""
-        # Determine device based on control type
-        device_type = get_device_type_for_control(self._control_name)
-        return self.coordinator.get_device_info(device_type)
 
     @property
     def current_option(self) -> str | None:
