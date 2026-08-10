@@ -8,6 +8,11 @@
 
 Issues: #360, #362
 
+**Coming from v1.5.1?** v1.5.2 was a pre-release, so you are getting its changes too —
+the register scanner keeping your tuned settings when the integration is disabled, the
+new SPA-TL3 profile, and the `Charge Stopped SOC` relabel. They are listed under v1.5.2
+below and are worth reading, particularly if you run an SPA or set charge limits.
+
 - **Fix: a "DC-DC Temperature" sensor reporting 0.0 °C on models that have no such
   sensor.** Introduced by us in v1.4.0, and it is the same bug that release was fixing.
 
