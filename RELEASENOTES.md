@@ -4,6 +4,30 @@
 
 ---
 
+## v1.5.5
+
+Issues: #360, #370
+
+- **VPP control entities no longer freeze after a single failed read.** Control Authority,
+  VPP Export Limit and Remote Power Control (registers 30100, 30200-30201, 30407-30410)
+  were skipped for the rest of the session after one unanswered read, so the entity kept
+  reporting its last value indefinitely. They now retry every 5 minutes, matching the
+  behaviour already used for the VPP input ranges. Affects WIT and other VPP-capable
+  models. Diagnosed by @Svetlonos76.
+- **New block size option: 5 registers.** For gateways that reject 10-register reads but
+  manage smaller ones — previously the only working choice was 1 register, which on a
+  large profile means ~216 reads per poll. Settings → Devices & Services → Growatt Modbus
+  → Configure → Max Register Block Size. Found by @Xybertecnic.
+- **A repair notice now appears if your configured inverter model no longer exists.**
+  Previously it fell back to a MIN 7-10kW profile silently, and most sensors would be
+  missing or stuck at zero with nothing to explain why. Mainly affects anyone who has
+  hand-edited a profile file, which an update then replaces.
+- The register scanner now offers the same block sizes as the integration (125, 50, 25,
+  10, 5, 1), so a scan can reproduce what the poller is doing.
+- Diagnostics now report suppressed VPP holding blocks alongside suppressed input ranges.
+
+---
+
 ## v1.5.4
 
 Issues: #360, #362
