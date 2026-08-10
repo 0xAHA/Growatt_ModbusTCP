@@ -1066,6 +1066,16 @@ BLOCK_SIZE_OPTIONS: dict[str, int] = {
     "50 registers": 50,
     "25 registers": 25,
     "10 registers": 10,
+    # 5 exists because a real gateway sat in the gap between 5 and 10 (#360). On that
+    # hardware a 10-register read failed and a 5-register read succeeded, and the only
+    # working option left was 1 — which costs 216 reads per poll on that profile, about
+    # 54 seconds against a 60 second interval. Almost no headroom, to work around a
+    # limit that 5 clears comfortably at 67 reads.
+    #
+    # The jump from 10 straight to 1 assumed a gateway that struggles with 10 needs
+    # one-at-a-time. It doesn't necessarily, and the assumption cost that user a poll
+    # cycle nearly as long as the interval itself.
+    "5 registers": 5,
     "1 register (slowest, most compatible)": 1,
 }
 

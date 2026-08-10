@@ -166,7 +166,13 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         vol.Optional("scan_vpp_control",  default=False): cv.boolean,  # VPP control 30100-30499
         vol.Optional("scan_vpp_data",     default=False): cv.boolean,  # VPP data 31000-31399
         # Block size for range reads: 125 (default, fastest), 25 (for finicky inverters), 1 (single-register, slowest but most compatible)
-        vol.Optional("block_size", default=125): vol.All(vol.Coerce(int), vol.In([125, 25, 1])),
+        # Same set the options flow offers (BLOCK_SIZE_OPTIONS), so a scan can be run at
+        # whatever block size the poller is using. These were [125, 25, 1] while the
+        # options flow offered 50 and 10 as well, which made "reproduce it with a scan"
+        # impossible for anyone on the sizes in between.
+        vol.Optional("block_size", default=125): vol.All(
+            vol.Coerce(int), vol.In([125, 50, 25, 10, 5, 1])
+        ),
     }
 )
 

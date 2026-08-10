@@ -128,6 +128,14 @@ async def async_get_config_entry_diagnostics(
             # Ranges suppressed after repeated failure — explains "why is this
             # sensor empty" without needing a scan.
             "failed_optional_ranges": _safe(getattr(client, "_failed_optional_ranges", None)),
+            # The same, for the optional VPP holding blocks (30100 / 30200 / 30407).
+            # Absent until #370, where a permanently-latched entry froze a control entity
+            # for six hours: the diagnostics showed the resulting `..._available: false`
+            # but nothing about why, so the cause was only found by reading the source.
+            # A suppression that is invisible in diagnostics costs a debugging cycle.
+            "failed_optional_holding_addrs": _safe(
+                getattr(client, "_failed_optional_holding_addrs", None)
+            ),
         }
 
     if hub is not None:

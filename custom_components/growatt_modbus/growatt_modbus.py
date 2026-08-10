@@ -757,11 +757,11 @@ class GrowattModbus:
         # Entries expire after _OPTIONAL_RANGE_RETRY_SECONDS and are retried.
         self._failed_optional_ranges: dict = {}
 
-        # Track VPP holding register addresses that failed once this session.
-        # These are optional VPP-range registers (30000+) that some firmware variants
-        # don't implement.  After the first failure we skip them rather than retrying
-        # every poll and accumulating transaction-ID mismatches.
-        self._failed_optional_holding_addrs: set = set()
+        # Anchor address -> timestamp of its last failure, for the optional VPP holding
+        # blocks (30100, 30200, 30407). Skipped while inside the retry window, then tried
+        # again — see the read path for why this is a dict rather than the set it was
+        # until #370, and what a permanent skip cost the user who found it.
+        self._failed_optional_holding_addrs: dict = {}
 
         # Last successfully read battery SOC — used to hold value if VPP range is
         # temporarily unavailable rather than reporting a misleading 0%.
@@ -3775,27 +3775,64 @@ class GrowattModbus:
                 logger.debug(f"Could not read diagnostic registers 235-238: {e}")
 
         # --- VPP holding registers (30000+ range) ---
-        # These are optional — some firmware variants don't implement them.
-        # On first failure the anchor address is added to _failed_optional_holding_addrs
-        # and the block is skipped for the rest of the session, avoiding repeated
-        # transaction-ID mismatches caused by unanswered requests.
+        # These are optional — some firmware variants don't implement them. A failing
+        # anchor address is recorded so the block is skipped for a while, avoiding
+        # repeated transaction-ID mismatches from unanswered requests.
+        #
+        # The skip is time-limited (#370). It used to be permanent: the anchor went into
+        # a set that was only ever added to, with no expiry, so a single dropped frame
+        # latched "not supported by this firmware" for the rest of the session. A WIT
+        # owner had control_authority frozen at Disabled for six hours while Growatt's
+        # own cloud read the register as Enabled the whole time, and neither reloading
+        # the entry nor restarting Home Assistant fixed it for more than one poll.
+        #
+        # That is the same defect #340 had on the input-register side, which #341 fixed
+        # with exactly this retry. This set never received the same treatment — the two
+        # mechanisms sit a few hundred lines apart and only one of them was corrected.
+        #
+        # Worth stating the limitation honestly: a transport error and a genuine
+        # "illegal data address" are still conflated here, because read_holding_registers
+        # returns None for both. Retrying every 5 minutes makes an unsupported register
+        # cost one wasted read per 5 minutes, which is cheap; the previous behaviour made
+        # a supported register cost everything.
+        _VPP_HOLDING_RETRY_S = 300
+
+        def _vpp_block_skipped(anchor: int) -> bool:
+            """True while this anchor is inside its retry window."""
+            prev = self._failed_optional_holding_addrs.get(anchor)
+            if prev is None:
+                return False
+            if time.time() - prev >= _VPP_HOLDING_RETRY_S:
+                logger.debug("[VPP] Retrying previously failed holding block at %d", anchor)
+                return False
+            return True
+
+        def _vpp_block_failed(anchor: int, what: str) -> None:
+            first = anchor not in self._failed_optional_holding_addrs
+            self._failed_optional_holding_addrs[anchor] = time.time()
+            if first:
+                logger.debug(
+                    "[VPP] %s did not respond — skipping for %ds, then retrying. "
+                    "If this repeats indefinitely the firmware likely does not "
+                    "implement it.", what, _VPP_HOLDING_RETRY_S,
+                )
 
         # Control Authority (30100)
-        if 30100 in holding_map and 30100 not in self._failed_optional_holding_addrs:
+        if 30100 in holding_map and not _vpp_block_skipped(30100):
             try:
                 vpp_ctrl_regs = self.read_holding_registers(30100, 1)
                 if vpp_ctrl_regs is not None and len(vpp_ctrl_regs) >= 1:
                     data.control_authority = int(vpp_ctrl_regs[0])
                     data.vpp_control_authority_available = True
+                    self._failed_optional_holding_addrs.pop(30100, None)
                     logger.debug("[VPP] control_authority=%s", data.control_authority)
                 else:
-                    self._failed_optional_holding_addrs.add(30100)
-                    logger.debug("[VPP] Register 30100 not supported by this firmware — skipping in future polls")
+                    _vpp_block_failed(30100, "Register 30100 (control authority)")
             except Exception as e:
                 logger.debug(f"Could not read VPP control_authority register 30100: {e}")
 
         # VPP Export Limitation (30200-30201)
-        if any(reg in holding_map for reg in [30200, 30201]) and 30200 not in self._failed_optional_holding_addrs:
+        if any(reg in holding_map for reg in [30200, 30201]) and not _vpp_block_skipped(30200):
             try:
                 vpp_export_regs = self.read_holding_registers(30200, 2)
                 if vpp_export_regs is not None and len(vpp_export_regs) >= 2:
@@ -3808,16 +3845,16 @@ class GrowattModbus:
                             raw_val = raw_val - 65536
                         data.vpp_export_limit_power_rate = int(raw_val)
                     data.vpp_export_limit_available = True
+                    self._failed_optional_holding_addrs.pop(30200, None)
                     logger.debug("[VPP] vpp_export_limit_enable=%s, vpp_export_limit_power_rate=%s%%",
                                data.vpp_export_limit_enable, data.vpp_export_limit_power_rate)
                 else:
-                    self._failed_optional_holding_addrs.add(30200)
-                    logger.debug("[VPP] Registers 30200-30201 not supported by this firmware — skipping in future polls")
+                    _vpp_block_failed(30200, "Registers 30200-30201 (export limit)")
             except Exception as e:
                 logger.debug(f"Could not read VPP export limitation registers 30200-30201: {e}")
 
         # Remote Power Control (30407-30410)
-        if any(reg in holding_map for reg in [30407, 30408, 30409, 30410]) and 30407 not in self._failed_optional_holding_addrs:
+        if any(reg in holding_map for reg in [30407, 30408, 30409, 30410]) and not _vpp_block_skipped(30407):
             try:
                 vpp_power_regs = self.read_holding_registers(30407, 4)
                 if vpp_power_regs is not None and len(vpp_power_regs) >= 3:
@@ -3836,9 +3873,9 @@ class GrowattModbus:
                     logger.debug("[VPP] remote_power_control_enable=%s, charging_time=%s min, charge_discharge_power=%s%%, ac_charge_enable=%s",
                                data.remote_power_control_enable, data.remote_power_control_charging_time,
                                data.remote_charge_and_discharge_power, data.vpp_ac_charge_enable)
+                    self._failed_optional_holding_addrs.pop(30407, None)
                 else:
-                    self._failed_optional_holding_addrs.add(30407)
-                    logger.debug("[VPP] Registers 30407-30410 not supported by this firmware — skipping in future polls")
+                    _vpp_block_failed(30407, "Registers 30407-30410 (remote power control)")
             except Exception as e:
                 logger.debug(f"Could not read VPP remote power control registers 30407-30410: {e}")
 
