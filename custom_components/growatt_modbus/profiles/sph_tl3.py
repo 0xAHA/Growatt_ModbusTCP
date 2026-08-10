@@ -90,7 +90,20 @@ SPH_TL3_3000_10000 = {
         92: {'name': 'pv_energy_total_low', 'scale': 1, 'unit': '', 'pair': 91, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Total PV energy lifetime LOW'},
 
         # Temperatures
+        #
+        # 94 and 95 were missing while `ipm_temp` and `boost_temp` were both in this
+        # profile's sensor set — so the entities existed and published 0.0 °C on every
+        # SPH-TL3 and SPA-TL3 install. Not a hardware limit: a full scan of the #360
+        # device read 94 = 200 (20.0 °C) and 95 = 333 (33.3 °C) alongside 93 = 378
+        # (37.8 °C), all three plausible and independent.
+        #
+        # The VPP copies at 31130-31132 are mapped further down and read zero on that
+        # device, so the fallback was never going to populate these either.
         93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
+        94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
+             'desc': 'IPM (power module) temperature (confirmed #360 scan)'},
+        95: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
+             'desc': 'Boost converter temperature (confirmed #360 scan)'},
 
         # Status
         105: {'name': 'fault_code', 'scale': 1, 'unit': ''},

@@ -97,10 +97,20 @@ BATTERY4_SENSORS: Set[str] = {f"battery4_{f}" for f in _EXTRA_BATTERY_FIELDS}
 # hard filter available, so exclusion has to happen here.
 NO_BATTERY_TEMP: Set[str] = {"battery_temp"}
 
-# Same mechanism, different sensor. dcdc_temp reads register 3176 (Bdc1Temp1) on MOD/MID
-# and has no equivalent anywhere in the SPA ranges, so a profile that wants the ordinary
-# inverter/IPM/boost temperatures has to subtract it or ship a permanent 0.0 °C.
-NO_DCDC_TEMP: Set[str] = {"dcdc_temp"}
+# dcdc_temp is NOT in TEMPERATURE_SENSORS, and must not be put back there.
+#
+# It was, briefly, and the consequences were the exact bug the change above exists to
+# prevent. The #362 fix identified register 3176 on MOD/MID as the DC-DC stage and added
+# "dcdc_temp" to the shared TEMPERATURE_SENSORS group — which almost every profile
+# includes. Only three register maps define the register at all, so every other model
+# gained a "DC-DC Temperature" entity reporting 0.0 °C: a phantom created while fixing a
+# phantom, verified on the two profiles that have the register and on none of the
+# twenty-six that don't.
+#
+# Opt in per profile instead. A sensor group shared by everything is the wrong home for
+# a sensor only a few models can populate, because adding to it is silent and the failure
+# is invisible — nothing errors, an entity simply reports freezing forever.
+DCDC_TEMP_SENSOR: Set[str] = {"dcdc_temp"}
 
 BMS_SENSORS: Set[str] = {
     "bms_status", "bms_error", "bms_warn_info",
@@ -112,10 +122,11 @@ BMS_SENSORS: Set[str] = {
 
 TEMPERATURE_SENSORS: Set[str] = {
     "inverter_temp", "ipm_temp", "boost_temp",
-    # MOD/MID expose Bdc1Temp1 at register 3176 — the battery-side DC-DC stage. It was
-    # mapped as battery_temp until #362 identified it against ShineApp. Only appears
-    # where a profile actually defines the register, so this is a no-op elsewhere.
-    "dcdc_temp",
+    # dcdc_temp deliberately absent — see DCDC_TEMP_SENSOR below. It was added here with
+    # the note "only appears where a profile actually defines the register, so this is a
+    # no-op elsewhere", which is the belief this whole file warns against: membership of
+    # the sensor set is what creates the entity, and the register only decides whether it
+    # has a value. It was not a no-op; it put 0.0 °C on twenty-six profiles.
 }
 
 STATUS_SENSORS: Set[str] = {
@@ -613,6 +624,11 @@ INVERTER_PROFILES = {
     # SPH TL3 SERIES - Hybrid Storage (Three Phase with Battery)
     # ========================================================================
     
+    # dcdc_temp is subtracted from both: it reads register 3176 (Bdc1Temp1), which
+    # exists on MOD/MID and nowhere in the SPH-TL3 map. It was in the sensor set anyway,
+    # so every SPH-TL3 install has been publishing a DC-DC temperature of 0.0 °C. Found
+    # while checking the same class of fault on SPA-TL3 (#360); the other two phantom
+    # temperatures here were fixable by adding registers 94/95, this one is not.
     "sph_tl3_3000_10000": {
         "name": "SPH-TL3 Series 3000-10000",
         "description": "Hybrid 3-phase inverter with battery storage (3-10kW)",
@@ -667,7 +683,7 @@ INVERTER_PROFILES = {
             # GrowattData field, so a hasattr() gate cannot suppress it — the sensor
             # would be created and publish 0.0 degrees forever. That is the v1.4.1
             # battery-temp bug exactly, and the sensor set is the only hard filter.
-            (TEMPERATURE_SENSORS - NO_DCDC_TEMP) |
+            TEMPERATURE_SENSORS |
             # Every BMS sensor is gated on hasattr(), so only the four registers this
             # profile actually defines (1083/1085/1095/1096) create entities (#360).
             BMS_SENSORS |
@@ -688,10 +704,21 @@ INVERTER_PROFILES = {
     # entry — the alternative considered was renaming the SPH-TL3 option to mention SPA,
     # which would have made phantom PV entities the documented behaviour.
     #
-    # ENERGY_SENSORS (energy_today/energy_total) is excluded for the same reason it is
-    # excluded from the single-phase SPA profile above: on the SPH map those count PV
-    # generation. Excluding a sensor that would have read zero costs nothing; including
-    # one is the defect being fixed here.
+    # ENERGY_SENSORS was excluded on the assumption that energy_today/energy_total count
+    # PV generation on the SPH map, which an AC-coupled unit has none of. A full scan of
+    # the #360 device refuted that:
+    #
+    #   input 53/54 = 0/20     -> 2.0 kWh today
+    #   input 55/56 = 0/23139  -> 2313.9 kWh total
+    #
+    # and the SPA extended block agrees exactly at 2053-2056, which is a second address
+    # reporting the same quantity. These count what the inverter puts out, and a battery
+    # discharging through it produces output like anything else. Restored.
+    #
+    # Worth recording how close this came to shipping wrong: the reporter checked the
+    # same registers and said there were no real values there, because 53 and 55 are the
+    # HIGH words and both read zero. The data was in 54 and 56. The scan CSV settled in
+    # seconds what two rounds of asking could not.
     "spa_tl3_4000_10000_v201": {
         "name": "SPA-TL3 (AC Storage) 4-10kW",
         "description": "Three-phase AC-coupled battery storage, no solar DC inputs (VPP V2.01)",
@@ -707,6 +734,7 @@ INVERTER_PROFILES = {
             POWER_FLOW_SENSORS |
             CONSUMPTION_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
+            ENERGY_SENSORS |
             BATTERY_SENSORS |
             BMS_SENSORS |
             TEMPERATURE_SENSORS |
@@ -791,7 +819,8 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
-        "sensors": (HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS) - NO_BATTERY_TEMP,
+        "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR)
+                    - NO_BATTERY_TEMP),
     },
 
     "mod_6000_15000tl3_xh_v201": {
@@ -803,7 +832,8 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
-        "sensors": (HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS) - NO_BATTERY_TEMP,
+        "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR)
+                    - NO_BATTERY_TEMP),
     },
 
     # MID 11-30KTL3-XH / MID 8-15KTL3-XHL/JP — three-phase commercial hybrid
@@ -821,7 +851,8 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 30.0,
-        "sensors": (HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS) - NO_BATTERY_TEMP,
+        "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR)
+                    - NO_BATTERY_TEMP),
     },
 
     # ========================================================================

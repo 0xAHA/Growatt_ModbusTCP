@@ -4,6 +4,40 @@
 
 ---
 
+## v1.5.3
+
+Issues: #360, #362
+
+- **Fix: a "DC-DC Temperature" sensor reporting 0.0 °C on models that have no such
+  sensor.** Introduced by us in v1.4.0, and it is the same bug that release was fixing.
+
+  v1.4.0 identified register 3176 on MOD/MID as the DC-DC stage rather than battery
+  temperature, and added `dcdc_temp` to the shared temperature sensor group — a group
+  almost every profile includes. Only MOD/MID, SPF and SPE define that register, so every
+  other model gained an entity that could never have a value and published freezing point
+  instead.
+
+  A sensor is created because it is in a profile's set; the register only decides whether
+  it has a value. The note added at the time said the opposite. It now belongs to the
+  profiles that can populate it, and a test fails if a temperature sensor is ever declared
+  without a register behind it.
+
+  **If you saw a DC-DC Temperature entity stuck at 0.0 °C, it will disappear on upgrade.**
+  MOD, MID, SPF and SPE keep theirs — those are real readings.
+
+- **SPH-TL3 and SPA-TL3 gain real IPM and Boost temperatures.** Both sensors were declared
+  but had no registers, so both reported 0.0 °C. A full scan of the #360 device answered
+  registers 94 and 95 with 20.0 °C and 33.3 °C alongside the inverter temperature at
+  37.8 °C, so these are now mapped rather than removed.
+
+- **SPA-TL3 regains Energy Today and Energy Total.** v1.5.2 excluded them, assuming they
+  counted solar generation an AC-coupled inverter does not have. The same scan shows
+  2.0 kWh today and 2313.9 kWh total, with the SPA extended block agreeing at a second
+  address. They measure what the inverter puts out, and a discharging battery produces
+  output like anything else.
+
+---
+
 ## v1.5.2
 
 Issues: #360, #362
