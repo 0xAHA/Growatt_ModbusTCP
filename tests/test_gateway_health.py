@@ -97,6 +97,7 @@ def test_no_division_by_zero_on_a_fresh_connection():
 # still appears, so it looks like it works — it just says "gateway_malformed_frames" to
 # the user instead of explaining anything.
 
+import ast
 import io
 import json
 import re
@@ -136,24 +137,57 @@ def test_repair_strings_have_title_and_description(filename):
         assert body.get("description"), f"{filename}: issue '{key}' has no description"
 
 
+def _supplied_placeholders() -> dict[str, set[str]]:
+    """Placeholder names each repair issue actually passes, read from the source.
+
+    Keyed by translation_key, taken from the `translation_placeholders={...}` dict in the
+    same `ir.async_create_issue(...)` call. Repairs are raised from more than one module,
+    so every file that creates them has to be searched — an earlier version of this test
+    looked only in coordinator.py and compared against a hard-coded list, which meant it
+    verified nothing about a repair raised anywhere else.
+
+    Parsed with `ast` rather than regex: the placeholder values are f-strings such as
+    f"{hub.host}:{hub.port}", whose own braces terminate any non-greedy brace match and
+    silently drop every key after the first.
+    """
+    supplied: dict[str, set[str]] = {}
+    for filename in ("coordinator.py", "__init__.py"):
+        tree = ast.parse((COMPONENT / filename).read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            if not (isinstance(func, ast.Attribute) and func.attr == "async_create_issue"):
+                continue
+            kwargs = {kw.arg: kw.value for kw in node.keywords if kw.arg}
+            key_node = kwargs.get("translation_key")
+            if not isinstance(key_node, ast.Constant):
+                continue
+            names: set[str] = set()
+            ph = kwargs.get("translation_placeholders")
+            if isinstance(ph, ast.Dict):
+                names = {
+                    k.value for k in ph.keys
+                    if isinstance(k, ast.Constant) and isinstance(k.value, str)
+                }
+            supplied.setdefault(key_node.value, set()).update(names)
+    return supplied
+
+
 def test_placeholders_used_in_strings_are_supplied_by_the_code():
     """A placeholder with no matching value raises at render time, so the repair never
     appears — the failure is invisible rather than ugly."""
     data = json.load(io.open(COMPONENT / "strings.json", encoding="utf-8"))
-    source = (COMPONENT / "coordinator.py").read_text(encoding="utf-8")
+    supplied = _supplied_placeholders()
 
-    expected = {
-        "write_reversion": {"controls"},
-        "gateway_malformed_frames": {"gateway", "percent"},
-    }
     for key, body in data.get("issues", {}).items():
         used = set(re.findall(r"\{([a-z_]+)\}", body["title"] + body["description"]))
-        assert used == expected.get(key, set()), (
-            f"issue '{key}' uses placeholders {sorted(used)}; "
-            f"the code supplies {sorted(expected.get(key, set()))}"
+        assert key in supplied, (
+            f"issue '{key}' is defined in strings.json but no ir.async_create_issue() "
+            f"call raises it — either it is dead, or it is raised from a module this "
+            f"test does not search"
         )
-        for placeholder in used:
-            assert f'"{placeholder}"' in source, (
-                f"issue '{key}' needs placeholder '{placeholder}' but coordinator.py "
-                f"never supplies it"
-            )
+        assert used == supplied[key], (
+            f"issue '{key}' uses placeholders {sorted(used)}; "
+            f"the code supplies {sorted(supplied[key])}"
+        )

@@ -376,12 +376,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Not gated on connectivity, for the same reason as the blocks above: profile
     # membership is a static fact needing no inverter and no poll. Gating it is what
     # stopped the v1.4.0 cleanup running at all (#362).
+    # A profile key that no longer exists resolves to min_7000_10000_tl_x, which loads
+    # cleanly and reports almost nothing on any other model. Nothing fails, so there is
+    # nothing for the user to search for — #360 spent a round trip on "my phase sensors
+    # show nothing" that turned out to be this.
+    #
+    # Raised before the cleanup below, which is skipped in that state: the fallback's
+    # sensor set is not this device's, and treating it as authoritative would delete
+    # every entity the real profile had created.
+    from .device_profiles import profile_exists
+
+    configured_profile = entry.data.get(CONF_INVERTER_SERIES, "")
+    profile_is_known = profile_exists(configured_profile)
+    if not profile_is_known:
+        try:
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                f"unknown_profile_{entry.entry_id}",
+                is_fixable=False,
+                severity=ir.IssueSeverity.ERROR,
+                translation_key="unknown_profile",
+                translation_placeholders={"profile": configured_profile or "(none)"},
+                learn_more_url=(
+                    "https://github.com/0xAHA/Growatt_ModbusTCP/blob/main/"
+                    "docs/hardware/models.md"
+                ),
+            )
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("Could not create unknown-profile repair issue: %s", err)
+
     # Imported here rather than at module scope: sensor.py imports coordinator.py, and
     # hoisting this creates a cycle at integration load.
     from .sensor import SENSOR_DEFINITIONS
     from .device_profiles import get_sensors_for_profile
 
-    profile_sensors = get_sensors_for_profile(entry.data.get(CONF_INVERTER_SERIES, ""))
+    profile_sensors = get_sensors_for_profile(configured_profile) if profile_is_known else set()
     if profile_sensors:
         for sensor_key in SENSOR_DEFINITIONS:
             if sensor_key in profile_sensors:

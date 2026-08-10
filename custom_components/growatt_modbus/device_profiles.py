@@ -1,5 +1,8 @@
 """Device profiles for Growatt inverters."""
+import logging
 from typing import Dict, Set
+
+_LOGGER = logging.getLogger(__name__)
 
 # ============================================================================
 # SENSOR GROUPS
@@ -1136,9 +1139,42 @@ def resolve_profile_alias(series: str) -> str:
     return PROFILE_ALIASES.get(series, series)
 
 
+def profile_exists(series: str) -> bool:
+    """Whether a profile key resolves to a real profile rather than the fallback.
+
+    Callers that can surface a problem to the user should check this first: get_profile()
+    cannot distinguish "you asked for MIN 7-10kW" from "you asked for something that does
+    not exist", because both return the same profile.
+    """
+    return resolve_profile_alias(series) in INVERTER_PROFILES
+
+
 def get_profile(series: str):
-    """Get inverter profile by series name, resolving any alias first."""
-    return INVERTER_PROFILES.get(resolve_profile_alias(series), INVERTER_PROFILES["min_7000_10000_tl_x"])
+    """Get inverter profile by series name, resolving any alias first.
+
+    An unknown key falls back to min_7000_10000_tl_x. That keeps setup alive rather than
+    raising, but it is a single-phase profile reading the 3000 range, so on anything else
+    it produces an integration that loads cleanly and reports almost nothing — with no
+    error to trace it to.
+    #360 hit this: a user hand-edited a profile into the component directory, and updating
+    the integration replaced those files. Their entry still named the vanished profile, so
+    they silently became a MIN.
+
+    The warning below is why this is not silent any more; __init__ also raises a repair
+    issue, because a log line alone does not reach anyone.
+    """
+    resolved = resolve_profile_alias(series)
+    profile = INVERTER_PROFILES.get(resolved)
+    if profile is None:
+        _LOGGER.warning(
+            "Unknown inverter profile %r — falling back to 'min_7000_10000_tl_x'. "
+            "Sensors for your model will be missing or empty. Reconfigure the "
+            "integration and select your model. This usually means a hand-edited "
+            "profile was removed by an update.",
+            series,
+        )
+        return INVERTER_PROFILES["min_7000_10000_tl_x"]
+    return profile
 
 
 def get_available_profiles(legacy_only: bool = False, friendly_names: bool = True) -> Dict[str, str]:
