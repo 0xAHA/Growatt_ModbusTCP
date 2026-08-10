@@ -8,23 +8,10 @@
 
 Issues: #360, #362
 
-- **Fix: sensors removed in v1.5.3 went `unavailable` instead of disappearing.**
-  If v1.5.3 left you with a DC-DC Temperature entity showing *unavailable* rather than
-  removing it, this is the follow-up. Upgrade and it will go.
-
-  Dropping a sensor from a profile stops it being created, but Home Assistant keeps what
-  earlier versions already registered — so it lingers as a dead entity. Arguably worse
-  than the 0.0 °C it replaced, because an unavailable sensor looks like something broken
-  rather than something that was never meant to exist.
-
-  The cleanup that handles this existed, but was a list of specific sensor names, so each
-  new removal needed its own entry and this one never got one. It is now driven by the
-  profile itself: any sensor the profile does not list is removed, because nothing can
-  recreate it. Future removals clean up after themselves.
-
-  This is the second time this cleanup has failed. In v1.4.0 it was gated on the inverter
-  being reachable, which never holds during setup, so it did not run at all. Both failure
-  modes are now covered by tests.
+- **Removed sensors now disappear instead of showing `unavailable`.** If v1.5.3 left you
+  with a DC-DC Temperature entity stuck as unavailable, upgrading clears it.
+- Stale entities are now cleared based on the active profile, so sensors dropped in future
+  releases tidy up after themselves.
 
 ---
 
@@ -32,38 +19,15 @@ Issues: #360, #362
 
 Issues: #360, #362
 
-**Coming from v1.5.1?** v1.5.2 was a pre-release, so you are getting its changes too —
-the register scanner keeping your tuned settings when the integration is disabled, the
-new SPA-TL3 profile, and the `Charge Stopped SOC` relabel. They are listed under v1.5.2
-below and are worth reading, particularly if you run an SPA or set charge limits.
+**Coming from v1.5.1?** v1.5.2 was a pre-release, so you get its changes too — see below.
 
-- **Fix: a "DC-DC Temperature" sensor reporting 0.0 °C on models that have no such
-  sensor.** Introduced by us in v1.4.0, and it is the same bug that release was fixing.
-
-  v1.4.0 identified register 3176 on MOD/MID as the DC-DC stage rather than battery
-  temperature, and added `dcdc_temp` to the shared temperature sensor group — a group
-  almost every profile includes. Only MOD/MID, SPF and SPE define that register, so every
-  other model gained an entity that could never have a value and published freezing point
-  instead.
-
-  A sensor is created because it is in a profile's set; the register only decides whether
-  it has a value. The note added at the time said the opposite. It now belongs to the
-  profiles that can populate it, and a test fails if a temperature sensor is ever declared
-  without a register behind it.
-
-  **If you saw a DC-DC Temperature entity stuck at 0.0 °C, it will disappear on upgrade.**
-  MOD, MID, SPF and SPE keep theirs — those are real readings.
-
-- **SPH-TL3 and SPA-TL3 gain real IPM and Boost temperatures.** Both sensors were declared
-  but had no registers, so both reported 0.0 °C. A full scan of the #360 device answered
-  registers 94 and 95 with 20.0 °C and 33.3 °C alongside the inverter temperature at
-  37.8 °C, so these are now mapped rather than removed.
-
-- **SPA-TL3 regains Energy Today and Energy Total.** v1.5.2 excluded them, assuming they
-  counted solar generation an AC-coupled inverter does not have. The same scan shows
-  2.0 kWh today and 2313.9 kWh total, with the SPA extended block agreeing at a second
-  address. They measure what the inverter puts out, and a discharging battery produces
-  output like anything else.
+- **DC-DC Temperature no longer appears on models that don't have the sensor.** It was
+  reporting 0.0 °C on MIN, SPH, SPH-TL3, WIT and TL-XH. MOD, MID, SPF and SPE keep theirs —
+  those are real readings.
+- **SPH-TL3 and SPA-TL3 gain IPM and Boost temperature** (registers 94/95). Both were
+  present but unmapped, so both read 0.0 °C.
+- **SPA-TL3 regains Energy Today and Energy Total** — confirmed on hardware, not the solar
+  generation figures they were mistaken for.
 
 ---
 
@@ -71,92 +35,28 @@ below and are worth reading, particularly if you run an SPA or set charge limits
 
 Issues: #360, #362
 
-- **"Charge Stopped SOC (Battery First)" renamed to "Charge Stopped SOC".**
-  Register 3048 is documented as a Battery First setting, and the name said so — but it
-  governs charging under Load Priority too. Measured on a MID 25KTL3-XH with all nine TOU
-  periods disabled and every priority on Load Priority: charging stopped at exactly the
-  configured value with 10.8 kW of PV available and room in the battery, and resumed when
-  it was raised.
-
-  This is the same correction register 3067 received in v1.4.1, and it fails more quietly
-  than that one did. A discharge floor firing unexpectedly looks like the battery refusing
-  to supply the house. A charge ceiling firing just sends surplus to the grid — everything
-  reads plausibly and nothing looks wrong unless you ask why SOC stopped climbing.
-
-  Entity IDs are unchanged, so automations and dashboards keep working.
-
-  Reported and measured by @as-wallpen.
-
-- **The "settings are being reverted" notice no longer blames the dongle by itself.**
-  It named a connected ShineWiFi or ShineLink dongle as the most likely cause. A user
-  running one alongside this integration, still uploading to Growatt's cloud, has local
-  writes persisting overnight — so the dongle alone is not sufficient. The notice now
-  points at the cloud pushing settings *down* (remote control or a schedule set in the
-  ShinePhone app), which is the part that actually overwrites local changes.
-
-- **SPA gains AC current, output power, inverter status, AC energy today/total, and
-  inverter/IPM/boost temperature.** From the SPA extended range (2000-2124). The model
-  matrix recorded AC current and power as unconfirmed; the temperatures were absent
-  entirely, so an SPA reported no temperature of any kind — which looks like hardware
-  that doesn't measure it rather than registers nobody asked for.
-
-  **These come from the protocol and have not yet been read on a device.** If you own a
-  single-phase SPA, a scan of 2000-2124 would confirm or correct all of them in one pass.
-
-  Verified values already in the profile were left alone: AC voltage and frequency keep
-  their measured 1000-range registers rather than adopting the documented 2000-range ones.
-
-  Three-phase SPA-TL3 does not serve this range and is unaffected.
-
-- **A protocol coverage audit, and what it found.** These registers had been sitting in
-  our own extracted protocol reference the whole time, unmapped, because nothing fails
-  when a register is never requested — "we never asked for it" and "the hardware doesn't
-  report it" look identical from outside.
-
-  `tools/protocol_coverage.py` now reports registers the protocol documents that no
-  profile maps, so that gap is findable rather than waiting for someone to notice. It
-  compares addresses, not meanings, and a range a model doesn't serve shows as a gap that
-  isn't a defect — it's a place to look, not a defect list.
-
-  Also corrects the range summary, which called 2000-2124 "SPH extended". Every register
-  in it is SPA, and that mislabel pointed anyone checking at the wrong family.
-
-- **Fix: scanning a disabled integration fell back to default connection settings.**
-  The documented procedure asks you to disable the integration before scanning, so the
-  poller stops competing with the scanner for the adapter. Disabling unloads the entry —
-  and the scan service looked for its connection details on the loaded entry, so selecting
-  your inverter no longer worked and the only way to scan was to retype the host and port.
-
-  That manual path started from defaults: slave ID 1, 250 ms pacing, 125-register blocks.
-  On a gateway tuned to smaller, slower reads, those requests fail — so every range reported
-  "no response" from hardware that had been polling perfectly a minute earlier. Following
-  the instructions was what triggered it, and v1.5.1's pacing fix could not help, because
-  the value it reads lives on the entry that disabling had just unloaded.
-
-  The scan now reads the connection, slave ID, **Modbus delay** and **block size** from the
-  stored entry whether or not it is loaded. Select your inverter under **Config entry**
-  rather than typing the host by hand — that is what carries your tuned settings into the
-  scan. An explicitly chosen block size still overrides the inherited one.
-
-  Reported by @Xybertecnic, whose scan came back empty on a disabled entry and full of data
-  the moment it was re-enabled.
-
-- **New profile: SPA-TL3 (AC Storage, 3-Phase) 4-10kW.**
-  Three-phase SPA inverters use the SPH-TL3 register layout, not the single-phase SPA one,
-  which reads a range this hardware does not serve — picking the only option with "SPA" in
-  its name left every entity unavailable.
-
-  SPA is AC-coupled and has no solar inputs, so running it on the SPH-TL3 profile instead
-  produced a full set of PV entities permanently reading zero. The new profile shares the
-  verified SPH-TL3 register map with those sensors removed, and **DTC 3725 now selects it
-  automatically**.
-
-  If your SPA-TL3 was auto-detected onto SPH-TL3, its PV sensors will disappear on upgrade.
-  They only ever reported zero.
-
-  Both dropdown entries now state their phase count — **SPA (AC Storage, 1-Phase) 3-6kW**
-  and **SPA-TL3 (AC Storage, 3-Phase) 4-10kW** — so the choice no longer depends on knowing
-  which register range your model serves.
+- **Scanning a disabled integration now keeps your tuned settings.** Select your inverter
+  under **Config entry** rather than typing the host and port, and the scan inherits your
+  slave ID, Modbus delay and block size. Typing the connection by hand still starts from
+  defaults, which a sensitive gateway may not tolerate. Reported by @Xybertecnic.
+- **New profile: SPA-TL3 (AC Storage, 3-Phase) 4-10kW**, selected automatically by
+  DTC 3725. Both SPA options now state their phase count, so the choice no longer depends
+  on knowing which register range your model serves.
+  - If your SPA-TL3 was auto-detected onto SPH-TL3, its PV entities disappear on
+    upgrade. They only ever reported zero.
+- **`Charge Stopped SOC (Battery First)` renamed to `Charge Stopped SOC`.** Register 3048
+  also governs charging under Load Priority, so the old name suggested it could be ignored
+  outside Battery First. Entity IDs are unchanged. Measured and reported by @as-wallpen.
+- **SPA gains AC current, output power, inverter status, AC energy and temperatures** from
+  the 2000-2124 range. These come from the protocol and have not yet been read on a device —
+  a scan from a single-phase SPA would confirm them. AC voltage and frequency keep their
+  existing measured registers. Three-phase SPA-TL3 is unaffected.
+- **The "settings are being reverted" notice** now points at Growatt's cloud pushing
+  settings down — remote control or a schedule set in the ShinePhone app — rather than a
+  connected dongle on its own.
+- **New: `tools/protocol_coverage.py`**, which reports registers the protocol documents
+  that no profile maps. Also corrects the range summary, which listed 2000-2124 as SPH
+  rather than SPA.
 
 ---
 

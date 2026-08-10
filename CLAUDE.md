@@ -874,6 +874,23 @@ When preparing a release:
    - Document all fixes and new features
    - Include upgrade notes if needed
 
+   **Keep entries to short bullets.** One or two sentences each: what changed, and what a
+   user has to do or expect. A bullet that runs to four paragraphs is a commit message in
+   the wrong file — the reasoning, the measurements and the history belong in the commit
+   and the code comments, where the next maintainer will look for them.
+
+   **Do not narrate whose fault it was.** No "introduced by us in vX.Y.Z", no "the same
+   bug that release was fixing", no post-mortem of how it got shipped. State the fix and
+   who it affects. Users need to know whether it touches them; they do not need the
+   confession, and it crowds out the part they came for.
+
+   Still include, because these are user-facing facts rather than blame:
+   - which models or profiles a change applies to
+   - entities that will appear or disappear on upgrade
+   - anything the user must do (re-select an option, re-run a scan)
+   - credit to the reporter — that is thanks, not fault
+   - whether a mapping is confirmed on hardware or taken from the protocol
+
 3. **Commit with proper message:**
    ```
    Bump version to vX.Y.Z
