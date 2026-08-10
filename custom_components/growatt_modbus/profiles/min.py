@@ -87,6 +87,23 @@ MIN_3000_6000TL_X = {
         3092: {'name': 'bus_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'DC bus voltage'},
         
         # Temperatures
+        #
+        # All three addresses are correct per V1.39 (Temp1/Temp2/Temp3, 0.1 C) and are
+        # read independently — no fallback copies one into another. What a MIN reports
+        # into them is a separate question, and on a MIN 10000TL-X observed over months:
+        #
+        #   3093 == 3094 at all times, 3095 == 0 at all times
+        #
+        # consistent with one physical sensor mirrored into Temp1 and Temp2 with Temp3
+        # unimplemented. On hardware that has three sensors they diverge — an SPA-TL3
+        # scan read the equivalent block as 37.8 / 20.0 / 33.3 C (#360).
+        #
+        # DELIBERATELY LEFT MAPPED. Removing ipm_temp and boost_temp here would tidy up
+        # a duplicate and an always-zero entity on that one unit, and silently delete
+        # working sensors on any MIN firmware that does populate them. One device is not
+        # enough to change a profile shared by every MIN, and an entity reading zero is
+        # cheaper than a missing one nobody can get back. Revisit only with readings from
+        # a second MIN.
         3093: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Inverter temperature', 'signed': True},
         3094: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'IPM temperature', 'signed': True},
         3095: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Boost temperature', 'signed': True},
@@ -236,6 +253,23 @@ MIN_7000_10000TL_X = {
         3092: {'name': 'bus_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'DC bus voltage'},
         
         # Temperatures
+        #
+        # All three addresses are correct per V1.39 (Temp1/Temp2/Temp3, 0.1 C) and are
+        # read independently — no fallback copies one into another. What a MIN reports
+        # into them is a separate question, and on a MIN 10000TL-X observed over months:
+        #
+        #   3093 == 3094 at all times, 3095 == 0 at all times
+        #
+        # consistent with one physical sensor mirrored into Temp1 and Temp2 with Temp3
+        # unimplemented. On hardware that has three sensors they diverge — an SPA-TL3
+        # scan read the equivalent block as 37.8 / 20.0 / 33.3 C (#360).
+        #
+        # DELIBERATELY LEFT MAPPED. Removing ipm_temp and boost_temp here would tidy up
+        # a duplicate and an always-zero entity on that one unit, and silently delete
+        # working sensors on any MIN firmware that does populate them. One device is not
+        # enough to change a profile shared by every MIN, and an entity reading zero is
+        # cheaper than a missing one nobody can get back. Revisit only with readings from
+        # a second MIN.
         3093: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Inverter temperature', 'signed': True},
         3094: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'IPM temperature', 'signed': True},
         3095: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Boost temperature', 'signed': True},

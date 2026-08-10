@@ -359,6 +359,44 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
             entity_registry.async_remove(stale_eid)
 
+    # General rule: a sensor the current profile does not list cannot be recreated, so a
+    # registry entry for it is stale by definition.
+    #
+    # The two blocks above each clean up one specific removal, which meant every future
+    # removal needed its own block — and the next one didn't get it. v1.5.3 dropped
+    # dcdc_temp from ~26 profiles that never had the register, and the entities did not
+    # disappear: they sat in the registry showing "unavailable", which is arguably worse
+    # than the 0.0 °C it replaced, because it looks like a broken sensor rather than one
+    # that was never meant to exist.
+    #
+    # Safe as a blanket rule because sensor.py creates exactly
+    # `SENSOR_DEFINITIONS ∩ get_sensors_for_profile(series)` and nothing else — anything
+    # outside that intersection has no code path that could bring it back.
+    #
+    # Not gated on connectivity, for the same reason as the blocks above: profile
+    # membership is a static fact needing no inverter and no poll. Gating it is what
+    # stopped the v1.4.0 cleanup running at all (#362).
+    # Imported here rather than at module scope: sensor.py imports coordinator.py, and
+    # hoisting this creates a cycle at integration load.
+    from .sensor import SENSOR_DEFINITIONS
+    from .device_profiles import get_sensors_for_profile
+
+    profile_sensors = get_sensors_for_profile(entry.data.get(CONF_INVERTER_SERIES, ""))
+    if profile_sensors:
+        for sensor_key in SENSOR_DEFINITIONS:
+            if sensor_key in profile_sensors:
+                continue
+            stale_eid = entity_registry.async_get_entity_id(
+                "sensor", DOMAIN, f"{entry.entry_id}_{sensor_key}"
+            )
+            if stale_eid:
+                _LOGGER.info(
+                    "Removing %s — '%s' is not in the %s profile, so nothing can "
+                    "populate it and it would linger as unavailable",
+                    stale_eid, sensor_key, entry.data.get(CONF_INVERTER_SERIES, "?"),
+                )
+                entity_registry.async_remove(stale_eid)
+
     # Per-entry state lives on the entry itself. hass.data[DOMAIN] is now reserved
     # solely for "_connections", the cross-entry shared-connection registry.
     entry.runtime_data = coordinator

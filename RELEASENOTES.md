@@ -4,6 +4,30 @@
 
 ---
 
+## v1.5.4
+
+Issues: #360, #362
+
+- **Fix: sensors removed in v1.5.3 went `unavailable` instead of disappearing.**
+  If v1.5.3 left you with a DC-DC Temperature entity showing *unavailable* rather than
+  removing it, this is the follow-up. Upgrade and it will go.
+
+  Dropping a sensor from a profile stops it being created, but Home Assistant keeps what
+  earlier versions already registered — so it lingers as a dead entity. Arguably worse
+  than the 0.0 °C it replaced, because an unavailable sensor looks like something broken
+  rather than something that was never meant to exist.
+
+  The cleanup that handles this existed, but was a list of specific sensor names, so each
+  new removal needed its own entry and this one never got one. It is now driven by the
+  profile itself: any sensor the profile does not list is removed, because nothing can
+  recreate it. Future removals clean up after themselves.
+
+  This is the second time this cleanup has failed. In v1.4.0 it was gated on the inverter
+  being reachable, which never holds during setup, so it did not run at all. Both failure
+  modes are now covered by tests.
+
+---
+
 ## v1.5.3
 
 Issues: #360, #362
