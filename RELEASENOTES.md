@@ -4,9 +4,17 @@
 
 ---
 
-## v1.6.0
+## v1.6.0 (pre-release)
 
 Issues: #371, #372, #373 — all on MOD/MID TL3-XH
+
+> **This is a pre-release, for testing.** Everything below was measured on a single
+> MOD 10KTL3-XH running DN1.0 firmware. The peak-shaving registers appear in no public
+> Growatt protocol document, so they rest on that one machine alone. If you run a MOD or
+> MID TL3-XH, confirming these values match your Growatt portal would be genuinely useful —
+> please comment on [#372](https://github.com/0xAHA/Growatt_ModbusTCP/issues/372).
+>
+> HACS will not offer this unless you enable beta versions on the integration.
 
 - **Two MOD controls that never worked have been removed.** Charge Power Rate (1090) and
   AC Charge Enable (1092) reject writes outright on this hardware — the whole holding block
