@@ -4,6 +4,33 @@
 
 ---
 
+## v1.6.0
+
+Issues: #371, #372, #373 — all on MOD/MID TL3-XH
+
+- **Two MOD controls that never worked have been removed.** Charge Power Rate (1090) and
+  AC Charge Enable (1092) reject writes outright on this hardware — the whole holding block
+  1000-1124 is unimplemented. Use **Charge Power Rate (3047)** and **Allow Grid Charge
+  (3049)** instead, both confirmed working. The old entities are removed on upgrade rather
+  than left behind as unavailable; **check any automations that referenced them.**
+- **New control: Grid Charge Stopped SOC.** Caps charging from the grid specifically,
+  separate from Charge Stopped SOC which applies to any source — the lower of the two wins.
+  Growatt exposes it in neither the app nor the portal, and on the reporting system it
+  silently held grid charging at 55% for two days while the general limit read 100%.
+- **New diagnostic sensors: Import Limit, Export Limit, Peak Shaving Reserve SOC, AC Charge
+  Max Power.** Peak-shaving settings configured in the Growatt portal, previously invisible.
+- **VPP remote power control state is now visible on MOD** (disabled by default): Control
+  Authority, Remote Power Control, Commanded Power and Last Setpoint. Read-only for now —
+  the commanded power is a target rather than a cap and will import from the grid to reach
+  it even with grid charging disabled, so writable controls need a guard first.
+- Controls dropped from a profile are now removed from Home Assistant rather than lingering
+  as unavailable, matching the behaviour sensors have had since v1.5.4.
+
+All three issues were reported by @KevlarD-67 with hardware measurements — A/B writes on one
+connection, portal round-trips, and full before/after register snapshots.
+
+---
+
 ## v1.5.5
 
 Issues: #360, #370

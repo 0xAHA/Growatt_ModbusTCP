@@ -694,6 +694,26 @@ WRITABLE_REGISTERS = {
                 'as Grid First mode (#362). Note your firmware may enforce a higher minimum '
                 'than 1% and silently ignore lower values (V1.39: US model / firmware ZACA-08+)'
     },
+    # Grid-charge stop SOC, MOD TL3-XH (#372). Separate from 3048 above: that one is the
+    # general charge stop, this one caps charging from the grid specifically. On the
+    # reporting system it sat at 55 while the general stop was 100 and silently limited
+    # grid charging for two days.
+    #
+    # Writable because Modbus is the only route to it — it appears in neither the
+    # ShinePhone app, the portal settings page, "Advanced Setting", nor tlx_enabled_settings.
+    # Confirmed in reverse: written over Modbus, then observed arriving in the Growatt
+    # cloud about 12 minutes later.
+    #
+    # Only offered where the profile maps 3312, which today is the MOD-XH map alone. The
+    # register appears in no public protocol document.
+    'grid_charge_stopped_soc': {
+        'register': 3312,
+        'scale': 1,
+        'valid_range': (0, 100),
+        'unit': '%',
+        'desc': 'SOC to stop charging from the grid (ub_ac_charging_stop_soc). Separate from '
+                'Charge Stopped SOC (3048), which applies to charging from any source (#372)'
+    },
 
     # MOD GEN4 grid-charge prerequisite gate (must be Enabled for TOU writes to persist)
     'allow_grid_charge': {
@@ -826,6 +846,11 @@ SENSOR_DEVICE_MAP = {
         'generator_discharge_today', 'generator_discharge_total',
         # WIT: Extra/parallel inverter power to grid
         'extra_power_to_grid',
+        # MOD TL3-XH demand management (#372) — limits on the grid connection point
+        'demand_import_limit', 'demand_export_limit',
+        # MOD TL3-XH VPP remote power control state (#373) — grid-facing control
+        'control_authority', 'remote_power_control_enable',
+        'remote_charge_and_discharge_power', 'vpp_last_setpoint',
     },
 
     # Load device - consumption
@@ -846,6 +871,8 @@ SENSOR_DEVICE_MAP = {
         'battery_charge_today', 'battery_discharge_today',
         'battery_charge_total', 'battery_discharge_total',
         'priority_mode',  # Battery priority mode
+        # MOD TL3-XH peak shaving (#372) — battery-side reserve and grid-charge ceiling
+        'peak_shaving_reserve_soc', 'ac_charge_max_power',
         # WIT: Battery SOH and BMS voltage
         'battery_soh', 'battery_voltage_bms',
         # SPF Off-Grid AC charge/discharge energy

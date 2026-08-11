@@ -367,27 +367,42 @@ MOD_6000_15000TL3_XH = {
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Max output power %'},
         30: {'name': 'modbus_address', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Modbus address 1-254'},
 
-        # Battery SOC limits.
+        # THE WHOLE HOLDING BLOCK 1000-1124 IS UNIMPLEMENTED ON THIS FAMILY.
         #
-        # 1071 (discharge_stopped_soc) and 1091 (charge_stopped_soc) are REMOVED —
-        # they exist on this hardware but do nothing. Writes are accepted and silently
-        # ignored, and the registers read back 0 forever:
+        # Nothing from that range is mapped here, and nothing should be added. Four
+        # registers were mapped at various points and all four are gone:
+        #
+        #   1071  discharge_stopped_soc   removed — writes accepted, silently ignored
+        #   1090  charge_power_rate       removed — writes REJECTED, exception 2
+        #   1091  charge_stopped_soc      removed — writes accepted, silently ignored
+        #   1092  ac_charge_enable        removed — writes REJECTED, exception 2
+        #
+        # Evidence, across three firmware lines:
         #
         #   #343  @Rohde2026 and @TimOsth, MOD DO1.0 — read back zeros; 3048/3067 work
         #   #362  @as-wallpen, MID 25KTL3-XH DN1.0 — 0 on every poll despite months of
-        #         writes, while 3067 was proven to work by direct before/after measurement
+        #         writes, while 3067 was proven by direct before/after measurement
+        #   #371  @KevlarD-67, MOD 10KTL3-XH DN1.0 — a full holding sweep read 0 of 125
+        #         registers non-zero across 1000-1124, and A/B writes 19 seconds apart on
+        #         one connection gave: FC6 1092 -> exception 2, FC6 3049 -> echoed and
+        #         read back. Same for 1090 against 3047.
         #
-        # They were kept because scan #228 showed "all Read OK". That was a misreading on
-        # my part: a register answering with 0 *is* Read OK. It showed the address
-        # responds, never that the control takes effect — so there has never been
-        # evidence for these two, only evidence against.
+        # Note the two failure modes differ, which matters for how each is detected. A
+        # silently ignored write only shows up on read-back — which is why 1071/1091
+        # survived a scan reporting "all Read OK", a register answering 0 being Read OK.
+        # An exception 2 surfaces immediately as a Modbus error, so 1090/1092 were never
+        # ambiguous once anyone wrote to them; they were simply never written to in a
+        # test. Neither has ever had evidence *for* it.
         #
-        # Use 3048 (batt_first_charge_stopped_soc) and 3067
-        # (grid_first_discharge_stopped_soc) instead; both are confirmed working.
-        1090: {'name': 'charge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
-               'valid_range': (0, 100), 'desc': 'Battery charge power rate limit (0-100%)'},
-        1092: {'name': 'ac_charge_enable', 'scale': 1, 'unit': '', 'access': 'RW',
-               'valid_range': (0, 1), 'desc': 'Enable charging from AC (grid)'},
+        # 1090/1092 were the worse pair to leave in place: they created a second grid
+        # charge switch and a second charge-rate control alongside the working ones, with
+        # no error surfaced when a user reached for the wrong one.
+        #
+        # Use instead, all confirmed working on this hardware:
+        #   3047  batt_first_charge_power_rate      (replaces 1090)
+        #   3048  batt_first_charge_stopped_soc     (replaces 1091)
+        #   3049  allow_grid_charge                 (replaces 1092)
+        #   3067  grid_first_discharge_stopped_soc  (replaces 1071)
 
         # Device identification
         30000: {'name': 'dtc_code', 'scale': 1, 'unit': '', 'access': 'RO', 'desc': 'Device Type Code: 5400 for MOD-XH/MID-XH', 'default': 5400},
@@ -487,6 +502,105 @@ MOD_6000_15000TL3_XH = {
                'valid_range': (1, 100),
                'desc': 'SOC to stop discharging. Applies in Load/self-consumption operation as '
                        'well as Grid First (#362); firmware may enforce a higher floor than 1'},
+
+        # ====================================================================
+        # Peak shaving / demand management (3307-3312)
+        # ====================================================================
+        #
+        # NOT IN ANY PUBLIC PROTOCOL DOCUMENT. docs/developer/protocol-v139.md carries no
+        # holding-register semantics above 3282 — the table jumps from there to 5400 —
+        # and Modbus RTU Protocol II V1.24 declares the TL-XH ranges up to 3374 but its
+        # tables stop around 3280. Consistent with Growatt's own statement that peak
+        # shaving on the MOD 3-10KTL3-XH needs a firmware upgrade obtained from them.
+        #
+        # Every mapping below was established by @KevlarD-67 (#372) on a MOD 10KTL3-XH
+        # (DN1.0) by changing the value in the Growatt web portal and reading the register
+        # back over Modbus, with peak shaving disabled throughout so the changes were
+        # inert, and all values restored afterwards. Correlation on value alone would not
+        # have been enough — 100 occurs in 6 cloud settings and 17 registers — so only the
+        # observed diffs are treated as confirmed.
+        #
+        # 3309, 3313 and 3314 are deliberately NOT mapped. 3314 in particular reads 10,
+        # which coincides with two other discharge-stop SOCs, and is settable nowhere, so
+        # it could not be confirmed in either direction.
+        3307: {'name': 'demand_import_limit', 'scale': 0.1, 'unit': 'kW', 'access': 'RO',
+               'desc': 'Import limit (uw_demand_mgt_downstrm_power_limit). Portal 7.5->7.0 kW '
+                       'read back 75->70 (#372); not in any public protocol document'},
+        3308: {'name': 'demand_export_limit', 'scale': 0.1, 'unit': 'kW', 'access': 'RO',
+               'desc': 'Export limit (uw_demand_mgt_revse_power_limit). Portal 7.5->7.0 kW '
+                       'read back 75->70 (#372); not in any public protocol document'},
+        3310: {'name': 'peak_shaving_reserve_soc', 'scale': 1, 'unit': '%', 'access': 'RO',
+               'desc': 'Reserved SOC for peak shaving (ub_peak_shaving_backup_soc). Portal '
+                       '50->45 read back 50->45 (#372); not in any public protocol document'},
+        3311: {'name': 'ac_charge_max_power', 'scale': 0.1, 'unit': 'kW', 'access': 'RO',
+               'desc': 'AC charging max power limit (uw_ac_charging_max_power_limit). Identified '
+                       'by elimination, write verified (#372); not in any public protocol document'},
+
+        # Grid-charge stop SOC — the one writable register in this cluster.
+        #
+        # Distinct from 3048 (batt_first_charge_stopped_soc, the general charge stop): this
+        # one caps charging *from the grid* specifically. On the reporter's system it sat at
+        # 55 while the general stop was 100 and silently capped grid charging for two days,
+        # costing a full charge cycle before the cause was found.
+        #
+        # Writable here because Modbus is the only way to reach it. It is not exposed in the
+        # ShinePhone app, the portal settings page, "Advanced Setting", or among the 39 types
+        # returned by tlx_enabled_settings. Confirmed in reverse (#372): FC6 3312=85 was
+        # echoed and read back, the Growatt cloud reported 85 about 12 minutes later, and it
+        # was then restored to 100 and verified.
+        3312: {'name': 'grid_charge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100),
+               'desc': 'SOC to stop charging from the grid (ub_ac_charging_stop_soc). Separate '
+                       'from 3048, which is the general charge stop. Confirmed by write plus '
+                       'cloud read-back (#372); not in any public protocol document'},
+
+        # ====================================================================
+        # VPP remote power control (30100, 30407-30410, 30474) — READ ONLY
+        # ====================================================================
+        #
+        # Mapped read-only on purpose. @KevlarD-67 demonstrated on hardware (#373) that
+        # this family does support remote power control — the WIT-only gate in select.py
+        # excludes it — but also that commanding it is not safe to expose yet:
+        #
+        #   1. THE POWER COMMAND IS A TARGET, NOT A LIMIT, AND IT OVERRIDES 3049.
+        #      At 30409=100 with insufficient PV the inverter climbed toward the commanded
+        #      power and drew 912 W from the grid while allow_grid_charge was 0. At 5/10/20%
+        #      only downward limiting is visible, which makes it look like a cap.
+        #   2. The duration expires but the registers do not clear. With 30408=2 the power
+        #      constraint released after ~128 s while 30407, 30409 and 30100 all stayed set
+        #      for the full 240 s observation. Active state cannot be inferred from these
+        #      values.
+        #   3. 30407 alone does nothing — 30100 (control authority) must also be set. That
+        #      is presumably why the capability was assumed absent on this family.
+        #
+        # Exposing the values makes the state visible and lets anyone verify the capability
+        # on their own hardware. Writable controls need a guard against commanding more than
+        # PV can supply, and that design is still open on #373.
+        #
+        # No new read code is needed: growatt_modbus.py already probes anchors 30100 and
+        # 30407 behind `if <addr> in holding_map`, so adding them here activates the
+        # existing path, including the 300 s failure retry from #370.
+        30100: {'name': 'control_authority', 'scale': 1, 'unit': '', 'access': 'RO',
+                'desc': 'VPP master enable. Read-only here — remote power control does nothing '
+                        'without it, and commanding power is not yet guarded (#373)'},
+        30407: {'name': 'remote_power_control_enable', 'scale': 1, 'unit': '', 'access': 'RO',
+                'desc': 'Remote power control enable. Does nothing unless 30100 is also set (#373)'},
+        30408: {'name': 'remote_power_control_charging_time', 'scale': 1, 'unit': 'min', 'access': 'RO',
+                'desc': 'Remote control duration. Expires without clearing 30407/30409/30100 (#373)'},
+        30409: {'name': 'remote_charge_and_discharge_power', 'scale': 1, 'unit': '%', 'access': 'RO',
+                'signed': True,
+                'desc': 'Commanded power, -100 to +100%. A TARGET, not a limit: it will import from '
+                        'the grid to reach it even with allow_grid_charge off (#373)'},
+        30410: {'name': 'vpp_ac_charge_enable', 'scale': 1, 'unit': '', 'access': 'RO',
+                'desc': 'VPP AC charge enable'},
+
+        # Mirrors the last commanded setpoint. Tracked 5 -> 10 -> 20 -> 100 across four runs,
+        # does not revert when remote control is disabled, and a direct write is accepted and
+        # ignored (the echo returns the written value, the read-back keeps the old one). It was
+        # the only unexpected change in a full 1150-register before/after snapshot (#373).
+        30474: {'name': 'vpp_last_setpoint', 'scale': 1, 'unit': '%', 'access': 'RO',
+                'signed': True,
+                'desc': 'Mirror of the last commanded VPP power setpoint. Write-ignored (#373)'},
 
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},

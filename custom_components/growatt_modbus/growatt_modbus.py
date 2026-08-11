@@ -335,6 +335,17 @@ class GrowattData:
     batt_first_charge_stopped_soc: int = 0     # SOC % to stop charging in Battery First mode (register 3048)
     grid_first_discharge_stopped_soc: int = 0  # SOC % to stop discharging in Grid First mode (register 3067)
 
+    # MOD TL3-XH peak shaving / demand management (holding 3307-3312, #372).
+    # Undocumented in any public protocol; mapped from portal round-trips. See mod.py.
+    demand_import_limit: float = 0.0       # kW  (3307, x0.1)
+    demand_export_limit: float = 0.0       # kW  (3308, x0.1)
+    peak_shaving_reserve_soc: int = 0      # %   (3310)
+    ac_charge_max_power: float = 0.0       # kW  (3311, x0.1)
+    grid_charge_stopped_soc: int = 0       # %   (3312) — grid-charge cap, distinct from 3048
+
+    # Mirror of the last commanded VPP power setpoint (holding 30474, #373). Write-ignored.
+    vpp_last_setpoint: int = 0             # % (-100..+100)
+
     # Dry Contact (SPH/MIN TL-X/TL-XH — V1.39 registers 3016/3017/3019/3119)
     dry_contact_state: int = 0       # input reg 3119: current relay state (0=Off, 1=On)
     dry_contact_enable: int = 0      # holding reg 3016: function enable (0=Disabled, 1=Enabled)
@@ -3731,6 +3742,48 @@ class GrowattModbus:
                     logger.debug("[TL-XH CTRL] grid_first_discharge_stopped_soc=%s%%", data.grid_first_discharge_stopped_soc)
             except Exception as e:
                 logger.debug(f"Could not read grid_first_discharge_stopped_soc register 3067: {e}")
+
+        # MOD TL3-XH peak shaving / demand management (3307-3312, #372).
+        #
+        # Read as one 6-register block: 3307-3312 is contiguous and the two addresses we
+        # deliberately do not map (3309, 3313) fall inside or beside it, so a block read
+        # costs no more than the five individual reads would and is gentler on a marginal
+        # gateway. Values we do not trust are simply not assigned.
+        if 3307 in holding_map:
+            try:
+                ps_regs = self.read_holding_registers(3307, 6)
+                if ps_regs is not None and len(ps_regs) >= 6:
+                    data.demand_import_limit = round(ps_regs[0] * 0.1, 1)
+                    data.demand_export_limit = round(ps_regs[1] * 0.1, 1)
+                    # ps_regs[2] is 3309 — unidentified, deliberately unmapped
+                    data.peak_shaving_reserve_soc = int(ps_regs[3])
+                    data.ac_charge_max_power = round(ps_regs[4] * 0.1, 1)
+                    data.grid_charge_stopped_soc = int(ps_regs[5])
+                    logger.debug(
+                        "[MOD PEAK] import_limit=%skW export_limit=%skW reserve_soc=%s%% "
+                        "ac_charge_max=%skW grid_charge_stop=%s%%",
+                        data.demand_import_limit, data.demand_export_limit,
+                        data.peak_shaving_reserve_soc, data.ac_charge_max_power,
+                        data.grid_charge_stopped_soc,
+                    )
+            except Exception as e:
+                logger.debug(f"Could not read peak shaving registers 3307-3312: {e}")
+
+        # Mirror of the last commanded VPP power setpoint (30474, #373).
+        #
+        # Not part of the 30407-30410 block and not covered by its availability probe, so
+        # it gets its own guarded read. Signed: the setpoint runs -100..+100.
+        if 30474 in holding_map:
+            try:
+                sp_regs = self.read_holding_registers(30474, 1)
+                if sp_regs is not None and len(sp_regs) >= 1:
+                    raw = sp_regs[0]
+                    if raw > 32767:
+                        raw -= 65536
+                    data.vpp_last_setpoint = int(raw)
+                    logger.debug("[VPP] last commanded setpoint (30474) = %s%%", data.vpp_last_setpoint)
+            except Exception as e:
+                logger.debug(f"Could not read VPP setpoint mirror register 30474: {e}")
 
         # MOD TL3-XH TOU slots 5-9 (registers 3050-3059)
         if 3050 in holding_map:

@@ -105,11 +105,29 @@ def _migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
         _try_rename(bin_current, f"binary_sensor.{ha_slugify(ent_name)}_inverter_online")
 
     # Select / Number / Time controls
+    #
+    # WARNING: this is a second copy of number.py's `friendly_overrides`, and it has
+    # drifted. It is missing export_limit_failed_power_rate, load_first_battery_minimum_soc,
+    # grid_first_discharge_stopped_soc and batt_first_charge_stopped_soc.
+    #
+    # The drift is not cosmetic. For any name missing here, this migration computes the
+    # expected entity_id from `.title()` while number.py builds the entity from the
+    # override — so the two disagree and this rename fights the platform on every setup.
+    # grid_first_discharge_stopped_soc is the clear case: number.py creates
+    # "Discharge Stopped SOC" and this renames it to "Grid First Discharge Stopped Soc".
+    #
+    # Not corrected here, deliberately: putting the four missing names back would rename
+    # those entities for everyone already running them, breaking automations that use the
+    # current IDs. That is a decision to take on its own, not a side effect of adding a
+    # control. The permanent fix is to import number.py's dict rather than restate it.
     _NUMBER_FRIENDLY_OVERRIDES = {
         'active_power_rate': 'VPP Active Power Rate',
         'export_limit_w': 'VPP Export Limit (W)',
         'max_output_power_rate': 'Max Output Power Rate',
         'vpp_export_limit_power_rate': 'VPP Export Limit Power Rate',
+        # New in #372. Listed in both copies from the outset so it cannot join the drift
+        # above; both forms happen to slugify identically, so it is a no-op today.
+        'grid_charge_stopped_soc': 'Grid Charge Stopped SOC',
     }
     for control_name in WRITABLE_REGISTERS:
         base_friendly = control_name.replace('_', ' ').title()
@@ -426,6 +444,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     stale_eid, sensor_key, entry.data.get(CONF_INVERTER_SERIES, "?"),
                 )
                 entity_registry.async_remove(stale_eid)
+
+    # The same rule for controls: a number, select or time entity whose register the
+    # profile does not map cannot be recreated, so its registry entry is stale.
+    #
+    # This generalises what were per-removal blocks above (export_limit_w, the WIT TOU
+    # start/end pairs, the time_period pairs), each written by hand when a control was
+    # dropped. #371 shows the cost of that pattern: removing 1090 and 1092 from the MOD
+    # profile stops the entities being created but leaves them in the registry showing
+    # `unavailable`, and nobody would think to add a fourth block. It is the same defect
+    # that hit sensors in v1.5.3 and was fixed for them in v1.5.4, one platform over.
+    #
+    # Safe as a blanket rule because number.py and select.py both create a generic control
+    # only when `control_config['register']` is in the profile's holding_registers — so
+    # anything failing that test has no code path that could bring it back.
+    #
+    # Bespoke classes are unaffected: they carry their own unique_ids (allow_grid_charge,
+    # the MOD TOU selects, the WIT VPP entities) and are not keyed by a WRITABLE_REGISTERS
+    # name, so they are never matched here.
+    # `holding` is the active profile's holding_registers, resolved further up for the
+    # SOC-limit cleanup.
+    if profile_is_known and holding:
+        for control_name, control_config in WRITABLE_REGISTERS.items():
+            if control_config.get("register") in holding:
+                continue
+            for _domain in ("number", "select", "time"):
+                stale_eid = entity_registry.async_get_entity_id(
+                    _domain, DOMAIN, f"{entry.entry_id}_{control_name}"
+                )
+                if stale_eid:
+                    _LOGGER.info(
+                        "Removing %s — register %s ('%s') is not in the %s profile, so "
+                        "the control cannot work and would linger as unavailable",
+                        stale_eid, control_config.get("register"), control_name,
+                        configured_profile,
+                    )
+                    entity_registry.async_remove(stale_eid)
 
     # Per-entry state lives on the entry itself. hass.data[DOMAIN] is now reserved
     # solely for "_connections", the cross-entry shared-connection registry.

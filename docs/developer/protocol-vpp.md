@@ -213,6 +213,70 @@ that model has, for most entries, never been verified against hardware. See
 
 ---
 
+## Field-established registers (not in any public document)
+
+Everything above is transcribed from Growatt's protocol documents. The registers below are
+not: they appear in no public revision we have, and were established by measurement on real
+hardware. They are recorded here because the alternative is losing them in an issue thread.
+
+Treat them as narrower evidence than the tables above — one machine, one firmware line —
+and say so in anything derived from them.
+
+### MOD TL3-XH peak shaving / demand management (holding 3307–3312)
+
+`protocol-v139.md` carries no holding-register semantics above 3282; Modbus RTU Protocol II
+V1.24 declares the TL-XH ranges to 3374 but its tables stop around 3280. This is consistent
+with Growatt's own position that peak shaving on the MOD 3-10KTL3-XH needs a firmware
+upgrade obtained from them — a later addition, documented in a revision that is not public.
+
+Established on a MOD 10KTL3-XH (DN1.0, DTC 5400) by changing each value in the Growatt web
+portal and reading the register back, with peak shaving disabled throughout so the changes
+were inert ([#372](https://github.com/0xAHA/Growatt_ModbusTCP/issues/372)).
+
+| Address | Meaning | Cloud field | Scale | How established |
+| --- | --- | --- | --- | --- |
+| 3307 | Import limit | `uw_demand_mgt_downstrm_power_limit` | 0.1 kW | Portal 7.5 → 7.0 kW, register 75 → 70 |
+| 3308 | Export limit | `uw_demand_mgt_revse_power_limit` | 0.1 kW | Portal 7.5 → 7.0 kW, register 75 → 70 |
+| 3310 | Peak shaving reserved SOC | `ub_peak_shaving_backup_soc` | 1 % | Portal 50 → 45, register 50 → 45 |
+| 3311 | AC charging max power limit | `uw_ac_charging_max_power_limit` | 0.1 kW | Elimination; write verified |
+| 3312 | Grid charging stop SOC | `ub_ac_charging_stop_soc` | 1 % | Reverse: wrote 85 over Modbus, cloud reported 85 ~12 min later |
+
+**3309, 3313 and 3314 are not mapped.** 3314 reads 10, which coincides with two other
+discharge-stop SOCs, and is settable nowhere — so it could not be confirmed in either
+direction. Value correlation alone is not sufficient here: 100 occurs in six cloud settings
+and seventeen registers.
+
+**3312 is distinct from 3048.** 3048 is the general charge stop; 3312 caps charging from
+the grid specifically, and the lower of the two wins. Growatt exposes 3312 in neither the
+app nor the portal, which is how it silently capped one system's grid charging at 55 % for
+two days while the general stop read 100 %.
+
+### VPP remote power control on MOD TL3-XH
+
+Remote power control works on this family, contrary to the assumption behind the WIT-only
+gate in the integration. Three findings from measurement
+([#373](https://github.com/0xAHA/Growatt_ModbusTCP/issues/373)) that any implementation
+needs:
+
+1. **The commanded power (30409) is a target, not a limit — and it overrides
+   `allow_grid_charge` (3049).** At 100 % with insufficient PV the inverter climbed toward
+   the setpoint and imported 912 W from the grid while 3049 was 0. At 5/10/20 % only
+   downward limiting is visible, which gives a misleading impression of a cap. Transfer
+   function measured linear: 77.6 W per percentage point, offset −86 W, full scale ≈7.25 kW
+   on a 15 kWh battery.
+2. **The duration expires but the registers do not clear.** With 30408 = 2 minutes the
+   power constraint released after ~128 s while 30407, 30409 and 30100 all stayed set for
+   the full 240 s observation. Active state cannot be inferred from the register values.
+3. **30407 alone does nothing** — 30100 (control authority) must also be set. This is
+   presumably why the capability was assumed absent on non-WIT families.
+
+**30474 mirrors the last commanded setpoint.** It tracked 5 → 10 → 20 → 100 across four
+runs, does not revert when remote control is disabled, and a direct write is accepted and
+ignored — the echo returns the written value, the read-back keeps the old one. It was the
+only unexpected change in a full 1150-register before/after snapshot.
+
+---
+
 ## Input Registers (87 registers)
 
 | Address | Parameter Name | R/W | Type | Unit | Count | Notes |

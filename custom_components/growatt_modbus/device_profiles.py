@@ -217,6 +217,32 @@ BACKUP_BOX_SENSORS: Set[str] = {
 }
 
 
+# MOD TL3-XH peak shaving / demand management, holding 3307-3312 (#372), and the
+# read-only VPP remote power control state, holding 30100/30407-30409/30474 (#373).
+#
+# ADD THIS ONLY TO PROFILES WHOSE REGISTER MAP DEFINES THOSE ADDRESSES. It is deliberately
+# a standalone group rather than an addition to an existing one: the registers appear in no
+# public protocol document and are confirmed on exactly one firmware line (MOD 10KTL3-XH,
+# DN1.0). Folding them into a shared group is how dcdc_temp reached twenty-six profiles
+# that had no register for it and published 0.0 for months (v1.5.3).
+#
+# grid_charge_stopped_soc (3312) is absent here on purpose — it is writable and appears as
+# a number entity, not a sensor.
+MOD_PEAK_SHAVING_SENSORS: Set[str] = {
+    "demand_import_limit",
+    "demand_export_limit",
+    "peak_shaving_reserve_soc",
+    "ac_charge_max_power",
+}
+
+MOD_VPP_STATE_SENSORS: Set[str] = {
+    "control_authority",
+    "remote_power_control_enable",
+    "remote_charge_and_discharge_power",
+    "vpp_last_setpoint",
+}
+
+
 # ============================================================================
 # COMPOSITE SENSOR GROUPS
 # Convenience unions used by INVERTER_PROFILES below.
@@ -822,7 +848,8 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
-        "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR)
+        "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
+                     | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 
@@ -835,7 +862,8 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
-        "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR)
+        "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
+                     | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 
@@ -854,7 +882,8 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 30.0,
-        "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR)
+        "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
+                     | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 

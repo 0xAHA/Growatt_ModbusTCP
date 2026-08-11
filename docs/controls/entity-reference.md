@@ -132,23 +132,89 @@ See [WIT Control Guide](wit-guide.md) for full protocol documentation.
 
 ## MOD Three-Phase Hybrid Inverters
 
-**Applies to:** MOD 10000TL3-XH (VPP V2.01, DTC 5400)
+**Applies to:** MOD 6000-15000TL3-XH and MID 11000-30000TL3-XH (VPP V2.01, DTC 5400)
 
-**Control method:** Not yet available — battery control holding registers not confirmed
+**Control method:** Persistent writes to the 3000-range GEN4 registers.
 
-> **Status (as of v0.6.6):** Hardware register scanning of a MOD 10000TL3-XH (Issue #131, Feb 2026) showed the storage range 1000–1124 all zeros, VPP register 30099 = 0, and legacy WIT registers 201/202/203 ineffective. The correct writable control registers for MOD battery management have not been identified. Battery **monitoring** is fully available; battery **control** is deferred. If you have a MOD and can share register scan data, please open an issue.
+### Controls
 
-Battery **monitoring** sensors are fully available (see below).
+| Entity | Type | Register | Options / Range | Description |
+|--------|------|----------|-----------------|-------------|
+| Allow Grid Charge | Select | 3049 | Disabled (0), Enabled (1) | Permits charging from the grid. Must be Enabled for time-of-use writes to persist |
+| Charge Power Rate | Number | 3047 | 1–100 % | Battery charge power limit |
+| Charge Stopped SOC | Number | 3048 | 0–100 % | SOC at which charging stops, from any source |
+| Discharge Power Rate | Number | 3036 | 0–100 % | Battery discharge power limit |
+| Discharge Stopped SOC | Number | 3067 | 1–100 % | SOC at which discharging stops |
+| Grid Charge Stopped SOC | Number | 3312 | 0–100 % | SOC at which charging **from the grid** stops. See below |
+| Time Period 1–9 Priority | Select | 3038–3058 | Load / Battery / Grid First | Priority for each time-of-use slot |
+| Time Period 1–9 Enable | Select | 3038–3058 | Disabled, Enabled | Enable each slot |
+| Time Period 1–9 Start / End | Time | 3038–3059 | 00:00–23:59 | Slot start and end times |
+
+!!! warning "Two charge-stop settings, and they are not the same"
+    **Charge Stopped SOC** (3048) applies to charging from any source. **Grid Charge
+    Stopped SOC** (3312) applies only to charging from the grid, and the lower of the two
+    wins.
+
+    This catches people out. On one system 3312 sat at 55 % while 3048 was 100 %, silently
+    capping grid charging for two days ([#372](https://github.com/0xAHA/Growatt_ModbusTCP/issues/372)).
+    Growatt exposes 3312 in neither the ShinePhone app nor the web portal, so if grid
+    charging stops short of your configured limit, check this entity.
+
+!!! info "Registers 1090 and 1092 are not available on this hardware"
+    Earlier versions offered **Charge Power Rate (1090)** and **AC Charge Enable (1092)**
+    on MOD. The entire holding block 1000–1124 is unimplemented on this family — a full
+    sweep read zero across all 125 registers, and writes are rejected outright with Modbus
+    exception 2 ([#371](https://github.com/0xAHA/Growatt_ModbusTCP/issues/371)).
+
+    Both were removed. Use **Charge Power Rate (3047)** and **Allow Grid Charge (3049)**
+    instead; both are confirmed working. If you had automations pointing at the old
+    entities, they will have been removed on upgrade.
+
+### Peak shaving and demand management (read-only)
+
+These are configured in the Growatt web portal and shown here for visibility. They are
+diagnostic entities, and appear in no public Growatt protocol document — the mappings were
+established by changing each value in the portal and reading the register back
+([#372](https://github.com/0xAHA/Growatt_ModbusTCP/issues/372)).
+
+| Entity | Register | Description |
+|--------|----------|-------------|
+| Import Limit | 3307 | Demand-management import ceiling (kW) |
+| Export Limit | 3308 | Demand-management export ceiling (kW) |
+| Peak Shaving Reserve SOC | 3310 | Charge held back for peak shaving (%) |
+| AC Charge Max Power | 3311 | Ceiling on grid charging power (kW) |
+
+### VPP remote power control (read-only)
+
+MOD TL3-XH **does** support VPP remote power control — this was measured on hardware
+([#373](https://github.com/0xAHA/Growatt_ModbusTCP/issues/373)) — but the controls are not
+exposed for writing yet. The state is available as disabled-by-default diagnostic entities:
+VPP Control Authority (30100), VPP Remote Power Control (30407), VPP Commanded Power
+(30409) and VPP Last Setpoint (30474).
+
+!!! danger "Why writing is not exposed"
+    **The commanded power is a target, not a limit.** At 100 % with insufficient solar, the
+    inverter climbed toward the setpoint and drew 912 W from the grid — while Allow Grid
+    Charge was Disabled. At lower percentages only downward limiting is visible, which
+    makes it look like a cap.
+
+    **The duration expires but the registers do not clear.** After a 2-minute command the
+    power constraint released at ~128 s while all three registers stayed set for the full
+    observation. You cannot tell from these values whether control is currently active.
+
+    Writable controls need a guard against commanding more power than solar can supply.
+    Until that exists, exposing them would let an automation import from the grid while the
+    user believes grid charging is switched off.
 
 **Battery monitoring sensors available:**
 
 | Sensor | Register | Description |
 |--------|----------|-------------|
 | Battery SOC | 3171 | State of charge (%) |
-| Battery SOH | 31218 | State of health (%) |
+| Battery SOH | 1096 | State of health (%) |
 | Battery Voltage | 3169 | Battery voltage (×0.01 V) |
 | Battery Current | 3170 | Battery current (×0.1 A) |
-| Battery Temp | 3175/3176 | Battery temperature (×0.1 °C) |
+| DC-DC Temperature | 3176 | Battery-side DC-DC stage temperature (×0.1 °C). Not the pack temperature — see [#362](https://github.com/0xAHA/Growatt_ModbusTCP/issues/362) |
 | Battery Charge Power | 3178/3179 | Charge power (×0.1 W) |
 | Battery Discharge Power | 3180/3181 | Discharge power (×0.1 W) |
 | Battery Charge Today | 3129/3130 | Energy charged today (kWh) |
@@ -185,7 +251,7 @@ Battery **monitoring** sensors are fully available (see below).
 | **SPH** (3–10kW) | Yes | Persistent writes | Priority Mode, AC Charge Enable, Time Period Enables (×3), System Enable (HU) | Discharge Rate, Discharge Stop SOC, Charge Rate, Charge Stop SOC, Time Period Start/End (×3) |
 | **SPF** ES PLUS | Yes | Persistent writes | Output Priority, Charge Priority, AC Input Mode, Battery Type | AC Charge Current, Gen Charge Current, Battery→Utility SOC, Utility→Battery SOC |
 | **WIT** (4–15kW) | Yes (timed) | VPP overrides | Work Mode, Control Authority, VPP Export Limit Enable, Remote Power Control | Active Power Rate, Export Limit, VPP Export Rate, Remote Duration, Remote Power |
-| **MOD** TL3-XH | No (pending) | — | — | — |
+| **MOD / MID** TL3-XH | Yes | Persistent writes | Allow Grid Charge, Time Period Priority/Enable (×9) | Charge Rate, Charge Stop SOC, Grid Charge Stop SOC, Discharge Rate, Discharge Stop SOC, Time Period Start/End (×9) |
 | **MIN / TL-XH** | No | — | — | — |
 | **MIC** | No | — | — | — |
 

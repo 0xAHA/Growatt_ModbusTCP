@@ -57,6 +57,37 @@ def test_cleanup_actually_removes():
     assert "async_remove" in body, "cleanup never calls async_remove"
 
 
+def test_controls_are_cleaned_up_by_profile_too():
+    """The same rule, one platform over.
+
+    Sensors got the profile-driven cleanup in v1.5.4; controls kept the per-removal
+    blocks, so #371 — dropping registers 1090 and 1092 from the MOD profile — would have
+    left `number.<name>_charge_power_rate` and `select.<name>_ac_charge_enable` in the
+    registry showing `unavailable`, and the next removal would have needed yet another
+    hand-written block.
+    """
+    body = _setup_entry_source()
+    assert "WRITABLE_REGISTERS.items()" in body, (
+        "stale-control cleanup does not iterate WRITABLE_REGISTERS, so it can only remove "
+        "controls somebody hard-coded into it by name"
+    )
+    for domain in ('"number"', '"select"', '"time"'):
+        assert domain in body, f"stale-control cleanup does not cover the {domain} platform"
+
+
+def test_control_cleanup_checks_the_register_not_the_name():
+    """Controls are gated on `control_config['register'] in holding_registers`, so the
+    cleanup has to test the same thing. Matching on the control name instead would keep
+    entities whose register was removed but whose name still exists in const.py — which is
+    exactly the 1090/1092 case, since both names are still defined there for other
+    families."""
+    body = _setup_entry_source()
+    assert re.search(r"control_config\.get\(\s*[\"']register[\"']\s*\)\s+in\s+holding", body), (
+        "stale-control cleanup does not test the control's register against the profile's "
+        "holding registers"
+    )
+
+
 def test_cleanup_is_not_gated_on_connectivity():
     """The v1.4.0 failure. Profile membership is static — it needs no inverter and no
     poll, and requiring one means the cleanup never runs during setup, which is the only

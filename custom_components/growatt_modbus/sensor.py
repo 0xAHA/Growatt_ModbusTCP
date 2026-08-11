@@ -1022,6 +1022,105 @@ SENSOR_DEFINITIONS = {
         "value_map": {0: "Off", 1: "On"},
     },
 
+    # MOD TL3-XH peak shaving / demand management (holding 3307-3312, #372)
+    #
+    # Settings rather than measurements, so DIAGNOSTIC. Not disabled by default: the whole
+    # point is that these were invisible — one of them capped a user's grid charging at
+    # 55% for two days with no way to see it.
+    #
+    # 3312 is not here. It is writable and appears as a number entity instead.
+    "demand_import_limit": {
+        "name": "Import Limit",
+        "icon": "mdi:transmission-tower-import",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.KILO_WATT,
+        "attr": "demand_import_limit",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "description": "Demand-management import limit. Set in the Growatt portal; read-only here.",
+    },
+    "demand_export_limit": {
+        "name": "Export Limit",
+        "icon": "mdi:transmission-tower-export",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.KILO_WATT,
+        "attr": "demand_export_limit",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "description": "Demand-management export limit. Set in the Growatt portal; read-only here.",
+    },
+    "peak_shaving_reserve_soc": {
+        "name": "Peak Shaving Reserve SOC",
+        "icon": "mdi:battery-lock",
+        "device_class": SensorDeviceClass.BATTERY,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": PERCENTAGE,
+        "attr": "peak_shaving_reserve_soc",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "description": "Battery charge held in reserve for peak shaving. Set in the Growatt portal.",
+    },
+    "ac_charge_max_power": {
+        "name": "AC Charge Max Power",
+        "icon": "mdi:transmission-tower",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.KILO_WATT,
+        "attr": "ac_charge_max_power",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "description": "Ceiling on charging power drawn from the grid. Set in the Growatt portal.",
+    },
+
+    # VPP remote power control state (holding 30100, 30407-30409, 30474, #373)
+    #
+    # Read-only. This family supports remote power control, but commanding it is not yet
+    # exposed: the power value is a target rather than a cap and will import from the grid
+    # to reach it even with grid charging disabled. These make the state visible and let
+    # anyone confirm the capability on their own hardware.
+    #
+    # Disabled by default — most users have no VPP setup, and an always-zero control
+    # register on the dashboard invites the assumption that something is broken.
+    "control_authority": {
+        "name": "VPP Control Authority",
+        "icon": "mdi:shield-key",
+        "attr": "control_authority",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "disabled_by_default": True,
+        "value_map": {0: "Disabled", 1: "Enabled"},
+        "description": "VPP master enable. Remote power control has no effect while this is Disabled.",
+    },
+    "remote_power_control_enable": {
+        "name": "VPP Remote Power Control",
+        "icon": "mdi:remote",
+        "attr": "remote_power_control_enable",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "disabled_by_default": True,
+        "value_map": {0: "Disabled", 1: "Enabled"},
+        "description": "Remote power control enable. Note the duration can expire while this still "
+                       "reads Enabled — it does not indicate whether control is currently active.",
+    },
+    "remote_charge_and_discharge_power": {
+        "name": "VPP Commanded Power",
+        "icon": "mdi:battery-charging-outline",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": PERCENTAGE,
+        "attr": "remote_charge_and_discharge_power",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "disabled_by_default": True,
+        "description": "Commanded charge/discharge power, negative for discharge. This is a target, "
+                       "not a limit — the inverter will import from the grid to reach it.",
+    },
+    "vpp_last_setpoint": {
+        "name": "VPP Last Setpoint",
+        "icon": "mdi:history",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": PERCENTAGE,
+        "attr": "vpp_last_setpoint",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "disabled_by_default": True,
+        "description": "Mirror of the last commanded VPP setpoint. Does not reset when remote "
+                       "control is disabled, so it reflects history rather than current state.",
+    },
+
     # Insulation resistance, DC injection and leakage current (ISO/DCI/GFCI)
     # Registers 3087-3091 (V1.39 / VPP 2.01 3000-range inverters: MIN, TL-XH, MOD, WIT)
     "pv_iso": {

@@ -175,6 +175,10 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
             # to stop charging under Load Priority with all TOU periods disabled, so the
             # "(Battery First)" suffix told users it could be ignored outside that mode.
             'batt_first_charge_stopped_soc': 'Charge Stopped SOC',
+            # Register 3312 (#372). "Grid" rather than "AC" deliberately: the cloud calls
+            # it ub_ac_charging_stop_soc, but next to "Charge Stopped SOC" above, "AC" does
+            # not tell a user which of the two applies to them.
+            'grid_charge_stopped_soc': 'Grid Charge Stopped SOC',
         }
         friendly_name = friendly_overrides.get(control_name, control_name.replace('_', ' ').title())
         self._attr_name = friendly_name
