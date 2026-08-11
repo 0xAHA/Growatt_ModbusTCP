@@ -48,12 +48,32 @@ SPH_3000_6000 = {
         # Power Flow — grid import/export and load (Issue #326)
         1015: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 1016, 'desc': 'Power to user (grid import when positive)'},
         1016: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 1015, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        1021: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'Total load power consumption'},
-        1022: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # 1021 was mapped as power_to_load and 1037 as self_consumption_power, which is
+        # the wrong way round (#369). Per V1.39 the storage range runs in four 8-register
+        # blocks — R, S, T, Total — so:
+        #
+        #   1021  PactouserTotal   AC power to user total     -> grid import
+        #   1029  Pactogrid total  AC power to grid total     -> grid export
+        #   1037  PLocalLoad total INV power to local load    -> house load
+        #
+        # Load Power was therefore showing grid import, and the real load at 1037 was
+        # read into a name no sensor group uses and discarded.
+        #
+        # Confirmed on an SPH 5000 (#369): Power to Load, Power to User and Grid Import
+        # Power charted three identical lines across a sunny morning, down to a shared
+        # 29 W baseline. On a single-phase unit R phase and Total are the same
+        # measurement, so 1015 and a mis-mapped 1021 return the same number — genuine
+        # load power would have diverged from import the moment the sun or the battery
+        # supplied the house.
+        #
+        # 1021 keeps a suffixed name so it does not collide with 1015 and does not
+        # participate in fallback, matching what SPH_TL3_3000_10000_V201 already does.
+        1021: {'name': 'power_to_user_total_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'AC power to user total H (PactouserTotal) — grid import'},
+        1022: {'name': 'power_to_user_total_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
         1029: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 1030, 'desc': 'AC power to grid total (positive=export)'},
         1030: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 1029, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        1037: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 1038},
-        1038: {'name': 'self_consumption_power_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1037: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1038, 'desc': 'INV power to local load total H (PLocalLoad total) — house load'},
+        1038: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         # AC Output
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
@@ -287,12 +307,32 @@ SPH_7000_10000 = {
         # Power Flow — grid import/export and load (Issue #326)
         1015: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 1016, 'desc': 'Power to user (grid import when positive)'},
         1016: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 1015, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        1021: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'Total load power consumption'},
-        1022: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # 1021 was mapped as power_to_load and 1037 as self_consumption_power, which is
+        # the wrong way round (#369). Per V1.39 the storage range runs in four 8-register
+        # blocks — R, S, T, Total — so:
+        #
+        #   1021  PactouserTotal   AC power to user total     -> grid import
+        #   1029  Pactogrid total  AC power to grid total     -> grid export
+        #   1037  PLocalLoad total INV power to local load    -> house load
+        #
+        # Load Power was therefore showing grid import, and the real load at 1037 was
+        # read into a name no sensor group uses and discarded.
+        #
+        # Confirmed on an SPH 5000 (#369): Power to Load, Power to User and Grid Import
+        # Power charted three identical lines across a sunny morning, down to a shared
+        # 29 W baseline. On a single-phase unit R phase and Total are the same
+        # measurement, so 1015 and a mis-mapped 1021 return the same number — genuine
+        # load power would have diverged from import the moment the sun or the battery
+        # supplied the house.
+        #
+        # 1021 keeps a suffixed name so it does not collide with 1015 and does not
+        # participate in fallback, matching what SPH_TL3_3000_10000_V201 already does.
+        1021: {'name': 'power_to_user_total_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'AC power to user total H (PactouserTotal) — grid import'},
+        1022: {'name': 'power_to_user_total_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
         1029: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 1030, 'desc': 'AC power to grid total (positive=export)'},
         1030: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 1029, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        1037: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 1038},
-        1038: {'name': 'self_consumption_power_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1037: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1038, 'desc': 'INV power to local load total H (PLocalLoad total) — house load'},
+        1038: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         # AC Output
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
@@ -509,12 +549,13 @@ SPH_8000_10000_HU = {
         # Power Flow - Critical for grid import/export tracking
         1015: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 1016, 'desc': 'Power to user (grid import when positive)'},
         1016: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 1015, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        1021: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'Total load power consumption'},
-        1022: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Same correction as the two profiles above — see #369 and the note there.
+        1021: {'name': 'power_to_user_total_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'AC power to user total H (PactouserTotal) — grid import'},
+        1022: {'name': 'power_to_user_total_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
         1029: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 1030, 'desc': 'AC power to grid total H (Pactogrid total, positive=export)'},
         1030: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 1029, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        1037: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 1038},
-        1038: {'name': 'self_consumption_power_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1037: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1038, 'desc': 'INV power to local load total H (PLocalLoad total) — house load'},
+        1038: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},
         1039: {'name': 'self_consumption_percentage', 'scale': 1, 'unit': '%'},
 
         # Energy Breakdown - Hardware registers for grid import/export
@@ -612,8 +653,13 @@ SPH_3000_6000_V201 = {
         # 1021: PactouserTotal  = AC power to user total (grid import)
         # 1029: Pactogrid total = AC power to grid total (grid export)
         # 1037: PLocalLoad total = INV power to local load total
-        1021: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'AC power to user total H (PactouserTotal)'},
-        1022: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Suffixed, because this profile inherits 1015/1016 as `power_to_user` from the
+        # legacy map above. Both addresses carry grid import and are the same number on
+        # single-phase hardware, so naming them identically was harmless in effect — but
+        # it left _find_register_by_name() picking whichever came first in iteration
+        # order, which is not something to rely on. Matches SPH_TL3_3000_10000_V201.
+        1021: {'name': 'power_to_user_total_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'AC power to user total H (PactouserTotal)'},
+        1022: {'name': 'power_to_user_total_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
         1029: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 1030, 'desc': 'AC power to grid total H (Pactogrid total)'},
         1030: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 1029, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         1037: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1038, 'desc': 'INV power to local load total H (PLocalLoad total)'},
@@ -744,8 +790,13 @@ SPH_7000_10000_V201 = {
         # 1021: PactouserTotal  = AC power to user total (grid import)
         # 1029: Pactogrid total = AC power to grid total (grid export)
         # 1037: PLocalLoad total = INV power to local load total
-        1021: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'AC power to user total H (PactouserTotal)'},
-        1022: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Suffixed, because this profile inherits 1015/1016 as `power_to_user` from the
+        # legacy map above. Both addresses carry grid import and are the same number on
+        # single-phase hardware, so naming them identically was harmless in effect — but
+        # it left _find_register_by_name() picking whichever came first in iteration
+        # order, which is not something to rely on. Matches SPH_TL3_3000_10000_V201.
+        1021: {'name': 'power_to_user_total_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'AC power to user total H (PactouserTotal)'},
+        1022: {'name': 'power_to_user_total_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
         1029: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 1030, 'desc': 'AC power to grid total H (Pactogrid total)'},
         1030: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 1029, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         1037: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1038, 'desc': 'INV power to local load total H (PLocalLoad total)'},
