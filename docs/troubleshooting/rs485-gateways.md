@@ -48,6 +48,13 @@ Set the work mode so it performs **Modbus TCP to RTU** conversion rather than pl
 
 One EW11A report ([#309](https://github.com/0xAHA/Growatt_ModbusTCP/issues/309)) showed all entities reading zero, but the same symptom followed the reporter onto a Waveshare adapter, so the gateway was not the cause. They resolved it with a Growatt WiLan-X2.
 
+!!! tip "It can hang after its settings are changed — reboot it"
+    Changing the EW11's Modbus or network settings can leave it running but refusing every connection. It stays visible on the network and its web interface may still load, yet nothing can open a Modbus session ([#368](https://github.com/0xAHA/Growatt_ModbusTCP/issues/368)).
+
+    The distinguishing feature is that it survives everything done on the Home Assistant side. That reporter downgraded the integration, restored several backups, and built a second Home Assistant instance from scratch — the fault followed all of it, because none of those touch the gateway. **Rebooting the EW11 fixed it immediately.**
+
+    Reboot the gateway before spending time on anything else whenever data stops arriving and nothing about your inverter has changed.
+
 ### ✅ Growatt ShineWiLan-X2 — works, within limits
 
 Growatt's own dongle. It exposes a **local Modbus TCP server on port 502 while keeping its cloud connection**, so you get local data in Home Assistant and the ShinePhone app at the same time — no need to choose. It also buffers data and re-synchronises after a power cut, which no generic serial server does.
@@ -94,6 +101,15 @@ Reported in [#367](https://github.com/0xAHA/Growatt_ModbusTCP/issues/367). Repea
 On the PUSR unit in #367, 113 registers cost the same as 1 — every read landed in one of two clusters ~500 ms apart, which looks like an internal scheduling tick. Block size 1 would have meant ~113 requests of ~0.8 s each in place of a single 1.3 s read. **Block size 25 was kept.**
 
 **Careful measuring latency from logs.** A 15-18 s figure reported on #367 turned out to be the integration's own failure cycle — a 10 s timeout plus reset and retry — not gateway latency. Measure with raw sockets and the integration disabled.
+
+**Read the failure type before anything else.** A register scan records why each read failed, and the two common answers mean opposite things:
+
+| In the scan's Status column | Meaning |
+|---|---|
+| `ConnectionException` on **every** row | The TCP socket never opened. Nothing about registers, block sizes or profiles applies — the gateway is unreachable or refusing connections |
+| `ModbusIOException`, short reads, or a mix of successes and failures | The connection works and the conversation is failing. Now block size, pacing and gateway settings are worth tuning |
+
+The first case is worth checking first because it is quick to confirm and rules out everything else. In [#368](https://github.com/0xAHA/Growatt_ModbusTCP/issues/368) all 2425 rows carried the same `ConnectionException`, which meant no amount of integration tuning could have helped — and the reporter had already downgraded, restored backups and rebuilt Home Assistant before that was spotted.
 
 **Symptom survives a gateway swap?** Then the gateway is not the variable. One reporter saw every entity read zero on an EW11A, fitted a Waveshare, and got exactly the same result — which ruled out both adapters in a single step and pointed at the inverter side instead ([#309](https://github.com/0xAHA/Growatt_ModbusTCP/issues/309)). Swapping hardware is slow, but it is decisive in a way that reading logs often is not.
 
