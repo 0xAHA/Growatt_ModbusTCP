@@ -119,6 +119,9 @@
       "ac_charge_energy_total": {
         "name": "AC Charge Energy Total"
       },
+      "ac_charge_max_power": {
+        "name": "AC Charge Max Power"
+      },
       "ac_current": {
         "name": "AC Current"
       },
@@ -383,6 +386,9 @@
       "buck2_temp": {
         "name": "Buck2 Temperature"
       },
+      "control_authority": {
+        "name": "VPP Control Authority"
+      },
       "dcdc_temp": {
         "name": "DC-DC Temperature"
       },
@@ -394,6 +400,12 @@
       },
       "dci_t": {
         "name": "DC Injection Current (T-Phase)"
+      },
+      "demand_export_limit": {
+        "name": "Export Limit"
+      },
+      "demand_import_limit": {
+        "name": "Import Limit"
       },
       "derating_mode": {
         "name": "Derating Mode"
@@ -521,6 +533,9 @@
       "output_dc_voltage": {
         "name": "Output DC Voltage"
       },
+      "peak_shaving_reserve_soc": {
+        "name": "Peak Shaving Reserve SOC"
+      },
       "power_to_grid": {
         "name": "Power to Grid"
       },
@@ -602,6 +617,12 @@
       "pv_total_power": {
         "name": "Solar Total Power"
       },
+      "remote_charge_and_discharge_power": {
+        "name": "VPP Commanded Power"
+      },
+      "remote_power_control_enable": {
+        "name": "VPP Remote Power Control"
+      },
       "self_consumption": {
         "name": "Self Consumption"
       },
@@ -613,6 +634,9 @@
       },
       "system_output_power": {
         "name": "System Output Power"
+      },
+      "vpp_last_setpoint": {
+        "name": "VPP Last Setpoint"
       },
       "warning_code": {
         "name": "Warning Code"
