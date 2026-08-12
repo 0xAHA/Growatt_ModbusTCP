@@ -111,6 +111,19 @@ On the PUSR unit in #367, 113 registers cost the same as 1 — every read landed
 
 The first case is worth checking first because it is quick to confirm and rules out everything else. In [#368](https://github.com/0xAHA/Growatt_ModbusTCP/issues/368) all 2425 rows carried the same `ConnectionException`, which meant no amount of integration tuning could have helped — and the reporter had already downgraded, restored backups and rebuilt Home Assistant before that was spotted.
 
+**Tuning has a floor, and it is the wiring.** Block size, pacing and gateway settings can only make the best of the signal that arrives. If reads keep failing after you have taken block size down and the Modbus delay up, the problem is likely physical:
+
+- **Termination.** RS485 wants a 120 Ω resistor at each end of the run — the two ends, not every device. Without it, signals reflect off the unterminated ends and corrupt the frames behind them. Most gateways have a jumper or DIP switch to enable an internal terminator.
+- **Cable and routing.** Use a twisted pair for A/B, keep the run away from anything switching high current, and avoid star topologies — RS485 is a daisy chain.
+- **Where the noise is.** An inverter's own power stage is an electrically hostile neighbour, and the gateway is usually mounted right next to it.
+
+Reported in [#370](https://github.com/0xAHA/Growatt_ModbusTCP/issues/370): sustained transport errors every 2-3 minutes across two multi-hour sessions on a bus with no termination, wired directly alongside the inverter's power stage — with the integration already at block size 10 and a 1000 ms delay, which is as far as tuning goes.
+
+Two symptoms point this way rather than at settings:
+
+- **Failures that recur on a rough interval regardless of what you are doing** — the same rate whether polling normally, writing settings, or running a scan
+- **Diagnostics showing `recoveries_this_poll` at its ceiling.** The integration allows two connection recoveries per poll. At the limit, whatever is read late in the cycle gets no retry at all, so the last blocks read look far worse than the link actually is
+
 **Symptom survives a gateway swap?** Then the gateway is not the variable. One reporter saw every entity read zero on an EW11A, fitted a Waveshare, and got exactly the same result — which ruled out both adapters in a single step and pointed at the inverter side instead ([#309](https://github.com/0xAHA/Growatt_ModbusTCP/issues/309)). Swapping hardware is slow, but it is decisive in a way that reading logs often is not.
 
 **Running a register scan?** Disable the integration entry first (**⋮ → Disable**, don't delete), wait ~30 s, then scan. The scanner opens a second connection, and on a sensitive gateway that contends with the poller. A scan taken while polling came back with 9 successful reads out of 1304 rows, every range reporting "no response" on a device that was working fine.
