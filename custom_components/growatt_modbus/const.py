@@ -1107,6 +1107,25 @@ BLOCK_SIZE_OPTIONS: dict[str, int] = {
 }
 
 
+def is_read_only_register(register_def) -> bool:
+    """True when a profile marks this register read-only.
+
+    `access` was documentation that nothing read until v1.6.1. v1.6.0 added the VPP
+    registers to the MOD profile as 'RO' on the assumption the flag would stop controls
+    being created for them, and the generic loops in number.py and select.py created five
+    writable controls anyway — including the power setpoint that was measured importing
+    from the grid to reach its target (#374).
+
+    Absent or unrecognised means writable, so nothing that works today changes: a profile
+    has to say 'RO'/'R' explicitly to withhold a control. Of 517 control/profile pairs,
+    six are affected — the five above and SPE register 117, which documents itself as
+    "firmware-determined, writes may be rejected" and is the same defect in miniature.
+    """
+    if not isinstance(register_def, dict):
+        return False
+    return str(register_def.get("access", "")).strip().upper() in ("RO", "R")
+
+
 def resolve_block_size(value) -> int:
     """Resolve a stored max_block_size option to an integer.
 

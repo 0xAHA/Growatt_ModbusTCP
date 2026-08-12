@@ -76,15 +76,32 @@ def test_controls_are_cleaned_up_by_profile_too():
 
 
 def test_control_cleanup_checks_the_register_not_the_name():
-    """Controls are gated on `control_config['register'] in holding_registers`, so the
-    cleanup has to test the same thing. Matching on the control name instead would keep
-    entities whose register was removed but whose name still exists in const.py — which is
-    exactly the 1090/1092 case, since both names are still defined there for other
-    families."""
+    """Controls are gated on the register, so the cleanup has to test the same thing.
+    Matching on the control name instead would keep entities whose register was removed
+    but whose name still exists in const.py — exactly the 1090/1092 case, since both names
+    remain defined there for other families."""
     body = _setup_entry_source()
-    assert re.search(r"control_config\.get\(\s*[\"']register[\"']\s*\)\s+in\s+holding", body), (
-        "stale-control cleanup does not test the control's register against the profile's "
-        "holding registers"
+    assert re.search(r"control_config\.get\(\s*[\"']register[\"']\s*\)", body), (
+        "stale-control cleanup does not look up the control's register"
+    )
+    assert re.search(r"\bin\s+holding\b", body), (
+        "stale-control cleanup does not test the register against the profile's holding "
+        "registers"
+    )
+
+
+def test_control_cleanup_also_removes_now_read_only_controls():
+    """A register can stop backing a control without leaving the profile.
+
+    v1.6.0 shipped five writable VPP controls on MOD because the profile's `access: 'RO'`
+    was never read. v1.6.1 makes the loops honour it — but those registers are still in
+    the profile, so a membership test alone would leave the five entities behind as
+    `unavailable` on every install that already has them (#374).
+    """
+    body = _setup_entry_source()
+    assert "is_read_only_register" in body, (
+        "stale-control cleanup does not consider read-only registers, so controls "
+        "withdrawn by marking the register RO will linger in the registry"
     )
 
 

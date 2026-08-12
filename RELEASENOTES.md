@@ -4,6 +4,34 @@
 
 ---
 
+## v1.6.1 (pre-release)
+
+Issues: #374
+
+> **Fixes a defect in the v1.6.0 pre-release.** If you installed v1.6.0 on a MOD or MID
+> TL3-XH, please take this one — v1.5.5 remains the stable release and was never affected.
+
+- **Five writable VPP controls appeared on MOD TL3-XH in v1.6.0 and should not have.**
+  Control Authority, Remote Power Control, Remote Duration, Remote Charge/Discharge Power
+  and VPP AC Charge Enable were created as operable entities, including a −100…+100 %
+  power slider. v1.6.0 marked those registers read-only in the profile, but nothing read
+  that flag.
+
+  They are removed on upgrade. Nothing was written to them and they were all at their safe
+  values; the exposure is what is being fixed.
+
+- **A profile marking a register read-only now withholds the control.** Previously `access`
+  was documentation only. This also removes one pre-existing control — SPE Grid Compliance
+  Region (register 117), which the profile already described as firmware-determined with
+  writes rejected.
+
+- The four VPP diagnostic sensors, the peak-shaving sensors and the Grid Charge Stopped SOC
+  control from v1.6.0 are unaffected and stay.
+
+Reported by @KevlarD-67, with the mechanism traced to the exact line.
+
+---
+
 ## v1.6.0 (pre-release)
 
 Issues: #371, #372, #373 — all on MOD/MID TL3-XH

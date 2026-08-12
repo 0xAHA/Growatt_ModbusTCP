@@ -15,6 +15,7 @@ from .const import (
     WRITABLE_REGISTERS,
     CONF_REGISTER_MAP,
     get_device_type_for_control,
+    is_read_only_register,
     DEVICE_TYPE_BATTERY,
     MOD_TOU_PERIODS,
 )
@@ -90,6 +91,16 @@ async def async_setup_entry(
         if register_num not in holding_registers:
             continue  # Skip if register not in this profile
 
+        # A profile marking the register read-only means "this model has the address but
+        # will not accept a write" — so do not offer a control for it (#374). See
+        # is_read_only_register() for what v1.6.0 shipped by assuming this already worked.
+        if is_read_only_register(holding_registers.get(register_num)):
+            _LOGGER.debug(
+                "Skipping %s: register %d is read-only on this profile",
+                control_name, register_num,
+            )
+            continue
+
         # Profile-specific filter: only_profiles restricts to named maps; not_profiles excludes them
         _only = control_config.get('only_profiles')
         if _only and register_map_name not in _only:
@@ -150,6 +161,16 @@ async def async_setup_entry(
             continue
         cfg = WRITABLE_REGISTERS[ctrl]
         if cfg["register"] not in holding_registers:
+            continue
+        # Read-only on this profile, so there is nothing to defer — it is not "skipped
+        # pending data", it is withheld deliberately (#374).
+        #
+        # This check has to be here as well as in the loop above, or the two paths
+        # disagree: on the reported MOD install control_authority was skipped at setup
+        # for want of live data, then added 8 seconds later by this path once the first
+        # poll confirmed 30100 answers. Gating only the setup loop would have fixed four
+        # of the five controls and left this one.
+        if is_read_only_register(holding_registers.get(cfg["register"])):
             continue
         # Only defer if it was actually skipped above (flag was False at setup time)
         already_created = any(

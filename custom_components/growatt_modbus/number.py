@@ -15,6 +15,7 @@ from .const import (
     WRITABLE_REGISTERS,
     CONF_REGISTER_MAP,
     get_device_type_for_control,
+    is_read_only_register,
 )
 from .coordinator import GrowattModbusCoordinator
 from .entity import GrowattEntity
@@ -108,6 +109,21 @@ async def async_setup_entry(
         register_num = control_config['register']
         if register_num not in holding_registers:
             continue  # Skip if register not in this profile
+
+        # A profile marking the register read-only means "this model has the address but
+        # will not accept a write" — so do not offer a control for it (#374).
+        #
+        # Until v1.6.1 `access` was documentation that nothing read. v1.6.0 added the VPP
+        # registers to the MOD profile as 'RO' expecting that to be enough, and this loop
+        # created five writable controls anyway — including the power setpoint measured
+        # importing from the grid to reach its target. The flag now means what everyone
+        # already assumed it meant.
+        if is_read_only_register(holding_registers.get(register_num)):
+            _LOGGER.debug(
+                "Skipping %s: register %d is read-only on this profile",
+                control_name, register_num,
+            )
+            continue
 
         # Profile-specific filter: only_profiles restricts to named maps; not_profiles excludes them
         _only = control_config.get('only_profiles')

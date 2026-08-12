@@ -21,6 +21,7 @@ from .const import (
     REGISTER_MAPS,
     WRITABLE_REGISTERS,
     DEVICE_TYPE_INVERTER,
+    is_read_only_register,
 )
 from .coordinator import GrowattConfigEntry, GrowattModbusCoordinator
 from .device_profiles import get_profile
@@ -466,7 +467,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # SOC-limit cleanup.
     if profile_is_known and holding:
         for control_name, control_config in WRITABLE_REGISTERS.items():
-            if control_config.get("register") in holding:
+            _reg = control_config.get("register")
+            # Stale for either reason: the profile no longer maps the register at all, or
+            # it maps it read-only. The second case is why v1.6.0's five VPP controls on
+            # MOD would otherwise survive the v1.6.1 fix — their registers are still in
+            # the profile, just marked RO, so a membership test alone leaves them behind
+            # as unavailable (#374).
+            if _reg in holding and not is_read_only_register(holding.get(_reg)):
                 continue
             for _domain in ("number", "select", "time"):
                 stale_eid = entity_registry.async_get_entity_id(

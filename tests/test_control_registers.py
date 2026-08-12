@@ -126,33 +126,138 @@ def test_only_3312_is_writable_in_the_peak_shaving_cluster():
 
 
 @pytest.mark.parametrize("addr", [30100, 30407, 30408, 30409, 30410, 30474])
-def test_mod_vpp_registers_are_read_only(addr):
-    """#373 established that this family supports remote power control, and also that the
-    power value is a target rather than a cap: at 100% it climbed toward the setpoint and
-    imported from the grid with allow_grid_charge off. Until that is guarded, these are
-    exposed for visibility only."""
+def test_mod_vpp_registers_are_marked_read_only(addr):
+    """The declaration. On its own this proves nothing about what the user sees — see the
+    test below, which is the one that matters."""
     reg = _holding("MOD_6000_15000TL3_XH").get(addr)
     assert reg is not None, f"holding {addr} is not mapped on MOD-XH"
-    assert str(reg.get("access", "")).upper() in ("RO", "R"), (
+    assert _const.is_read_only_register(reg), (
         f"holding {addr} is writable on MOD-XH. Commanding VPP power on this family needs "
         f"a guard against importing from the grid to reach the setpoint (#373)."
     )
 
 
-def test_the_wit_gate_still_confines_writable_vpp_controls():
-    """`access: 'RO'` in the profile does not by itself stop a control being created —
-    number.py and select.py key off WRITABLE_REGISTERS plus profile membership, not the
-    access flag. What actually keeps MOD read-only is the WIT-only name check.
+# ---------------------------------------------------------------------------
+# No control may exist for a register its profile marks read-only (#374)
+# ---------------------------------------------------------------------------
+#
+# This replaces two tests that passed while the defect shipped, which is worth recording
+# because both were the wrong shape rather than merely incomplete:
+#
+#   test_mod_vpp_registers_are_read_only    asserted the `access` flag was 'RO'. It was.
+#                                           Nothing read the flag, so the assertion was
+#                                           true and meaningless.
+#   test_the_wit_gate_still_confines_...    asserted the WIT gate still had its shape. It
+#                                           did. But the gate only returns *inside* the
+#                                           WIT branch — non-WIT profiles fall through to
+#                                           the generic loop it was believed to confine.
+#
+# Both tested a declaration, or a mechanism believed to enforce it, rather than the
+# outcome. v1.6.0 created five writable VPP controls on MOD with both passing, including a
+# -100..+100% power slider on the register measured importing from the grid to reach its
+# setpoint. The tests below assert the outcome instead.
 
-    So if that gate becomes a capability probe, MOD gains writable VPP controls the moment
-    its hardware answers — including the power setpoint that #373 measured importing from
-    the grid to reach its target. That is the change to make deliberately, with a guard,
-    not to arrive at by refactoring.
+
+PLATFORMS = ("number.py", "select.py")
+
+
+def test_both_control_platforms_consult_the_read_only_flag():
+    """The load-bearing test. Everything below models the loops; this checks the loops.
+
+    `_controls_created_for` applies the read-only filter itself, so on its own it would
+    pass whatever number.py and select.py actually do — a model of the code agreeing with
+    itself. That is the shape of mistake that let v1.6.0 ship: a test asserting a
+    declaration rather than an outcome.
+    """
+    component = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+    for platform in PLATFORMS:
+        src = (component / platform).read_text(encoding="utf-8")
+        assert "is_read_only_register" in src, (
+            f"{platform} never consults the read-only flag, so a profile marking a "
+            f"register RO does not stop the control being created — which is exactly "
+            f"what shipped in v1.6.0 (#374)"
+        )
+
+
+def _controls_created_for(map_key: str) -> set[str]:
+    """Control names the generic loops would create for a profile.
+
+    Mirrors the filters in number.py/select.py: profile membership, the read-only flag,
+    only_profiles/not_profiles. Bespoke classes and the live-confirmation skips are not
+    modelled — they can only ever remove entities from this set, never add one, so a
+    control absent here cannot appear in Home Assistant.
+
+    This is a model, not the code. Pair it with
+    test_both_control_platforms_consult_the_read_only_flag, which checks the real thing.
+    """
+    holding = _holding(map_key)
+    created = set()
+    for name, cfg in WRITABLE_REGISTERS.items():
+        addr = cfg.get("register")
+        if addr not in holding:
+            continue
+        if _const.is_read_only_register(holding.get(addr)):
+            continue
+        only = cfg.get("only_profiles")
+        if only and map_key not in only:
+            continue
+        not_p = cfg.get("not_profiles")
+        if not_p and map_key in not_p:
+            continue
+        created.add(name)
+    return created
+
+
+@pytest.mark.parametrize("map_key", sorted(REGISTER_MAPS))
+def test_no_control_is_created_for_a_read_only_register(map_key):
+    """The general rule. A profile marking a register read-only is a statement that the
+    hardware will not accept a write, and the only way to honour it is not to offer the
+    control."""
+    holding = _holding(map_key)
+    offending = sorted(
+        name for name in _controls_created_for(map_key)
+        if _const.is_read_only_register(holding.get(WRITABLE_REGISTERS[name]["register"]))
+    )
+    assert not offending, f"{map_key} would create controls for read-only registers: {offending}"
+
+
+@pytest.mark.parametrize("addr", [30100, 30407, 30408, 30409, 30410])
+def test_mod_creates_no_vpp_control(addr):
+    """The specific case, stated as the user-visible outcome rather than a flag.
+
+    Each of these had a control in v1.6.0: two selects, two numbers, and control_authority
+    arriving 8 seconds later through the deferred-registration path.
+    """
+    created = _controls_created_for("MOD_6000_15000TL3_XH")
+    named = {
+        name for name, cfg in WRITABLE_REGISTERS.items() if cfg.get("register") == addr
+    }
+    leaked = sorted(named & created)
+    assert not leaked, (
+        f"MOD-XH would create {leaked} for register {addr}. #373 defers writable VPP "
+        f"controls on this family until commanding power is bounded against available PV."
+    )
+
+
+def test_the_deferred_path_honours_read_only_too():
+    """Gating only the setup loop fixes four of the five.
+
+    control_authority is skipped at setup for want of live data, then added by the
+    deferred listener once the first poll confirms 30100 answers — which is exactly what
+    the reported log shows happening 8 seconds in. The two paths have to agree.
     """
     src = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
            / "select.py").read_text(encoding="utf-8")
-    assert "is_wit = str(register_map_name).upper() in" in src, (
-        "the WIT gate in select.py has changed shape. If it is now a capability probe, "
-        "MOD-XH will gain writable VPP controls — #373 defers those until commanding "
-        "power is bounded against available PV."
+    deferred = src[src.index("deferred_vpp: list"):src.index("if deferred_vpp:")]
+    assert "is_read_only_register" in deferred, (
+        "the deferred VPP registration path does not check the read-only flag, so a "
+        "control withheld at setup will be added a few seconds later anyway"
     )
+
+
+def test_mod_still_creates_the_controls_it_should():
+    """The counterweight. It would be easy to fix #374 by withholding too much."""
+    created = _controls_created_for("MOD_6000_15000TL3_XH")
+    for expected in ("batt_first_charge_power_rate", "batt_first_charge_stopped_soc",
+                     "grid_first_discharge_stopped_soc", "grid_charge_stopped_soc"):
+        assert expected in created, f"MOD-XH lost the {expected} control"
