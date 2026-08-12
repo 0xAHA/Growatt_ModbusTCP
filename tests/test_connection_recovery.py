@@ -79,6 +79,15 @@ class _FakeClient:
     def read_holding_registers(self, *args, **kwargs):
         return self._next()
 
+    # -- writes ------------------------------------------------------------
+    # Consume the same script, so a test can say "fail once, then succeed" for a write
+    # exactly as it does for a read.
+    def write_register(self, *args, **kwargs):
+        return self._next()
+
+    def write_registers(self, *args, **kwargs):
+        return self._next()
+
 
 def _hub(script) -> tuple[SharedModbusConnection, _FakeClient]:
     hub = SharedModbusConnection(host="10.0.0.1", port=502)
@@ -178,6 +187,83 @@ def test_successful_reads_consume_no_budget():
         hub.read_input_registers(0, 1, slave_id=1)
     assert hub._recoveries_this_poll == 0
     assert client.closes == 0
+
+
+# --------------------------------------------------------------------------
+# Writes must recover the same way reads do (#375)
+# --------------------------------------------------------------------------
+#
+# They did not until v1.6.x. Reads reset and retried inside the same call; writes dropped
+# the socket and returned False, leaving the *next* call to reconnect. On a datalogger
+# that reaps idle sockets that is a visible difference: the first read after a drop
+# succeeds silently, the first write after a drop fails and the control does not take
+# effect. Reported by @alanmk on #358 and split out as #375.
+
+
+@pytest.mark.parametrize("method,args", [
+    ("write_register", (1092, 1)),
+    ("write_registers", (3038, [512, 286])),
+])
+def test_write_transport_error_resets_and_retries_once(method, args):
+    hub, client = _hub([ConnectionError("broken pipe"), _Response()])
+    assert getattr(hub, method)(*args, slave_id=1) is True, (
+        "a write that fails on transport should reconnect and succeed on the retry"
+    )
+    assert client.closes == 1, "the failed attempt should have reset the connection"
+    assert client.reads == 2, "the write should have been attempted twice"
+
+
+@pytest.mark.parametrize("method,args", [
+    ("write_register", (1092, 1)),
+    ("write_registers", (3038, [512, 286])),
+])
+def test_write_transport_error_on_retry_gives_up(method, args):
+    """One reset per write, not a loop. A genuinely dead gateway must not turn a single
+    write into a chain of reconnects."""
+    hub, client = _hub([ConnectionError("broken pipe"), ConnectionError("still broken")])
+    assert getattr(hub, method)(*args, slave_id=1) is False
+    assert client.closes >= 1
+    assert client.reads == 2, "no third attempt"
+
+
+@pytest.mark.parametrize("method,args", [
+    ("write_register", (1090, 40)),
+    ("write_registers", (1090, [40])),
+])
+def test_write_protocol_error_does_not_retry(method, args):
+    """A register-level refusal arrives as an isError() response, not an exception.
+
+    Retrying achieves nothing — the register will refuse again — and on the addresses
+    known to reject writes (#371, exception 2 on MOD holding 1090/1092) it would double
+    the log volume for no benefit.
+    """
+    hub, client = _hub([_Response(error=True)])
+    assert getattr(hub, method)(*args, slave_id=1) is False
+    assert client.closes == 0, "a protocol refusal must not reset the connection"
+    assert client.reads == 1, "a protocol refusal must not be retried"
+
+
+def test_write_recovery_shares_the_poll_budget():
+    """Writes draw on the same per-poll recovery budget as reads, so a failing link
+    cannot spend it twice over."""
+    hub, client = _hub([ConnectionError("a"), _Response(),
+                        ConnectionError("b"), _Response(),
+                        ConnectionError("c")])
+    assert hub.write_register(3049, 1, slave_id=1) is True
+    assert hub.write_register(3049, 1, slave_id=1) is True
+    # Budget is 2 per poll; the third failure has none left and must not reset again.
+    closes_before = client.closes
+    assert hub.write_register(3049, 1, slave_id=1) is False
+    assert client.closes == closes_before + 1, (
+        "with the budget spent the write should disconnect once and give up, not recover"
+    )
+
+
+def test_write_without_a_client_returns_false():
+    hub = SharedModbusConnection(host="10.0.0.1", port=502)
+    hub._client = None
+    assert hub.write_register(1, 1, slave_id=1) is False
+    assert hub.write_registers(1, [1], slave_id=1) is False
 
 
 # --------------------------------------------------------------------------

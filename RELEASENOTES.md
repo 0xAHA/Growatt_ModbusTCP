@@ -4,6 +4,17 @@
 
 ---
 
+## Unreleased
+
+Merged to `main`, not yet in any release. Fold these into the next one.
+
+- **Writes now recover from a dropped socket, as reads already did.** On a gateway or
+  datalogger that closes idle connections, the first write after a drop failed and the
+  control silently did not take effect, while the first read after a drop retried and
+  succeeded. Reported by @alanmk. (#375)
+
+---
+
 ## v1.6.1 (pre-release)
 
 Issues: #374

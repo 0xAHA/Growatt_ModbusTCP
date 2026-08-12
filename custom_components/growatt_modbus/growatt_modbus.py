@@ -661,50 +661,89 @@ class SharedModbusConnection:
             return self._validate_registers(resp, start, count)
         return None
 
+    # Writes reset and retry once on a transport error, exactly as the reads above do
+    # (#375). They did not until then: they dropped the socket and returned False, with a
+    # comment saying the *next* call would reconnect — so on a gateway or datalogger that
+    # reaps idle sockets, the first read after a drop recovered silently and the first
+    # write after a drop failed. The user saw a control that did not take effect and an
+    # ERROR in the log; whether anything retried depended on having an external controller
+    # that did so. Found by @alanmk while field-testing #358.
+    #
+    # Retrying a write is safe in this integration because every write is idempotent —
+    # each sets a register to an absolute value, none increments or toggles relative to
+    # the current one. Replaying one whose transport attempt failed cannot compound, and
+    # the failure it prevents (a silently ineffective control) is worse than the one it
+    # risks (writing the same value twice).
+    #
+    # Only transport-level exceptions retry. A register-level refusal arrives as an
+    # isError() response, not an exception, and still fails immediately — retrying an
+    # illegal-address write achieves nothing and doubles the log volume on the registers
+    # known to reject writes (#371).
+
     def write_register(self, register: int, value: int, slave_id: int) -> bool:
         if self._client is None:
             return False
-        try:
-            if value < 0:
-                value = value & 0xFFFF
+        if value < 0:
+            value = value & 0xFFFF
+        for attempt in (0, 1):
             try:
-                result = self._client.write_register(address=register, value=value, unit=slave_id)
-            except TypeError:
                 try:
-                    result = self._client.write_register(address=register, value=value, slave=slave_id)
+                    result = self._client.write_register(address=register, value=value, unit=slave_id)
                 except TypeError:
                     try:
-                        result = self._client.write_register(address=register, value=value, device_id=slave_id)
+                        result = self._client.write_register(address=register, value=value, slave=slave_id)
                     except TypeError:
-                        result = self._client.write_register(register, value)
+                        try:
+                            result = self._client.write_register(address=register, value=value, device_id=slave_id)
+                        except TypeError:
+                            result = self._client.write_register(register, value)
+            except Exception as exc:
+                if attempt == 0 and self._begin_recovery():
+                    logger.debug(
+                        "[SharedConn %s:%s] write_register(%d, %d) transport error (%s) — "
+                        "resetting and retrying once",
+                        self.host, self.port, register, value, exc,
+                    )
+                    self.reset("transport error during write")
+                    if self.ensure_connected():
+                        continue
+                logger.debug("[SharedConn %s:%s] write_register(%d, %d, slave=%d) error: %s",
+                             self.host, self.port, register, value, slave_id, exc)
+                self.disconnect()
+                return False
+
             return not (hasattr(result, 'isError') and callable(result.isError) and result.isError())
-        except Exception as exc:
-            logger.debug("[SharedConn %s:%s] write_register(%d, %d, slave=%d) error: %s",
-                         self.host, self.port, register, value, slave_id, exc)
-            # An exception here is transport-level (register-level refusals come back
-            # as isError() responses) — drop the socket so the next call reconnects.
-            self.disconnect()
-            return False
+        return False
 
     def write_registers(self, register: int, values: list, slave_id: int) -> bool:
         if self._client is None:
             return False
-        try:
+        for attempt in (0, 1):
             try:
-                result = self._client.write_registers(address=register, values=values, slave=slave_id)
-            except TypeError:
                 try:
-                    result = self._client.write_registers(address=register, values=values, unit=slave_id)
+                    result = self._client.write_registers(address=register, values=values, slave=slave_id)
                 except TypeError:
-                    result = self._client.write_registers(register, values)
+                    try:
+                        result = self._client.write_registers(address=register, values=values, unit=slave_id)
+                    except TypeError:
+                        result = self._client.write_registers(register, values)
+            except Exception as exc:
+                if attempt == 0 and self._begin_recovery():
+                    logger.debug(
+                        "[SharedConn %s:%s] write_registers(%d, %d values) transport error "
+                        "(%s) — resetting and retrying once",
+                        self.host, self.port, register, len(values), exc,
+                    )
+                    self.reset("transport error during write")
+                    if self.ensure_connected():
+                        continue
+                logger.debug("[SharedConn %s:%s] write_registers(%d, slave=%d) error: %s",
+                             self.host, self.port, register, slave_id, exc)
+                self.disconnect()
+                return False
+
             return not (hasattr(result, 'isError') and callable(result.isError) and result.isError())
-        except Exception as exc:
-            logger.debug("[SharedConn %s:%s] write_registers(%d, slave=%d) error: %s",
-                         self.host, self.port, register, slave_id, exc)
-            # An exception here is transport-level (register-level refusals come back
-            # as isError() responses) — drop the socket so the next call reconnects.
-            self.disconnect()
-            return False
+        return False
 
 
 class GrowattModbus:
