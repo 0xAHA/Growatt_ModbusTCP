@@ -212,7 +212,23 @@ MOD_6000_15000TL3_XH = {
         3285: {'name': 'box_warning_code',  'scale': 1,   'unit': '',   'desc': 'Warning code (700-800 range)'},
         3286: {'name': 'box_temperature',   'scale': 1,   'unit': '°C', 'signed': True, 'desc': 'NTC temperature, Int8, -40 to 100°C'},
         3287: {'name': 'box_grid_voltage',  'scale': 0.1, 'unit': 'V',  'desc': 'Grid voltage'},
-        3289: {'name': 'box_grid_power_high', 'scale': 1, 'unit': '', 'pair': 3290, 'signed': True, 'desc': 'Grid power HIGH (Int32, positive=import)'},
+        # box_grid_power has been observed constant at zero on a MOD 10KTL3-XH (DN1.0):
+        # 2509 samples over two nights, never non-zero, including 11 samples where the
+        # house meter showed real grid flow of up to 2064 W. In those same 11, power_to_user
+        # read 0 in all of them and power_to_grid in 10 of 11 (#373).
+        #
+        # NOT removed on that evidence. The box's other sensors work on the same unit
+        # (temperature, grid voltage, work mode, bypass status all report), so this is not
+        # a dead block — and this register is the *box's* view of the grid, which may
+        # legitimately read zero in whichever mode that unit sits in on-grid. What would
+        # settle it is box_work_mode (3282) during a sample with known grid flow; nobody
+        # has captured that pairing yet.
+        #
+        # Practical consequence, and the reason it is recorded here: a grid-bounded limit
+        # ("never command anything that causes import") is not buildable from this
+        # inverter's own registers on this model. A PV-bounded one is — PV power at 1/2,
+        # 5/6, 9/10 is validated, as is battery power at 3178-3181.
+        3289: {'name': 'box_grid_power_high', 'scale': 1, 'unit': '', 'pair': 3290, 'signed': True, 'desc': 'Grid power HIGH (Int32, positive=import). Reads 0 on at least one DN1.0 unit — see note above'},
         3290: {'name': 'box_grid_power_low',  'scale': 1, 'unit': '', 'pair': 3289, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Grid power LOW'},
         3297: {'name': 'box_load_power_high', 'scale': 1, 'unit': '', 'pair': 3298, 'desc': 'Load power HIGH (Uint32)'},
         3298: {'name': 'box_load_power_low',  'scale': 1, 'unit': '', 'pair': 3297, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Load power LOW'},
@@ -564,14 +580,24 @@ MOD_6000_15000TL3_XH = {
         #
         #   1. THE POWER COMMAND IS A TARGET, NOT A LIMIT, AND IT OVERRIDES 3049.
         #      At 30409=100 with insufficient PV the inverter climbed toward the commanded
-        #      power and drew 912 W from the grid while allow_grid_charge was 0. At 5/10/20%
+        #      power and drew from the grid while allow_grid_charge was 0. At 5/10/20%
         #      only downward limiting is visible, which makes it look like a cap.
-        #   2. The duration expires but the registers do not clear. With 30408=2 the power
-        #      constraint released after ~128 s while 30407, 30409 and 30100 all stayed set
-        #      for the full 240 s observation. Active state cannot be inferred from these
-        #      values.
+        #      The 912 W often quoted for this is one sample five seconds in, from a run
+        #      an abort threshold stopped while charge power was still climbing
+        #      (2592 -> 4767 W in those five seconds) — a lower bound, not a typical value.
+        #   2. The duration is not reliable in either direction. At 30408=2 the constraint
+        #      released at ~128 s; at 30408=5 it had NOT released at 390 s and only did so
+        #      when 30407/30100 were written back to 0 by hand. In both runs 30407, 30409
+        #      and 30100 stayed set throughout. So active state cannot be inferred from
+        #      these values, and an implementation must clear them itself rather than
+        #      treating the timer as a safety net.
         #   3. 30407 alone does nothing — 30100 (control authority) must also be set. That
         #      is presumably why the capability was assumed absent on this family.
+        #
+        # The charge transfer function fits a line over three points (77.6 W per percentage
+        # point) and then does not: a repeat of the 20% point produced 0 W rather than
+        # ~1466 W, with lower PV surplus and higher SoC. Which variable matters is untested.
+        # A clamp that assumes commanded power is delivered will meet that case.
         #
         # Exposing the values makes the state visible and lets anyone verify the capability
         # on their own hardware. Writable controls need a guard against commanding more than
@@ -594,10 +620,14 @@ MOD_6000_15000TL3_XH = {
         30410: {'name': 'vpp_ac_charge_enable', 'scale': 1, 'unit': '', 'access': 'RO',
                 'desc': 'VPP AC charge enable'},
 
-        # Mirrors the last commanded setpoint. Tracked 5 -> 10 -> 20 -> 100 across four runs,
-        # does not revert when remote control is disabled, and a direct write is accepted and
-        # ignored (the echo returns the written value, the read-back keeps the old one). It was
-        # the only unexpected change in a full 1150-register before/after snapshot (#373).
+        # Mirrors the last commanded setpoint. Retains it after remote control is disabled —
+        # confirmed ten hours on, still reading -33 (raw 65503) with 30100/30407/30409 all
+        # zero, which also confirms the two's complement decode. A direct write is accepted
+        # and ignored: the echo returns the written value, the read-back keeps the old one.
+        # That combination is what makes it right as a sensor and wrong as a control.
+        #
+        # An earlier report that it returns to 100 on its own has not reproduced and is not
+        # relied on here (#373).
         30474: {'name': 'vpp_last_setpoint', 'scale': 1, 'unit': '%', 'access': 'RO',
                 'signed': True,
                 'desc': 'Mirror of the last commanded VPP power setpoint. Write-ignored (#373)'},

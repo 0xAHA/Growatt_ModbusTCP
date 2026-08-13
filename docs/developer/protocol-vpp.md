@@ -260,20 +260,43 @@ needs:
 
 1. **The commanded power (30409) is a target, not a limit — and it overrides
    `allow_grid_charge` (3049).** At 100 % with insufficient PV the inverter climbed toward
-   the setpoint and imported 912 W from the grid while 3049 was 0. At 5/10/20 % only
-   downward limiting is visible, which gives a misleading impression of a cap. Transfer
-   function measured linear: 77.6 W per percentage point, offset −86 W, full scale ≈7.25 kW
-   on a 15 kWh battery.
-2. **The duration expires but the registers do not clear.** With 30408 = 2 minutes the
-   power constraint released after ~128 s while 30407, 30409 and 30100 all stayed set for
-   the full 240 s observation. Active state cannot be inferred from the register values.
+   the setpoint and drew from the grid while 3049 was 0. At 5/10/20 % only downward
+   limiting is visible, which gives a misleading impression of a cap.
+
+    The often-quoted 912 W is **a single sample five seconds in, from a run an abort
+    threshold stopped immediately** — charge power was still climbing, 2592 → 4767 W in
+    those five seconds. Treat it as a lower bound on what this does, not a characteristic
+    value.
+
+2. **The duration is not reliable in either direction.** With 30408 = 2 minutes the
+   constraint released at ~128 s. With 30408 = 5 minutes it had **not** released at 390 s
+   and only did so when 30407 and 30100 were written back to 0 by hand. In both runs
+   30407, 30409 and 30100 stayed set throughout.
+
+    Two consequences. Active state cannot be inferred from the register values — that
+    holds either way. And **an implementation must clear the registers itself**; the timer
+    is not a safety net that will release the inverter on its own.
+
 3. **30407 alone does nothing** — 30100 (control authority) must also be set. This is
    presumably why the capability was assumed absent on non-WIT families.
 
-**30474 mirrors the last commanded setpoint.** It tracked 5 → 10 → 20 → 100 across four
-runs, does not revert when remote control is disabled, and a direct write is accepted and
-ignored — the echo returns the written value, the read-back keeps the old one. It was the
-only unexpected change in a full 1150-register before/after snapshot.
+**On the transfer function.** Three charge points fit a line — 77.6 W per percentage
+point, offset −86 W, full scale ≈7.25 kW on a 15 kWh battery — and predicted a fourth
+within 2 %. A fifth measurement does **not** fit: a repeat of the 20 % point produced
+**0 W** rather than ~1466 W, with the battery at zero and the PV surplus going to the grid
+instead. Conditions differed on two axes at once (PV 4.9 → 3.0 kW, house load low → 1.9 kW,
+SoC ~60 → 83 %), and which of them matters has not been tested.
+
+So the linear fit describes some regime, not the device. **A clamp that assumes commanded
+power is delivered will meet the case where it is not.** The discharge side (−10 % → 832 W,
+−20 % → 1569 W) is two points fitted to two parameters and therefore has no residual by
+construction — indicative only.
+
+**30474 mirrors the last commanded setpoint.** It retains the last command after remote
+control is disabled — confirmed ten hours later still reading −33, raw 65503, with
+30100/30407/30409 all zero — and a direct write is accepted and ignored, the echo returning
+the written value while the read-back keeps the old one. An earlier report that it returns
+to 100 on its own has since failed to reproduce and should not be relied on.
 
 ---
 
