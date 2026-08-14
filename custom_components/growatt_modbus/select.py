@@ -496,13 +496,37 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
         _LOGGER.info("[WIT-VPP] Setting battery mode to %s", option)
 
         try:
-            client = self.coordinator.modbus_client
+            applied = await self.hass.async_add_executor_job(self._apply_mode, option)
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.exception("[WIT-VPP] Failed to set battery mode: %s", err)
+            return
 
+        if not applied:
+            return
+
+        # Store last mode for UI feedback (only reached if all writes succeeded)
+        setattr(self.coordinator, "wit_vpp_last_mode", option)
+        _LOGGER.info("[WIT-VPP] Successfully set battery mode to %s", option)
+        await self.coordinator.async_request_refresh()
+
+    def _apply_mode(self, option: str) -> bool:
+        """Write the whole mode sequence, holding the bus for its duration.
+
+        Runs in a single executor job on purpose (#331). Each write used to be its own
+        job taking the shared lock separately, which meant a poll could land between them
+        and any one acquisition could time out — leaving the inverter with control
+        authority granted and no power setpoint, or a TOU period with no period count.
+        A half-applied VPP command is worse than one that plainly failed.
+
+        Both parts matter: `write_batch` holds the bus, and running on one thread is what
+        lets the individual writes re-enter the lock rather than deadlock on it.
+        """
+        client = self.coordinator.modbus_client
+
+        with client.write_batch(f"WIT VPP mode -> {option}"):
             # Step 1: Enable VPP control authority (persists across power cycles)
             _LOGGER.debug("[WIT-VPP] Enabling VPP control authority (30100=1)")
-            await self.hass.async_add_executor_job(
-                client.write_register, self.VPP_CONTROL_AUTHORITY, 1
-            )
+            client.write_register(self.VPP_CONTROL_AUTHORITY, 1)
 
             if option == "Hold":
                 # HOLD: Use TOU +1% charge workaround for TRUE standby
@@ -513,9 +537,7 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
 
                 # Enable AC charging (required for TOU charge to work)
                 try:
-                    await self.hass.async_add_executor_job(
-                        client.write_register, self.VPP_AC_CHARGE_ENABLE, 1
-                    )
+                    client.write_register(self.VPP_AC_CHARGE_ENABLE, 1)
                 except Exception as e:  # noqa: BLE001
                     _LOGGER.warning("[WIT-VPP] AC charge enable (30410) failed: %s", e)
 
@@ -531,97 +553,74 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
                 # Write TOU period using function 0x10 (write multiple registers)
                 _LOGGER.debug("[WIT-VPP] Writing TOU period %02d:%02d-%02d:%02d @ +1%%",
                              start_min // 60, start_min % 60, end_min // 60, end_min % 60)
-                success = await self.hass.async_add_executor_job(
-                    client.write_registers, self.VPP_TOU_PERIOD1_BASE,
-                    [start_min, end_min, 1]  # +1% = HOLD (NOT -1% which = full discharge!)
+                success = client.write_registers(
+                    self.VPP_TOU_PERIOD1_BASE,
+                    [start_min, end_min, 1],  # +1% = HOLD (NOT -1% which = full discharge!)
                 )
                 if not success:
                     _LOGGER.error("[WIT-VPP] Failed to write TOU period for HOLD mode")
-                    return
+                    return False
 
                 # Enable 1 TOU period
-                success = await self.hass.async_add_executor_job(
-                    client.write_register, self.VPP_TOU_NUM_PERIODS, 1
-                )
+                success = client.write_register(self.VPP_TOU_NUM_PERIODS, 1)
                 if not success:
                     _LOGGER.error("[WIT-VPP] Failed to enable TOU period for HOLD mode")
-                    return
+                    return False
 
             elif option == "Charge":
                 # CHARGE: Enable AC charging, enable remote control, set +100%
                 _LOGGER.debug("[WIT-VPP] Setting CHARGE mode")
 
                 # Clear any HOLD TOU periods first
-                success = await self.hass.async_add_executor_job(
-                    client.write_register, self.VPP_TOU_NUM_PERIODS, 0
-                )
+                success = client.write_register(self.VPP_TOU_NUM_PERIODS, 0)
                 if not success:
                     _LOGGER.error("[WIT-VPP] Failed to clear TOU periods for CHARGE mode")
-                    return
+                    return False
 
                 # Enable AC charging (PV priority)
                 try:
-                    await self.hass.async_add_executor_job(
-                        client.write_register, self.VPP_AC_CHARGE_ENABLE, 1
-                    )
+                    client.write_register(self.VPP_AC_CHARGE_ENABLE, 1)
                 except Exception as e:  # noqa: BLE001
                     _LOGGER.warning("[WIT-VPP] AC charge enable (30410) failed: %s", e)
 
                 # Enable remote power control
-                success = await self.hass.async_add_executor_job(
-                    client.write_register, self.VPP_REMOTE_POWER_ENABLE, 1
-                )
+                success = client.write_register(self.VPP_REMOTE_POWER_ENABLE, 1)
                 if not success:
                     _LOGGER.error("[WIT-VPP] Failed to enable remote power control for CHARGE mode")
-                    return
+                    return False
 
                 # Set charge power (+100%)
                 power_percent = getattr(self.coordinator, "wit_vpp_power_percent", 100)
-                success = await self.hass.async_add_executor_job(
-                    client.write_register, self.VPP_REMOTE_POWER_PERCENT, power_percent
-                )
+                success = client.write_register(self.VPP_REMOTE_POWER_PERCENT, power_percent)
                 if not success:
                     _LOGGER.error("[WIT-VPP] Failed to set charge power percentage")
-                    return
+                    return False
 
             elif option == "Discharge":
                 # DISCHARGE: Enable remote control, set -100%
                 _LOGGER.debug("[WIT-VPP] Setting DISCHARGE mode")
 
                 # Clear any HOLD TOU periods first
-                success = await self.hass.async_add_executor_job(
-                    client.write_register, self.VPP_TOU_NUM_PERIODS, 0
-                )
+                success = client.write_register(self.VPP_TOU_NUM_PERIODS, 0)
                 if not success:
                     _LOGGER.error("[WIT-VPP] Failed to clear TOU periods for DISCHARGE mode")
-                    return
+                    return False
 
                 # Enable remote power control
-                success = await self.hass.async_add_executor_job(
-                    client.write_register, self.VPP_REMOTE_POWER_ENABLE, 1
-                )
+                success = client.write_register(self.VPP_REMOTE_POWER_ENABLE, 1)
                 if not success:
                     _LOGGER.error("[WIT-VPP] Failed to enable remote power control for DISCHARGE mode")
-                    return
+                    return False
 
                 # Set discharge power (-100% = 65436 unsigned)
                 power_percent = getattr(self.coordinator, "wit_vpp_power_percent", 100)
                 power_value = 65536 - power_percent  # Convert to unsigned 16-bit
-                success = await self.hass.async_add_executor_job(
-                    client.write_register, self.VPP_REMOTE_POWER_PERCENT, power_value
-                )
+                success = client.write_register(self.VPP_REMOTE_POWER_PERCENT, power_value)
                 if not success:
                     _LOGGER.error("[WIT-VPP] Failed to set discharge power percentage")
-                    return
+                    return False
 
-            # Store last mode for UI feedback (only reached if all writes succeeded)
-            setattr(self.coordinator, "wit_vpp_last_mode", option)
-            _LOGGER.info("[WIT-VPP] Successfully set battery mode to %s", option)
-
-            await self.coordinator.async_request_refresh()
-
-        except Exception as err:  # noqa: BLE001
-            _LOGGER.exception("[WIT-VPP] Failed to set battery mode: %s", err)
+        return True
 
 
 class GrowattWitVppTouDefaultModeSelect(GrowattEntity, SelectEntity):

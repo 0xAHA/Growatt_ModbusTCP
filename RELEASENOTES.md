@@ -12,6 +12,11 @@ Merged to `main`, not yet in any release. Fold these into the next one.
   datalogger that closes idle connections, the first write after a drop failed and the
   control silently did not take effect, while the first read after a drop retried and
   succeeded. Reported by @alanmk. (#375)
+- **WIT Mode (VPP) now applies as one operation.** Setting Hold, Charge or Discharge writes
+  six to eight registers, and a poll could previously land between them — leaving the
+  inverter with control authority granted but no power setpoint, or a schedule with no
+  period count. The sequence now holds the connection from first write to last, so it
+  either applies completely or fails without starting. (#331)
 
 ---
 

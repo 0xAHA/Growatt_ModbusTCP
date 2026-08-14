@@ -19,6 +19,7 @@ Hardware Setup:
 import time
 import logging
 import threading
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, Tuple, Union
 from homeassistant.config_entries import ConfigEntry
@@ -419,7 +420,12 @@ class SharedModbusConnection:
         self.port = port
         self._timeout = timeout
         self._client: Optional['ModbusTcpClient'] = None
-        self._lock = threading.Lock()
+        # Reentrant so a caller can hold the bus across a sequence of writes while the
+        # individual write methods still take it themselves (#331). A plain Lock would
+        # deadlock the moment write_batch() wrapped anything. Reentrancy is per-thread,
+        # which is why the batched sequence has to run in ONE executor job — see
+        # GrowattModbus.write_batch().
+        self._lock = threading.RLock()
         self._refcount = 0
         self._connected = False
         # Per-poll budget for transport-error recoveries (Issue #364). A block-level
@@ -2319,6 +2325,54 @@ class GrowattModbus:
             if not self.connect():
                 raise ModbusWriteError(0, [], "Reconnect failed - cannot determine socket state")
             logger.info(f"{tag} Reconnect successful (no is_socket_open available)")
+
+    @contextmanager
+    def write_batch(self, what: str = "write sequence"):
+        """Hold the shared bus for a sequence of writes that must not be interleaved.
+
+        Some controls are not one register. The WIT VPP mode select writes six to eight —
+        control authority, AC charge enable, a TOU period, the period count, remote enable,
+        the power setpoint — and they only mean anything together. Each one used to take
+        the shared lock separately, so a poll could land in the middle of the sequence and
+        any single acquisition could time out, leaving the inverter with authority granted
+        and no setpoint, or a TOU period with no count. A half-applied command is worse
+        than one that plainly failed, and it is what drove one user to bypass the
+        integration entirely (#331).
+
+        Inside this block the bus is held from first write to last, so the sequence either
+        lands complete or fails without having started.
+
+        TWO CONSTRAINTS, both easy to get wrong:
+
+        1. Everything inside must run on ONE thread. The lock is an RLock, and reentrancy
+           is per-thread — so a sequence split across several executor jobs would deadlock
+           against itself rather than nest. Call the whole sequence from a single
+           hass.async_add_executor_job().
+        2. Keep the block short. The poll waits on this same lock, so a long batch delays
+           polling for every entity on the connection.
+
+        A no-op when there is no shared connection: the client owns its socket outright and
+        there is nothing to contend with.
+        """
+        if self._shared_conn is None:
+            yield
+            return
+
+        from .const import SHARED_LOCK_TIMEOUT
+        acquired = self._shared_conn._lock.acquire(timeout=SHARED_LOCK_TIMEOUT)
+        if not acquired:
+            raise ModbusWriteError(
+                0, [], f"Shared connection busy (lock timeout on {what})"
+            )
+        try:
+            logger.debug("[BATCH] Holding shared bus for %s", what)
+            yield
+        finally:
+            # Released even if a write inside raised. A leaked lock would stall every
+            # subsequent poll on this connection — a worse failure than the one this
+            # method exists to prevent.
+            self._shared_conn._lock.release()
+            logger.debug("[BATCH] Released shared bus after %s", what)
 
     def write_register(self, register: int, value: int) -> bool:
         """
