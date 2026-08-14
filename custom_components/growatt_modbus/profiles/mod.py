@@ -213,9 +213,8 @@ MOD_6000_15000TL3_XH = {
         3286: {'name': 'box_temperature',   'scale': 1,   'unit': '°C', 'signed': True, 'desc': 'NTC temperature, Int8, -40 to 100°C'},
         3287: {'name': 'box_grid_voltage',  'scale': 0.1, 'unit': 'V',  'desc': 'Grid voltage'},
         # box_grid_power has been observed constant at zero on a MOD 10KTL3-XH (DN1.0):
-        # 2509 samples over two nights, never non-zero, including 11 samples where the
-        # house meter showed real grid flow of up to 2064 W. In those same 11, power_to_user
-        # read 0 in all of them and power_to_grid in 10 of 11 (#373).
+        # 4430 consecutive samples over two nights, never once non-zero, including samples
+        # where the house meter showed real grid flow of up to 2064 W (#373).
         #
         # NOT removed on that evidence. The box's other sensors work on the same unit
         # (temperature, grid voltage, work mode, bypass status all report), so this is not
@@ -224,10 +223,25 @@ MOD_6000_15000TL3_XH = {
         # settle it is box_work_mode (3282) during a sample with known grid flow; nobody
         # has captured that pairing yet.
         #
-        # Practical consequence, and the reason it is recorded here: a grid-bounded limit
-        # ("never command anything that causes import") is not buildable from this
-        # inverter's own registers on this model. A PV-bounded one is — PV power at 1/2,
-        # 5/6, 9/10 is validated, as is battery power at 3178-3181.
+        # USE power_to_user (3041/3042) FOR GRID IMPORT ON THIS MODEL, not this register.
+        #
+        # An earlier version of this note claimed a grid-bounded limit ("never command
+        # anything that causes import") was not buildable from this inverter's own
+        # registers. That was too strong, and the reporter said so rather than let it
+        # stand: across 637 samples during EV charging, power_to_user was non-zero in
+        # 632 of 632, with a median difference of -4 W against a P1 meter and 98% of
+        # samples within 200 W. For sustained import it tracks the grid closely.
+        #
+        # The limitation is real but narrower than stated. power_to_user also read 0.0
+        # through eight transient events, including a confirmed 2.2 kW load running for
+        # ten seconds while the inverter's own discharge register moved by 2.2 kW to meet
+        # it. So it is trustworthy for sustained flow and blind to transients on roughly
+        # that timescale — which is the normal profile of a kettle, an espresso machine or
+        # a boiler, so any design using it should expect to miss those.
+        #
+        # For a clamp that exists to stop a *command* causing continuous import, that gap
+        # is acceptable and should be stated rather than discovered. PV power (1/2, 5/6,
+        # 9/10) and battery power (3178-3181) are also validated on this model.
         3289: {'name': 'box_grid_power_high', 'scale': 1, 'unit': '', 'pair': 3290, 'signed': True, 'desc': 'Grid power HIGH (Int32, positive=import). Reads 0 on at least one DN1.0 unit — see note above'},
         3290: {'name': 'box_grid_power_low',  'scale': 1, 'unit': '', 'pair': 3289, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'desc': 'Grid power LOW'},
         3297: {'name': 'box_load_power_high', 'scale': 1, 'unit': '', 'pair': 3298, 'desc': 'Load power HIGH (Uint32)'},
