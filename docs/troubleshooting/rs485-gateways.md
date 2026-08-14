@@ -111,6 +111,8 @@ On the PUSR unit in #367, 113 registers cost the same as 1 — every read landed
 
 The first case is worth checking first because it is quick to confirm and rules out everything else. In [#368](https://github.com/0xAHA/Growatt_ModbusTCP/issues/368) all 2425 rows carried the same `ConnectionException`, which meant no amount of integration tuning could have helped — and the reporter had already downgraded, restored backups and rebuilt Home Assistant before that was spotted.
 
+**A setting that will not stick, while sensors read fine.** Gateways and dataloggers commonly close a connection that has been idle for a while. Reads recover from that transparently — the next poll reconnects and retries — so the symptom is one-sided and easy to misread: sensors keep updating normally while a switch, number or select silently reverts. It shows up most often on the first change made after a quiet period. From v1.6.2 writes reset and retry on a dropped socket the same way reads always have ([#375](https://github.com/0xAHA/Growatt_ModbusTCP/issues/375)). On earlier versions, making the change a second time straight away usually works, because the connection is live by then.
+
 **Tuning has a floor, and it is the wiring.** Block size, pacing and gateway settings can only make the best of the signal that arrives. If reads keep failing after you have taken block size down and the Modbus delay up, the problem is likely physical:
 
 - **Termination.** RS485 wants a 120 Ω resistor at each end of the run — the two ends, not every device. Without it, signals reflect off the unterminated ends and corrupt the frames behind them. Most gateways have a jumper or DIP switch to enable an internal terminator.

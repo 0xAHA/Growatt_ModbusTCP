@@ -138,6 +138,25 @@ Always write registers in this order to avoid momentary incorrect inverter state
 
 Enabling 30407 before setting 30409 puts the inverter under remote control with whatever power value was last in 30409 (which could be stale).
 
+### The integration applies this sequence as one operation
+
+If you use the **Mode (VPP)** select rather than writing registers yourself, the integration
+performs the whole sequence — control authority, AC charge enable, the TOU period and its
+count, remote enable and the power setpoint — holding the connection from the first write
+to the last. A poll cannot land in the middle, so a mode change either applies completely
+or fails without having started.
+
+Before v1.6.2 a poll could interleave, leaving the inverter part-configured: authority
+granted with no power setpoint, or a schedule with no period count.
+
+Two limits remain, and both matter when writing automations:
+
+- **A write can wait for a poll to finish.** On a slow gateway a poll can occupy most of the
+  interval, so a mode change issued during one queues behind it rather than failing.
+- **Mode (VPP) reports the last command, not the inverter.** The select shows what was last
+  sent, not a read-back of the registers, so it will not reflect a change made outside Home
+  Assistant or one the inverter declined.
+
 ---
 
 ## Proper WIT Control Patterns

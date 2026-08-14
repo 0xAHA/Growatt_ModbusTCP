@@ -4,9 +4,12 @@
 
 ---
 
-## Unreleased
+## v1.6.2 (pre-release)
 
-Merged to `main`, not yet in any release. Fold these into the next one.
+Issues: #331, #375
+
+> **Reliability fixes to the write path.** Affects anyone using controls — switches, numbers,
+> selects — and WIT owners in particular. v1.5.5 remains the stable release.
 
 - **Writes now recover from a dropped socket, as reads already did.** On a gateway or
   datalogger that closes idle connections, the first write after a drop failed and the
@@ -17,6 +20,14 @@ Merged to `main`, not yet in any release. Fold these into the next one.
   inverter with control authority granted but no power setpoint, or a schedule with no
   period count. The sequence now holds the connection from first write to last, so it
   either applies completely or fails without starting. (#331)
+
+Two limits are unchanged and now documented in the [WIT guide](https://0xaha.github.io/Growatt_ModbusTCP/controls/wit-guide/):
+a write can still wait behind a running poll, and Mode (VPP) reports the last command sent
+rather than reading the inverter back.
+
+Also in this release: the MOD TL3-XH profile note on grid import now records that
+`power_to_user` (3041/3042) does track sustained grid import on that model, corrected
+against 637 logged samples from @KevlarD-67. Documentation only — no entity changes. (#373)
 
 ---
 
