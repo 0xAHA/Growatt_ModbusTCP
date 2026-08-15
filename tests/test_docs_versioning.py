@@ -63,3 +63,25 @@ def test_manifest_version_is_readable():
     assert re.fullmatch(r"\d+\.\d+\.\d+", version), (
         f"manifest version {version!r} is not plain semver; the badge renders it verbatim"
     )
+
+
+# The installations badge reads $.<domain>.total out of Home Assistant's analytics feed.
+# The domain is typed into the badge URL, so it is a second copy of manifest.json's
+# `domain` field — and if the two ever diverge the badge does not error, it just renders
+# an empty value on the front page of the documentation site.
+ANALYTICS_BADGE = re.compile(
+    r"analytics\.home-assistant\.io%2Fcustom_integrations\.json&query=%24\.(\w+)\.total"
+)
+
+
+@pytest.mark.parametrize("path", BADGE_FILES, ids=lambda p: p.name)
+def test_installations_badge_queries_the_manifest_domain(path):
+    match = ANALYTICS_BADGE.search(path.read_text(encoding="utf-8"))
+    assert match, f"{path.name} has no installations badge"
+
+    domain = json.loads(MANIFEST.read_text(encoding="utf-8"))["domain"]
+    assert match.group(1) == domain, (
+        f"{path.name} installations badge queries $.{match.group(1)}.total but the "
+        f"manifest domain is {domain!r}. shields.io renders a blank badge rather than "
+        f"failing, so this drift is invisible on the rendered page."
+    )
