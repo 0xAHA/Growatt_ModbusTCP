@@ -59,7 +59,7 @@
 | 31 | FlashStart | Update firmware | W | 0x0001: own 0X0100: control broad |
 | 32 | Reset User Info | Reset User Information | W | 0x0001 |
 | 33 | Reset to factory | Reset to factory | W | 0x0001 |
-| 34 | MaxChargeCurr | Max Charge Current | W | 0~ |
+| 34 | MaxChargeCurr | Max Charge Current | W | 0~400, step 1A, default 70 |
 | 35 | BulkChargeVolt | Bulk Charge Volt | W | 500~640- |
 | 36 | FloatChargeVolt | Float Charge Volt | W | 500~560 |
 | 37 | BatLowToUtiVolt | Bat Low Volt Switch To Uti | W |  |
