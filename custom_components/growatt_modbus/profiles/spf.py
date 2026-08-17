@@ -226,7 +226,32 @@ SPF_3000_6000_ES_PLUS = {
              'desc': 'Battery to Grid: SOC level to switch from battery to utility. Non-Lithium: 20.0-64.0V, Lithium: 0-100%',
              'battery_dependent': True},
 
-        # AC Charge Current
+        # Max Total Charge Current — LCD "Program 02" (#376)
+        #
+        # Total across both chargers: "Max. charging current = utility charging current +
+        # solar charging current". Caps register 38 when set lower — the manual states that
+        # if Program 02 is below Program 11, the inverter uses Program 02 for the utility
+        # charger too.
+        #
+        # Range is from the SPF 6000ES Plus LCD manual: 10A~100A, step 1A, default 60A.
+        # NOT the 0~400 in the off-grid protocol document, which covers the whole family.
+        # The floor of 10 matters: this panel scrolls to 999 and silently discards an
+        # out-of-range save, so values below 10 would look accepted and do nothing.
+        #
+        # Confirmed for the 6000 only. The reporter notes the SPF 3000ES is "much more
+        # restricted regarding amperage", and that manual has not been seen. Shipping the
+        # 6000 range is safe because out-of-range writes are cleanly rejected — the register
+        # keeps its previous value, so write verification reverts the entity visibly rather
+        # than leaving a setting that appears to have applied.
+        #
+        # Cannot be set at all when battery type (39) is Lithium; see WRITABLE_REGISTERS.
+        34: {'name': 'max_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
+             'valid_range': (10, 100),
+             'desc': 'Max total charge current, solar + utility (LCD Program 02). '
+                     '10-100A confirmed on SPF 6000ES Plus; unavailable on Lithium'},
+
+        # AC Charge Current — LCD "Program 11", 0A~80A per the same manual, which confirms
+        # the limit this profile already assumed.
         38: {'name': 'ac_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
              'valid_range': (0, 80),
              'desc': 'AC charging current limit (SPF 6000 hardware max: 80A, stored directly)'},

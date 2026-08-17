@@ -4,6 +4,27 @@
 
 ---
 
+## Unreleased
+
+Merged to `main`, not yet in any release.
+
+- **SPH 3-6kW and 7-10kW now report battery charge and discharge energy.** Charge/Discharge
+  Today and Total published a constant 0 on these profiles because the registers were never
+  mapped. Load consumption energy arrives at the same time. Reported by @igotyou, confirmed
+  against ShinePhone. (#377)
+- **New control on SPF 3000-6000 ES Plus: Max Charge Current.** The total charging current
+  across solar and utility, 10-100 A. It is unavailable when Battery Type is Lithium, which
+  is a state the inverter does not allow it to be set in. Reported by @dinkalin-ux, range
+  taken from the SPF 6000ES Plus manual. (#376)
+- **Register scans now name the register map instead of reporting UNKNOWN.** Affected any
+  device identified by DTC, which is most of them. Diagnostic output only — no change to how
+  the integration runs. (#379)
+- SPH V2.01 profiles had registers 1052-1055 labelled as grid import, which is battery
+  discharge energy; grid import was already mapped correctly elsewhere in the same profiles.
+  No entity changes. (#378)
+
+---
+
 ## v1.6.2
 
 Issues: #331, #375, #380

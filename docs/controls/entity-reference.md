@@ -77,7 +77,8 @@ All writes use **read-back verification** — after writing, the integration rea
 | Charge Priority | Select | 2 | CSO (0), SNU (1), OSO (2) | Battery charge source priority |
 | AC Input Mode | Select | 8 | APL (0), UPS (1), GEN (2) | AC input mode (appliance / UPS / generator) |
 | Battery Type | Select | 39 | AGM (0), FLD (1), User (2), Lithium (3), User 2 (4) | Battery chemistry (⚠️ set with caution) |
-| AC Charge Current | Number | 38 | 0–80 A | Max charging current from AC/grid |
+| Max Charge Current | Number | 34 | 10–100 A | **Total** charging current, solar + utility combined (LCD Program 02) |
+| AC Charge Current | Number | 38 | 0–80 A | Max charging current from AC/grid (LCD Program 11) |
 | Generator Charge Current | Number | 83 | 0–80 A | Max charging current from generator |
 | Battery to Utility SOC | Number | 37 | 0–100 % (Lithium) / 20–64 V (Lead-acid) | SOC/voltage to switch from battery to utility |
 | Utility to Battery SOC | Number | 95 | 0–100 % (Lithium) / 20–64 V (Lead-acid) | SOC/voltage to switch back from utility to battery |
@@ -92,6 +93,18 @@ All writes use **read-back verification** — after writing, the integration rea
 - `CSO` — Solar first, grid only when solar insufficient
 - `SNU` — Solar and grid simultaneously
 - `OSO` — Solar only, no grid charging
+
+**Max Charge Current vs AC Charge Current.** Max Charge Current (34) is the *total* across
+both chargers — solar plus utility. AC Charge Current (38) limits only the utility side. If
+you set the total below the AC limit, the inverter applies the total to the utility charger
+as well, so 34 can quietly override 38.
+
+**Max Charge Current is unavailable when Battery Type is Lithium.** The inverter does not
+allow it to be set in that mode — the BMS takes over charge current control — so the entity
+is withheld rather than offered and ignored. Range and behaviour are confirmed on an
+SPF 6000ES Plus; smaller units in this family accept a lower maximum, and a value above
+what your model allows will be rejected by the inverter and the entity will revert
+([#376](https://github.com/0xAHA/Growatt_ModbusTCP/issues/376)).
 
 **Notes:**
 - SPF is an off-grid inverter — there is no grid export. The grid is treated as an AC input source for charging/backup.
@@ -264,7 +277,7 @@ VPP Control Authority (30100), VPP Remote Power Control (30407), VPP Commanded P
 | Model Family | Battery Control | Control Method | Select Entities | Number Entities |
 |---|---|---|---|---|
 | **SPH** (3–10kW) | Yes | Persistent writes | Priority Mode, AC Charge Enable, Time Period Enables (×3), System Enable (HU) | Discharge Rate, Discharge Stop SOC, Charge Rate, Charge Stop SOC, Time Period Start/End (×3) |
-| **SPF** ES PLUS | Yes | Persistent writes | Output Priority, Charge Priority, AC Input Mode, Battery Type | AC Charge Current, Gen Charge Current, Battery→Utility SOC, Utility→Battery SOC |
+| **SPF** ES PLUS | Yes | Persistent writes | Output Priority, Charge Priority, AC Input Mode, Battery Type | Max Charge Current, AC Charge Current, Gen Charge Current, Battery→Utility SOC, Utility→Battery SOC |
 | **WIT** (4–15kW) | Yes (timed) | VPP overrides | Work Mode, Control Authority, VPP Export Limit Enable, Remote Power Control | Active Power Rate, Export Limit, VPP Export Rate, Remote Duration, Remote Power |
 | **MOD / MID** TL3-XH | Yes | Persistent writes | Allow Grid Charge, Time Period Priority/Enable (×9) | Charge Rate, Charge Stop SOC, Grid Charge Stop SOC, Discharge Rate, Discharge Stop SOC, Time Period Start/End (×9) |
 | **MIN / TL-XH** | No | — | — | — |

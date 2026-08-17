@@ -336,6 +336,30 @@ WRITABLE_REGISTERS = {
             4: 'User Defined 2'
         }
     },
+    # Max total charge current — LCD "Program 02" (#376).
+    #
+    # Caps ac_charge_current (38) when set lower: the manual states that if Program 02 is
+    # below Program 11, the inverter applies Program 02 to the utility charger as well.
+    #
+    # 10-100A is from the SPF 6000ES Plus LCD manual, not the 0~400 in the family-wide
+    # protocol document. The floor of 10 is real — this panel scrolls to 999 and silently
+    # discards an out-of-range save, so a slider offering 0-9 would look accepted and do
+    # nothing.
+    #
+    # unavailable_when: the manual says "(If LI is selected in Program 5, this program
+    # can't be set up)". Program 05 is battery type, register 39, where 3 = Lithium. A
+    # write on a Lithium system would be discarded the same silent way, so the control is
+    # withheld rather than offered and ignored. Checked against live data each update,
+    # unlike the profile-membership gating used elsewhere.
+    'max_charge_current': {
+        'register': 34,
+        'scale': 1,
+        'valid_range': (10, 100),
+        'unit': 'A',
+        'unavailable_when': ('battery_type', 3),
+        'desc': 'Max total charge current, solar + utility (LCD Program 02). 10-100A on '
+                'SPF 6000ES Plus; not settable when battery type is Lithium'
+    },
     'ac_charge_current': {
         'register': 38,
         'scale': 1,
@@ -954,6 +978,30 @@ def get_device_type_for_sensor(sensor_key: str) -> str:
 # ============================================================================
 # CONTROL ENTITY DEVICE MAPPING
 # ============================================================================
+
+def control_is_blocked(control_config: dict, data) -> bool:
+    """Is this control's register currently unsettable because of another register?
+
+    Some settings are conditional on live device state rather than on the profile. The SPF
+    max charge current cannot be set while battery type is Lithium — the BMS takes over
+    charge control — and that hardware discards a rejected save silently rather than
+    refusing it, so a control that was offered anyway would look like it worked (#376).
+
+    Declared as `'unavailable_when': ('field', value)` rather than as a callable. A lambda
+    would be harder to test and easy to leave decorative, which is a mistake this project
+    has shipped before: 31 `condition` lambdas in sensor.py are no-ops because they gate on
+    dataclass fields that always exist.
+
+    Returns False when there is no condition, or when there is no data yet — an entity that
+    vanished during startup would be worse than one that briefly accepts a write.
+    """
+    condition = control_config.get('unavailable_when')
+    if not condition or data is None:
+        return False
+
+    field, blocking_value = condition
+    return getattr(data, field, None) == blocking_value
+
 
 def get_device_type_for_control(control_name: str) -> str:
     """Get the device type that a control entity belongs to.

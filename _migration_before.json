@@ -1,0 +1,102 @@
+{
+  "GrowattGenericNumber": {
+    "file": "number.py",
+    "unique_id": "f\"{config_entry.entry_id}_{control_name}\"",
+    "device_expr": "get_device_type_for_control(self._control_name)"
+  },
+  "GrowattExportLimitPowerNumber": {
+    "file": "number.py",
+    "unique_id": "f\"{config_entry.entry_id}_export_limit_power\"",
+    "device_expr": "get_device_type_for_control('export_limit_power')"
+  },
+  "GrowattActivePowerRateNumber": {
+    "file": "number.py",
+    "unique_id": "f\"{config_entry.entry_id}_active_power_rate\"",
+    "device_expr": "get_device_type_for_control('active_power_rate')"
+  },
+  "GrowattWitExportLimitWNumber": {
+    "file": "number.py",
+    "unique_id": "f\"{config_entry.entry_id}_export_limit_w\"",
+    "device_expr": "get_device_type_for_control(\"export_limit_w\")"
+  },
+  "GrowattWitActivePowerRateNumber": {
+    "file": "number.py",
+    "unique_id": "f\"{config_entry.entry_id}_active_power_rate_vpp\"",
+    "device_expr": "get_device_type_for_control(\"active_power_rate\")"
+  },
+  "GrowattWitVppPowerPercentNumber": {
+    "file": "number.py",
+    "unique_id": "f\"{config_entry.entry_id}_vpp_power_percent\"",
+    "device_expr": "get_device_type_for_control(\"active_power_rate\")"
+  },
+  "GrowattWitVppChargeCutoffSocNumber": {
+    "file": "number.py",
+    "unique_id": "f\"{config_entry.entry_id}_vpp_charge_cutoff_soc\"",
+    "device_expr": "get_device_type_for_control(\"work_mode\")"
+  },
+  "GrowattWitVppDischargeCutoffSocNumber": {
+    "file": "number.py",
+    "unique_id": "f\"{config_entry.entry_id}_vpp_discharge_cutoff_soc\"",
+    "device_expr": "get_device_type_for_control(\"work_mode\")"
+  },
+  "GrowattWitVppTouPeriodsNumber": {
+    "file": "number.py",
+    "unique_id": "f\"{config_entry.entry_id}_vpp_tou_periods\"",
+    "device_expr": "get_device_type_for_control(\"work_mode\")"
+  },
+  "GrowattWitVppTouPeriodNumber": {
+    "file": "number.py",
+    "unique_id": "f\"{config_entry.entry_id}_vpp_tou_p{period}_power\"",
+    "device_expr": "get_device_type_for_control(\"work_mode\""
+  },
+  "GrowattGenericSelect": {
+    "file": "select.py",
+    "unique_id": "f\"{config_entry.entry_id}_{control_name}\"",
+    "device_expr": "get_device_type_for_control(self._control_name)"
+  },
+  "GrowattWitWorkModeSelect": {
+    "file": "select.py",
+    "unique_id": "f\"{config_entry.entry_id}_work_mode\"",
+    "device_expr": "get_device_type_for_control(\"work_mode\")"
+  },
+  "GrowattWitVppBatteryModeSelect": {
+    "file": "select.py",
+    "unique_id": "f\"{config_entry.entry_id}_vpp_battery_mode\"",
+    "device_expr": "get_device_type_for_control(\"work_mode\")"
+  },
+  "GrowattWitVppTouDefaultModeSelect": {
+    "file": "select.py",
+    "unique_id": "f\"{config_entry.entry_id}_vpp_tou_default_mode\"",
+    "device_expr": "get_device_type_for_control(\"work_mode\")"
+  },
+  "GrowattModTouPriority": {
+    "file": "select.py",
+    "unique_id": "f\"{config_entry.entry_id}_mod_tou_{self._period}_priority\"",
+    "device_expr": "DEVICE_TYPE_BATTERY"
+  },
+  "GrowattModTouEnable": {
+    "file": "select.py",
+    "unique_id": "f\"{config_entry.entry_id}_mod_tou_{self._period}_enable\"",
+    "device_expr": "DEVICE_TYPE_BATTERY"
+  },
+  "GrowattModAllowGridChargeSelect": {
+    "file": "select.py",
+    "unique_id": "f\"{config_entry.entry_id}_allow_grid_charge\"",
+    "device_expr": "DEVICE_TYPE_BATTERY"
+  },
+  "GrowattWitVppTouTime": {
+    "file": "time.py",
+    "unique_id": "f\"{config_entry.entry_id}_vpp_tou_p{period}_{'start' if is_start else 'end'}\"",
+    "device_expr": "DEVICE_TYPE_BATTERY"
+  },
+  "GrowattGenericTime": {
+    "file": "time.py",
+    "unique_id": "f\"{config_entry.entry_id}_{control_name}\"",
+    "device_expr": "get_device_type_for_control(self._control_name"
+  },
+  "GrowattModTouTime": {
+    "file": "time.py",
+    "unique_id": "f\"{config_entry.entry_id}_mod_tou_{self._period}_{'start' if is_start else 'end'}\"",
+    "device_expr": "DEVICE_TYPE_BATTERY"
+  }
+}

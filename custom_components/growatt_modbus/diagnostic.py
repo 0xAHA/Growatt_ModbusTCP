@@ -14,7 +14,7 @@ from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 
 from .const import DOMAIN, CONF_INVERTER_SERIES, resolve_block_size
-from .device_profiles import get_display_name_for_profile, get_profile
+from .device_profiles import fill_register_map, get_display_name_for_profile, get_profile
 from .auto_detection import ASSUMED, CONFIRMED, DTC_REGISTRY, convert_to_legacy_profile
 
 # Import register maps for "Suggested Match" column
@@ -1609,6 +1609,7 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     # Also returns when confidence was downgraded to "High" by proto_ver==0 — a matched DTC
     # always wins over register heuristics regardless of protocol version confidence.
     if detection.get("dtc_code") and detection.get("profile_key"):
+        fill_register_map(detection)
         return detection
     
     # Check register ranges (only successful reads with non-zero values)
@@ -1843,6 +1844,7 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
                     detection["reasoning"].append("  - MOD extended range (3125-3249) responding")
                 detection["reasoning"].append("⚠ Try scanning during daytime when PV is generating for better detection")
 
+    fill_register_map(detection)
     return detection
 
 

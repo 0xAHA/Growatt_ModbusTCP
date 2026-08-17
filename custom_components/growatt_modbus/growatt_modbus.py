@@ -402,6 +402,7 @@ class GrowattData:
     charge_config: int = 0            # 0=CSO, 1=SNU, 2=OSO
     ac_input_mode: int = 0            # 0=APL, 1=UPS, 2=GEN
     battery_type: int = 0             # 0=AGM, 1=FLD, 2=USE, 3=Lithium, 4=USE2
+    max_charge_current: int = 0       # A, total solar + utility (holding 34, LCD Program 02)
     ac_charge_current: int = 0        # 0-800 (0-80A with scale 0.1)
     gen_charge_current: int = 0       # 0-800 (0-80A with scale 0.1)
     bat_low_to_uti: int = 0           # Battery-dependent: Non-Lithium 200-640 (20-64V), Lithium 5-100 (0.5-10%)
@@ -3647,23 +3648,35 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read SPF control registers 1-8: {e}")
 
-        # Read battery configuration registers (37-39)
-        if any(reg in holding_map for reg in [37, 38, 39]):
+        # Read battery configuration registers (34-39)
+        #
+        # One block of six rather than 34 on its own plus 37-39: the addresses are
+        # contiguous and 35/36 (bulk and float charge voltage) sit between them unmapped, so
+        # a single read costs no more round trips than the old three-register one and is
+        # gentler on a marginal gateway.
+        if any(reg in holding_map for reg in [34, 37, 38, 39]):
             try:
-                battery_ctrl_regs = self.read_holding_registers(37, 3)
-                logger.debug("[SPF CTRL] Raw battery ctrl regs 37-39: %r", battery_ctrl_regs)
+                battery_ctrl_regs = self.read_holding_registers(34, 6)
+                logger.debug("[SPF CTRL] Raw battery ctrl regs 34-39: %r", battery_ctrl_regs)
 
-                if battery_ctrl_regs is not None and len(battery_ctrl_regs) >= 3:
+                if battery_ctrl_regs is not None and len(battery_ctrl_regs) >= 6:
+                    if 34 in holding_map:
+                        data.max_charge_current = int(battery_ctrl_regs[0])
+                    # [1] and [2] are 35/36, bulk and float charge voltage — not mapped
                     if 37 in holding_map:
-                        data.bat_low_to_uti = int(battery_ctrl_regs[0])
+                        data.bat_low_to_uti = int(battery_ctrl_regs[3])
                     if 38 in holding_map:
-                        data.ac_charge_current = int(battery_ctrl_regs[1])
+                        data.ac_charge_current = int(battery_ctrl_regs[4])
                     if 39 in holding_map:
-                        data.battery_type = int(battery_ctrl_regs[2])
-                    logger.debug("[SPF CTRL] bat_low_to_uti=%s, ac_charge_current=%s, battery_type=%s",
-                               data.bat_low_to_uti, data.ac_charge_current, data.battery_type)
+                        data.battery_type = int(battery_ctrl_regs[5])
+                    logger.debug(
+                        "[SPF CTRL] max_charge_current=%s, bat_low_to_uti=%s, "
+                        "ac_charge_current=%s, battery_type=%s",
+                        data.max_charge_current, data.bat_low_to_uti,
+                        data.ac_charge_current, data.battery_type,
+                    )
             except Exception as e:
-                logger.debug(f"Could not read battery control registers 37-39: {e}")
+                logger.debug(f"Could not read battery control registers 34-39: {e}")
 
         # Read generator charge current (83) and AC to battery voltage (95)
         if 83 in holding_map:

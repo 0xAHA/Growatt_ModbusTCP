@@ -1178,6 +1178,34 @@ def profile_exists(series: str) -> bool:
     return resolve_profile_alias(series) in INVERTER_PROFILES
 
 
+def fill_register_map(detection: dict) -> None:
+    """Fill a detection result's register map name from its profile key, if nothing set it.
+
+    Lives here rather than in `diagnostic.py` because it is a lookup against the profile
+    registry and nothing else — which also keeps it testable without Home Assistant.
+
+    The DTC branch is the *primary* detection path, and it sets `profile_key` and returns
+    without ever assigning `register_map`, so the field kept its "UNKNOWN" default. Every
+    heuristic fallback — PV3 probing, range checks, model-name matching — assigns it
+    explicitly. The field was therefore populated on the paths that matter least and blank
+    on the one used most, in exactly the scans people are asked to attach when confirming a
+    mapping (#379).
+
+    Resolved from the *final* profile key rather than where it is first set: a DTC read from
+    the V1.39 register is downgraded to a legacy profile afterwards, so deriving it earlier
+    would report the pre-downgrade map.
+
+    Only fills a missing value. The heuristic branches choose deliberately — PV3 probing
+    picks between maps that share a profile key — and recomputing would undo that.
+    """
+    if detection.get("register_map") not in (None, "", "UNKNOWN"):
+        return
+
+    profile = INVERTER_PROFILES.get(detection.get("profile_key") or "")
+    if profile and profile.get("register_map"):
+        detection["register_map"] = profile["register_map"]
+
+
 def get_profile(series: str):
     """Get inverter profile by series name, resolving any alias first.
 

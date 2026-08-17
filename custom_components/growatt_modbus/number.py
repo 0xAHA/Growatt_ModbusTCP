@@ -14,6 +14,7 @@ from .const import (
     DOMAIN,
     WRITABLE_REGISTERS,
     CONF_REGISTER_MAP,
+    control_is_blocked,
     get_device_type_for_control,
     is_read_only_register,
 )
@@ -205,12 +206,30 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         # Configure range and unit
         self._configure_range_and_unit()
 
+    @property
+    def available(self) -> bool:
+        """Withhold the control when the inverter will not accept a write.
+
+        Some settings are conditional on another register rather than on the profile. The
+        SPF's max charge current cannot be set while battery type is Lithium — the BMS takes
+        over charge control — and this hardware discards a rejected save silently rather
+        than refusing it, so an offered-but-ignored slider would look like it worked (#376).
+
+        Declarative as `('field', value)` rather than a callable: a lambda here would be
+        hard to test and easy to make decorative, which is a mistake this project has
+        already shipped once.
+        """
+        if not super().available:
+            return False
+        return not control_is_blocked(self._control_config, self.coordinator.data)
+
     def _get_icon(self, control_name: str) -> str:
         """Get icon based on control name."""
         icon_map = {
             'export_limit_power': 'mdi:speedometer',
             'export_limit_failed_power_rate': 'mdi:transmission-tower-export',
             'active_power_rate': 'mdi:speedometer',
+            'max_charge_current': 'mdi:battery-charging-high',
             'ac_charge_current': 'mdi:current-ac',
             'gen_charge_current': 'mdi:current-ac',
             'bat_low_to_uti': 'mdi:battery-alert',

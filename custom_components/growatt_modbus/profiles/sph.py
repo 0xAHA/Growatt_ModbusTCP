@@ -75,6 +75,38 @@ SPH_3000_6000 = {
         1037: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1038, 'desc': 'INV power to local load total H (PLocalLoad total) — house load'},
         1038: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
+        # Battery and load energy counters (#377).
+        #
+        # Absent from this profile until now, which is not the same as being wrong: the
+        # sensors exist in the profile's sensor set and GrowattData defaults them to 0.0,
+        # so Charge/Discharge Today and Total published a steady zero forever. Nothing
+        # errored, because there was never a read to fail.
+        #
+        # Confirmed on an SPH 3600 (DTC 3501) against ShinePhone, register dump and app
+        # screenshot minutes apart, all six exact:
+        #
+        #   discharged  0.7 / 6985.5      charged  2.0 / 6516.5      load  6.7 / 66983.9
+        #
+        # Names match SPH_8000_10000_HU, which already maps this block. The coordinator
+        # accepts either battery_charge_today_low or charge_energy_today_low, so these
+        # feed the existing sensors without further plumbing.
+        #
+        # NOT added here: 1044-1051 (Etouser / Etogrid). They read plausibly on the same
+        # device, but the export lifetime total disagreed with the portal (7561.0 kWh
+        # against 6362), so they want their own evidence rather than riding along on this.
+        1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge energy today HIGH (Edischarge1_today)'},
+        1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge energy total HIGH (Edischarge1_total)'},
+        1055: {'name': 'battery_discharge_total_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1056: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 1057, 'desc': 'Battery charge energy today HIGH (Echarge1_today)'},
+        1057: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 1056, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1058: {'name': 'battery_charge_total_high', 'scale': 1, 'unit': '', 'pair': 1059, 'desc': 'Battery charge energy total HIGH (Echarge1_total)'},
+        1059: {'name': 'battery_charge_total_low', 'scale': 1, 'unit': '', 'pair': 1058, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1060: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1061, 'desc': 'Local load energy today HIGH (ELocalLoad_Today)'},
+        1061: {'name': 'load_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1060, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1062: {'name': 'load_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1063, 'desc': 'Local load energy total HIGH (ELocalLoad_Total)'},
+        1063: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1062, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
         # AC Output
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
         38: {'name': 'ac_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Grid voltage'},
@@ -333,6 +365,38 @@ SPH_7000_10000 = {
         1030: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 1029, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         1037: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1038, 'desc': 'INV power to local load total H (PLocalLoad total) — house load'},
         1038: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},
+
+        # Battery and load energy counters (#377).
+        #
+        # Absent from this profile until now, which is not the same as being wrong: the
+        # sensors exist in the profile's sensor set and GrowattData defaults them to 0.0,
+        # so Charge/Discharge Today and Total published a steady zero forever. Nothing
+        # errored, because there was never a read to fail.
+        #
+        # Confirmed on an SPH 3600 (DTC 3501) against ShinePhone, register dump and app
+        # screenshot minutes apart, all six exact:
+        #
+        #   discharged  0.7 / 6985.5      charged  2.0 / 6516.5      load  6.7 / 66983.9
+        #
+        # Names match SPH_8000_10000_HU, which already maps this block. The coordinator
+        # accepts either battery_charge_today_low or charge_energy_today_low, so these
+        # feed the existing sensors without further plumbing.
+        #
+        # NOT added here: 1044-1051 (Etouser / Etogrid). They read plausibly on the same
+        # device, but the export lifetime total disagreed with the portal (7561.0 kWh
+        # against 6362), so they want their own evidence rather than riding along on this.
+        1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge energy today HIGH (Edischarge1_today)'},
+        1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge energy total HIGH (Edischarge1_total)'},
+        1055: {'name': 'battery_discharge_total_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1056: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 1057, 'desc': 'Battery charge energy today HIGH (Echarge1_today)'},
+        1057: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 1056, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1058: {'name': 'battery_charge_total_high', 'scale': 1, 'unit': '', 'pair': 1059, 'desc': 'Battery charge energy total HIGH (Echarge1_total)'},
+        1059: {'name': 'battery_charge_total_low', 'scale': 1, 'unit': '', 'pair': 1058, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1060: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1061, 'desc': 'Local load energy today HIGH (ELocalLoad_Today)'},
+        1061: {'name': 'load_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1060, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1062: {'name': 'load_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1063, 'desc': 'Local load energy total HIGH (ELocalLoad_Total)'},
+        1063: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1062, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # AC Output
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
@@ -676,10 +740,25 @@ SPH_3000_6000_V201 = {
         1051: {'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 1050, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Grid Energy (from grid / import)
-        1052: {'name': 'grid_import_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1053},
-        1053: {'name': 'grid_import_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        1054: {'name': 'grid_import_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1055},
-        1055: {'name': 'grid_import_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # 1052-1059 are the LEGACY battery energy counters, not grid import (#378).
+        #
+        # These were mapped as grid_import_energy_*, which cannot be right: grid import is
+        # already correctly at 1044/1046 (Etouser) in this same profile, and Protocol V1.39
+        # documents 1052 as Edischarge1_today and 1056 as Echarge1_today. Confirmed on SPH
+        # hardware against ShinePhone (#377), where all six of 1052-1063 matched exactly.
+        #
+        # They keep a _legacy suffix and do NOT participate in fallback, because on a V2.01
+        # profile the canonical source for battery energy is the VPP block at 31202-31209
+        # below. Mapping both under the same names made one of them silently dead — which
+        # is what the base profile inheriting corrected names exposed.
+        1052: {'name': 'battery_discharge_today_legacy_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge today (Edischarge1_today) — VPP 31206 is canonical here'},
+        1053: {'name': 'battery_discharge_today_legacy_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1054: {'name': 'battery_discharge_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge total (Edischarge1_total) — VPP 31208 is canonical here'},
+        1055: {'name': 'battery_discharge_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1056: {'name': 'battery_charge_today_legacy_high', 'scale': 1, 'unit': '', 'pair': 1057, 'desc': 'Battery charge today (Echarge1_today) — VPP 31202 is canonical here'},
+        1057: {'name': 'battery_charge_today_legacy_low', 'scale': 1, 'unit': '', 'pair': 1056, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1058: {'name': 'battery_charge_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 1059, 'desc': 'Battery charge total (Echarge1_total) — VPP 31204 is canonical here'},
+        1059: {'name': 'battery_charge_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 1058, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Load Energy
         1060: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1061},
@@ -813,10 +892,25 @@ SPH_7000_10000_V201 = {
         1051: {'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 1050, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Grid Energy (from grid / import)
-        1052: {'name': 'grid_import_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1053},
-        1053: {'name': 'grid_import_energy_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        1054: {'name': 'grid_import_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1055},
-        1055: {'name': 'grid_import_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # 1052-1059 are the LEGACY battery energy counters, not grid import (#378).
+        #
+        # These were mapped as grid_import_energy_*, which cannot be right: grid import is
+        # already correctly at 1044/1046 (Etouser) in this same profile, and Protocol V1.39
+        # documents 1052 as Edischarge1_today and 1056 as Echarge1_today. Confirmed on SPH
+        # hardware against ShinePhone (#377), where all six of 1052-1063 matched exactly.
+        #
+        # They keep a _legacy suffix and do NOT participate in fallback, because on a V2.01
+        # profile the canonical source for battery energy is the VPP block at 31202-31209
+        # below. Mapping both under the same names made one of them silently dead — which
+        # is what the base profile inheriting corrected names exposed.
+        1052: {'name': 'battery_discharge_today_legacy_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge today (Edischarge1_today) — VPP 31206 is canonical here'},
+        1053: {'name': 'battery_discharge_today_legacy_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1054: {'name': 'battery_discharge_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge total (Edischarge1_total) — VPP 31208 is canonical here'},
+        1055: {'name': 'battery_discharge_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1056: {'name': 'battery_charge_today_legacy_high', 'scale': 1, 'unit': '', 'pair': 1057, 'desc': 'Battery charge today (Echarge1_today) — VPP 31202 is canonical here'},
+        1057: {'name': 'battery_charge_today_legacy_low', 'scale': 1, 'unit': '', 'pair': 1056, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1058: {'name': 'battery_charge_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 1059, 'desc': 'Battery charge total (Echarge1_total) — VPP 31204 is canonical here'},
+        1059: {'name': 'battery_charge_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 1058, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Load Energy
         1060: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1061},
