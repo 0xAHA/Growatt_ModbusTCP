@@ -40,6 +40,15 @@ Firmware V1.523, reported in [#367](https://github.com/0xAHA/Growatt_ModbusTCP/i
 
 Measured: zero short/misaligned reads, 89 sensors populated, two full register scans of 2300 registers across 17 ranges with no read errors, and **26 days of statistics from before the v1.3.7 guard existed with no corrupt values at all**. On this gateway there was never anything to catch.
 
+**Two more settings if you see `Very short frame: 0x0` or null bytes**, contributed from a working install ([#356](https://github.com/0xAHA/Growatt_ModbusTCP/issues/356)):
+
+| Setting | Value | Why |
+|---|---|---|
+| Multi-Client / Max Socket Client | **1** | The default allows up to 8. Several clients querying one RS485 bus at 9600 baud interleave on the wire and corrupt frames |
+| Connection / TCP Idle Timeout | **30-60 s** | A dead session is dropped promptly, so a restarted Home Assistant is not refused while the gateway still holds the old socket |
+
+The first matters more than it sounds. The bus is a single shared medium: a second client is not a second conversation but an interruption of the first, and the resulting fragment arrives as a valid-looking short read rather than as an error.
+
 ### ✅ Elfin EW11 / EW11A — known good
 
 Running on the maintainer's own MIN 10000TL-X without issue, and the reference setup most fixes in this integration are verified against. An Elfin EW11 also produced the register readings behind [#326](https://github.com/0xAHA/Growatt_ModbusTCP/issues/326).
