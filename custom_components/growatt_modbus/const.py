@@ -69,6 +69,30 @@ SHARED_LOCK_TIMEOUT = 60       # seconds to wait for shared bus lock before givi
 DEFAULT_INTER_SLAVE_DELAY_MS = 50  # ms pause after each slave poll to let RS485 bus settle
 
 # ============================================================================
+# PEAK SHAVING — UNSET LIMITS (#380)
+# ============================================================================
+# The demand-management power limits (3307, 3308, 3311) sit at a ceiling rather than at
+# zero when peak shaving has never been configured. Measured on a MID 25KTL3-XH: 30000 on
+# both demand limits and 65535 on the AC charge limit, which decode at x0.1 to 3000 kW and
+# 6553.5 kW on a 25 kW inverter.
+#
+# A *configured* MOD 10KTL3-XH on the same register map reads 75 (7.5 kW) on all three, so
+# these sentinels do not collide with a legitimate setting. The read succeeds either way —
+# nothing errors and nothing logs — so without this the sensors publish a stable, typed,
+# entirely wrong number.
+#
+# The ceiling is a backstop for unset encodings we have not seen. It mirrors the 1000 kWh
+# sanity limit already applied to PV energy sums: no single-inverter demand limit in this
+# range is a real setting.
+PEAK_SHAVING_UNSET_RAW = (30000, 65535)
+PEAK_SHAVING_MAX_PLAUSIBLE_KW = 1000.0
+
+# Deliberately NOT given the same treatment: peak_shaving_reserve_soc (3310) and
+# grid_charge_stopped_soc (3312). An SOC has no absurd ceiling to give it away — 50 % reads
+# identically whether it was configured or left at the factory default, on both the MOD and
+# the MID. Unset is undetectable by value there, so guessing would be worse than leaving it.
+
+# ============================================================================
 # SENSOR TYPE CLASSIFICATIONS FOR OFFLINE BEHAVIOR
 # ============================================================================
 

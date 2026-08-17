@@ -184,6 +184,21 @@ established by changing each value in the portal and reading the register back
 | Peak Shaving Reserve SOC | 3310 | Charge held back for peak shaving (%) |
 | AC Charge Max Power | 3311 | Ceiling on grid charging power (kW) |
 
+**These also apply to MID.** The MID 11-30KTL3-XH profile loads the same register map, so
+the entities appear there too — the profile name does not tell you which family a register
+cluster reaches.
+
+**The three kW limits are unavailable until peak shaving has been configured.** When the
+feature has never been set up, those registers hold a ceiling rather than a zero — 30000 or
+65535, which would render as 3000 kW and 6553.5 kW. The integration publishes nothing
+instead, so an unavailable entity here means "not configured in the portal", not a
+communication problem
+([#380](https://github.com/0xAHA/Growatt_ModbusTCP/issues/380)).
+
+Reserve SOC is the exception and is always shown. An SOC has no implausible ceiling to
+give it away — 50 % reads identically whether you set it or the factory did — so there is
+no way to tell configured from unset, and guessing would be worse than showing the value.
+
 ### VPP remote power control (read-only)
 
 MOD TL3-XH **does** support VPP remote power control — this was measured on hardware

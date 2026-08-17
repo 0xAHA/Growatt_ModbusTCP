@@ -338,10 +338,14 @@ class GrowattData:
 
     # MOD TL3-XH peak shaving / demand management (holding 3307-3312, #372).
     # Undocumented in any public protocol; mapped from portal round-trips. See mod.py.
-    demand_import_limit: float = 0.0       # kW  (3307, x0.1)
-    demand_export_limit: float = 0.0       # kW  (3308, x0.1)
-    peak_shaving_reserve_soc: int = 0      # %   (3310)
-    ac_charge_max_power: float = 0.0       # kW  (3311, x0.1)
+    # None rather than 0.0 so an unset limit publishes nothing instead of a plausible
+    # number. These sit at a ceiling (30000 / 65535) when peak shaving was never
+    # configured, and the read succeeds, so 0.0 would be indistinguishable from a real
+    # reading of zero. See PEAK_SHAVING_UNSET_RAW (#380).
+    demand_import_limit: Optional[float] = None   # kW  (3307, x0.1)
+    demand_export_limit: Optional[float] = None   # kW  (3308, x0.1)
+    peak_shaving_reserve_soc: int = 0             # %   (3310) — unset not detectable
+    ac_charge_max_power: Optional[float] = None   # kW  (3311, x0.1)
     grid_charge_stopped_soc: int = 0       # %   (3312) — grid-charge cap, distinct from 3048
 
     # Mirror of the last commanded VPP power setpoint (holding 30474, #373). Write-ignored.
@@ -3376,6 +3380,71 @@ class GrowattModbus:
         except Exception as e:
             logger.debug(f"Battery data not available: {e}")
 
+    @staticmethod
+    def _peak_shaving_kw(raw: int) -> Optional[float]:
+        """Decode a demand-management power limit, or None if it was never configured.
+
+        Returning None matters more than it looks. The register read succeeds — an unset
+        limit answers with a ceiling rather than an error — so a caller that trusts the
+        read publishes 3000 kW on a 25 kW inverter and nothing anywhere reports a fault
+        (#380).
+        """
+        from .const import PEAK_SHAVING_UNSET_RAW, PEAK_SHAVING_MAX_PLAUSIBLE_KW
+
+        if raw in PEAK_SHAVING_UNSET_RAW:
+            return None
+        kw = round(raw * 0.1, 1)
+        if kw > PEAK_SHAVING_MAX_PLAUSIBLE_KW:
+            return None
+        return kw
+
+    def _read_peak_shaving(self, data: GrowattData) -> None:
+        """MOD/MID TL3-XH peak shaving and demand management (3307-3312, #372).
+
+        Read as one 6-register block: 3307-3312 is contiguous and the two addresses we
+        deliberately do not map (3309, 3313) fall inside or beside it, so a block read
+        costs no more than the five individual reads would and is gentler on a marginal
+        gateway.
+
+        Applies to MID as well as MOD — the MID profile loads the same register map, which
+        is how #380 was found.
+        """
+        try:
+            ps_regs = self.read_holding_registers(3307, 6)
+            if ps_regs is None or len(ps_regs) < 6:
+                return
+
+            data.demand_import_limit = self._peak_shaving_kw(ps_regs[0])
+            data.demand_export_limit = self._peak_shaving_kw(ps_regs[1])
+            # ps_regs[2] is 3309 — unidentified, deliberately unmapped
+            # SOCs are assigned raw: unset is indistinguishable from configured on these
+            data.peak_shaving_reserve_soc = int(ps_regs[3])
+            data.ac_charge_max_power = self._peak_shaving_kw(ps_regs[4])
+            data.grid_charge_stopped_soc = int(ps_regs[5])
+
+            unset = [
+                name for name, value in (
+                    ("import_limit", data.demand_import_limit),
+                    ("export_limit", data.demand_export_limit),
+                    ("ac_charge_max", data.ac_charge_max_power),
+                ) if value is None
+            ]
+            if unset:
+                logger.debug(
+                    "[MOD PEAK] peak shaving not configured for %s (raw %s/%s/%s) — "
+                    "these sensors stay unavailable rather than publishing a ceiling",
+                    ", ".join(unset), ps_regs[0], ps_regs[1], ps_regs[4],
+                )
+            logger.debug(
+                "[MOD PEAK] import_limit=%s export_limit=%s reserve_soc=%s%% "
+                "ac_charge_max=%s grid_charge_stop=%s%%",
+                data.demand_import_limit, data.demand_export_limit,
+                data.peak_shaving_reserve_soc, data.ac_charge_max_power,
+                data.grid_charge_stopped_soc,
+            )
+        except Exception as e:
+            logger.debug(f"Could not read peak shaving registers 3307-3312: {e}")
+
     def _read_backup_box_data(self, data: GrowattData) -> None:
         """Populate backup box (Growatt ARK) fields from cached 3000-range registers."""
         try:
@@ -3843,24 +3912,7 @@ class GrowattModbus:
         # costs no more than the five individual reads would and is gentler on a marginal
         # gateway. Values we do not trust are simply not assigned.
         if 3307 in holding_map:
-            try:
-                ps_regs = self.read_holding_registers(3307, 6)
-                if ps_regs is not None and len(ps_regs) >= 6:
-                    data.demand_import_limit = round(ps_regs[0] * 0.1, 1)
-                    data.demand_export_limit = round(ps_regs[1] * 0.1, 1)
-                    # ps_regs[2] is 3309 — unidentified, deliberately unmapped
-                    data.peak_shaving_reserve_soc = int(ps_regs[3])
-                    data.ac_charge_max_power = round(ps_regs[4] * 0.1, 1)
-                    data.grid_charge_stopped_soc = int(ps_regs[5])
-                    logger.debug(
-                        "[MOD PEAK] import_limit=%skW export_limit=%skW reserve_soc=%s%% "
-                        "ac_charge_max=%skW grid_charge_stop=%s%%",
-                        data.demand_import_limit, data.demand_export_limit,
-                        data.peak_shaving_reserve_soc, data.ac_charge_max_power,
-                        data.grid_charge_stopped_soc,
-                    )
-            except Exception as e:
-                logger.debug(f"Could not read peak shaving registers 3307-3312: {e}")
+            self._read_peak_shaving(data)
 
         # Mirror of the last commanded VPP power setpoint (30474, #373).
         #
