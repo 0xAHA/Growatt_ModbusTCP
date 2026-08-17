@@ -4,12 +4,13 @@
 
 ---
 
-## v1.6.2 (pre-release)
+## v1.6.2
 
-Issues: #331, #375
+Issues: #331, #375, #380
 
-> **Reliability fixes to the write path.** Affects anyone using controls — switches, numbers,
-> selects — and WIT owners in particular. v1.5.5 remains the stable release.
+> **First stable release of the 1.6 line.** v1.6.0 and v1.6.1 were pre-releases, so if you
+> are coming from v1.5.5 you are getting all three at once — their notes are below and
+> worth reading, particularly if you have a MOD or MID TL3-XH.
 
 - **Writes now recover from a dropped socket, as reads already did.** On a gateway or
   datalogger that closes idle connections, the first write after a drop failed and the
@@ -20,6 +21,11 @@ Issues: #331, #375
   inverter with control authority granted but no power setpoint, or a schedule with no
   period count. The sequence now holds the connection from first write to last, so it
   either applies completely or fails without starting. (#331)
+- **Peak-shaving limits stay unavailable until they are configured.** On MOD and MID
+  TL3-XH, Import Limit, Export Limit and AC Charge Max Power previously showed 3000 kW or
+  6553.5 kW on systems where peak shaving had never been set up in the portal. An
+  unavailable entity here now means "not configured", not a connection problem. Reserve SOC
+  is unaffected and still always shown. Reported by @as-wallpen. (#380)
 
 Two limits are unchanged and now documented in the [WIT guide](https://0xaha.github.io/Growatt_ModbusTCP/controls/wit-guide/):
 a write can still wait behind a running poll, and Mode (VPP) reports the last command sent
