@@ -78,7 +78,13 @@
           "invert_grid_power": "Invert Grid Power",
           "invert_battery_power": "Invert Battery Power",
           "battery_voltage_range": "Battery Voltage Range",
-          "modbus_delay": "Modbus Request Delay (ms)"
+          "modbus_delay": "Modbus Request Delay (ms)",
+          "device_path": "USB / Serial Port",
+          "manual_path": "Or enter a path manually",
+          "baudrate": "Baud Rate",
+          "host": "Host / IP Address",
+          "port": "TCP Port",
+          "max_block_size": "Max Register Block Size"
         },
         "data_description": {
           "device_name": "Friendly name for the device (appears before all sensor names)",
@@ -89,9 +95,16 @@
           "invert_grid_power": "Enable if CT clamp installed backwards (swaps import/export on AC side)",
           "invert_battery_power": "Enable if battery power shows opposite direction (inverts charge/discharge sign)",
           "battery_voltage_range": "Override automatic battery voltage register selection. Use High-voltage when VPP register 31214 does not respond and register 3169 reads ~10× too low (symptom of a 16-bit overflow on ARK/HV battery systems).",
-          "modbus_delay": "Minimum pause between consecutive Modbus requests within a poll cycle (50–1000 ms, default 250). Increase to 500–1000 ms if the log shows transaction ID mismatch errors or if the inverter logs spurious fault entries while the integration is running."
+          "modbus_delay": "Minimum pause between consecutive Modbus requests within a poll cycle (50–1000 ms, default 250). Increase to 500–1000 ms if the log shows transaction ID mismatch errors or if the inverter logs spurious fault entries while the integration is running.",
+          "device_path": "Paths under /dev/serial/by-id/ are tied to the adapter itself and survive a reboot. A /dev/ttyUSB path is assigned in plug order and can move to a different device when you have more than one USB serial adapter.",
+          "manual_path": "Overrides the selection above. Use this if the adapter is not listed, or to paste a /dev/serial/by-id/ path.",
+          "host": "IP address or hostname of the RS485-to-TCP gateway.",
+          "max_block_size": "Registers requested per Modbus read. Auto lets the profile decide. Lower this if entities are unavailable or stuck at zero and the log shows short reads or \"Unable to decode request\" - some RS485 gateways truncate large responses."
         }
       }
+    },
+    "error": {
+      "manual_path_required": "Choose a port from the list, or enter a path in the manual field."
     }
   },
   "issues": {
