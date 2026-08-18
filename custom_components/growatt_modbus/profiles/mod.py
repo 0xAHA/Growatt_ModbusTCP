@@ -85,6 +85,24 @@ MOD_6000_15000TL3_XH = {
         65: {'name': 'pv2_energy_total_high', 'scale': 1, 'unit': '', 'pair': 66, 'desc': 'PV2 DC energy total HIGH'},
         66: {'name': 'pv2_energy_total_low', 'scale': 1, 'unit': '', 'pair': 65, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV2 DC energy total LOW'},
 
+        # PV3 energy — the map previously jumped from 66 straight to 91, so a third string
+        # was invisible to every per-string figure while its power sensors worked fine.
+        #
+        # The daily consequence is the one that reached users: use_mppt_energy_today sums
+        # the per-string counters, so a three-string system under-reported daily solar by a
+        # whole string. On a MID 25KTL3-XH that was 17.6 kWh against the portal's 29.5.
+        #
+        # Confirmed by prediction, then measurement (#381). PV3 lifetime was derived from
+        # registers already mapped — 91/92 (all strings, 3611.9) minus PV1 (1268.4) minus
+        # PV2 (801.1) = 1542.4 — which predicted a raw 15424 at 69/70 before anyone read it.
+        # The scan returned exactly 15424, and 67/68 returned 119, giving 11.9 kWh for the
+        # day. PV1 9.4 + PV2 8.2 + PV3 11.9 = 29.5, matching the portal's daily solar figure
+        # to the decimal.
+        67: {'name': 'pv3_energy_today_high', 'scale': 1, 'unit': '', 'pair': 68, 'desc': 'PV3 DC energy today HIGH (Epv3_today)'},
+        68: {'name': 'pv3_energy_today_low', 'scale': 1, 'unit': '', 'pair': 67, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV3 DC energy today LOW'},
+        69: {'name': 'pv3_energy_total_high', 'scale': 1, 'unit': '', 'pair': 70, 'desc': 'PV3 DC energy total HIGH (Epv3_total)'},
+        70: {'name': 'pv3_energy_total_low', 'scale': 1, 'unit': '', 'pair': 69, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV3 DC energy total LOW'},
+
         # PV Total energy lifetime
         91: {'name': 'pv_energy_total_high', 'scale': 1, 'unit': '', 'pair': 92, 'desc': 'PV energy total lifetime HIGH'},
         92: {'name': 'pv_energy_total_low', 'scale': 1, 'unit': '', 'pair': 91, 'combined_scale': 0.1, 'combined_unit': 'kWh'},

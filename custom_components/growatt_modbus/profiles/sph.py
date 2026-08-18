@@ -423,6 +423,20 @@ SPH_7000_10000 = {
         65: {'name': 'pv2_energy_total_high', 'scale': 1, 'unit': '', 'pair': 66, 'desc': 'PV2 DC energy total HIGH'},
         66: {'name': 'pv2_energy_total_low', 'scale': 1, 'unit': '', 'pair': 65, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV2 DC energy total LOW'},
 
+        # PV3 energy. This profile declares has_pv3, and use_mppt_energy_today sums the
+        # per-string counters, so without these a third string is missing from the daily
+        # solar figure entirely — measured as a whole-string shortfall on the MOD map (#381).
+        #
+        # Protocol V1.39 documents 67-70 as Epv3_today / Epv3_total. Confirmed on hardware
+        # for MOD_6000_15000TL3_XH; carried here on the protocol plus the shared register
+        # layout, not on an SPH 7-10kW reading. A two-string unit answers 0 and the sensors
+        # stay hidden by their non-zero condition, so this cannot make anything worse than
+        # the current silent omission.
+        67: {'name': 'pv3_energy_today_high', 'scale': 1, 'unit': '', 'pair': 68, 'desc': 'PV3 DC energy today HIGH (Epv3_today)'},
+        68: {'name': 'pv3_energy_today_low', 'scale': 1, 'unit': '', 'pair': 67, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV3 DC energy today LOW'},
+        69: {'name': 'pv3_energy_total_high', 'scale': 1, 'unit': '', 'pair': 70, 'desc': 'PV3 DC energy total HIGH (Epv3_total)'},
+        70: {'name': 'pv3_energy_total_low', 'scale': 1, 'unit': '', 'pair': 69, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV3 DC energy total LOW'},
+
         # Temperatures
         93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
         94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},

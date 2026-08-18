@@ -16,6 +16,11 @@ Merged to `main`, not yet in any release.
   across solar and utility, 10-100 A. It is unavailable when Battery Type is Lithium, which
   is a state the inverter does not allow it to be set in. Reported by @dinkalin-ux, range
   taken from the SPF 6000ES Plus manual. (#376)
+- **Three-string MOD, MID and SPH 7-10kW systems no longer under-report daily solar.** PV3
+  had no energy counter in the register map, and the daily solar figure is the sum of the
+  per-string counters — so a whole string was missing from it. On a MID 25KTL3-XH that was
+  17.6 kWh against the portal's 29.5. PV3 Energy Today and Total also start reporting.
+  Reported by @as-wallpen, register addresses derived and confirmed with @KevlarD-67. (#381)
 - **Register scans now name the register map instead of reporting UNKNOWN.** Affected any
   device identified by DTC, which is most of them. Diagnostic output only — no change to how
   the integration runs. (#379)
