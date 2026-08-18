@@ -108,3 +108,91 @@ def test_the_read_block_covers_register_34():
 def test_max_charge_current_reaches_the_data_container():
     """A field missing from GrowattData is the most common way a control silently fails."""
     assert hasattr(_gm.GrowattData(), "max_charge_current")
+
+
+# ---------------------------------------------------------------------------
+# Bulk and float charging voltage, holding 35 and 36 (#384)
+#
+# Different in kind from every other control here: a wrong in-range value charges a battery
+# bank incorrectly rather than producing a visible mistake. Created disabled by default so
+# operating them is deliberate.
+#
+# The range is unusually well evidenced - the reporter photographed the SPF 6000ES Plus and
+# SPF 3000-5000 ES manuals side by side, and Programs 19/20 are identical in both, so unlike
+# max_charge_current these do not vary across the family.
+# ---------------------------------------------------------------------------
+
+VOLTAGE_CONTROLS = ["bulk_charge_voltage", "float_charge_voltage"]
+USER_DEFINED = (2, 4)  # register 39: 2 = User Defined, 4 = User Defined 2
+
+
+@pytest.mark.parametrize("name", VOLTAGE_CONTROLS)
+def test_the_voltage_controls_are_mapped_and_writable(name):
+    addr = {"bulk_charge_voltage": 35, "float_charge_voltage": 36}[name]
+    reg = SPF["holding_registers"][addr]
+    assert reg["name"] == name
+    assert reg["access"] == "RW"
+    assert reg["scale"] == 0.1, "555 raw must read as 55.5 V"
+
+
+@pytest.mark.parametrize("name", VOLTAGE_CONTROLS)
+def test_the_slider_spans_the_manual_range(name):
+    """valid_range is in raw units; the entity multiplies by scale. 480-584 x 0.1 is the
+    48.0-58.4 V both manuals give."""
+    cfg = _const.WRITABLE_REGISTERS[name]
+    lo, hi = cfg["valid_range"]
+    assert lo * cfg["scale"] == pytest.approx(48.0)
+    assert hi * cfg["scale"] == pytest.approx(58.4)
+
+
+@pytest.mark.parametrize("name", VOLTAGE_CONTROLS)
+def test_they_are_created_disabled(name):
+    """The decision that separates these from every other control in the integration."""
+    assert _const.WRITABLE_REGISTERS[name].get("disabled_by_default") is True
+
+
+@pytest.mark.parametrize("name", VOLTAGE_CONTROLS)
+@pytest.mark.parametrize("battery_type", USER_DEFINED)
+def test_available_on_a_self_defined_battery(name, battery_type):
+    """"If self-defined is selected in program 5, this program can be set up"."""
+    cfg = _const.WRITABLE_REGISTERS[name]
+    assert _const.control_is_blocked(cfg, _Data(battery_type=battery_type)) is False
+
+
+@pytest.mark.parametrize("name", VOLTAGE_CONTROLS)
+@pytest.mark.parametrize("battery_type", [0, 1, 3])  # AGM, Flooded, Lithium
+def test_withheld_on_every_preset_battery_type(name, battery_type):
+    """The inverse of max_charge_current, which is blocked only on Lithium. Offering these
+    on a preset chemistry would present a slider the inverter will not honour."""
+    cfg = _const.WRITABLE_REGISTERS[name]
+    assert _const.control_is_blocked(cfg, _Data(battery_type=battery_type)) is True
+
+
+def test_the_two_availability_forms_do_not_interfere():
+    """max_charge_current uses unavailable_when, the voltages use available_when. A control
+    with neither must stay available - that is the other 500-odd controls."""
+    assert _const.control_is_blocked(_const.WRITABLE_REGISTERS["ac_charge_current"],
+                                     _Data(battery_type=3)) is False
+    assert _const.control_is_blocked(ENTRY, _Data(battery_type=2)) is False
+
+
+@pytest.mark.parametrize("name", VOLTAGE_CONTROLS)
+def test_the_data_container_carries_the_field(name):
+    """native_value reads getattr(data, control_name), so the names must match exactly."""
+    assert hasattr(_gm.GrowattData(), name)
+
+
+def test_the_number_platform_honours_disabled_by_default():
+    """Without this the flag is decoration and the controls appear enabled."""
+    source = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+              / "number.py").read_text(encoding="utf-8")
+    assert "control_config.get('disabled_by_default')" in source
+    assert "_attr_entity_registry_enabled_default = False" in source
+
+
+def test_the_block_read_covers_35_and_36():
+    """34-39 is read as one block; 35 and 36 are indices 1 and 2."""
+    source = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+              / "growatt_modbus.py").read_text(encoding="utf-8")
+    assert "data.bulk_charge_voltage = int(battery_ctrl_regs[1])" in source
+    assert "data.float_charge_voltage = int(battery_ctrl_regs[2])" in source

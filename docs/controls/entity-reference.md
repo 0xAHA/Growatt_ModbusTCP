@@ -78,6 +78,8 @@ All writes use **read-back verification** — after writing, the integration rea
 | AC Input Mode | Select | 8 | APL (0), UPS (1), GEN (2) | AC input mode (appliance / UPS / generator) |
 | Battery Type | Select | 39 | AGM (0), FLD (1), User (2), Lithium (3), User 2 (4) | Battery chemistry (⚠️ set with caution) |
 | Max Charge Current | Number | 34 | 10–100 A | **Total** charging current, solar + utility combined (LCD Program 02) |
+| Bulk Charge Voltage | Number | 35 | 48.0–58.4 V | C.V. charging voltage (LCD Program 19). Disabled by default |
+| Float Charge Voltage | Number | 36 | 48.0–58.4 V | Floating charging voltage (LCD Program 20). Disabled by default |
 | AC Charge Current | Number | 38 | 0–80 A | Max charging current from AC/grid (LCD Program 11) |
 | Generator Charge Current | Number | 83 | 0–80 A | Max charging current from generator |
 | Battery to Utility SOC | Number | 37 | 0–100 % (Lithium) / 20–64 V (Lead-acid) | SOC/voltage to switch from battery to utility |
@@ -98,6 +100,19 @@ All writes use **read-back verification** — after writing, the integration rea
 both chargers — solar plus utility. AC Charge Current (38) limits only the utility side. If
 you set the total below the AC limit, the inverter applies the total to the utility charger
 as well, so 34 can quietly override 38.
+
+**Bulk and Float Charge Voltage are disabled by default, and only work on a self-defined
+battery type.** These are the only controls in this integration where a wrong value affects
+hardware rather than a reading: the inverter rejects anything outside 48.0-58.4 V, but an
+in-range value that is wrong for your battery chemistry will be accepted and applied. They
+are created disabled so enabling them is a deliberate step - **Settings > Devices & Services
+> Growatt Modbus > entities**, then enable the one you want.
+
+Both correspond to LCD Programs 19 and 20, which the manual marks as settable only when
+Program 5 (battery type) is a self-defined option. The entities are therefore unavailable on
+AGM, Flooded and Lithium. The integration reads your existing values and never writes a
+default - a value changes only when you move the control
+([#384](https://github.com/0xAHA/Growatt_ModbusTCP/issues/384)).
 
 **Max Charge Current is unavailable when Battery Type is Lithium.** The inverter does not
 allow it to be set in that mode — the BMS takes over charge current control — so the entity

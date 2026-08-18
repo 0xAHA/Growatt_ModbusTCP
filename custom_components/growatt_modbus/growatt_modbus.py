@@ -403,6 +403,8 @@ class GrowattData:
     ac_input_mode: int = 0            # 0=APL, 1=UPS, 2=GEN
     battery_type: int = 0             # 0=AGM, 1=FLD, 2=USE, 3=Lithium, 4=USE2
     max_charge_current: int = 0       # A, total solar + utility (holding 34, LCD Program 02)
+    bulk_charge_voltage: int = 0      # raw, x0.1 V (holding 35, LCD Program 19)
+    float_charge_voltage: int = 0     # raw, x0.1 V (holding 36, LCD Program 20)
     ac_charge_current: int = 0        # 0-800 (0-80A with scale 0.1)
     gen_charge_current: int = 0       # 0-800 (0-80A with scale 0.1)
     bat_low_to_uti: int = 0           # Battery-dependent: Non-Lithium 200-640 (20-64V), Lithium 5-100 (0.5-10%)
@@ -3662,7 +3664,10 @@ class GrowattModbus:
                 if battery_ctrl_regs is not None and len(battery_ctrl_regs) >= 6:
                     if 34 in holding_map:
                         data.max_charge_current = int(battery_ctrl_regs[0])
-                    # [1] and [2] are 35/36, bulk and float charge voltage — not mapped
+                    if 35 in holding_map:
+                        data.bulk_charge_voltage = int(battery_ctrl_regs[1])
+                    if 36 in holding_map:
+                        data.float_charge_voltage = int(battery_ctrl_regs[2])
                     if 37 in holding_map:
                         data.bat_low_to_uti = int(battery_ctrl_regs[3])
                     if 38 in holding_map:

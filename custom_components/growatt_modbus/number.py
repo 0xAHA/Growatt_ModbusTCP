@@ -175,6 +175,13 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         self._control_name = control_name
         self._control_config = control_config
 
+        # Controls that should exist but not be operable until someone chooses to enable
+        # them. Used for the SPF bulk and float charging voltages (#384), where a wrong
+        # in-range value damages a battery bank rather than producing a wrong reading —
+        # unlike every other control here, where the worst case is a visible mistake.
+        if control_config.get('disabled_by_default'):
+            self._attr_entity_registry_enabled_default = False
+
         # Generate friendly name
         friendly_overrides = {
             'active_power_rate': 'VPP Active Power Rate',
@@ -230,6 +237,8 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
             'export_limit_failed_power_rate': 'mdi:transmission-tower-export',
             'active_power_rate': 'mdi:speedometer',
             'max_charge_current': 'mdi:battery-charging-high',
+            'bulk_charge_voltage': 'mdi:battery-charging-100',
+            'float_charge_voltage': 'mdi:battery-charging-60',
             'ac_charge_current': 'mdi:current-ac',
             'gen_charge_current': 'mdi:current-ac',
             'bat_low_to_uti': 'mdi:battery-alert',

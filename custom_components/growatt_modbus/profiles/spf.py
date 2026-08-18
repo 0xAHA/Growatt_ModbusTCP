@@ -250,6 +250,24 @@ SPF_3000_6000_ES_PLUS = {
              'desc': 'Max total charge current, solar + utility (LCD Program 02). '
                      '10-100A confirmed on SPF 6000ES Plus; unavailable on Lithium'},
 
+        # Bulk and float charging voltage — LCD "Program 19" and "Program 20" (#384).
+        #
+        # 48.0-58.4V on both, confirmed by comparing the SPF 6000ES Plus and SPF 3000-5000 ES
+        # manuals directly: Programs 19 and 20 are identical, so these do not vary across the
+        # family the way max charge current does. Read 555 and 551 on a 6000ES Plus (55.5V
+        # bulk, 55.1V float), inside that range.
+        #
+        # Settable only on a self-defined battery type — both programs say "If self-defined
+        # is selected in program 5". Exposed disabled by default; see WRITABLE_REGISTERS.
+        35: {'name': 'bulk_charge_voltage', 'scale': 0.1, 'unit': 'V', 'access': 'RW',
+             'valid_range': (480, 584),
+             'desc': 'Bulk / C.V. charging voltage (LCD Program 19). 48.0-58.4V, default '
+                     '56.4V. Requires a self-defined battery type'},
+        36: {'name': 'float_charge_voltage', 'scale': 0.1, 'unit': 'V', 'access': 'RW',
+             'valid_range': (480, 584),
+             'desc': 'Float charging voltage (LCD Program 20). 48.0-58.4V, default 54.0V. '
+                     'Requires a self-defined battery type'},
+
         # AC Charge Current — LCD "Program 11", 0A~80A per the same manual, which confirms
         # the limit this profile already assumed.
         38: {'name': 'ac_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',

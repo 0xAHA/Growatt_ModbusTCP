@@ -360,6 +360,44 @@ WRITABLE_REGISTERS = {
         'desc': 'Max total charge current, solar + utility (LCD Program 02). 10-100A on '
                 'SPF 6000ES Plus; not settable when battery type is Lithium'
     },
+    # Bulk and float charging voltage — LCD "Program 19" and "Program 20" (#384).
+    #
+    # valid_range is in raw units: 480-584 at scale 0.1 gives 48.0-58.4 V. Taken from the
+    # manual, and unusually well evidenced — the reporter photographed the SPF 6000ES Plus
+    # and SPF 3000-5000 ES manuals side by side and Programs 19/20 are identical in both, so
+    # unlike max_charge_current these do not vary across the family. (The protocol
+    # spreadsheet disagrees at 500~640 and 500~560; the two manuals agree with each other
+    # and are model-specific, so they govern.)
+    #
+    # disabled_by_default: these are the only controls here where a wrong value damages
+    # hardware rather than producing a wrong reading. The range is the inverter's own limit,
+    # so an out-of-range write is rejected and reverts — but an in-range value that is wrong
+    # for a particular battery chemistry will be accepted. Created disabled so operating
+    # them is a deliberate act rather than a slider that appears next to scan interval.
+    #
+    # available_when: both programs read "If self-defined is selected in program 5, this
+    # program can be set up". Program 5 is battery type (register 39), where 2 = User
+    # Defined and 4 = User Defined 2.
+    'bulk_charge_voltage': {
+        'register': 35,
+        'scale': 0.1,
+        'valid_range': (480, 584),
+        'unit': 'V',
+        'available_when': ('battery_type', (2, 4)),
+        'disabled_by_default': True,
+        'desc': 'Bulk / C.V. charging voltage (LCD Program 19). 48.0-58.4V, default 56.4V. '
+                'Settable only on a self-defined battery type'
+    },
+    'float_charge_voltage': {
+        'register': 36,
+        'scale': 0.1,
+        'valid_range': (480, 584),
+        'unit': 'V',
+        'available_when': ('battery_type', (2, 4)),
+        'disabled_by_default': True,
+        'desc': 'Float charging voltage (LCD Program 20). 48.0-58.4V, default 54.0V. '
+                'Settable only on a self-defined battery type'
+    },
     'ac_charge_current': {
         'register': 38,
         'scale': 1,
@@ -995,12 +1033,23 @@ def control_is_blocked(control_config: dict, data) -> bool:
     Returns False when there is no condition, or when there is no data yet — an entity that
     vanished during startup would be worse than one that briefly accepts a write.
     """
-    condition = control_config.get('unavailable_when')
-    if not condition or data is None:
+    if data is None:
         return False
 
-    field, blocking_value = condition
-    return getattr(data, field, None) == blocking_value
+    condition = control_config.get('unavailable_when')
+    if condition:
+        field, blocking_value = condition
+        return getattr(data, field, None) == blocking_value
+
+    # The complement: settable only while another register holds one of a set of values.
+    # SPF bulk and float charging voltage are settable only on a self-defined battery type
+    # (#384), which is the inverse of max_charge_current being blocked only on Lithium.
+    allowed = control_config.get('available_when')
+    if allowed:
+        field, permitted = allowed
+        return getattr(data, field, None) not in permitted
+
+    return False
 
 
 def get_device_type_for_control(control_name: str) -> str:

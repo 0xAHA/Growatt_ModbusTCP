@@ -4,9 +4,20 @@
 
 ---
 
-## Unreleased
+## v1.6.4 (pre-release)
 
-Merged to `main`, not yet in any release.
+Issues: #377, #383, #384
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **SPH V2.01 profiles now read battery energy on hardware without VPP support.** "SPH
+  (3-6kW)" resolves to the V2.01 variant on many entries, and a V1.39 inverter on that
+  profile never reads the 31000 range - so Battery Charge/Discharge Today and Total showed a
+  permanent 0.0 while voltage and SOC worked. Reported by @igotyou. (#377)
+- **Two new SPF controls, disabled by default: Bulk and Float Charge Voltage.** 48.0-58.4 V,
+  available only on a self-defined battery type. Created disabled because an in-range but
+  wrong value affects your battery rather than a reading - enable them under the
+  integration's entities list if you want them. Requested by @dinkalin-ux. (#384)
 
 - **SPH V2.01 profiles now read battery energy on hardware without VPP support.** "SPH
   (3-6kW)" resolves to the V2.01 variant on many entries, and a V1.39 inverter on that
