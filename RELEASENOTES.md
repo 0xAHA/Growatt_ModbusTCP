@@ -4,6 +4,21 @@
 
 ---
 
+## Unreleased
+
+Merged to `main`, not yet in any release.
+
+- **Connection settings can be changed after setup.** The USB/serial port, baud rate, host
+  and TCP port are now editable from the integration's Configure page. Previously the only
+  way to change them was to delete the entry and add it again, which loses entity IDs and
+  with them automations, dashboards and statistics history. Requested by @dartyukh-afk. (#383)
+- **The serial port picker now offers `/dev/serial/by-id/` paths and marks them as stable.**
+  These are tied to the adapter's own serial number, so they survive a reboot; `/dev/ttyUSB0`
+  is assigned in plug order and can move to a different device when more than one USB serial
+  adapter is attached. (#383)
+
+---
+
 ## v1.6.3 (pre-release)
 
 Issues: #376, #377, #378, #379, #381

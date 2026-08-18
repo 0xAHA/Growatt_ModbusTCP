@@ -39,6 +39,55 @@ from .auto_detection import async_determine_inverter_type
 
 _LOGGER = logging.getLogger(__name__)
 
+# Where udev puts the stable serial symlinks. Paths here are keyed on vendor, product and
+# serial number, so a given adapter keeps the same one across reboots — unlike /dev/ttyUSBn,
+# which is assigned in enumeration order and swaps between devices (#383).
+SERIAL_BY_ID_DIR = "/dev/serial/by-id"
+
+MANUAL_PATH_SENTINEL = "manual"
+
+
+def _serial_port_options(current_path: str | None = None) -> dict[str, str]:
+    """Build the device-path choices for a serial connection.
+
+    Lists the by-id symlinks first and says why, because the alternative is a path that
+    silently starts pointing at a different device. The reporter on #383 has a JK BMS on the
+    same machine and loses the inverter whenever the two swap between ttyUSB0 and ttyUSB1.
+
+    `current_path` is always included even when the device is absent right now. That is the
+    whole point: this form exists to be used *after* a path has stopped working, and a
+    `vol.In` whose default is not among its own options renders as an error rather than a
+    form.
+    """
+    options: dict[str, str] = {}
+
+    try:
+        import os
+
+        if os.path.isdir(SERIAL_BY_ID_DIR):
+            for name in sorted(os.listdir(SERIAL_BY_ID_DIR)):
+                path = f"{SERIAL_BY_ID_DIR}/{name}"
+                options[path] = f"{name}  (stable — recommended)"
+    except OSError as err:
+        _LOGGER.debug("Could not list %s: %s", SERIAL_BY_ID_DIR, err)
+
+    try:
+        for port in serial.tools.list_ports.comports():
+            if port.device in options:
+                continue
+            desc = port.device
+            if port.description and port.description != "n/a":
+                desc = f"{port.device} - {port.description}"
+            options[port.device] = desc
+    except Exception as err:  # pragma: no cover - platform dependent
+        _LOGGER.debug("Could not enumerate serial ports: %s", err)
+
+    if current_path and current_path not in options:
+        options[current_path] = f"{current_path}  (configured, not detected)"
+
+    options[MANUAL_PATH_SENTINEL] = "⌨️  Enter path manually"
+    return options
+
 
 def _detect_grid_orientation(client: GrowattModbus) -> tuple[bool, str]:
     """
@@ -871,42 +920,95 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                     changed = True
                     _LOGGER.info(f"Profile changed to: {profile['name']}")
             
-            if changed:
-                self.hass.config_entries.async_update_entry(
-                    self.config_entry,
-                    data=new_data,
-                    options=new_options,
-                    title=new_data[CONF_NAME],
-                )
-            else:
-                # Just update options
-                self.hass.config_entries.async_update_entry(
-                    self.config_entry,
-                    options=new_options,
-                )
-            
-            # Reload the integration to apply changes.
+            # Connection settings (#383). Written into data rather than options because
+            # that is where the connection lives and where __init__ reads it from.
             #
-            # The settings are already persisted by async_update_entry() above, so this
-            # reload is a convenience — not part of saving. It must not be allowed to fail
-            # the form: async_reload() raises OperationNotAllowed when the entry is in a
-            # non-recoverable state such as FAILED_UNLOAD (e.g. a poll wedged on an
-            # unresponsive gateway held the connection open past the unload timeout).
-            # Unguarded, that propagated to the UI as a bare "Unknown error" while the
-            # change had in fact been saved — leaving the user to retry a save that had
-            # already applied, on an entry that was now stuck (Issue #361).
-            try:
-                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
-            except Exception as err:
-                _LOGGER.warning(
-                    "Settings saved, but reloading the integration failed (%s). "
-                    "The new settings will take effect after a manual reload or an HA "
-                    "restart. If this persists the inverter is likely unreachable — check "
-                    "the connection before retrying.",
-                    err,
-                )
+            # No unique_id is recomputed. It was derived from host/port or path/slave at
+            # setup and is only used to stop the same device being added twice; rewriting it
+            # here could collide with another entry, and the failure would be a broken entry
+            # rather than a rejected form.
+            connection_type = self.config_entry.data.get(CONF_CONNECTION_TYPE, "tcp")
 
-            return self.async_create_entry(title="", data=new_options)
+            if connection_type == "serial":
+                selected_path = user_input.get(CONF_DEVICE_PATH)
+                manual_path = (user_input.get("manual_path") or "").strip()
+
+                if selected_path == MANUAL_PATH_SENTINEL:
+                    if not manual_path:
+                        errors["base"] = "manual_path_required"
+                        selected_path = None
+                    else:
+                        selected_path = manual_path
+                elif manual_path:
+                    # A path typed while a device was also picked. Take the typed one —
+                    # someone who filled in the free-text box meant it.
+                    selected_path = manual_path
+
+                if selected_path and selected_path != new_data.get(CONF_DEVICE_PATH):
+                    _LOGGER.info(
+                        "Serial device path changed: %s -> %s",
+                        new_data.get(CONF_DEVICE_PATH), selected_path,
+                    )
+                    new_data[CONF_DEVICE_PATH] = selected_path
+                    changed = True
+
+                if CONF_BAUDRATE in user_input and user_input[CONF_BAUDRATE] != new_data.get(CONF_BAUDRATE):
+                    new_data[CONF_BAUDRATE] = user_input[CONF_BAUDRATE]
+                    changed = True
+            else:
+                new_host = (user_input.get(CONF_HOST) or "").strip()
+                if new_host and new_host != new_data.get(CONF_HOST):
+                    _LOGGER.info(
+                        "Host changed: %s -> %s", new_data.get(CONF_HOST), new_host
+                    )
+                    new_data[CONF_HOST] = new_host
+                    changed = True
+
+                if CONF_PORT in user_input and user_input[CONF_PORT] != new_data.get(CONF_PORT):
+                    new_data[CONF_PORT] = user_input[CONF_PORT]
+                    changed = True
+
+            # An invalid entry must not save a partial change. Nothing above has been
+            # persisted yet - new_data and new_options are still local - so when there are
+            # errors we fall through to the form builder below, which re-renders the page
+            # with `errors` populated and the current values as defaults.
+            if not errors:
+                if changed:
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        data=new_data,
+                        options=new_options,
+                        title=new_data[CONF_NAME],
+                    )
+                else:
+                    # Just update options
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        options=new_options,
+                    )
+
+                # Reload the integration to apply changes.
+                #
+                # The settings are already persisted by async_update_entry() above, so this
+                # reload is a convenience - not part of saving. It must not be allowed to
+                # fail the form: async_reload() raises OperationNotAllowed when the entry is
+                # in a non-recoverable state such as FAILED_UNLOAD (e.g. a poll wedged on an
+                # unresponsive gateway held the connection open past the unload timeout).
+                # Unguarded, that propagated to the UI as a bare "Unknown error" while the
+                # change had in fact been saved - leaving the user to retry a save that had
+                # already applied, on an entry that was now stuck (Issue #361).
+                try:
+                    await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                except Exception as err:
+                    _LOGGER.warning(
+                        "Settings saved, but reloading the integration failed (%s). "
+                        "The new settings will take effect after a manual reload or an HA "
+                        "restart. If this persists the inverter is likely unreachable - "
+                        "check the connection before retrying.",
+                        err,
+                    )
+
+                return self.async_create_entry(title="", data=new_options)
 
         # Build options schema with current values
         current_name = self.config_entry.data.get(CONF_NAME, "Growatt")
@@ -1000,6 +1102,50 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                 default=current_max_block_size
             ): vol.In(list(BLOCK_SIZE_OPTIONS)),
         })
+
+        # Connection settings (#383).
+        #
+        # Until now these could only be set at initial setup, so a USB port that changed
+        # after a reboot, or a gateway that moved IP, could only be fixed by deleting the
+        # entry and adding it again — which loses entity IDs, and with them automations,
+        # dashboards and statistics history. The reporter was re-passing USB devices through
+        # Proxmox to force the old path back rather than face that.
+        #
+        # Shown per connection type: a serial entry has no use for a host field, and offering
+        # both invites someone to fill in the wrong one.
+        current_connection_type = self.config_entry.data.get(CONF_CONNECTION_TYPE, "tcp")
+
+        if current_connection_type == "serial":
+            current_device_path = self.config_entry.data.get(CONF_DEVICE_PATH, "")
+            port_options = _serial_port_options(current_device_path)
+            options_schema = options_schema.extend({
+                vol.Required(
+                    CONF_DEVICE_PATH,
+                    default=current_device_path if current_device_path in port_options
+                    else MANUAL_PATH_SENTINEL,
+                ): vol.In(port_options),
+                vol.Optional("manual_path"): str,
+                vol.Required(
+                    CONF_BAUDRATE,
+                    default=self.config_entry.data.get(CONF_BAUDRATE, DEFAULT_BAUDRATE),
+                ): vol.In({
+                    9600: "9600 (Default)",
+                    19200: "19200",
+                    38400: "38400",
+                    115200: "115200",
+                }),
+            })
+        else:
+            options_schema = options_schema.extend({
+                vol.Required(
+                    CONF_HOST,
+                    default=self.config_entry.data.get(CONF_HOST, ""),
+                ): str,
+                vol.Required(
+                    CONF_PORT,
+                    default=self.config_entry.data.get(CONF_PORT, DEFAULT_PORT),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
+            })
 
         return self.async_show_form(
             step_id="init",

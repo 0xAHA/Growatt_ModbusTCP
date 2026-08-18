@@ -78,6 +78,25 @@ The setup wizard runs auto-detection automatically for VPP-capable inverters. Fo
 | Scan Interval | 30 s | Polling frequency (5–300 s) |
 | Connection Timeout | 10 s | Response timeout (1–60 s) |
 | Invert Grid Power | Auto | Fix a backwards CT clamp |
+| USB / Serial Port | - | Change the adapter path without re-adding the entry |
+| Host / TCP Port | - | Change the gateway address without re-adding the entry |
+
+### Use a `/dev/serial/by-id/` path for USB adapters
+
+`/dev/ttyUSB0` is assigned in the order devices are enumerated. With more than one USB
+serial adapter attached - an inverter and a battery BMS, say - a reboot can swap them, and
+the integration then talks to the wrong device or fails to connect.
+
+Paths under `/dev/serial/by-id/` are keyed on the adapter's own vendor, product and serial
+number, so they do not move:
+
+```
+/dev/serial/by-id/usb-1a86_USB_Single_Serial_58CA017290-if00
+```
+
+The options page lists these first and marks them as stable. If yours is not listed, run
+`ls -l /dev/serial/by-id/` on the host and paste the path into the manual field.
+
 
 ---
 
