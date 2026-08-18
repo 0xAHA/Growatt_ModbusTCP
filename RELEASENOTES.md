@@ -70,7 +70,8 @@ Issues: #331, #375, #380
   six to eight registers, and a poll could previously land between them — leaving the
   inverter with control authority granted but no power setpoint, or a schedule with no
   period count. The sequence now holds the connection from first write to last, so it
-  either applies completely or fails without starting. (#331)
+  either applies completely or fails without starting. Reported by @Wojak129, and
+  diagnosed from @rine77's description of the symptom. (#331)
 - **Peak-shaving limits stay unavailable until they are configured.** On MOD and MID
   TL3-XH, Import Limit, Export Limit and AC Charge Max Power previously showed 3000 kW or
   6553.5 kW on systems where peak shaving had never been set up in the portal. An
