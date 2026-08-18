@@ -212,6 +212,12 @@ established by changing each value in the portal and reading the register back
 | Peak Shaving Reserve SOC | 3310 | Charge held back for peak shaving (%) |
 | AC Charge Max Power | 3311 | Ceiling on grid charging power (kW) |
 
+**These report what peak shaving is configured to use, not whether it is running.** On the
+unit these mappings came from, Peak Shaving Enable reads *Disable* while all five registers
+hold plausible configured values. A populated cluster therefore says the settings exist, not
+that the feature is in force
+([#372](https://github.com/0xAHA/Growatt_ModbusTCP/issues/372)).
+
 **These also apply to MID.** The MID 11-30KTL3-XH profile loads the same register map, so
 the entities appear there too — the profile name does not tell you which family a register
 cluster reaches.

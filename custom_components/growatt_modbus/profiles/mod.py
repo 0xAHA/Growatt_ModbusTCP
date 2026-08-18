@@ -571,18 +571,44 @@ MOD_6000_15000TL3_XH = {
         # 3309, 3313 and 3314 are deliberately NOT mapped. 3314 in particular reads 10,
         # which coincides with two other discharge-stop SOCs, and is settable nowhere, so
         # it could not be confirmed in either direction.
+        # Direction established by changing ONE portal field (#372).
+        #
+        # The first measurement moved a limit and saw both 3307 and 3308 go 75->70 together,
+        # which pins the cluster to uw_demand_mgt_* but says nothing about which is which -
+        # both registers carried the same evidence line and neither was distinguishable.
+        # Two values moving together cannot separate them; only a divergence can.
+        #
+        # Settled by changing Import Limit alone, 7.5 -> 7.0 kW, with Export Limit untouched:
+        # 3307 followed 51 seconds later, 3308 did not move at all. That also established
+        # something not previously known - the portal writes these two fields independently,
+        # rather than driving both from one control.
+        #
+        # Read-only routes were tried first and cannot settle it: the cloud API reports 7.5
+        # for both uw_demand_mgt_downstrm_power_limit and uw_demand_mgt_revse_power_limit,
+        # and seven days of recorder history had the two sensors never once diverging.
         3307: {'name': 'demand_import_limit', 'scale': 0.1, 'unit': 'kW', 'access': 'RO',
-               'desc': 'Import limit (uw_demand_mgt_downstrm_power_limit). Portal 7.5->7.0 kW '
-                       'read back 75->70 (#372); not in any public protocol document'},
+               'desc': 'Import limit (uw_demand_mgt_downstrm_power_limit). Confirmed by an '
+                       'isolated portal change 7.5->7.0 kW that moved this register and not '
+                       '3308 (#372); not in any public protocol document'},
         3308: {'name': 'demand_export_limit', 'scale': 0.1, 'unit': 'kW', 'access': 'RO',
-               'desc': 'Export limit (uw_demand_mgt_revse_power_limit). Portal 7.5->7.0 kW '
-                       'read back 75->70 (#372); not in any public protocol document'},
+               'desc': 'Export limit (uw_demand_mgt_revse_power_limit). Confirmed by exclusion '
+                       'in the same test: unchanged while 3307 followed an isolated Import '
+                       'Limit change (#372); not in any public protocol document'},
         3310: {'name': 'peak_shaving_reserve_soc', 'scale': 1, 'unit': '%', 'access': 'RO',
                'desc': 'Reserved SOC for peak shaving (ub_peak_shaving_backup_soc). Portal '
                        '50->45 read back 50->45 (#372); not in any public protocol document'},
         3311: {'name': 'ac_charge_max_power', 'scale': 0.1, 'unit': 'kW', 'access': 'RO',
                'desc': 'AC charging max power limit (uw_ac_charging_max_power_limit). Identified '
                        'by elimination, write verified (#372); not in any public protocol document'},
+
+        # A configured cluster does not mean peak shaving is running. On the unit these
+        # mappings came from, Peak Shaving Enable reads Disable while all five registers
+        # hold plausible configured values (75/75/50/75/100) - so these sensors report what
+        # the feature *would* use, not what it is currently doing (#372).
+        #
+        # Note that is the inverse of #380, where an unconfigured system left the three kW
+        # limits at a ceiling and they had to be suppressed. Configured-looking values and
+        # an active feature are independent facts here.
 
         # Grid-charge stop SOC — the one writable register in this cluster.
         #
