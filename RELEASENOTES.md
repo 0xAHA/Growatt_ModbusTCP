@@ -4,9 +4,13 @@
 
 ---
 
-## Unreleased
+## v1.6.3 (pre-release)
 
-Merged to `main`, not yet in any release.
+Issues: #376, #377, #378, #379, #381
+
+> **Pre-release for testing.** v1.6.2 remains the stable release and is unaffected by
+> everything below. Most of this is SPH and SPF work that does not touch the write-path
+> changes in v1.6.2.
 
 - **SPH 3-6kW and 7-10kW now report battery charge and discharge energy.** Charge/Discharge
   Today and Total published a constant 0 on these profiles because the registers were never
