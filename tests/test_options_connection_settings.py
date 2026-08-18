@@ -118,3 +118,16 @@ def test_an_empty_manual_path_is_rejected_not_saved():
     assert "if not errors:" in SOURCE, (
         "the save block is not guarded, so an invalid entry would persist a partial change"
     )
+
+
+def test_setup_and_options_offer_the_same_ports():
+    """First setup is the better moment to pick a stable path — nothing is built on the
+    entity IDs yet. Offering by-id only on the reconfigure page meant a new user got the
+    fragile name and discovered the durable one only after it bit them."""
+    assert SOURCE.count("_serial_port_options") >= 3, (
+        "the setup wizard and the options page do not share the port list, so one of them "
+        "is missing the stable by-id paths"
+    )
+    assert "port_options[port.device] = desc" not in SOURCE, (
+        "the setup wizard still builds its own port list from comports() alone"
+    )

@@ -345,20 +345,17 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
         else:
             _LOGGER.warning("No serial devices found on system")
 
-        # Build port options with descriptions
-        port_options = {}
-        for port in ports:
-            # Create friendly description
-            desc = port.device
-            if port.description and port.description != "n/a":
-                desc = f"{port.device} - {port.description}"
-            port_options[port.device] = desc
+        # Same list the options page builds, so a stable /dev/serial/by-id/ path is offered
+        # at first setup rather than only after a ttyUSB path has already moved (#383).
+        #
+        # First setup is the better moment to choose one: nothing has been built on top of
+        # the entity IDs yet, so picking the durable path costs nothing here and saves a
+        # reconfigure later.
+        port_options = await self.hass.async_add_executor_job(_serial_port_options)
 
-        # Add manual entry option
-        port_options["manual"] = "⌨️  Enter path manually"
-
-        # Default to first port or manual if no ports found
-        default_port = next(iter(port_options.keys())) if port_options else "manual"
+        # by-id paths sort first in the dict, so this defaults to a stable path when one
+        # exists and falls back to whatever was detected otherwise.
+        default_port = next(iter(port_options.keys())) if port_options else MANUAL_PATH_SENTINEL
 
         if not ports:
             _LOGGER.info("Defaulting to manual entry (no devices detected)")
