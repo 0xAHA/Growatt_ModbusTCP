@@ -761,18 +761,24 @@ SPH_3000_6000_V201 = {
         # documents 1052 as Edischarge1_today and 1056 as Echarge1_today. Confirmed on SPH
         # hardware against ShinePhone (#377), where all six of 1052-1063 matched exactly.
         #
-        # They keep a _legacy suffix and do NOT participate in fallback, because on a V2.01
-        # profile the canonical source for battery energy is the VPP block at 31202-31209
-        # below. Mapping both under the same names made one of them silently dead — which
-        # is what the base profile inheriting corrected names exposed.
-        1052: {'name': 'battery_discharge_today_legacy_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge today (Edischarge1_today) — VPP 31206 is canonical here'},
-        1053: {'name': 'battery_discharge_today_legacy_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        1054: {'name': 'battery_discharge_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge total (Edischarge1_total) — VPP 31208 is canonical here'},
-        1055: {'name': 'battery_discharge_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        1056: {'name': 'battery_charge_today_legacy_high', 'scale': 1, 'unit': '', 'pair': 1057, 'desc': 'Battery charge today (Echarge1_today) — VPP 31202 is canonical here'},
-        1057: {'name': 'battery_charge_today_legacy_low', 'scale': 1, 'unit': '', 'pair': 1056, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        1058: {'name': 'battery_charge_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 1059, 'desc': 'Battery charge total (Echarge1_total) — VPP 31204 is canonical here'},
-        1059: {'name': 'battery_charge_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 1058, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # These carry the CANONICAL names; the VPP block at 31202-31209 carries a _vpp
+        # suffix plus maps_to. That matches how battery_voltage (1013 / 31214) and
+        # battery_soc (1014 / 31217) are already handled in this same profile, and it lets
+        # the range detection pick whichever range the device actually answers on.
+        #
+        # The direction matters (#377). With the canonical names on the VPP side instead, a
+        # V1.39 SPH configured onto a V2.01 profile read a permanent 0.0 for battery energy:
+        # its poll never touches the 31000 range at all, so the only mapping under the name
+        # the coordinator looks for was one the hardware never answers. Voltage and SOC
+        # worked on the same device precisely because they follow this convention.
+        1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge today (Edischarge1_today)'},
+        1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge total (Edischarge1_total)'},
+        1055: {'name': 'battery_discharge_total_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1056: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 1057, 'desc': 'Battery charge today (Echarge1_today)'},
+        1057: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 1056, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1058: {'name': 'battery_charge_total_high', 'scale': 1, 'unit': '', 'pair': 1059, 'desc': 'Battery charge total (Echarge1_total)'},
+        1059: {'name': 'battery_charge_total_low', 'scale': 1, 'unit': '', 'pair': 1058, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Load Energy
         1060: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1061},
@@ -832,14 +838,16 @@ SPH_3000_6000_V201 = {
 
         # Battery Energy (VPP V2.01 protocol: 31202=charge today, 31204=charge total,
         #                                       31206=discharge today, 31208=discharge total)
-        31202: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery charge energy today HIGH'},
-        31203: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31204: {'name': 'battery_charge_total_high', 'scale': 1, 'unit': '', 'pair': 31205, 'desc': 'Battery charge energy total HIGH'},
-        31205: {'name': 'battery_charge_total_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31206: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery discharge energy today HIGH'},
-        31207: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31208: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 31209, 'desc': 'Battery discharge energy total HIGH'},
-        31209: {'name': 'battery_discharge_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # _vpp suffix plus maps_to, so these are the fallback rather than the only source.
+        # The canonical names live on 1052-1059 above; range detection chooses between them.
+        31202: {'name': 'battery_charge_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery charge energy today HIGH (VPP)'},
+        31203: {'name': 'battery_charge_today_vpp_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'maps_to': 'battery_charge_today_low'},
+        31204: {'name': 'battery_charge_total_vpp_high', 'scale': 1, 'unit': '', 'pair': 31205, 'desc': 'Battery charge energy total HIGH (VPP)'},
+        31205: {'name': 'battery_charge_total_vpp_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'maps_to': 'battery_charge_total_low'},
+        31206: {'name': 'battery_discharge_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery discharge energy today HIGH (VPP)'},
+        31207: {'name': 'battery_discharge_today_vpp_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'maps_to': 'battery_discharge_today_low'},
+        31208: {'name': 'battery_discharge_total_vpp_high', 'scale': 1, 'unit': '', 'pair': 31209, 'desc': 'Battery discharge energy total HIGH (VPP)'},
+        31209: {'name': 'battery_discharge_total_vpp_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'maps_to': 'battery_discharge_total_low'},
 
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
         31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
@@ -913,18 +921,24 @@ SPH_7000_10000_V201 = {
         # documents 1052 as Edischarge1_today and 1056 as Echarge1_today. Confirmed on SPH
         # hardware against ShinePhone (#377), where all six of 1052-1063 matched exactly.
         #
-        # They keep a _legacy suffix and do NOT participate in fallback, because on a V2.01
-        # profile the canonical source for battery energy is the VPP block at 31202-31209
-        # below. Mapping both under the same names made one of them silently dead — which
-        # is what the base profile inheriting corrected names exposed.
-        1052: {'name': 'battery_discharge_today_legacy_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge today (Edischarge1_today) — VPP 31206 is canonical here'},
-        1053: {'name': 'battery_discharge_today_legacy_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        1054: {'name': 'battery_discharge_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge total (Edischarge1_total) — VPP 31208 is canonical here'},
-        1055: {'name': 'battery_discharge_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        1056: {'name': 'battery_charge_today_legacy_high', 'scale': 1, 'unit': '', 'pair': 1057, 'desc': 'Battery charge today (Echarge1_today) — VPP 31202 is canonical here'},
-        1057: {'name': 'battery_charge_today_legacy_low', 'scale': 1, 'unit': '', 'pair': 1056, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        1058: {'name': 'battery_charge_total_legacy_high', 'scale': 1, 'unit': '', 'pair': 1059, 'desc': 'Battery charge total (Echarge1_total) — VPP 31204 is canonical here'},
-        1059: {'name': 'battery_charge_total_legacy_low', 'scale': 1, 'unit': '', 'pair': 1058, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # These carry the CANONICAL names; the VPP block at 31202-31209 carries a _vpp
+        # suffix plus maps_to. That matches how battery_voltage (1013 / 31214) and
+        # battery_soc (1014 / 31217) are already handled in this same profile, and it lets
+        # the range detection pick whichever range the device actually answers on.
+        #
+        # The direction matters (#377). With the canonical names on the VPP side instead, a
+        # V1.39 SPH configured onto a V2.01 profile read a permanent 0.0 for battery energy:
+        # its poll never touches the 31000 range at all, so the only mapping under the name
+        # the coordinator looks for was one the hardware never answers. Voltage and SOC
+        # worked on the same device precisely because they follow this convention.
+        1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge today (Edischarge1_today)'},
+        1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge total (Edischarge1_total)'},
+        1055: {'name': 'battery_discharge_total_low', 'scale': 1, 'unit': '', 'pair': 1054, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1056: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 1057, 'desc': 'Battery charge today (Echarge1_today)'},
+        1057: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 1056, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1058: {'name': 'battery_charge_total_high', 'scale': 1, 'unit': '', 'pair': 1059, 'desc': 'Battery charge total (Echarge1_total)'},
+        1059: {'name': 'battery_charge_total_low', 'scale': 1, 'unit': '', 'pair': 1058, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Load Energy
         1060: {'name': 'load_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1061},
@@ -978,14 +992,16 @@ SPH_7000_10000_V201 = {
         #                      31206=discharge today, 31208=discharge total
         31200: {'name': 'battery_power_high', 'scale': 1, 'unit': '', 'pair': 31201},
         31201: {'name': 'battery_power_low', 'scale': 1, 'unit': '', 'pair': 31200, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        31202: {'name': 'battery_charge_today_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery charge energy today HIGH'},
-        31203: {'name': 'battery_charge_today_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31204: {'name': 'battery_charge_total_high', 'scale': 1, 'unit': '', 'pair': 31205, 'desc': 'Battery charge energy total HIGH'},
-        31205: {'name': 'battery_charge_total_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31206: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery discharge energy today HIGH'},
-        31207: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        31208: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 31209, 'desc': 'Battery discharge energy total HIGH'},
-        31209: {'name': 'battery_discharge_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # _vpp suffix plus maps_to, so these are the fallback rather than the only source.
+        # The canonical names live on 1052-1059 above; range detection chooses between them.
+        31202: {'name': 'battery_charge_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31203, 'desc': 'Battery charge energy today HIGH (VPP)'},
+        31203: {'name': 'battery_charge_today_vpp_low', 'scale': 1, 'unit': '', 'pair': 31202, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'maps_to': 'battery_charge_today_low'},
+        31204: {'name': 'battery_charge_total_vpp_high', 'scale': 1, 'unit': '', 'pair': 31205, 'desc': 'Battery charge energy total HIGH (VPP)'},
+        31205: {'name': 'battery_charge_total_vpp_low', 'scale': 1, 'unit': '', 'pair': 31204, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'maps_to': 'battery_charge_total_low'},
+        31206: {'name': 'battery_discharge_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31207, 'desc': 'Battery discharge energy today HIGH (VPP)'},
+        31207: {'name': 'battery_discharge_today_vpp_low', 'scale': 1, 'unit': '', 'pair': 31206, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'maps_to': 'battery_discharge_today_low'},
+        31208: {'name': 'battery_discharge_total_vpp_high', 'scale': 1, 'unit': '', 'pair': 31209, 'desc': 'Battery discharge energy total HIGH (VPP)'},
+        31209: {'name': 'battery_discharge_total_vpp_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'maps_to': 'battery_discharge_total_low'},
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
         31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},

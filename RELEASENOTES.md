@@ -8,6 +8,11 @@
 
 Merged to `main`, not yet in any release.
 
+- **SPH V2.01 profiles now read battery energy on hardware without VPP support.** "SPH
+  (3-6kW)" resolves to the V2.01 variant on many entries, and a V1.39 inverter on that
+  profile never reads the 31000 range - so Battery Charge/Discharge Today and Total showed a
+  permanent 0.0 while voltage and SOC worked. The 1000-range registers now carry the name
+  the integration looks for, with the VPP block as the fallback. Reported by @igotyou. (#377)
 - **Connection settings can be changed after setup.** The USB/serial port, baud rate, host
   and TCP port are now editable from the integration's Configure page. Previously the only
   way to change them was to delete the entry and add it again, which loses entity IDs and
