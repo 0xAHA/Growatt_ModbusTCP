@@ -84,7 +84,8 @@
           "baudrate": "Baud Rate",
           "host": "Host / IP Address",
           "port": "TCP Port",
-          "max_block_size": "Max Register Block Size"
+          "max_block_size": "Max Register Block Size",
+          "protocol_variant": "Protocol Variant"
         },
         "data_description": {
           "device_name": "Friendly name for the device (appears before all sensor names)",
@@ -99,7 +100,8 @@
           "device_path": "Paths under /dev/serial/by-id/ are tied to the adapter itself and survive a reboot. A /dev/ttyUSB path is assigned in plug order and can move to a different device when you have more than one USB serial adapter.",
           "manual_path": "Overrides the selection above. Use this if the adapter is not listed, or to paste a /dev/serial/by-id/ path.",
           "host": "IP address or hostname of the RS485-to-TCP gateway.",
-          "max_block_size": "Registers requested per Modbus read. Auto lets the profile decide. Lower this if entities are unavailable or stuck at zero and the log shows short reads or \"Unable to decode request\" - some RS485 gateways truncate large responses."
+          "max_block_size": "Registers requested per Modbus read. Auto lets the profile decide. Lower this if entities are unavailable or stuck at zero and the log shows short reads or \"Unable to decode request\" - some RS485 gateways truncate large responses.",
+          "protocol_variant": "Ten inverter families exist as two register maps - a V1.39 legacy one and a VPP V2.01 one. Auto uses whatever auto-detection concluded at setup and is right for almost everyone. Change it only if sensors that should work are reporting nothing: an inverter without VPP support on the V2.01 map cannot read the 30000/31000 range, and the reverse leaves the VPP sensors empty."
         }
       }
     },

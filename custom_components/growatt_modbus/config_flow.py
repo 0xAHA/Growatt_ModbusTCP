@@ -21,6 +21,9 @@ from .const import (
     CONF_DEVICE_PATH,
     CONF_BAUDRATE,
     CONF_INVERT_BATTERY_POWER,
+    PROTOCOL_VARIANT_AUTO,
+    PROTOCOL_VARIANT_LEGACY,
+    PROTOCOL_VARIANT_V201,
     BLOCK_SIZE_OPTIONS,
     resolve_block_size,
     DEFAULT_PORT,
@@ -904,6 +907,31 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                 # and legitimate V2.01 users can re-run setup to restore it correctly.
                 supports_v201 = self.config_entry.data.get("vpp_protocol_confirmed", False)
 
+                # An explicit Protocol variant choice overrides that flag (#385).
+                #
+                # Auto keeps whatever detection concluded, so nobody who ignores the field
+                # sees a change. The two explicit values are the escape hatch: until now a
+                # stored flag that disagreed with the hardware could not be corrected at
+                # all, because re-selecting the same family name resolved through the same
+                # flag that was wrong. The only way out was deleting the config entry.
+                #
+                # The new value is persisted, so the override survives a later save that
+                # leaves the field on its stored setting.
+                variant = user_input.get("protocol_variant", PROTOCOL_VARIANT_AUTO)
+                if variant == PROTOCOL_VARIANT_LEGACY:
+                    supports_v201 = False
+                elif variant == PROTOCOL_VARIANT_V201:
+                    supports_v201 = True
+
+                if variant != PROTOCOL_VARIANT_AUTO and \
+                        new_data.get("vpp_protocol_confirmed") != supports_v201:
+                    _LOGGER.info(
+                        "Protocol variant set to %s by hand (was vpp_protocol_confirmed=%s)",
+                        variant, new_data.get("vpp_protocol_confirmed"),
+                    )
+                    new_data["vpp_protocol_confirmed"] = supports_v201
+                    changed = True
+
                 # Resolve to actual profile ID
                 new_series = resolve_profile_selection(selected_display_name, supports_v201=supports_v201)
 
@@ -1049,6 +1077,13 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             )
             current_display_name = next(iter(available_profiles), "MIN (7-10kW)")
 
+        # Which variant is in force right now, and what Auto would mean if left alone.
+        # Shown in the Auto label rather than as separate text: a user who does not care
+        # never reads it, and a user debugging can see it without opening a log.
+        _v201_now = self.config_entry.data.get("vpp_protocol_confirmed", False)
+        _variant_now = "VPP V2.01" if _v201_now else "Legacy V1.39"
+        _current_variant = PROTOCOL_VARIANT_AUTO
+
         options_schema = vol.Schema({
             vol.Required(
                 "device_name",
@@ -1058,6 +1093,18 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                 CONF_INVERTER_SERIES,
                 default=current_display_name
             ): vol.In(list(available_profiles.keys())),
+            # Ten families exist as two register maps. The dropdown above shows one plain
+            # name for both on purpose; this is where the choice can be overridden when
+            # detection got it wrong (#385). Auto is the stored result, so leaving this
+            # alone changes nothing.
+            vol.Required(
+                "protocol_variant",
+                default=_current_variant
+            ): vol.In({
+                PROTOCOL_VARIANT_AUTO: f"Auto (currently {_variant_now})",
+                PROTOCOL_VARIANT_LEGACY: "Legacy V1.39",
+                PROTOCOL_VARIANT_V201: "VPP V2.01",
+            }),
             vol.Required(
                 "scan_interval",
                 default=current_scan_interval

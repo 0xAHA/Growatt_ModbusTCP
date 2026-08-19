@@ -69,6 +69,26 @@ SHARED_LOCK_TIMEOUT = 60       # seconds to wait for shared bus lock before givi
 DEFAULT_INTER_SLAVE_DELAY_MS = 50  # ms pause after each slave poll to let RS485 bus settle
 
 # ============================================================================
+# PROTOCOL VARIANT OVERRIDE (#385)
+# ============================================================================
+# Ten inverter families exist as two register maps - a V1.39 legacy one and a VPP V2.01 one.
+# Which is used comes from `vpp_protocol_confirmed`, set by auto-detection at setup, and the
+# profile dropdown deliberately shows one plain name for both: the distinction is an
+# implementation detail of the protocol and most users never need it.
+#
+# It still has to be correctable. When the stored flag disagrees with the hardware there was
+# no way back - re-selecting the same family name re-resolved through the same flag, so the
+# only escape was deleting the config entry and losing entity IDs, automations and history.
+# That is what made #377 take two days: a fix landed in the profile the reporter was not on,
+# his own detection output said "no VPP support", and he could not act on it.
+#
+# AUTO keeps whatever detection concluded, so nothing changes for anyone who does not go
+# looking. The two explicit values override it.
+PROTOCOL_VARIANT_AUTO = "auto"
+PROTOCOL_VARIANT_LEGACY = "legacy"
+PROTOCOL_VARIANT_V201 = "v201"
+
+# ============================================================================
 # PEAK SHAVING — UNSET LIMITS (#380)
 # ============================================================================
 # The demand-management power limits (3307, 3308, 3311) sit at a ceiling rather than at

@@ -8,12 +8,12 @@
 
 Merged to `main`, not yet in any release.
 
-- **Profiles with two protocol variants are now listed separately.** "SPH (3-6kW)" meant
-  either the legacy or the VPP V2.01 register map depending on a hidden flag, so you could
-  not see which you were running and could not change it without deleting the config entry.
-  Each variant now has its own entry - `[V1.39 legacy]` and `[VPP V2.01]` - and the Configure
-  page names the register map currently loaded. Ten families are affected; the rest are
-  unchanged. (#385)
+- **A wrong protocol variant can now be corrected without deleting the integration.** Ten
+  inverter families exist as two register maps, chosen by auto-detection at setup. When that
+  choice was wrong there was no way back - the profile list shows one name for both, and
+  re-selecting it resolved through the same setting that was already wrong. The Configure
+  page now has a **Protocol variant** field (Auto / Legacy V1.39 / VPP V2.01), and names the
+  register map currently loaded. Leaving it on Auto changes nothing. (#385)
 
 ---
 

@@ -248,22 +248,31 @@ Detected protocol version: Protocol 2.01 (register 30099 = 201)
 
 ## Choosing a profile by hand
 
-If you select a profile yourself, families that exist in two protocol variants show both,
-and each entry names exactly one register map:
+Pick your family - `SPH (3-6kW)`, `MOD Hybrid (6-15kW)` and so on. There is one entry per
+family; you do not need to know which protocol your inverter speaks.
 
-```
-SPH (3-6kW) [V1.39 legacy]
-SPH (3-6kW) [VPP V2.01]
-```
+### If sensors that should work report nothing
 
-Pick the one matching what auto-detection reported. `[VPP V2.01]` reads the 30000/31000
-range; `[V1.39 legacy]` does not. An inverter whose DTC came from holding 43 has no VPP
-support and wants the legacy entry - putting it on the V2.01 variant mostly works, because
-both share the base and storage ranges, and then quietly fails for the handful of sensors
-that only exist in the range it cannot read.
+Ten families exist as **two register maps**: a V1.39 legacy one and a VPP V2.01 one. Which
+is used is decided by auto-detection at setup, and it is almost always right.
 
-Families with a single profile - SPF, WIT and the rest - are unsuffixed.
+When it is wrong the symptom is specific and easy to misread. Both maps share the base and
+storage ranges, so most sensors work either way - only the handful that live in the range the
+inverter cannot read report a permanent zero. That looks like a broken sensor rather than a
+wrong profile.
 
-**The Configure page names the register map currently loaded**, under the form title. That
-is the value worth quoting in an issue: the display name alone used to be ambiguous, and a
-register scan reports it too.
+**Settings > Devices & Services > Growatt Modbus > Configure** has a **Protocol variant**
+field for this:
+
+| Setting | Meaning |
+| --- | --- |
+| `Auto` | Use what auto-detection concluded. Correct for almost everyone |
+| `Legacy V1.39` | Force the legacy map. Use if your inverter has no VPP support |
+| `VPP V2.01` | Force the V2.01 map |
+
+The same page names the **register map currently loaded** under the form title. That is the
+value worth quoting in an issue - it says which of the two you are actually running, which
+the family name alone does not.
+
+An inverter whose DTC was read from holding register 43 has no VPP support and wants the
+legacy map.
