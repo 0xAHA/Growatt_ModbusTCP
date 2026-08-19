@@ -319,6 +319,28 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
 
         # Write to Modbus register with read-back verification
         register = self._control_config['register']
+
+        # Skip a write that would change nothing (#384).
+        #
+        # These registers are held in EEPROM, which has a finite write endurance. Nothing in
+        # the integration writes on its own - a write happens only when this method is
+        # called - but an automation that re-applies the same value on a schedule would
+        # burn a write cycle every time it ran, for no effect. A repairer working on this
+        # inverter family reported four SPF6000ES units with failed EEPROMs in a year, and
+        # while that is not attributable to anything here, there is no reason to spend
+        # cycles on writes that cannot change the value.
+        #
+        # Gated on having a current reading: when the register has not been read yet the
+        # comparison is meaningless and the write goes ahead. A skipped write that should
+        # have happened is worse than a redundant one.
+        current_raw = getattr(self.coordinator.data, self._control_name, None) \
+            if self.coordinator.data is not None else None
+        if current_raw is not None and int(current_raw) == raw_value:
+            _LOGGER.debug(
+                "%s already reads %s (raw %d) — skipping write to register %d",
+                self._control_name, value, raw_value, register,
+            )
+            return
         try:
             write_ok, verified = await self.hass.async_add_executor_job(
                 self.coordinator.modbus_client.write_register_verified,

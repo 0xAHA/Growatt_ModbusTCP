@@ -196,3 +196,45 @@ def test_the_block_read_covers_35_and_36():
               / "growatt_modbus.py").read_text(encoding="utf-8")
     assert "data.bulk_charge_voltage = int(battery_ctrl_regs[1])" in source
     assert "data.float_charge_voltage = int(battery_ctrl_regs[2])" in source
+
+
+# ---------------------------------------------------------------------------
+# EEPROM write avoidance (#384)
+#
+# These registers live in EEPROM, which has finite write endurance. Nothing in the
+# integration writes on its own - a write happens only when a user or an automation sets a
+# value - but an automation re-applying the same value on a schedule would burn a cycle every
+# run for no effect. Raised by a reporter whose contact repairs inverters and saw four
+# SPF6000ES units with failed EEPROMs in a year.
+# ---------------------------------------------------------------------------
+
+def test_nothing_writes_outside_an_explicit_set():
+    """The reassuring half of the answer: polling never writes. If this ever changes, the
+    EEPROM guarantee given to users on #384 is void."""
+    for name in ("coordinator.py", "__init__.py"):
+        source = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+                  / name).read_text(encoding="utf-8")
+        assert "write_register(" not in source, f"{name} performs a Modbus write"
+        assert "write_registers(" not in source, f"{name} performs a Modbus write"
+
+
+def test_setting_the_current_value_does_not_write():
+    """A redundant write costs an EEPROM cycle and cannot change anything."""
+    source = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+              / "number.py").read_text(encoding="utf-8")
+    guard = source[source.index("async def async_set_native_value"):]
+    guard = guard[:guard.index("write_register_verified")]
+    assert "int(current_raw) == raw_value" in guard, (
+        "a write is issued even when the register already holds the requested value"
+    )
+    assert "return" in guard
+
+
+def test_the_guard_needs_a_current_reading():
+    """A skipped write that should have happened is worse than a redundant one, so an
+    unread register must fall through to the write."""
+    source = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+              / "number.py").read_text(encoding="utf-8")
+    assert "current_raw is not None and" in source, (
+        "the no-op guard fires without a known current value"
+    )

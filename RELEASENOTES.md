@@ -8,6 +8,10 @@
 
 Merged to `main`, not yet in any release.
 
+- **Setting a control to the value it already has no longer writes to the inverter.** These
+  registers are held in EEPROM, which has a finite number of write cycles. Nothing polls or
+  writes on its own, but an automation re-applying the same value on a schedule used to burn
+  a cycle every run for no effect. Raised by @dinkalin-ux. (#384)
 - **A wrong protocol variant can now be corrected without deleting the integration.** Ten
   inverter families exist as two register maps, chosen by auto-detection at setup. When that
   choice was wrong there was no way back - the profile list shows one name for both, and
