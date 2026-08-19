@@ -536,10 +536,14 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
                 _LOGGER.debug("[WIT-VPP] Setting HOLD mode via TOU +1%% workaround")
 
                 # Enable AC charging (required for TOU charge to work)
-                try:
-                    client.write_register(self.VPP_AC_CHARGE_ENABLE, 1)
-                except Exception as e:  # noqa: BLE001
-                    _LOGGER.warning("[WIT-VPP] AC charge enable (30410) failed: %s", e)
+                # FC 0x06 first, FC 0x10 if refused: 30410 accepts only Write Multiple
+                # Registers on some WIT models (#353). A plain warning here meant grid
+                # charging silently never engaged while every other write succeeded.
+                if not client.write_single_register_any_fc(self.VPP_AC_CHARGE_ENABLE, 1):
+                    _LOGGER.warning(
+                        "[WIT-VPP] AC charge enable (30410) refused both FC 0x06 and "
+                        "FC 0x10 - grid charging will not engage"
+                    )
 
                 # Get current time for TOU period
                 from datetime import datetime
@@ -578,10 +582,14 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
                     return False
 
                 # Enable AC charging (PV priority)
-                try:
-                    client.write_register(self.VPP_AC_CHARGE_ENABLE, 1)
-                except Exception as e:  # noqa: BLE001
-                    _LOGGER.warning("[WIT-VPP] AC charge enable (30410) failed: %s", e)
+                # FC 0x06 first, FC 0x10 if refused: 30410 accepts only Write Multiple
+                # Registers on some WIT models (#353). A plain warning here meant grid
+                # charging silently never engaged while every other write succeeded.
+                if not client.write_single_register_any_fc(self.VPP_AC_CHARGE_ENABLE, 1):
+                    _LOGGER.warning(
+                        "[WIT-VPP] AC charge enable (30410) refused both FC 0x06 and "
+                        "FC 0x10 - grid charging will not engage"
+                    )
 
                 # Enable remote power control
                 success = client.write_register(self.VPP_REMOTE_POWER_ENABLE, 1)

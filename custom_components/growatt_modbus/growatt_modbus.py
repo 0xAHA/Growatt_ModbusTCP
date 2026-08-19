@@ -2490,6 +2490,47 @@ class GrowattModbus:
             logger.error(f"[WRITE] {error_msg}")
             raise ModbusWriteError(register, [value], error_msg)
 
+    def write_single_register_any_fc(self, register: int, value: int) -> bool:
+        """Write one register, falling back to FC 0x10 when FC 0x06 is refused.
+
+        Some VPP registers accept only Write Multiple Registers, even for a single value.
+        30410 (VPP AC charge enable) is the reported case: on a WIT 8000TL3-HU it rejects
+        FC 0x06 and accepts FC 0x10 with count=1 (#353).
+
+        That mattered more than a rejected write usually does, because the caller logged a
+        warning and carried on. Every other register in the mode sequence succeeded, so grid
+        charging silently never engaged while the control reported success.
+
+        FC 0x06 is tried first deliberately. It is what the rest of the integration uses and
+        what most hardware expects; switching everything to FC 0x10 would risk the opposite
+        failure on devices that only accept the single-register form. This only adds a second
+        attempt where the first is refused outright, so it cannot make a working write worse.
+        """
+        try:
+            if self.write_register(register, value):
+                return True
+            logger.debug(
+                "[FC FALLBACK] register %d refused FC 0x06 (no exception) — trying FC 0x10",
+                register,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(
+                "[FC FALLBACK] register %d raised on FC 0x06 (%s) — trying FC 0x10",
+                register, exc,
+            )
+
+        try:
+            if self.write_registers(register, [value]):
+                logger.info(
+                    "[FC FALLBACK] register %d accepted FC 0x10 after refusing FC 0x06",
+                    register,
+                )
+                return True
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[FC FALLBACK] register %d also refused FC 0x10: %s", register, exc)
+
+        return False
+
     def write_register_verified(self, register: int, value: int) -> tuple:
         """Write a holding register with read-back verification and retry.
 

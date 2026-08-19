@@ -1,7 +1,9 @@
 {
   "domain": "growatt_modbus",
   "name": "Growatt Modbus",
-  "codeowners": ["@0xAHA"],
+  "codeowners": [
+    "@0xAHA"
+  ],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/0xAHA/Growatt_ModbusTCP",
@@ -12,5 +14,5 @@
     "pymodbus>=3.0.0",
     "pyserial>=3.4"
   ],
-  "version": "1.6.4"
+  "version": "1.6.5"
 }

@@ -4,6 +4,24 @@
 
 ---
 
+## v1.6.5 (pre-release)
+
+Issues: #353
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **WIT grid charging now works on models that reject Write Single Register.** Register
+  30410 (VPP AC charge enable) accepts only FC 0x10 on some WIT hardware. The write was
+  attempted with FC 0x06, and a refusal was logged as a warning and stepped over - so every
+  other register in the mode sequence succeeded and grid charging silently never engaged.
+  It now falls back to FC 0x10 when FC 0x06 is refused, and reports a real failure when
+  neither works. Reported by @jekmanis. (#353)
+- Documentation: register 30476 (WIT priority mode) is no longer described as read-only. It
+  is writable on some models - the integration's TOU Default Mode control writes it - and
+  the guide now says so rather than telling people not to try. (#353)
+
+---
+
 ## v1.6.4 (pre-release)
 
 Issues: #377, #383, #384
