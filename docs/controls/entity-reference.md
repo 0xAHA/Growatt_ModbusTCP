@@ -150,7 +150,7 @@ what your model allows will be rejected by the inverter and the entity will reve
 
 **Important notes:**
 - WIT uses a **time-limited override** model. Commands via registers 30407–30409 expire after the configured duration or when HA restarts. The inverter then returns to its TOU schedule default.
-- Register 30476 (`priority_mode`) on WIT is **read-only** — it shows the base TOU mode but cannot be written via Modbus. Use the inverter display or Growatt app to change the base mode.
+- Register 30476 (`priority_mode`) on WIT shows the base TOU mode. Writability **varies by model** - it was documented as read-only, but has been written successfully for months on a WIT 8000TL3-HU ([#353](https://github.com/0xAHA/Growatt_ModbusTCP/issues/353)). The TOU Default Mode control writes it; if your model rejects the write, use the inverter display or Growatt app instead.
 - Rate limiting is built in to prevent command flooding.
 - Conflict detection prevents simultaneous charge + discharge commands.
 

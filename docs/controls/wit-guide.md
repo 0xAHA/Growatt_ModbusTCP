@@ -18,7 +18,7 @@ WIT (Wireless Inverter Technology) series inverters (4000-15000TL3) use a fundam
 ### WIT Models (VPP Protocol)
 
 - **Time-limited overrides**: Control commands are temporary (duration-based)
-- **Read-only base mode**: Register 30476 (priority_mode) shows TOU schedule default, cannot be changed via Modbus
+- **Base mode**: Register 30476 (priority_mode) shows the TOU schedule default. It is writable over Modbus on at least some WIT models - see below.
 - **VPP remote control**: Registers 201-202 and 30407-30409 for temporary overrides
 - **Register range**: 30000+ (VPP protocol range)
 
@@ -28,25 +28,34 @@ WIT (Wireless Inverter Technology) series inverters (4000-15000TL3) use a fundam
 
 ### What You CAN Do
 
-✅ **Read** the current priority mode (register 30476) - shows TOU schedule default
+✅ **Read** the current priority mode (register 30476) - shows TOU schedule default, and write it on models that accept it
 ✅ **Override** battery behavior temporarily using VPP remote control
 ✅ **Set** charge/discharge power and duration (30407-30409)
 ✅ **Monitor** all battery/inverter parameters
 
 ### What You CANNOT Do
 
-❌ **Change** the base priority mode via Modbus (register 30476 is read-only)
+⚠️ **Change** the base priority mode via Modbus - 30476 accepts writes on some models and not others; see below
 ❌ **Permanently set** battery mode externally
 ❌ **Disable** TOU schedule via Modbus
 ❌ **Use** SPH-style persistent mode control
 
 ---
 
-## Register 30476: Priority Mode (READ-ONLY)
+## Register 30476: Priority Mode (writability varies by model)
 
 **Common Misconception**: This register can be written to change WIT operating mode.
 
-**Reality**: On WIT inverters, register 30476 is **read-only** and shows:
+**Reality**: register 30476 shows the base TOU mode. Whether it can be written **varies by
+model**, and the integration's TOU Default Mode control writes it.
+
+It was documented here as read-only, which was wrong: @jekmanis reported writing it
+intensively for months on a WIT 8000TL3-HU
+([#353](https://github.com/0xAHA/Growatt_ModbusTCP/issues/353)). Treat a write as
+best-effort - it succeeds on some models and is rejected on others - and read it back to
+confirm rather than assuming either way.
+
+It shows:
 - The **default mode** used outside configured TOU periods
 - What mode the inverter will return to when remote overrides expire
 - Current TOU period mode if a schedule is active
@@ -56,7 +65,8 @@ WIT (Wireless Inverter Technology) series inverters (4000-15000TL3) use a fundam
 - 1 = Battery First
 - 2 = Grid First
 
-**To change this value**: Must be configured via inverter display panel or manufacturer app, NOT Modbus.
+**To change this value**: the integration's **TOU Default Mode** control writes it. If your
+model rejects the write, use the inverter display panel or the manufacturer app instead.
 
 ---
 
@@ -439,13 +449,13 @@ Always ensure remote power control is enabled when control authority is on, or d
 1. Home Assistant automation writing to WIT controls too frequently
 2. Multiple automations conflicting (TOU + manual control)
 3. No rate limiting on control changes
-4. Trying to write to read-only register 30476
+4. Trying to write register 30476 on a model that rejects it
 
 **Solutions**:
 - ✅ Use v0.4.6+ which includes 30s rate limiting
 - ✅ Consolidate control logic into single automation
 - ✅ Use time-based overrides with appropriate durations
-- ✅ Don't write to register 30476 (it's read-only on WIT)
+- ⚠️ Treat a write to 30476 as best-effort - some WIT models accept it, others reject it
 
 ### Problem: Control Changes Don't Persist
 
@@ -642,7 +652,7 @@ Check entity: `switch.growatt_control_authority` (must be ON)
 
 **Key Takeaways**:
 1. WIT uses VPP protocol - time-limited overrides, not persistent mode changes
-2. Register 30476 (priority_mode) is **read-only** on WIT
+2. Register 30476 (priority_mode) is not writable on every WIT model
 3. Use registers 30407-30409 for proper WIT control
 4. Rate limiting (30s) prevents oscillation (v0.4.6+)
 5. TOU schedule and remote control can conflict
