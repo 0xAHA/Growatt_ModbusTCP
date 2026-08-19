@@ -8,6 +8,10 @@
 
 Merged to `main`, not yet in any release.
 
+- **MIN TL-XH2 now reports inverter temperature.** That model answers Illegal Function
+  across the base register range, which is where every other profile reads this from, so it
+  had no temperature source at all. It now uses VPP register 31114. Reported by
+  @Richardmarkink. (#361)
 - **Setting a control to the value it already has no longer writes to the inverter.** These
   registers are held in EEPROM, which has a finite number of write cycles. Nothing polls or
   writes on its own, but an automation re-applying the same value on a schedule used to burn

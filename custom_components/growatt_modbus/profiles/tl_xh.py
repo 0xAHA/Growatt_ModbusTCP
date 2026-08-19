@@ -564,6 +564,20 @@ MIN_TL_XH2_3000_10000_V201 = {
         31106: {'name': 'ac_voltage',   'scale': 0.1,  'unit': 'V',  'desc': 'Grid voltage'},
         31109: {'name': 'ac_current',   'scale': 0.1,  'unit': 'A',  'desc': 'Grid current'},
 
+        # Inverter temperature (#361). Every other profile reads this from the base range -
+        # register 93, or 25/32/2093/3093 depending on family - but this one cannot: the
+        # TL-XH2 answers Illegal Function across the whole base block, which is what opened
+        # that issue. 31114 is the only source it has, so without this the profile had no
+        # inverter temperature at all and correctly left the sensor out of its set.
+        #
+        # VPP V2.01/V2.03: "31114 Inverter temperature, RO, INT16, 0.1 degC, [-400,1250]".
+        # Confirmed on hardware - a MIN 4200TL-XH2 read 339 while its app showed 33.9 degC.
+        #
+        # Signed because the protocol says INT16 and the documented range starts at -40 degC.
+        31114: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
+                'desc': 'Inverter temperature (VPP 31114). Only temperature source on this '
+                        'profile - the base range is unimplemented on TL-XH2 hardware'},
+
         # === Battery (cluster 1) ===
         # Unsuffixed on purpose. The first-gen profile names these *_vpp to stop them
         # being used as fallbacks for its 3000-range battery registers. TL-XH2 has no

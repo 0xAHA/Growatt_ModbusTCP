@@ -487,7 +487,12 @@ INVERTER_PROFILES = {
             BASIC_AC_SENSORS |
             GRID_SENSORS |          # active power (31100/31101) = net grid exchange on hybrids
             BATTERY_SENSORS |
-            STATUS_SENSORS
+            STATUS_SENSORS |
+            # Inverter Temperature, from VPP 31114 (#361). Added with the register in the
+            # same change: this profile deliberately omitted it while nothing could populate
+            # it, which is the correct handling of a sensor with no source and the reason
+            # this model never showed a phantom 0.0 degC.
+            {"inverter_temp"}
         ),
     },
 
