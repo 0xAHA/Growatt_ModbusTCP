@@ -1149,7 +1149,16 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             data_schema=options_schema,
             errors=errors,
             description_placeholders={
-                "info": "Update integration settings and inverter profile"
+                # Name the register map that is actually loaded (#385). Families with
+                # two protocol variants used to share one dropdown entry, so nothing
+                # on this page told you which of them you were running - and a scan
+                # attached to an issue reported the profile key as UNKNOWN on top of
+                # that. Stating it here is what turns "it did not work" into a
+                # diagnosis without a debug log.
+                "info": (
+                    "Update integration settings and inverter profile. "
+                    f"Currently loaded register map: {current_series}"
+                )
             }
         )
     

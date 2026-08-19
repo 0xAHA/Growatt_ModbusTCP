@@ -983,6 +983,15 @@ PROFILE_ALIASES: Dict[str, str] = {
 # ============================================================================
 
 # User-friendly profile names (hides protocol versions and technical details)
+# Suffixes distinguishing the two protocol variants of a family in the profile dropdown
+# (#385). A family with a single profile keeps its plain name; only the ten with both a
+# legacy and a V2.01 map are suffixed.
+#
+# These strings are user-visible AND are parsed back by resolve_profile_selection(), so they
+# are defined once here rather than written out at each site.
+LEGACY_SUFFIX = "[V1.39 legacy]"
+V201_SUFFIX = "[VPP V2.01]"
+
 PROFILE_DISPLAY_NAMES = {
     # Single-Phase Grid-Tied
     "MIC (0.6-3.3kW)": {
@@ -1246,18 +1255,35 @@ def get_available_profiles(legacy_only: bool = False, friendly_names: bool = Tru
         or profile ID to display name (if friendly_names=False)
     """
     if friendly_names:
-        # Return user-friendly names in alphabetical order
+        # Every entry names exactly one profile (#385).
+        #
+        # These used to be one entry per family, resolving to base or v201 through a flag
+        # stored on the config entry. The user saw "SPH (3-6kW)" either way, could not tell
+        # which of two register maps they were running, and could not change it: re-selecting
+        # the same name re-resolved through the same flag. The only escape was deleting the
+        # config entry, which loses entity IDs and history.
+        #
+        # That cost real time on #377 - a fix was shipped into the profile the reporter was
+        # not on, and neither of us could see why it had no effect until a debug log line
+        # revealed the variant. His own detection had said "no VPP support" while his entry
+        # ran the V2.01 map.
+        #
+        # Families with a single profile keep their plain name; only the ten with two
+        # variants gain a suffix, so the list grows by ten rather than doubling.
         profiles = {}
         for display_name in sorted(PROFILE_DISPLAY_NAMES.keys()):
             profile_info = PROFILE_DISPLAY_NAMES[display_name]
-            # Use base profile for legacy-only, otherwise use v201 as default
-            if legacy_only:
-                profile_id = profile_info["base"]
-            else:
-                # Prefer v201 if available and different from base
-                profile_id = profile_info["v201"]
+            base, v201 = profile_info["base"], profile_info["v201"]
 
-            profiles[display_name] = profile_id
+            if base == v201:
+                profiles[display_name] = base
+                continue
+
+            if legacy_only:
+                profiles[f"{display_name} {LEGACY_SUFFIX}"] = base
+            else:
+                profiles[f"{display_name} {LEGACY_SUFFIX}"] = base
+                profiles[f"{display_name} {V201_SUFFIX}"] = v201
 
         return profiles
     else:
@@ -1281,6 +1307,18 @@ def resolve_profile_selection(display_name: str, supports_v201: bool = True) -> 
     Returns:
         Actual profile ID to use
     """
+    # An explicitly chosen variant wins over the stored flag (#385). This is the half that
+    # makes a wrong flag correctable: picking the suffixed name means the variant, not
+    # "resolve this again through the same value that got me here".
+    for suffix, key in ((LEGACY_SUFFIX, "base"), (V201_SUFFIX, "v201")):
+        marker = f" {suffix}"
+        if display_name.endswith(marker):
+            stem = display_name[: -len(marker)]
+            if stem in PROFILE_DISPLAY_NAMES:
+                return PROFILE_DISPLAY_NAMES[stem][key]
+
+    # Plain family name, still accepted: values stored before the suffixes existed, and the
+    # setup path where auto-detection supplies supports_v201 rather than the user choosing.
     if display_name in PROFILE_DISPLAY_NAMES:
         profile_info = PROFILE_DISPLAY_NAMES[display_name]
         if supports_v201:
@@ -1305,10 +1343,18 @@ def get_display_name_for_profile(profile_id: str) -> str:
     Returns:
         User-friendly display name
     """
-    # Search for this profile_id in the display names mapping
+    # Return the suffixed name for a family with two variants, so the options page shows
+    # which register map is actually loaded rather than a name shared by both (#385).
     for display_name, profile_info in PROFILE_DISPLAY_NAMES.items():
-        if profile_id in (profile_info["base"], profile_info["v201"]):
-            return display_name
+        base, v201 = profile_info["base"], profile_info["v201"]
+        if base == v201:
+            if profile_id == base:
+                return display_name
+            continue
+        if profile_id == base:
+            return f"{display_name} {LEGACY_SUFFIX}"
+        if profile_id == v201:
+            return f"{display_name} {V201_SUFFIX}"
 
     # Fallback: return the technical name from profile
     profile = INVERTER_PROFILES.get(profile_id)
