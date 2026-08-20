@@ -4,9 +4,11 @@
 
 ---
 
-## Unreleased
+## v1.6.6 (pre-release)
 
-Merged to `main`, not yet in any release.
+Issues: #361, #384, #385
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
 
 - **A failed read no longer publishes a solar reading of zero.** When a Modbus block read
   failed, the registers behind it were reported as 0 rather than as missing - so a single
