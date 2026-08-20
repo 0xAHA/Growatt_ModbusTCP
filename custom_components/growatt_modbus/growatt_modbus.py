@@ -20,7 +20,7 @@ import time
 import logging
 import threading
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, Tuple, Union
 from homeassistant.config_entries import ConfigEntry
 
@@ -126,6 +126,23 @@ WRITE_VERIFY_RETRY_DELAY = 1.5     # seconds — delay between retry attempts
 @dataclass
 class GrowattData:
     """Container for Growatt inverter data"""
+
+    # Fields whose register could not be read this poll (#384).
+    #
+    # A block read that fails leaves its addresses absent from the register cache, and the
+    # decode below turned that into 0.0 - so a single dropped frame published "the sun went
+    # out" for one poll, with no error anywhere because from Home Assistant's side the poll
+    # succeeded. A reporter's graph showed PV voltage, current and power all dropping to zero
+    # together and recovering on the next poll, which is what a shared block failing looks
+    # like.
+    #
+    # Recorded as names rather than by setting the fields to None, because several are summed
+    # (pv_total_power = pv1 + pv2 + pv3 + pv4) and None would raise. The value keeps its
+    # previous or default number and the sensor consults this set to decide whether to report
+    # it at all - so the entity goes unknown for that poll and leaves a gap in history, rather
+    # than recording a zero that reads as a real measurement.
+    unread_fields: set = field(default_factory=set)
+
     # Solar Input
     pv1_voltage: float = 0.0          # V
     pv1_current: float = 0.0          # A
@@ -1331,6 +1348,22 @@ class GrowattModbus:
 
         return None
 
+    def _set_from_register(self, data: "GrowattData", field_name: str, address: int) -> None:
+        """Assign a decoded register to a field, or record that it could not be read.
+
+        Replaces `data.x = self._get_register_value(addr) or 0.0`, which could not tell a
+        genuine zero from a failed read and published both as zero (#384).
+        """
+        value = self._get_register_value(address)
+        if value is None:
+            data.unread_fields.add(field_name)
+            logger.debug(
+                "[%s] %s: register %d not read this poll — reporting unknown rather than 0",
+                self.register_map.get('name', '?'), field_name, address,
+            )
+            return
+        setattr(data, field_name, value)
+
     def _get_register_value(self, address: int) -> Optional[float]:
         """
         Get scaled value from register, handling 32-bit pairs automatically
@@ -1856,11 +1889,11 @@ class GrowattModbus:
             pv1_power_low_addr = self._find_register_by_name('pv1_power_low')
             
             if pv1_voltage_addr:
-                data.pv1_voltage = self._get_register_value(pv1_voltage_addr) or 0.0
+                self._set_from_register(data, 'pv1_voltage', pv1_voltage_addr)
             if pv1_current_addr:
-                data.pv1_current = self._get_register_value(pv1_current_addr) or 0.0
+                self._set_from_register(data, 'pv1_current', pv1_current_addr)
             if pv1_power_low_addr:
-                data.pv1_power = self._get_register_value(pv1_power_low_addr) or 0.0
+                self._set_from_register(data, 'pv1_power', pv1_power_low_addr)
             
             # PV String 2
             pv2_voltage_addr = self._find_register_by_name('pv2_voltage')
@@ -1868,11 +1901,11 @@ class GrowattModbus:
             pv2_power_low_addr = self._find_register_by_name('pv2_power_low')
             
             if pv2_voltage_addr:
-                data.pv2_voltage = self._get_register_value(pv2_voltage_addr) or 0.0
+                self._set_from_register(data, 'pv2_voltage', pv2_voltage_addr)
             if pv2_current_addr:
-                data.pv2_current = self._get_register_value(pv2_current_addr) or 0.0
+                self._set_from_register(data, 'pv2_current', pv2_current_addr)
             if pv2_power_low_addr:
-                data.pv2_power = self._get_register_value(pv2_power_low_addr) or 0.0
+                self._set_from_register(data, 'pv2_power', pv2_power_low_addr)
             
             # PV String 3 (if available)
             pv3_voltage_addr = self._find_register_by_name('pv3_voltage')
@@ -1880,11 +1913,11 @@ class GrowattModbus:
             pv3_power_low_addr = self._find_register_by_name('pv3_power_low')
             
             if pv3_voltage_addr:
-                data.pv3_voltage = self._get_register_value(pv3_voltage_addr) or 0.0
+                self._set_from_register(data, 'pv3_voltage', pv3_voltage_addr)
             if pv3_current_addr:
-                data.pv3_current = self._get_register_value(pv3_current_addr) or 0.0
+                self._set_from_register(data, 'pv3_current', pv3_current_addr)
             if pv3_power_low_addr:
-                data.pv3_power = self._get_register_value(pv3_power_low_addr) or 0.0
+                self._set_from_register(data, 'pv3_power', pv3_power_low_addr)
 
             # PV String 4 (if available — 4-MPPT models like WIT 29.9-50K-XHU)
             pv4_voltage_addr = self._find_register_by_name('pv4_voltage')
@@ -1892,11 +1925,11 @@ class GrowattModbus:
             pv4_power_low_addr = self._find_register_by_name('pv4_power_low')
 
             if pv4_voltage_addr:
-                data.pv4_voltage = self._get_register_value(pv4_voltage_addr) or 0.0
+                self._set_from_register(data, 'pv4_voltage', pv4_voltage_addr)
             if pv4_current_addr:
-                data.pv4_current = self._get_register_value(pv4_current_addr) or 0.0
+                self._set_from_register(data, 'pv4_current', pv4_current_addr)
             if pv4_power_low_addr:
-                data.pv4_power = self._get_register_value(pv4_power_low_addr) or 0.0
+                self._set_from_register(data, 'pv4_power', pv4_power_low_addr)
 
             # Derive per-string power where the profile has no power register for that
             # string (Issue #361). Some hardware reports only per-string voltage and

@@ -1856,7 +1856,21 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
             return self.coordinator.get_sensor_value(self._sensor_key, pv_energy_today)
         
         # Regular sensor - get value from data attribute
-        value = getattr(data, self._sensor_def["attr"], None)
+        attr = self._sensor_def["attr"]
+
+        # Report nothing when the register behind this sensor was not read this poll (#384).
+        #
+        # A failed block read used to publish 0, which is indistinguishable from a real zero
+        # and lands in long-term statistics as a measurement. A reporter's solar graph showed
+        # a vertical drop to 0 W and back within one poll, with no error anywhere, because
+        # from Home Assistant's side the poll had succeeded.
+        #
+        # Returning None makes the entity unknown for that poll, so history shows a gap. A
+        # gap is honest about what happened; a zero is a claim the inverter never made.
+        if attr in getattr(data, "unread_fields", ()):
+            return None
+
+        value = getattr(data, attr, None)
         
         if value is None:
             return None

@@ -8,6 +8,12 @@
 
 Merged to `main`, not yet in any release.
 
+- **A failed read no longer publishes a solar reading of zero.** When a Modbus block read
+  failed, the registers behind it were reported as 0 rather than as missing - so a single
+  dropped frame put a vertical drop to 0 W in the solar graph, recovering on the next poll,
+  with no error anywhere. PV voltage, current and power now go *unknown* for that poll
+  instead, leaving a gap in history rather than a zero that cannot afterwards be told apart
+  from a real measurement. A genuine zero is still recorded. Reported by @dinkalin-ux. (#384)
 - **MIN TL-XH2 now reports inverter temperature.** That model answers Illegal Function
   across the base register range, which is where every other profile reads this from, so it
   had no temperature source at all. It now uses VPP register 31114. Reported by
