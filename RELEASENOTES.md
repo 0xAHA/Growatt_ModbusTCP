@@ -4,6 +4,19 @@
 
 ---
 
+## Unreleased
+
+Merged to `main`, not yet in any release.
+
+- **SPH time-slot entities are now named after the slot the inverter actually uses.** The
+  three Grid First slots displayed as "Grid First Period 7/8/9" but are slots **1, 2 and 3**
+  in the Growatt app and in the protocol, and the Battery First slots displayed as "AC Charge
+  Time Period" with no indication of which app group they belonged to. Entity IDs are
+  unchanged, so automations keep working - only the displayed names are corrected. Reported
+  by @Vict20. (#386)
+
+---
+
 ## v1.6.6 (pre-release)
 
 Issues: #361, #384, #385

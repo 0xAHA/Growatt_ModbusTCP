@@ -46,15 +46,29 @@ All writes use **read-back verification** — after writing, the integration rea
 | Charge Power Rate | Number | 1090 | 0–100 % | Maximum battery charge power rate |
 | Charge Stop SOC | Number | 1091 | 0–100 % | SOC level at which charging stops |
 | System Enable | Select | 1008 | Disabled (0), Enabled (1) | System enable control (HU models only) |
-| Time Period 1 Start | Number | 1100 | 0–2359 (HHMM) | Charge/discharge period 1 start time |
-| Time Period 1 End | Number | 1101 | 0–2359 (HHMM) | Charge/discharge period 1 end time |
-| Time Period 1 Enable | Select | 1102 | Disabled (0), Enabled (1) | Enable/disable period 1 |
-| Time Period 2 Start | Number | 1103 | 0–2359 (HHMM) | Charge/discharge period 2 start time |
-| Time Period 2 End | Number | 1104 | 0–2359 (HHMM) | Charge/discharge period 2 end time |
-| Time Period 2 Enable | Select | 1105 | Disabled (0), Enabled (1) | Enable/disable period 2 |
-| Time Period 3 Start | Number | 1106 | 0–2359 (HHMM) | Charge/discharge period 3 start time |
-| Time Period 3 End | Number | 1107 | 0–2359 (HHMM) | Charge/discharge period 3 end time |
-| Time Period 3 Enable | Select | 1108 | Disabled (0), Enabled (1) | Enable/disable period 3 |
+| Battery First Period 1 Start | Time | 1100 | HH:MM | Charge schedule slot 1 start |
+| Battery First Period 1 End | Time | 1101 | HH:MM | Charge schedule slot 1 end |
+| Battery First Period 1 Enable | Select | 1102 | Disabled (0), Enabled (1) | Enable charge slot 1 |
+| Battery First Period 2/3 | Time / Select | 1103-1108 | as above | Charge schedule slots 2 and 3 |
+| Grid First Period 1 Start | Time | 1080 | HH:MM | Discharge/export schedule slot 1 start |
+| Grid First Period 1 End | Time | 1081 | HH:MM | Discharge/export schedule slot 1 end |
+| Grid First Period 1 Enable | Select | 1082 | Disabled (0), Enabled (1) | Enable discharge slot 1 |
+| Grid First Period 2/3 | Time / Select | 1083-1088 | as above | Discharge schedule slots 2 and 3 |
+| Battery First / Grid First 4-6 | Time / Select | 1017-1034 | as above | Extra slots - see the note below |
+
+**Two independent schedules.** Battery First (1100-1108) is the charge schedule and Grid
+First (1080-1088) is the discharge/export schedule. They run concurrently and do not
+conflict - confirmed on an SPH 3600 running one of each simultaneously for several hours
+([#386](https://github.com/0xAHA/Growatt_ModbusTCP/issues/386)).
+
+The slot numbers shown match the Growatt app and Protocol V1.39. The underlying entity IDs
+use an older numbering (`grid_first_time_period_7/8/9` for Grid First 1-3, `time_period_*`
+for Battery First), which is kept so existing automations continue to work.
+
+**Slots 4-6 (registers 1017-1034) are documented but may not be implemented on your
+firmware.** They are mapped because the protocol defines them, but at least one SPH 3600
+(RAAA191904/ZCBA-0004) accepts the write and immediately reverts the register. If yours does
+that, disable the entities - other firmware may well support them.
 
 **Notes:**
 - All SPH variants share the same 1000+ register range — controls apply across 3–6kW, 7–10kW, and HU variants automatically.

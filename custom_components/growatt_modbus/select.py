@@ -240,8 +240,17 @@ class GrowattGenericSelect(GrowattEntity, SelectEntity):
         self._control_name = control_name
         self._control_config = control_config
 
-        # Generate friendly name (e.g., "output_config" -> "Output Config")
-        friendly_name = control_name.replace('_', ' ').title()
+        # Generate friendly name (e.g., "output_config" -> "Output Config"), unless the
+        # control carries an explicit label.
+        #
+        # The label exists because a few control names do not describe what the register
+        # actually is. The SPH time-slot blocks are the clearest case (#386): the registers
+        # at 1080-1088 are named ..._7/8/9 here but Protocol V1.39 calls them Grid First
+        # 1/2/3, which is also what the Growatt app shows. A reporter had to work that out by
+        # experiment. The names cannot be changed without changing entity IDs and breaking
+        # everyone's automations, so the display name is corrected instead - the same remedy
+        # used for two SPH controls in #362.
+        friendly_name = control_config.get('label') or control_name.replace('_', ' ').title()
         self._attr_name = friendly_name
 
         # Set icon based on control type

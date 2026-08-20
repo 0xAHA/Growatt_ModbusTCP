@@ -595,6 +595,16 @@ WRITABLE_REGISTERS = {
         'desc': 'System enable control (SPH HU models)'
     },
 
+    # Battery First time slots 1-3, registers 1100-1108 (#386).
+    #
+    # Protocol V1.39 calls these "Bat First Start/Stop Time 1..3" and the Growatt app shows
+    # them under Battery First, so that is what the labels say. They were previously
+    # displayed as "AC Charge Time Period N", which is true in effect - Battery First is the
+    # charge schedule - but gave no clue which of the app's groups they correspond to.
+    #
+    # The control names keep their existing form. Renaming them would change entity IDs and
+    # break automations, which is too high a price for a labelling error; only the display
+    # name is corrected. Same remedy as #362.
     # AC Charge Time Period Controls (hex-packed: hours*256 + minutes, e.g. 06:00 = 0x0600 = 1536)
     # These are SPH AC-charge scheduling slots (registers 1100-1108), distinct from
     # the Battery First / Grid First extended slots at 1017-1088.
@@ -603,7 +613,7 @@ WRITABLE_REGISTERS = {
         'scale': 1,
         'valid_range': (0, 5947),
         'unit': '',
-        'label': 'AC Charge Time Period 1 Start',
+        'label': 'Battery First Period 1 Start',
         'desc': 'AC charge period 1 start time (hex-packed: hours*256+minutes, e.g. 06:00 = 0x0600 = 1536)'
     },
     'time_period_1_end': {
@@ -611,7 +621,7 @@ WRITABLE_REGISTERS = {
         'scale': 1,
         'valid_range': (0, 5947),
         'unit': '',
-        'label': 'AC Charge Time Period 1 End',
+        'label': 'Battery First Period 1 End',
         'desc': 'AC charge period 1 end time (hex-packed: hours*256+minutes, e.g. 22:00 = 0x1600 = 5632)'
     },
     'time_period_1_enable': {
@@ -622,7 +632,7 @@ WRITABLE_REGISTERS = {
             0: 'Disabled',
             1: 'Enabled'
         },
-        'label': 'AC Charge Time Period 1 Enable',
+        'label': 'Battery First Period 1 Enable',
         'desc': 'Enable AC charge time period 1'
     },
     'time_period_2_start': {
@@ -630,7 +640,7 @@ WRITABLE_REGISTERS = {
         'scale': 1,
         'valid_range': (0, 5947),
         'unit': '',
-        'label': 'AC Charge Time Period 2 Start',
+        'label': 'Battery First Period 2 Start',
         'desc': 'AC charge period 2 start time (hex-packed: hours*256+minutes)'
     },
     'time_period_2_end': {
@@ -638,7 +648,7 @@ WRITABLE_REGISTERS = {
         'scale': 1,
         'valid_range': (0, 5947),
         'unit': '',
-        'label': 'AC Charge Time Period 2 End',
+        'label': 'Battery First Period 2 End',
         'desc': 'AC charge period 2 end time (hex-packed: hours*256+minutes)'
     },
     'time_period_2_enable': {
@@ -649,7 +659,7 @@ WRITABLE_REGISTERS = {
             0: 'Disabled',
             1: 'Enabled'
         },
-        'label': 'AC Charge Time Period 2 Enable',
+        'label': 'Battery First Period 2 Enable',
         'desc': 'Enable AC charge time period 2'
     },
     'time_period_3_start': {
@@ -657,7 +667,7 @@ WRITABLE_REGISTERS = {
         'scale': 1,
         'valid_range': (0, 5947),
         'unit': '',
-        'label': 'AC Charge Time Period 3 Start',
+        'label': 'Battery First Period 3 Start',
         'desc': 'AC charge period 3 start time (hex-packed: hours*256+minutes)'
     },
     'time_period_3_end': {
@@ -665,7 +675,7 @@ WRITABLE_REGISTERS = {
         'scale': 1,
         'valid_range': (0, 5947),
         'unit': '',
-        'label': 'AC Charge Time Period 3 End',
+        'label': 'Battery First Period 3 End',
         'desc': 'AC charge period 3 end time (hex-packed: hours*256+minutes)'
     },
     'time_period_3_enable': {
@@ -676,7 +686,7 @@ WRITABLE_REGISTERS = {
             0: 'Disabled',
             1: 'Enabled'
         },
-        'desc': 'Enable time period 3'
+        'label': 'Battery First Period 3 Enable', 'desc': 'Enable time period 3'
     },
 
     # SPH GEN3 Battery First extended time slots 4-6 (registers 1017-1025)
@@ -702,15 +712,15 @@ WRITABLE_REGISTERS = {
     'grid_first_time_period_6_enable': {'register': 1034, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 6'},
 
     # SPH GEN3 Grid First extended time slots 7-9 (registers 1080-1088)
-    'grid_first_time_period_7_start': {'register': 1080, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 7 start (hex-packed: hours*256+minutes)'},
-    'grid_first_time_period_7_end':   {'register': 1081, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 7 end (hex-packed: hours*256+minutes)'},
-    'grid_first_time_period_7_enable': {'register': 1082, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 7'},
-    'grid_first_time_period_8_start': {'register': 1083, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 8 start (hex-packed: hours*256+minutes)'},
-    'grid_first_time_period_8_end':   {'register': 1084, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 8 end (hex-packed: hours*256+minutes)'},
-    'grid_first_time_period_8_enable': {'register': 1085, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 8'},
-    'grid_first_time_period_9_start': {'register': 1086, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 9 start (hex-packed: hours*256+minutes)'},
-    'grid_first_time_period_9_end':   {'register': 1087, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 9 end (hex-packed: hours*256+minutes)'},
-    'grid_first_time_period_9_enable': {'register': 1088, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 9'},
+    'grid_first_time_period_7_start': {'register': 1080, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'label': 'Grid First Period 1 Start', 'desc': 'Grid First period 1 start (hex-packed: hours*256+minutes)'},
+    'grid_first_time_period_7_end':   {'register': 1081, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'label': 'Grid First Period 1 End', 'desc': 'Grid First period 1 end (hex-packed: hours*256+minutes)'},
+    'grid_first_time_period_7_enable': {'register': 1082, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'label': 'Grid First Period 1 Enable', 'desc': 'Enable Grid First period 7'},
+    'grid_first_time_period_8_start': {'register': 1083, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'label': 'Grid First Period 2 Start', 'desc': 'Grid First period 2 start (hex-packed: hours*256+minutes)'},
+    'grid_first_time_period_8_end':   {'register': 1084, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'label': 'Grid First Period 2 End', 'desc': 'Grid First period 2 end (hex-packed: hours*256+minutes)'},
+    'grid_first_time_period_8_enable': {'register': 1085, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'label': 'Grid First Period 2 Enable', 'desc': 'Enable Grid First period 8'},
+    'grid_first_time_period_9_start': {'register': 1086, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'label': 'Grid First Period 3 Start', 'desc': 'Grid First period 3 start (hex-packed: hours*256+minutes)'},
+    'grid_first_time_period_9_end':   {'register': 1087, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'label': 'Grid First Period 3 End', 'desc': 'Grid First period 3 end (hex-packed: hours*256+minutes)'},
+    'grid_first_time_period_9_enable': {'register': 1088, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'label': 'Grid First Period 3 Enable', 'desc': 'Enable Grid First period 9'},
 
     # MIN TL-X / TL-XH / MIC: fallback output power cap when export limitation control fails
     'export_limit_failed_power_rate': {
