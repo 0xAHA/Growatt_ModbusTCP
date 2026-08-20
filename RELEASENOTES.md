@@ -4,9 +4,11 @@
 
 ---
 
-## Unreleased
+## v1.6.7 (pre-release)
 
-Merged to `main`, not yet in any release.
+Issues: #386
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
 
 - **SPH time-slot entities are now named after the slot the inverter actually uses.** The
   three Grid First slots displayed as "Grid First Period 7/8/9" but are slots **1, 2 and 3**
