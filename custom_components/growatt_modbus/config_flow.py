@@ -1161,7 +1161,13 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
 
         if current_connection_type == "serial":
             current_device_path = self.config_entry.data.get(CONF_DEVICE_PATH, "")
-            port_options = _serial_port_options(current_device_path)
+            # Enumerating serial ports globs /dev and opens sysfs files, so it must not run
+            # on the event loop — Home Assistant reports it as a blocking call (#384). The
+            # initial config flow already did this correctly; this call site was added later
+            # and did not.
+            port_options = await self.hass.async_add_executor_job(
+                _serial_port_options, current_device_path
+            )
             options_schema = options_schema.extend({
                 vol.Required(
                     CONF_DEVICE_PATH,

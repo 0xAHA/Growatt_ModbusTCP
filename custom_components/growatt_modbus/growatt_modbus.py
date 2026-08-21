@@ -1364,6 +1364,21 @@ class GrowattModbus:
             return
         setattr(data, field_name, value)
 
+    def _inherit_unread(self, data: "GrowattData", target: str, *sources: str) -> bool:
+        """Mark a derived field unread when any input it is computed from was not read.
+
+        A calculated value is only as readable as its inputs. Unread inputs keep their 0.0
+        default, so the arithmetic still succeeds and produces a confident-looking zero —
+        which is the defect `_set_from_register` exists to prevent, reintroduced one step
+        downstream (#384).
+
+        Returns True when the target was marked unread, so callers can skip the calculation.
+        """
+        if any(source in data.unread_fields for source in sources):
+            data.unread_fields.add(target)
+            return True
+        return False
+
     def _get_register_value(self, address: int) -> Optional[float]:
         """
         Get scaled value from register, handling 32-bit pairs automatically
@@ -1969,47 +1984,47 @@ class GrowattModbus:
             # These registers track DC input from solar panels only (not total system output)
             pv1_energy_today_addr = self._find_register_by_name('pv1_energy_today_low')
             if pv1_energy_today_addr:
-                data.pv1_energy_today = self._get_register_value(pv1_energy_today_addr) or 0.0
+                self._set_from_register(data, 'pv1_energy_today', pv1_energy_today_addr)
                 logger.debug(f"[{self.register_map['name']}] PV1 energy today from reg {pv1_energy_today_addr}: {data.pv1_energy_today} kWh")
 
             pv2_energy_today_addr = self._find_register_by_name('pv2_energy_today_low')
             if pv2_energy_today_addr:
-                data.pv2_energy_today = self._get_register_value(pv2_energy_today_addr) or 0.0
+                self._set_from_register(data, 'pv2_energy_today', pv2_energy_today_addr)
                 logger.debug(f"[{self.register_map['name']}] PV2 energy today from reg {pv2_energy_today_addr}: {data.pv2_energy_today} kWh")
 
             pv3_energy_today_addr = self._find_register_by_name('pv3_energy_today_low')
             if pv3_energy_today_addr:
-                data.pv3_energy_today = self._get_register_value(pv3_energy_today_addr) or 0.0
+                self._set_from_register(data, 'pv3_energy_today', pv3_energy_today_addr)
                 logger.debug(f"[{self.register_map['name']}] PV3 energy today from reg {pv3_energy_today_addr}: {data.pv3_energy_today} kWh")
 
             pv4_energy_today_addr = self._find_register_by_name('pv4_energy_today_low')
             if pv4_energy_today_addr:
-                data.pv4_energy_today = self._get_register_value(pv4_energy_today_addr) or 0.0
+                self._set_from_register(data, 'pv4_energy_today', pv4_energy_today_addr)
                 logger.debug(f"[{self.register_map['name']}] PV4 energy today from reg {pv4_energy_today_addr}: {data.pv4_energy_today} kWh")
 
             pv1_energy_total_addr = self._find_register_by_name('pv1_energy_total_low')
             if pv1_energy_total_addr:
-                data.pv1_energy_total = self._get_register_value(pv1_energy_total_addr) or 0.0
+                self._set_from_register(data, 'pv1_energy_total', pv1_energy_total_addr)
                 logger.debug(f"[{self.register_map['name']}] PV1 energy total from reg {pv1_energy_total_addr}: {data.pv1_energy_total} kWh")
 
             pv2_energy_total_addr = self._find_register_by_name('pv2_energy_total_low')
             if pv2_energy_total_addr:
-                data.pv2_energy_total = self._get_register_value(pv2_energy_total_addr) or 0.0
+                self._set_from_register(data, 'pv2_energy_total', pv2_energy_total_addr)
                 logger.debug(f"[{self.register_map['name']}] PV2 energy total from reg {pv2_energy_total_addr}: {data.pv2_energy_total} kWh")
 
             pv3_energy_total_addr = self._find_register_by_name('pv3_energy_total_low')
             if pv3_energy_total_addr:
-                data.pv3_energy_total = self._get_register_value(pv3_energy_total_addr) or 0.0
+                self._set_from_register(data, 'pv3_energy_total', pv3_energy_total_addr)
                 logger.debug(f"[{self.register_map['name']}] PV3 energy total from reg {pv3_energy_total_addr}: {data.pv3_energy_total} kWh")
 
             pv4_energy_total_addr = self._find_register_by_name('pv4_energy_total_low')
             if pv4_energy_total_addr:
-                data.pv4_energy_total = self._get_register_value(pv4_energy_total_addr) or 0.0
+                self._set_from_register(data, 'pv4_energy_total', pv4_energy_total_addr)
                 logger.debug(f"[{self.register_map['name']}] PV4 energy total from reg {pv4_energy_total_addr}: {data.pv4_energy_total} kWh")
 
             pv_energy_total_addr = self._find_register_by_name('pv_energy_total_low')
             if pv_energy_total_addr:
-                data.pv_energy_total = self._get_register_value(pv_energy_total_addr) or 0.0
+                self._set_from_register(data, 'pv_energy_total', pv_energy_total_addr)
                 logger.debug(f"[{self.register_map['name']}] PV energy total from reg {pv_energy_total_addr}: {data.pv_energy_total} kWh")
                 if data.pv_energy_total == 0.0:
                     # Some MIN TL-XH firmware variants return 0 in the 3000-range Epv registers
@@ -2033,25 +2048,25 @@ class GrowattModbus:
             ac_freq_addr = self._find_register_by_name('ac_frequency')
 
             if ac_voltage_addr:
-                data.ac_voltage = self._get_register_value(ac_voltage_addr) or 0.0
+                self._set_from_register(data, 'ac_voltage', ac_voltage_addr)
             if ac_current_addr:
-                data.ac_current = self._get_register_value(ac_current_addr) or 0.0
+                self._set_from_register(data, 'ac_current', ac_current_addr)
             if ac_power_addr:
-                data.ac_power = self._get_register_value(ac_power_addr) or 0.0
+                self._set_from_register(data, 'ac_power', ac_power_addr)
                 logger.debug(f"AC Power from reg {ac_power_addr}: {data.ac_power}W")
             if ac_freq_addr:
-                data.ac_frequency = self._get_register_value(ac_freq_addr) or 0.0
+                self._set_from_register(data, 'ac_frequency', ac_freq_addr)
 
             # AC Apparent Power (SPF Off-Grid, some other models)
             ac_apparent_power_addr = self._find_register_by_name('ac_apparent_power_low')
             if ac_apparent_power_addr:
-                data.ac_apparent_power = self._get_register_value(ac_apparent_power_addr) or 0.0
+                self._set_from_register(data, 'ac_apparent_power', ac_apparent_power_addr)
                 logger.debug(f"AC Apparent Power from reg {ac_apparent_power_addr}: {data.ac_apparent_power} VA")
 
             # Load Percentage (SPF Off-Grid)
             load_percentage_addr = self._find_register_by_name('load_percentage')
             if load_percentage_addr:
-                data.load_percentage = self._get_register_value(load_percentage_addr) or 0.0
+                self._set_from_register(data, 'load_percentage', load_percentage_addr)
                 logger.debug(f"Load Percentage from reg {load_percentage_addr}: {data.load_percentage}%")
 
             # Grid/AC Input (SPF Off-Grid, other models)
@@ -2059,17 +2074,17 @@ class GrowattModbus:
             grid_frequency_addr = self._find_register_by_name('grid_frequency')
             ac_input_power_low_addr = self._find_register_by_name('ac_input_power_low')
             if grid_voltage_addr:
-                data.grid_voltage = self._get_register_value(grid_voltage_addr) or 0.0
+                self._set_from_register(data, 'grid_voltage', grid_voltage_addr)
                 logger.debug(f"Grid voltage from reg {grid_voltage_addr}: {data.grid_voltage} V (raw cache: {self._register_cache.get(grid_voltage_addr)})")
             else:
                 logger.debug("Grid voltage register not found in profile")
             if grid_frequency_addr:
-                data.grid_frequency = self._get_register_value(grid_frequency_addr) or 0.0
+                self._set_from_register(data, 'grid_frequency', grid_frequency_addr)
                 logger.debug(f"Grid frequency from reg {grid_frequency_addr}: {data.grid_frequency} Hz (raw cache: {self._register_cache.get(grid_frequency_addr)})")
             else:
                 logger.debug("Grid frequency register not found in profile")
             if ac_input_power_low_addr:
-                data.ac_input_power = self._get_register_value(ac_input_power_low_addr) or 0.0
+                self._set_from_register(data, 'ac_input_power', ac_input_power_low_addr)
                 logger.debug(f"AC input power from reg {ac_input_power_low_addr}: {data.ac_input_power} W")
             else:
                 logger.debug("AC input power register not found in profile")
@@ -2080,22 +2095,22 @@ class GrowattModbus:
             generator_discharge_today_low_addr = self._find_register_by_name('generator_discharge_today_low')
             generator_discharge_total_low_addr = self._find_register_by_name('generator_discharge_total_low')
             if generator_power_addr:
-                data.generator_power = self._get_register_value(generator_power_addr) or 0.0
+                self._set_from_register(data, 'generator_power', generator_power_addr)
                 logger.debug(f"Generator power from reg {generator_power_addr}: {data.generator_power} W (raw cache: {self._register_cache.get(generator_power_addr)})")
             else:
                 logger.debug("Generator power register not found in profile")
             if generator_voltage_addr:
-                data.generator_voltage = self._get_register_value(generator_voltage_addr) or 0.0
+                self._set_from_register(data, 'generator_voltage', generator_voltage_addr)
                 logger.debug(f"Generator voltage from reg {generator_voltage_addr}: {data.generator_voltage} V (raw cache: {self._register_cache.get(generator_voltage_addr)})")
             else:
                 logger.debug("Generator voltage register not found in profile")
             if generator_discharge_today_low_addr:
-                data.generator_discharge_today = self._get_register_value(generator_discharge_today_low_addr) or 0.0
+                self._set_from_register(data, 'generator_discharge_today', generator_discharge_today_low_addr)
                 logger.debug(f"Generator discharge today from reg {generator_discharge_today_low_addr}: {data.generator_discharge_today} kWh")
             else:
                 logger.debug("Generator discharge today register not found in profile")
             if generator_discharge_total_low_addr:
-                data.generator_discharge_total = self._get_register_value(generator_discharge_total_low_addr) or 0.0
+                self._set_from_register(data, 'generator_discharge_total', generator_discharge_total_low_addr)
                 logger.debug(f"Generator discharge total from reg {generator_discharge_total_low_addr}: {data.generator_discharge_total} kWh")
             else:
                 logger.debug("Generator discharge total register not found in profile")
@@ -2114,17 +2129,17 @@ class GrowattModbus:
             ac_power_t_addr = self._find_register_by_name('ac_power_t_low')
 
             if ac_voltage_r_addr:
-                data.ac_voltage_r = self._get_register_value(ac_voltage_r_addr) or 0.0
+                self._set_from_register(data, 'ac_voltage_r', ac_voltage_r_addr)
             if ac_current_r_addr:
-                data.ac_current_r = self._get_register_value(ac_current_r_addr) or 0.0
+                self._set_from_register(data, 'ac_current_r', ac_current_r_addr)
             if ac_voltage_s_addr:
-                data.ac_voltage_s = self._get_register_value(ac_voltage_s_addr) or 0.0
+                self._set_from_register(data, 'ac_voltage_s', ac_voltage_s_addr)
             if ac_current_s_addr:
-                data.ac_current_s = self._get_register_value(ac_current_s_addr) or 0.0
+                self._set_from_register(data, 'ac_current_s', ac_current_s_addr)
             if ac_voltage_t_addr:
-                data.ac_voltage_t = self._get_register_value(ac_voltage_t_addr) or 0.0
+                self._set_from_register(data, 'ac_voltage_t', ac_voltage_t_addr)
             if ac_current_t_addr:
-                data.ac_current_t = self._get_register_value(ac_current_t_addr) or 0.0
+                self._set_from_register(data, 'ac_current_t', ac_current_t_addr)
 
             power_r_reg = (self._get_register_value(ac_power_r_addr) or 0.0) if ac_power_r_addr else 0.0
             power_s_reg = (self._get_register_value(ac_power_s_addr) or 0.0) if ac_power_s_addr else 0.0
@@ -2140,12 +2155,14 @@ class GrowattModbus:
             all_phase_powers_valid = bool(power_r_reg and power_s_reg and power_t_reg)
 
             if is_three_phase and not all_phase_powers_valid:
-                if data.ac_voltage_r > 0 and data.ac_current_r > 0:
-                    data.ac_power_r = round(data.ac_voltage_r * data.ac_current_r, 1)
-                if data.ac_voltage_s > 0 and data.ac_current_s > 0:
-                    data.ac_power_s = round(data.ac_voltage_s * data.ac_current_s, 1)
-                if data.ac_voltage_t > 0 and data.ac_current_t > 0:
-                    data.ac_power_t = round(data.ac_voltage_t * data.ac_current_t, 1)
+                for _ph in ('r', 's', 't'):
+                    if self._inherit_unread(data, f'ac_power_{_ph}',
+                                            f'ac_voltage_{_ph}', f'ac_current_{_ph}'):
+                        continue
+                    _v = getattr(data, f'ac_voltage_{_ph}')
+                    _i = getattr(data, f'ac_current_{_ph}')
+                    if _v > 0 and _i > 0:
+                        setattr(data, f'ac_power_{_ph}', round(_v * _i, 1))
                 logger.debug(
                     f"Phase power registers incomplete (R={power_r_reg}, S={power_s_reg}, T={power_t_reg}), "
                     f"using V×I: R={data.ac_power_r}W, S={data.ac_power_s}W, T={data.ac_power_t}W"
@@ -2160,16 +2177,16 @@ class GrowattModbus:
             ac_voltage_st_addr = self._find_register_by_name('line_voltage_st')
             ac_voltage_tr_addr = self._find_register_by_name('line_voltage_tr')
             if ac_voltage_rs_addr:
-                data.ac_voltage_rs = self._get_register_value(ac_voltage_rs_addr) or 0.0
+                self._set_from_register(data, 'ac_voltage_rs', ac_voltage_rs_addr)
             if ac_voltage_st_addr:
-                data.ac_voltage_st = self._get_register_value(ac_voltage_st_addr) or 0.0
+                self._set_from_register(data, 'ac_voltage_st', ac_voltage_st_addr)
             if ac_voltage_tr_addr:
-                data.ac_voltage_tr = self._get_register_value(ac_voltage_tr_addr) or 0.0
+                self._set_from_register(data, 'ac_voltage_tr', ac_voltage_tr_addr)
             
             # System output power (total per inverter)
             system_output_addr = self._find_register_by_name('system_output_power_low')
             if system_output_addr:
-                data.system_output_power = self._get_register_value(system_output_addr) or 0.0
+                self._set_from_register(data, 'system_output_power', system_output_addr)
 
             # Power Flow (if available - storage/hybrid models)
             power_to_user_addr = self._find_register_by_name('power_to_user_low')
@@ -2204,7 +2221,7 @@ class GrowattModbus:
                             logger.debug(f"power_to_user 3042=0, using VPP meter reg {vpp_addr}: {ptu_val}W")
                 data.power_to_user = ptu_val if ptu_val is not None else 0.0
             if power_to_load_addr:
-                data.power_to_load = self._get_register_value(power_to_load_addr) or 0.0
+                self._set_from_register(data, 'power_to_load', power_to_load_addr)
             
             # Energy Today
             # For hybrid inverters (WIT/SPH-TL3 etc.), the AC energy_today register (e.g. reg 53/54)
@@ -2236,13 +2253,13 @@ class GrowattModbus:
                     logger.warning(f"[{self.register_map['name']}@{self.connection_id}] Per-MPPT energy {pv_energy_sum} kWh unrealistic - using fallback register instead")
                     energy_today_addr = self._find_register_by_name('energy_today_low')
                     if energy_today_addr:
-                        data.energy_today = self._get_register_value(energy_today_addr) or 0.0
+                        self._set_from_register(data, 'energy_today', energy_today_addr)
                         logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from reg {energy_today_addr}: {data.energy_today} kWh")
             else:
                 # Grid-tied profiles (MIC/MIN/MOD): energy_today register is solar-only, read directly
                 energy_today_addr = self._find_register_by_name('energy_today_low')
                 if energy_today_addr:
-                    data.energy_today = self._get_register_value(energy_today_addr) or 0.0
+                    self._set_from_register(data, 'energy_today', energy_today_addr)
                     logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Energy today from reg {energy_today_addr}: {data.energy_today} kWh (cache: {self._register_cache.get(energy_today_addr)})")
 
             # Energy Total — read directly from register; no override.
@@ -2252,7 +2269,7 @@ class GrowattModbus:
             # Both are exposed as distinct sensor entities — do not substitute one for the other.
             energy_total_addr = self._find_register_by_name('energy_total_low')
             if energy_total_addr:
-                data.energy_total = self._get_register_value(energy_total_addr) or 0.0
+                self._set_from_register(data, 'energy_total', energy_total_addr)
             
             # Energy Breakdown (if available)
             self._read_energy_breakdown(data)
@@ -2269,11 +2286,11 @@ class GrowattModbus:
             boost_temp_addr = self._find_register_by_name('boost_temp')
             
             if inverter_temp_addr:
-                data.inverter_temp = self._get_register_value(inverter_temp_addr) or 0.0
+                self._set_from_register(data, 'inverter_temp', inverter_temp_addr)
             if ipm_temp_addr:
-                data.ipm_temp = self._get_register_value(ipm_temp_addr) or 0.0
+                self._set_from_register(data, 'ipm_temp', ipm_temp_addr)
             if boost_temp_addr:
-                data.boost_temp = self._get_register_value(boost_temp_addr) or 0.0
+                self._set_from_register(data, 'boost_temp', boost_temp_addr)
 
             # SPF Off-Grid additional temperatures
             dcdc_temp_addr = self._find_register_by_name('dcdc_temp')
@@ -2281,20 +2298,20 @@ class GrowattModbus:
             buck2_temp_addr = self._find_register_by_name('buck2_temp')
 
             if dcdc_temp_addr:
-                data.dcdc_temp = self._get_register_value(dcdc_temp_addr) or 0.0
+                self._set_from_register(data, 'dcdc_temp', dcdc_temp_addr)
             if buck1_temp_addr:
-                data.buck1_temp = self._get_register_value(buck1_temp_addr) or 0.0
+                self._set_from_register(data, 'buck1_temp', buck1_temp_addr)
             if buck2_temp_addr:
-                data.buck2_temp = self._get_register_value(buck2_temp_addr) or 0.0
+                self._set_from_register(data, 'buck2_temp', buck2_temp_addr)
 
             # SPF Off-Grid fan speeds
             mppt_fan_speed_addr = self._find_register_by_name('mppt_fan_speed')
             inverter_fan_speed_addr = self._find_register_by_name('inverter_fan_speed')
 
             if mppt_fan_speed_addr:
-                data.mppt_fan_speed = self._get_register_value(mppt_fan_speed_addr) or 0.0
+                self._set_from_register(data, 'mppt_fan_speed', mppt_fan_speed_addr)
             if inverter_fan_speed_addr:
-                data.inverter_fan_speed = self._get_register_value(inverter_fan_speed_addr) or 0.0
+                self._set_from_register(data, 'inverter_fan_speed', inverter_fan_speed_addr)
 
             # Diagnostics
             derating_addr = self._find_register_by_name('derating_mode')
@@ -2998,11 +3015,11 @@ class GrowattModbus:
             # Energy to user
             addr = self._find_register_by_name('energy_to_user_today_low')
             if addr:
-                data.energy_to_user_today = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'energy_to_user_today', addr)
             
             addr = self._find_register_by_name('energy_to_user_total_low')
             if addr:
-                data.energy_to_user_total = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'energy_to_user_total', addr)
             
             # Energy to grid
             # Prefer 32-bit pair (_low suffix); fall back to standalone single register.
@@ -3010,45 +3027,45 @@ class GrowattModbus:
             addr = self._find_register_by_name('energy_to_grid_today_low') or \
                    self._find_register_by_name('energy_to_grid_today')
             if addr:
-                data.energy_to_grid_today = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'energy_to_grid_today', addr)
 
             addr = self._find_register_by_name('energy_to_grid_total_low')
             if addr:
-                data.energy_to_grid_total = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'energy_to_grid_total', addr)
             
             # Load energy
             addr = self._find_register_by_name('load_energy_today_low')
             if addr:
-                data.load_energy_today = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'load_energy_today', addr)
                 logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Load energy today from reg {addr}: {data.load_energy_today} kWh (cache: {self._register_cache.get(addr)})")
             else:
                 logger.debug(f"[{self.register_map['name']}@{self.connection_id}] load_energy_today_low register not found (expected for off-grid models like SPF)")
 
             addr = self._find_register_by_name('load_energy_total_low')
             if addr:
-                data.load_energy_total = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'load_energy_total', addr)
                 logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Load energy total from reg {addr}: {data.load_energy_total} kWh (cache: {self._register_cache.get(addr)})")
 
             # Operational discharge energy (SPF off-grid models)
             addr = self._find_register_by_name('op_discharge_energy_today_low')
             if addr:
-                data.op_discharge_energy_today = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'op_discharge_energy_today', addr)
                 logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Operational discharge energy today from reg {addr}: {data.op_discharge_energy_today} kWh (cache: {self._register_cache.get(addr)})")
 
             addr = self._find_register_by_name('op_discharge_energy_total_low')
             if addr:
-                data.op_discharge_energy_total = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'op_discharge_energy_total', addr)
                 logger.debug(f"[{self.register_map['name']}@{self.connection_id}] Operational discharge energy total from reg {addr}: {data.op_discharge_energy_total} kWh (cache: {self._register_cache.get(addr)})")
 
             # AC Discharge Energy (SPF off-grid models - battery to load via inverter)
             addr = self._find_register_by_name('ac_discharge_energy_today_low')
             if addr:
-                data.ac_discharge_energy_today = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'ac_discharge_energy_today', addr)
                 logger.debug(f"[{self.register_map['name']}@{self.connection_id}] AC discharge energy today from reg {addr}: {data.ac_discharge_energy_today} kWh (cache: {self._register_cache.get(addr)})")
 
             addr = self._find_register_by_name('ac_discharge_energy_total_low')
             if addr:
-                data.ac_discharge_energy_total = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'ac_discharge_energy_total', addr)
                 logger.debug(f"[{self.register_map['name']}@{self.connection_id}] AC discharge energy total from reg {addr}: {data.ac_discharge_energy_total} kWh (cache: {self._register_cache.get(addr)})")
 
         except Exception as e:
@@ -3185,7 +3202,7 @@ class GrowattModbus:
             # Use range-aware lookup to respect VPP vs fallback detection
             addr = self._find_register_by_name_with_fallback('battery_temp')
             if addr:
-                data.battery_temp = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'battery_temp', addr)
                 logger.debug(f"Battery temp from reg {addr}: {data.battery_temp}°C")
 
             # Battery State of Health (WIT-only - only set if register exists in profile)
@@ -3249,7 +3266,15 @@ class GrowattModbus:
                     battery_power = 0.0
                     logger.debug(f"Battery power set to 0W (voltage {data.battery_voltage}V < {BATTERY_VOLTAGE_THRESHOLD}V AND SOC {data.battery_soc}% < {BATTERY_SOC_THRESHOLD}% — battery appears disconnected, ignoring registers HIGH={raw_high} LOW={raw_low})")
                 else:
-                    battery_power = self._get_register_value(addr) or 0.0
+                    _bp = self._get_register_value(addr)
+                    if _bp is None:
+                        # Not read this poll. Coercing to 0 here is worse than elsewhere:
+                        # the sign split below would then set BOTH charge and discharge to
+                        # zero, which is indistinguishable from an idle battery (#384).
+                        data.unread_fields.update(
+                            ('battery_power', 'charge_power', 'discharge_power')
+                        )
+                    battery_power = 0.0 if _bp is None else _bp
                     logger.debug(f"Battery power (signed): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {battery_power}W")
 
                 # Apply inversion if configured (for inverters with opposite sign convention)
@@ -3284,7 +3309,12 @@ class GrowattModbus:
                     raw_low = self._register_cache.get(addr, 0)
                     pair_addr = self._find_register_by_name_with_fallback('charge_power_high')
                     raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                    raw_charge_power = self._get_register_value(addr) or 0.0
+                    _rcp = self._get_register_value(addr)
+                    if _rcp is None:
+                        data.unread_fields.add(
+                            'discharge_power' if self._invert_battery_power else 'charge_power'
+                        )
+                    raw_charge_power = 0.0 if _rcp is None else _rcp
                     logger.debug(f"Charge power (raw): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {raw_charge_power}W")
 
                     # Apply swapping if battery power is inverted (opposite convention)
@@ -3304,7 +3334,12 @@ class GrowattModbus:
                     raw_low = self._register_cache.get(addr, 0)
                     pair_addr = self._find_register_by_name_with_fallback('discharge_power_high')
                     raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                    raw_discharge_power = self._get_register_value(addr) or 0.0
+                    _rdp = self._get_register_value(addr)
+                    if _rdp is None:
+                        data.unread_fields.add(
+                            'charge_power' if self._invert_battery_power else 'discharge_power'
+                        )
+                    raw_discharge_power = 0.0 if _rdp is None else _rdp
                     logger.debug(f"Discharge power (raw): HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {raw_discharge_power}W")
 
                     # Apply swapping if battery power is inverted (opposite convention)
@@ -3383,7 +3418,7 @@ class GrowattModbus:
                 raw_low = self._register_cache.get(addr, 0)
                 pair_addr = self._find_register_by_name('ac_charge_energy_today_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                data.ac_charge_energy_today = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'ac_charge_energy_today', addr)
                 logger.debug(f"AC charge energy today: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.ac_charge_energy_today} kWh")
 
             # AC Charge Energy Total (WIT-specific - SPF populates this from charge_energy_total above)
@@ -3392,7 +3427,7 @@ class GrowattModbus:
                 raw_low = self._register_cache.get(addr, 0)
                 pair_addr = self._find_register_by_name('ac_charge_energy_total_high')
                 raw_high = self._register_cache.get(pair_addr, 0) if pair_addr else 0
-                data.ac_charge_energy_total = self._get_register_value(addr) or 0.0
+                self._set_from_register(data, 'ac_charge_energy_total', addr)
                 logger.debug(f"AC charge energy total: HIGH={raw_high} (reg {pair_addr}), LOW={raw_low} (reg {addr}) → {data.ac_charge_energy_total} kWh")
 
             if data.battery_voltage > 0:

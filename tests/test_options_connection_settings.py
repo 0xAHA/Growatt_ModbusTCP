@@ -131,3 +131,35 @@ def test_setup_and_options_offer_the_same_ports():
     assert "port_options[port.device] = desc" not in SOURCE, (
         "the setup wizard still builds its own port list from comports() alone"
     )
+
+
+def test_port_enumeration_never_runs_on_the_event_loop():
+    """Listing serial ports globs /dev and opens sysfs files. Home Assistant flags that as a
+    blocking call and logs a traceback asking the user to file a bug (#384).
+
+    The setup wizard always wrapped it in an executor. The options page was added later and
+    called it directly - the same helper, one of two call sites converted, which is the
+    failure shape CLAUDE.md rule 5 exists for.
+
+    Asserted with ast rather than a string search: handing the function to
+    async_add_executor_job leaves it a bare Name, so *any* Call node naming it is by
+    definition a direct invocation on the loop.
+    """
+    import ast
+    from pathlib import Path
+
+    path = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+            / "config_flow.py")
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+
+    direct = [
+        node.lineno
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "_serial_port_options"
+    ]
+    assert not direct, (
+        f"_serial_port_options is called directly at config_flow.py line(s) "
+        f"{direct} - it must go through hass.async_add_executor_job"
+    )

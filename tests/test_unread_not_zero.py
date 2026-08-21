@@ -168,6 +168,49 @@ def test_a_derived_string_power_is_not_published_when_its_inputs_were_unread():
     )
 
 
+def test_no_field_anywhere_still_coerces_a_failed_read_to_zero():
+    """The fix was scoped to twelve PV fields, which left ~57 others - AC power, AC voltage,
+    load power, every energy counter - still publishing a confident zero on a failed read.
+
+    A reporter's chart showed PV1 Power and AC Power dropping to exactly 0 at the same
+    instant while the inverter was plainly producing, and a second inverter showed PV
+    voltage reading 0 V in full daylight, which is not a physical possibility.
+
+    Asserted with ast so docstrings and comments quoting the old pattern do not count:
+    every `data.<field> = self._get_register_value(...) or 0.0` is a real assignment node.
+    """
+    import ast
+    from pathlib import Path
+
+    path = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+            / "growatt_modbus.py")
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+
+    offenders = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not (len(node.targets) == 1 and isinstance(node.targets[0], ast.Attribute)):
+            continue
+        target = node.targets[0]
+        if not (isinstance(target.value, ast.Name) and target.value.id == "data"):
+            continue
+        value = node.value
+        if not (isinstance(value, ast.BoolOp) and isinstance(value.op, ast.Or)):
+            continue
+        if any(
+            isinstance(v, ast.Call) and isinstance(v.func, ast.Attribute)
+            and v.func.attr == "_get_register_value"
+            for v in value.values
+        ):
+            offenders.append(f"{target.attr} (line {node.lineno})")
+
+    assert not offenders, (
+        "these fields still turn a failed read into 0.0 instead of recording it as "
+        f"unread: {offenders}"
+    )
+
+
 def test_an_unread_total_reaches_home_assistant_as_unavailable():
     """The join. Recording it in the set is only useful if the sensor consults the set —
     and pv_total_power is read through the same generic path as the twelve fields already

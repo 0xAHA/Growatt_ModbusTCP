@@ -4,6 +4,28 @@
 
 ---
 
+## v1.6.9 (pre-release)
+
+Issues: #384
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **No sensor publishes a zero for a reading it could not take.** v1.6.6 fixed this for the
+  twelve PV sensors; the same defect remained in 57 others, including AC power, AC voltage,
+  grid voltage, load power, temperatures and every energy counter. All of them now go
+  *unknown* for that poll, leaving a gap in history rather than a zero that cannot afterwards
+  be told apart from a real measurement. Genuine zeros are still recorded. Applies to every
+  profile. Reported by @dinkalin-ux. (#384)
+- **Battery charge and discharge power no longer both read 0 W on a failed read**, which was
+  indistinguishable from an idle battery. Derived values — total solar power, per-phase power
+  calculated from voltage and current — now inherit the read state of their inputs.
+- **Changing connection settings no longer logs a blocking-call warning.** Opening the
+  options page on a serial setup enumerated serial ports on the event loop, which Home
+  Assistant reports with a traceback asking you to file a bug. Cosmetic, but noisy. Reported
+  by @dinkalin-ux. (#384)
+
+---
+
 ## v1.6.8 (pre-release)
 
 Issues: #384
