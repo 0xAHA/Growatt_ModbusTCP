@@ -4,6 +4,21 @@
 
 ---
 
+## v1.6.8 (pre-release)
+
+Issues: #384
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **Total Solar Power now goes unknown on a failed read, instead of zero.** v1.6.6 stopped
+  the per-string PV sensors publishing a zero when their block could not be read, but the
+  total is calculated from those strings and was still publishing 0 W - so the headline solar
+  sensor, and the energy-flow cards that read it, kept showing the drop the earlier fix was
+  meant to remove. Applies to every profile. Per-string power on models that report only
+  voltage and current (MIN TL-XH2) is corrected the same way. (#384)
+
+---
+
 ## v1.6.7 (pre-release)
 
 Issues: #386

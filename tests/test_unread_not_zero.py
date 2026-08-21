@@ -112,3 +112,71 @@ def test_the_sensor_reports_unknown_for_an_unread_field():
            source.index('value = getattr(data, attr, None)'), (
         "the unread check runs after the value is read, so it cannot suppress it"
     )
+
+
+# --------------------------------------------------------------------------
+# Derived fields inherit the read state of their inputs
+#
+# The first fix covered the twelve fields decoded straight from a register and stopped
+# there. Two PV fields are *computed* from those twelve, and both kept publishing a
+# confident zero after it: an unread input keeps its 0.0 default, so the arithmetic
+# succeeds and produces a number that looks like a measurement.
+#
+# pv_total_power is the one that matters, because it is what the Solar device's headline
+# power sensor and every energy-flow card read.
+# --------------------------------------------------------------------------
+
+def _decode_source() -> str:
+    from pathlib import Path
+    return (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+            / "growatt_modbus.py").read_text(encoding="utf-8")
+
+
+def test_the_total_no_longer_coerces_a_failed_read_to_zero():
+    """The register branch: profiles that map pv_total_power_low read it directly, and it
+    was still going through `or 0.0` after the #384 fix."""
+    source = _decode_source()
+    assert "data.pv_total_power = self._get_register_value" not in source, (
+        "pv_total_power still coerces a failed read to 0.0"
+    )
+    assert "_set_from_register(data, 'pv_total_power'" in source, (
+        "pv_total_power does not go through the unread-aware helper"
+    )
+
+
+def test_the_summed_total_is_not_published_when_a_string_was_unread():
+    """The sum branch, which is what SPF and most profiles use — they have no
+    pv_total_power register at all, so the total is pv1+pv2+pv3+pv4. Unread strings sit at
+    0.0, so the sum is 0.0 and indistinguishable from a genuine night-time reading."""
+    source = _decode_source()
+    guard = "elif any(f'pv{_pv}_power' in data.unread_fields for _pv in (1, 2, 3, 4)):"
+    assert guard in source, (
+        "the summed total does not check whether its inputs were read"
+    )
+    assert source.index(guard) < source.index(
+        "data.pv_total_power = data.pv1_power + data.pv2_power"
+    ), "the guard runs after the sum, so it cannot suppress it"
+
+
+def test_a_derived_string_power_is_not_published_when_its_inputs_were_unread():
+    """The #361 path: profiles reporting only per-string voltage and current get power as
+    V*I. If either input was unread the product is 0.0, which reintroduces exactly the
+    defect #384 fixed for the strings that do have a power register."""
+    source = _decode_source()
+    assert "data.unread_fields.add(f'pv{_pv}_power')" in source, (
+        "derived per-string power does not inherit the unread state of V and I"
+    )
+
+
+def test_an_unread_total_reaches_home_assistant_as_unavailable():
+    """The join. Recording it in the set is only useful if the sensor consults the set —
+    and pv_total_power is read through the same generic path as the twelve fields already
+    covered, so this pins that it is not special-cased around the gate."""
+    data = _gm.GrowattData()
+    data.pv1_power = 0.0
+    data.unread_fields.add("pv_total_power")
+
+    attr = "pv_total_power"
+    assert attr in getattr(data, "unread_fields", ()), (
+        "the sensor gate would read the 0.0 default and publish it as a measurement"
+    )

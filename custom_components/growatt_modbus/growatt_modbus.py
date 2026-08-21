@@ -1940,6 +1940,13 @@ class GrowattModbus:
             for _pv in (1, 2, 3, 4):
                 if self._find_register_by_name(f'pv{_pv}_power_low'):
                     continue  # real register present — never override it
+                # A derived value is only as readable as its inputs. If either was not
+                # read this poll they are still sitting at their 0.0 default, so the
+                # product would publish a confident zero (#384).
+                if (f'pv{_pv}_voltage' in data.unread_fields
+                        or f'pv{_pv}_current' in data.unread_fields):
+                    data.unread_fields.add(f'pv{_pv}_power')
+                    continue
                 _v = getattr(data, f'pv{_pv}_voltage', 0.0) or 0.0
                 _i = getattr(data, f'pv{_pv}_current', 0.0) or 0.0
                 if _v and _i:
@@ -1948,7 +1955,12 @@ class GrowattModbus:
             # Total PV Power
             pv_total_addr = self._find_register_by_name('pv_total_power_low')
             if pv_total_addr:
-                data.pv_total_power = self._get_register_value(pv_total_addr) or 0.0
+                self._set_from_register(data, 'pv_total_power', pv_total_addr)
+            elif any(f'pv{_pv}_power' in data.unread_fields for _pv in (1, 2, 3, 4)):
+                # Summed from the strings, so it inherits their read state. Unread
+                # strings keep their 0.0 default, which made the total the one PV field
+                # still publishing a plausible zero after the #384 fix.
+                data.unread_fields.add('pv_total_power')
             else:
                 # Calculate from strings if not available
                 data.pv_total_power = data.pv1_power + data.pv2_power + data.pv3_power + data.pv4_power
