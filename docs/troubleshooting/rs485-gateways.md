@@ -175,9 +175,13 @@ This matters when you are judging whether a change actually helped:
 |---|---|
 | Vertical drop to 0 and back, **one sample** | Pre-v1.6.6 behaviour — upgrade |
 | **Gap**, one or two samples | A dropped frame. Normal on a serial bus; reduce by raising the scan interval |
-| **Flat-bottomed dip** across several consecutive polls, with voltage and current still reporting plausible values | Not a comms fault. The inverter reported this — check battery SOC, load, and whether ShinePhone shows the same dip |
+| **Flat-bottomed dip** across several consecutive polls, with voltage and current still reporting plausible values | Not a comms fault. The inverter reported this — see below |
 
 The third row is the one most often misread as a communication problem. If the reads had failed, every sensor in that block would be gapped together; values that are present, low, and consistent with each other came from the inverter.
+
+To find out why the inverter backed off, overlay **Battery SOC**, **Battery Power**, **Load Power** and **Inverter Status** on the same window — on most profiles these are read in the same block as the PV registers, so they also confirm the read succeeded. A full battery with a low load is the common answer: the inverter has nowhere to send the energy and throttles the MPPT, which is correct behaviour.
+
+Do not use the Growatt cloud app to cross-check a short dip. ShinePhone stores 5-minute averages, so a 30-second event is smoothed to roughly a 10% dent — it cannot confirm or rule out anything at that timescale. Your own recorder has far better resolution.
 
 Occasional dropped frames are normal on RS485 and cannot be eliminated entirely. Raising the scan interval reduces how often they happen by reducing how many reads you make — the failure rate per read stays the same.
 
