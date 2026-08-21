@@ -157,6 +157,32 @@ The integration holds one socket per host:port across polls. It was suspected of
 
 ---
 
+## Gaps in the graph are the fix, not the fault
+
+Since **v1.6.6** a register that could not be read is published as **unavailable** for that poll, not as `0`.
+
+If you upgraded from an older version, occasional short gaps in your solar or battery graphs are the same dropped frames you always had — they are simply no longer disguised. Before, a single failed block read produced a vertical drop to 0 W and back within one poll, with nothing logged as an error, because from Home Assistant's side the poll had succeeded.
+
+Zero is not a neutral placeholder. It is a plausible measurement, it enters long-term statistics, and afterwards it cannot be told apart from a real one. A gap is unambiguous.
+
+**A genuine zero is still recorded.** Night-time, standby and a truly idle string all still read 0.
+
+### Telling the two apart
+
+This matters when you are judging whether a change actually helped:
+
+| What you see | What it means |
+|---|---|
+| Vertical drop to 0 and back, **one sample** | Pre-v1.6.6 behaviour — upgrade |
+| **Gap**, one or two samples | A dropped frame. Normal on a serial bus; reduce by raising the scan interval |
+| **Flat-bottomed dip** across several consecutive polls, with voltage and current still reporting plausible values | Not a comms fault. The inverter reported this — check battery SOC, load, and whether ShinePhone shows the same dip |
+
+The third row is the one most often misread as a communication problem. If the reads had failed, every sensor in that block would be gapped together; values that are present, low, and consistent with each other came from the inverter.
+
+Occasional dropped frames are normal on RS485 and cannot be eliminated entirely. Raising the scan interval reduces how often they happen by reducing how many reads you make — the failure rate per read stays the same.
+
+---
+
 ## Keeping the cloud app working
 
 You do not necessarily have to choose. On both systems in #367 the inverter has a **`SYS COM` port separate from the USB port the ShineWiFi dongle occupies**, so a second RS485 master can run alongside the stock dongle. Home Assistant gets a local Modbus path, and the dongle keeps feeding Growatt's own app.
