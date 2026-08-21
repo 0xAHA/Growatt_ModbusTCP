@@ -432,18 +432,43 @@ class GrowattData:
     serial_number: str = ""
 
 class SharedModbusConnection:
-    """Single ModbusTcpClient shared across multiple GrowattModbus instances on the same host:port.
+    """One Modbus client shared across every GrowattModbus instance on the same transport.
+
+    For TCP that means the same host:port; for serial, the same device path.
 
     Serializes all Modbus transactions with a threading.Lock (because _fetch_data runs in
-    executor threads, not on the asyncio event loop).  Reference-counted so the TCP socket
+    executor threads, not on the asyncio event loop).  Reference-counted so the connection
     stays open as long as at least one coordinator needs it.
+
+    **Serial was excluded from this until v1.7.0**, which was backwards. The hub's stated
+    purpose is preventing RS485 cross-talk, and an RS485 bus is exactly where two
+    uncoordinated masters collide: each config entry opened its own ModbusSerialClient on
+    the same adapter and paced itself with a per-instance `min_read_interval`, which says
+    nothing about what the other entry is doing. Two inverters on one USB-RS485 adapter —
+    the normal way to wire a parallel SPF stack — interleaved their frames on one physical
+    bus with nothing serializing them.
     """
 
-    def __init__(self, host: str, port: int, timeout: int = 10) -> None:
+    def __init__(
+        self,
+        host: str = "",
+        port: int = 502,
+        timeout: int = 10,
+        device: str = "",
+        baudrate: int = 9600,
+        parity: str = "N",
+        stopbits: int = 1,
+        bytesize: int = 8,
+    ) -> None:
         self.host = host
         self.port = port
+        self.device = device
+        self.baudrate = baudrate
+        self.parity = parity
+        self.stopbits = stopbits
+        self.bytesize = bytesize
         self._timeout = timeout
-        self._client: Optional['ModbusTcpClient'] = None
+        self._client: Optional[Union['ModbusTcpClient', 'ModbusSerialClient']] = None
         # Reentrant so a caller can hold the bus across a sequence of writes while the
         # individual write methods still take it themselves (#331). A plain Lock would
         # deadlock the moment write_batch() wrapped anything. Reentrancy is per-thread,
@@ -466,6 +491,15 @@ class SharedModbusConnection:
         # failure rate indefinitely and the only visible sign is log lines nobody reads.
         self.good_reads = 0
         self.malformed_reads = 0
+
+    @property
+    def is_serial(self) -> bool:
+        return bool(self.device)
+
+    @property
+    def connection_id(self) -> str:
+        """Identifier used in log lines — the device path, or host:port."""
+        return self.device if self.is_serial else f"{self.host}:{self.port}"
 
     # ------------------------------------------------------------------
     # Reference counting
@@ -498,12 +532,30 @@ class SharedModbusConnection:
     def ensure_connected(self) -> bool:
         """Connect if not already open; flush stale bytes on a new connection."""
         if self._client is None:
-            try:
-                self._client = ModbusTcpClient(host=self.host, port=self.port, timeout=self._timeout)
-            except TypeError:
-                self._client = ModbusTcpClient(self.host, self.port)
-                if hasattr(self._client, 'timeout'):
-                    self._client.timeout = self._timeout
+            if self.is_serial:
+                if not SERIAL_AVAILABLE:
+                    logger.error(
+                        "[SharedConn %s] pyserial/pymodbus serial support is not installed",
+                        self.connection_id,
+                    )
+                    return False
+                # NB: the runtime name is ModbusClient — ModbusSerialClient is imported only
+                # under TYPE_CHECKING and does not exist when this executes.
+                self._client = ModbusClient(
+                    port=self.device,
+                    baudrate=self.baudrate,
+                    parity=self.parity,
+                    stopbits=self.stopbits,
+                    bytesize=self.bytesize,
+                    timeout=self._timeout,
+                )
+            else:
+                try:
+                    self._client = ModbusTcpClient(host=self.host, port=self.port, timeout=self._timeout)
+                except TypeError:
+                    self._client = ModbusTcpClient(self.host, self.port)
+                    if hasattr(self._client, 'timeout'):
+                        self._client.timeout = self._timeout
 
         try:
             if hasattr(self._client, 'is_socket_open') and self._client.is_socket_open():
@@ -535,13 +587,34 @@ class SharedModbusConnection:
         a wedged connection.
         """
         logger.warning(
-            "[SharedConn %s:%s] Resetting connection%s",
-            self.host, self.port, f": {reason}" if reason else "",
+            "[SharedConn %s] Resetting connection%s",
+            self.connection_id, f": {reason}" if reason else "",
         )
         self.disconnect()
 
     def _flush_receive_buffer(self) -> None:
-        """Drain stale Modbus responses left in the adapter's TCP buffer after reconnect."""
+        """Drain stale Modbus responses left in the adapter's buffer after reconnect."""
+        if self.is_serial:
+            # pyserial exposes its own drain; the socket recv() path below does not apply
+            # and would raise on a Serial object.
+            serial_port = getattr(self._client, 'socket', None)
+            if serial_port is None:
+                return
+            try:
+                waiting = getattr(serial_port, 'in_waiting', 0)
+                serial_port.reset_input_buffer()
+                if waiting:
+                    logger.debug(
+                        "[SharedConn %s] Flushed %d stale bytes from serial input buffer",
+                        self.connection_id, waiting,
+                    )
+            except Exception as exc:
+                logger.debug(
+                    "[SharedConn %s] Serial buffer flush failed (non-critical): %s",
+                    self.connection_id, exc,
+                )
+            return
+
         sock = getattr(self._client, 'socket', None)
         if sock is None:
             transport = getattr(self._client, 'transport', None)
@@ -565,11 +638,11 @@ class SharedModbusConnection:
                 sock.settimeout(original_timeout)
             if discarded:
                 logger.debug(
-                    "[SharedConn %s:%s] Flushed %d stale bytes from receive buffer after reconnect",
-                    self.host, self.port, discarded,
+                    "[SharedConn %s] Flushed %d stale bytes from receive buffer after reconnect",
+                    self.connection_id, discarded,
                 )
         except Exception as exc:
-            logger.debug("[SharedConn %s:%s] Buffer flush failed (non-critical): %s", self.host, self.port, exc)
+            logger.debug("[SharedConn %s] Buffer flush failed (non-critical): %s", self.connection_id, exc)
 
     # ------------------------------------------------------------------
     # Register access (slave_id passed per call, not stored on hub)
@@ -603,9 +676,9 @@ class SharedModbusConnection:
 
         if len(registers) != count:
             logger.warning(
-                "[SharedConn %s:%s] Short/misaligned read at %d: got %d of %d registers — "
+                "[SharedConn %s] Short/misaligned read at %d: got %d of %d registers — "
                 "discarding frame and flushing buffer",
-                self.host, self.port, start, len(registers), count,
+                self.connection_id, start, len(registers), count,
             )
             # A misaligned stream stays misaligned — which is why the corrupt values
             # repeat byte-for-byte rather than varying. Draining the buffer here gives the
@@ -647,15 +720,15 @@ class SharedModbusConnection:
             except Exception as exc:
                 if attempt == 0 and self._begin_recovery():
                     logger.debug(
-                        "[SharedConn %s:%s] read_input_registers(%d, %d) transport error "
+                        "[SharedConn %s] read_input_registers(%d, %d) transport error "
                         "(%s) — resetting and retrying once",
-                        self.host, self.port, start, count, exc,
+                        self.connection_id, start, count, exc,
                     )
                     self.reset("transport error during block read")
                     if self.ensure_connected():
                         continue
-                logger.debug("[SharedConn %s:%s] read_input_registers(%d, %d, slave=%d) error: %s",
-                             self.host, self.port, start, count, slave_id, exc)
+                logger.debug("[SharedConn %s] read_input_registers(%d, %d, slave=%d) error: %s",
+                             self.connection_id, start, count, slave_id, exc)
                 return None
 
             return self._validate_registers(resp, start, count)
@@ -677,15 +750,15 @@ class SharedModbusConnection:
             except Exception as exc:
                 if attempt == 0 and self._begin_recovery():
                     logger.debug(
-                        "[SharedConn %s:%s] read_holding_registers(%d, %d) transport error "
+                        "[SharedConn %s] read_holding_registers(%d, %d) transport error "
                         "(%s) — resetting and retrying once",
-                        self.host, self.port, start, count, exc,
+                        self.connection_id, start, count, exc,
                     )
                     self.reset("transport error during block read")
                     if self.ensure_connected():
                         continue
-                logger.debug("[SharedConn %s:%s] read_holding_registers(%d, %d, slave=%d) error: %s",
-                             self.host, self.port, start, count, slave_id, exc)
+                logger.debug("[SharedConn %s] read_holding_registers(%d, %d, slave=%d) error: %s",
+                             self.connection_id, start, count, slave_id, exc)
                 return None
 
             return self._validate_registers(resp, start, count)
@@ -730,15 +803,15 @@ class SharedModbusConnection:
             except Exception as exc:
                 if attempt == 0 and self._begin_recovery():
                     logger.debug(
-                        "[SharedConn %s:%s] write_register(%d, %d) transport error (%s) — "
+                        "[SharedConn %s] write_register(%d, %d) transport error (%s) — "
                         "resetting and retrying once",
-                        self.host, self.port, register, value, exc,
+                        self.connection_id, register, value, exc,
                     )
                     self.reset("transport error during write")
                     if self.ensure_connected():
                         continue
-                logger.debug("[SharedConn %s:%s] write_register(%d, %d, slave=%d) error: %s",
-                             self.host, self.port, register, value, slave_id, exc)
+                logger.debug("[SharedConn %s] write_register(%d, %d, slave=%d) error: %s",
+                             self.connection_id, register, value, slave_id, exc)
                 self.disconnect()
                 return False
 
@@ -760,15 +833,15 @@ class SharedModbusConnection:
             except Exception as exc:
                 if attempt == 0 and self._begin_recovery():
                     logger.debug(
-                        "[SharedConn %s:%s] write_registers(%d, %d values) transport error "
+                        "[SharedConn %s] write_registers(%d, %d values) transport error "
                         "(%s) — resetting and retrying once",
-                        self.host, self.port, register, len(values), exc,
+                        self.connection_id, register, len(values), exc,
                     )
                     self.reset("transport error during write")
                     if self.ensure_connected():
                         continue
-                logger.debug("[SharedConn %s:%s] write_registers(%d, slave=%d) error: %s",
-                             self.host, self.port, register, slave_id, exc)
+                logger.debug("[SharedConn %s] write_registers(%d, slave=%d) error: %s",
+                             self.connection_id, register, slave_id, exc)
                 self.disconnect()
                 return False
 

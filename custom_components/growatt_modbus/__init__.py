@@ -17,6 +17,9 @@ from .const import (
     CONF_INVERTER_SERIES,
     CONF_REGISTER_MAP,
     CONF_CONNECTION_TYPE,
+    CONF_DEVICE_PATH,
+    CONF_BAUDRATE,
+    DEFAULT_BAUDRATE,
     CURRENT_DEVICE_STRUCTURE_VERSION,
     REGISTER_MAPS,
     WRITABLE_REGISTERS,
@@ -242,27 +245,48 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info("Removing stale number entity %s (WIT export_limit_w reg 203 not writable)", _stale_export_eid)
         entity_registry.async_remove(_stale_export_eid)
 
-    # Shared connection hub: all TCP entries on the same host:port share one ModbusTcpClient
-    # and a threading.Lock to serialize reads/writes and prevent RS485 cross-talk on the gateway.
+    # Shared connection hub: every entry on the same transport — the same host:port for TCP,
+    # the same device path for serial — shares one client and a threading.Lock that
+    # serializes reads and writes, preventing RS485 cross-talk.
+    #
+    # Serial was excluded from this until v1.7.0, which had it backwards: an RS485 bus is
+    # precisely where two uncoordinated masters collide. Each entry opened its own
+    # ModbusSerialClient on the same adapter and paced itself with a per-instance
+    # min_read_interval, which says nothing about what the other entry is doing. Two
+    # inverters on one USB-RS485 adapter is the normal way to wire a parallel SPF stack.
+    #
     # This is transparent for single-entry setups (hub refcount=1, no actual sharing).
     hub: SharedModbusConnection | None = None
     connection_type = entry.data.get(CONF_CONNECTION_TYPE, "tcp")
+    timeout = entry.options.get("timeout", 10)
+    connections = hass.data[DOMAIN].setdefault("_connections", {})
+
     if connection_type == "tcp":
         from homeassistant.const import CONF_HOST, CONF_PORT
         host = entry.data.get(CONF_HOST, "")
         port = entry.data.get(CONF_PORT, 502)
-        timeout = entry.options.get("timeout", 10)
-        hub_key = f"{host}:{port}"
-        connections = hass.data[DOMAIN].setdefault("_connections", {})
+        hub_key = f"{host}:{port}" if host else ""
+        hub_factory = lambda: SharedModbusConnection(host=host, port=port, timeout=timeout)
+    else:
+        device = entry.data.get(CONF_DEVICE_PATH, "")
+        baudrate = entry.data.get(CONF_BAUDRATE, DEFAULT_BAUDRATE)
+        # Keyed on the device path alone: baud rate is a property of the bus, so two entries
+        # disagreeing about it are misconfigured rather than entitled to separate clients.
+        hub_key = f"serial:{device}" if device else ""
+        hub_factory = lambda: SharedModbusConnection(
+            device=device, baudrate=baudrate, timeout=timeout
+        )
+
+    if hub_key:
         if hub_key not in connections:
-            connections[hub_key] = SharedModbusConnection(host=host, port=port, timeout=timeout)
+            connections[hub_key] = hub_factory()
             _LOGGER.debug("Created shared Modbus connection hub for %s", hub_key)
         hub = connections[hub_key]
         hub.acquire_ref()
         if hub._refcount > 1:
             _LOGGER.info(
                 "Shared Modbus connection mode: entry %s joined hub for %s (refcount=%d) — "
-                "RS485 gateway cross-talk prevention active",
+                "RS485 cross-talk prevention active",
                 entry.entry_id, hub_key, hub._refcount,
             )
 

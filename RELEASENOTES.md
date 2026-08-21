@@ -4,6 +4,20 @@
 
 ---
 
+## v1.7.0 (pre-release)
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **Multiple inverters on one USB-RS485 adapter now share a single connection.** Until now
+  each entry opened its own serial client on the same adapter and paced only itself, so two
+  pollers interleaved their frames on one bus with nothing coordinating them — which shows up
+  as random, unexplained read failures on both inverters. Serial entries on the same device
+  path are now serialised behind one lock, the same way TCP entries on the same host:port
+  already were. **Only affects setups with two or more entries on one adapter**; single-entry
+  setups are unchanged, and TCP is untouched.
+
+---
+
 ## v1.6.9 (pre-release)
 
 Issues: #384

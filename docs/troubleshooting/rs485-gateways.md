@@ -157,6 +157,23 @@ The integration holds one socket per host:port across polls. It was suspected of
 
 ---
 
+## Two or more inverters on one adapter
+
+If you run several inverters as separate integration entries over **one** USB-RS485 adapter or one gateway, they share a single physical bus. Only one master can be talking at a time.
+
+The integration handles this for you: every entry pointing at the same device path (or the same host:port) shares one connection and one lock, so their reads are queued rather than interleaved. Nothing to configure.
+
+**Serial setups need v1.7.0 or later for this.** Before that, only TCP entries were coordinated — each serial entry opened its own client on the same adapter and paced only itself, which produced random read failures on *all* the inverters sharing that bus. If you have two entries on one adapter and see unexplained dropouts, this is the first thing to rule out.
+
+Two consequences worth knowing:
+
+- **Polls queue, they do not overlap.** With several inverters the effective cycle is the sum of their polls. If a single poll takes 8 s, three inverters need an interval comfortably above 24 s.
+- **A slow or failing inverter slows the others**, because they wait for the bus. If one entry is much worse than the rest, disable it and see whether the others recover — that isolates the problem device quickly.
+
+Raising the scan interval is the main lever here, exactly as it is for a single unit.
+
+---
+
 ## Gaps in the graph are the fix, not the fault
 
 Since **v1.6.6** a register that could not be read is published as **unavailable** for that poll, not as `0`.
