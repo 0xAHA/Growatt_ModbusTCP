@@ -34,14 +34,15 @@ def _load_port_helper():
     import ast
 
     tree = ast.parse(SOURCE)
-    wanted = {"SERIAL_BY_ID_DIR", "MANUAL_PATH_SENTINEL", "_serial_port_options"}
+    wanted = {"SERIAL_BY_ID_DIR", "SERIAL_BY_PATH_DIR", "MANUAL_PATH_SENTINEL",
+              "_serial_port_options"}
     keep = [
         node for node in tree.body
         if (isinstance(node, ast.FunctionDef) and node.name in wanted)
         or (isinstance(node, ast.Assign)
             and any(getattr(t, "id", None) in wanted for t in node.targets))
     ]
-    assert len(keep) == 3, f"expected 3 definitions, found {len(keep)}"
+    assert len(keep) == 4, f"expected 4 definitions, found {len(keep)}"
 
     module = types.ModuleType("_port_helper")
     fake_serial = types.ModuleType("serial")
@@ -89,6 +90,45 @@ def test_by_id_paths_are_listed_and_labelled(tmp_path, monkeypatch):
 
 def test_a_missing_by_id_directory_is_not_fatal():
     """Absent on Windows, and on Linux systems with no USB serial devices attached."""
+    assert HELPER._serial_port_options("/dev/ttyUSB0")
+
+
+def test_by_path_options_are_offered_alongside_by_id(tmp_path, monkeypatch):
+    """by-id needs the adapter to carry a serial number, and CH340 chips - most cheap RS485
+    adapters - do not have one. Two identical CH340s then produce by-id names that cannot
+    distinguish them, so a user with two adapters can point both config entries at the same
+    one without noticing (#384). by-path names the USB socket and cannot be ambiguous.
+
+    Offering only by-id meant the correct choice for that hardware was not in the list at
+    all, and the user had to know to type it by hand."""
+    by_id = tmp_path / "by-id"
+    by_path = tmp_path / "by-path"
+    by_id.mkdir()
+    by_path.mkdir()
+    # Real by-path names contain colons (pci-0000:00:14.0-usb-0:5:1.0-port0), which cannot
+    # be used in a filename on Windows, where this suite also runs. The name is irrelevant
+    # to what is being asserted.
+    by_path_name = "pci-0000_00_14.0-usb-0_5_1.0-port0"
+    (by_id / "usb-1a86_USB2.0-Serial-if00-port0").write_text("")
+    (by_path / by_path_name).write_text("")
+    monkeypatch.setattr(HELPER, "SERIAL_BY_ID_DIR", str(by_id))
+    monkeypatch.setattr(HELPER, "SERIAL_BY_PATH_DIR", str(by_path))
+
+    options = HELPER._serial_port_options(None)
+
+    id_path = f"{by_id}/usb-1a86_USB2.0-Serial-if00-port0"
+    path_path = f"{by_path}/{by_path_name}"
+    assert id_path in options, "by-id paths are no longer offered"
+    assert path_path in options, "by-path paths are not offered"
+
+    # The labels have to distinguish them, or the user cannot tell which one suits their
+    # hardware - both being called 'stable' is what made this invisible.
+    assert "adapter" in options[id_path].lower()
+    assert "socket" in options[path_path].lower()
+
+
+def test_a_missing_by_path_directory_is_not_fatal(tmp_path, monkeypatch):
+    monkeypatch.setattr(HELPER, "SERIAL_BY_PATH_DIR", str(tmp_path / "nope"))
     assert HELPER._serial_port_options("/dev/ttyUSB0")
 
 

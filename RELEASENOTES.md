@@ -4,6 +4,21 @@
 
 ---
 
+## v1.7.4 (pre-release)
+
+Issues: #384
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **The serial port list now offers `/dev/serial/by-path/` paths as well as `/dev/serial/by-id/`.**
+  by-id needs the adapter to have a serial number, and CH340 chips — most cheap USB-RS485
+  adapters — do not have one, so two identical adapters produce by-id names that cannot tell
+  them apart. by-path names the USB socket instead and is unambiguous. Both are listed and
+  labelled by what they follow, so you can pick the one that suits your hardware instead of
+  typing it by hand. Raised by @dinkalin-ux. (#384)
+
+---
+
 ## v1.7.3 (pre-release)
 
 Issues: #384

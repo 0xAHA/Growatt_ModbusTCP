@@ -81,21 +81,34 @@ The setup wizard runs auto-detection automatically for VPP-capable inverters. Fo
 | USB / Serial Port | - | Change the adapter path without re-adding the entry |
 | Host / TCP Port | - | Change the gateway address without re-adding the entry |
 
-### Use a `/dev/serial/by-id/` path for USB adapters
+### Use a stable path for USB adapters
 
 `/dev/ttyUSB0` is assigned in the order devices are enumerated. With more than one USB
 serial adapter attached - an inverter and a battery BMS, say - a reboot can swap them, and
 the integration then talks to the wrong device or fails to connect.
 
-Paths under `/dev/serial/by-id/` are keyed on the adapter's own vendor, product and serial
-number, so they do not move:
+There are two stable alternatives, and the setup page lists both. Which one is right depends
+on your adapter:
+
+| Path | Keyed on | Use it when |
+|---|---|---|
+| `/dev/serial/by-id/...` | the adapter's vendor, product and **serial number** | your adapter has a serial number - it then survives being moved to another socket |
+| `/dev/serial/by-path/...` | the **physical USB socket** | your adapter has no serial number, or you have two identical adapters |
 
 ```
 /dev/serial/by-id/usb-1a86_USB_Single_Serial_58CA017290-if00
+/dev/serial/by-path/pci-0000:00:14.0-usb-0:5:1.0-port0
 ```
 
-The options page lists these first and marks them as stable. If yours is not listed, run
-`ls -l /dev/serial/by-id/` on the host and paste the path into the manual field.
+**Check for a serial number before choosing by-id.** The first example above ends in
+`58CA017290`, a real serial. A name like `usb-1a86_USB2.0-Serial-if00-port0` has none - it
+describes the chip model only. CH340 chips (USB vendor `1a86`), which most cheap RS485
+adapters use, ship without serial numbers, so **two identical CH340 adapters cannot be told
+apart by by-id** and you may end up pointing two config entries at the same one. Use
+`by-path` for those.
+
+If yours is not listed, run `ls -l /dev/serial/by-id/ /dev/serial/by-path/` on the host and
+paste the path into the manual field.
 
 
 ---

@@ -47,15 +47,30 @@ _LOGGER = logging.getLogger(__name__)
 # which is assigned in enumeration order and swaps between devices (#383).
 SERIAL_BY_ID_DIR = "/dev/serial/by-id"
 
+# The other stable form, keyed on the physical USB socket rather than the device. It is the
+# right choice when the adapter has no serial number to key on — CH340 chips (USB vendor
+# 1a86), which is most of the cheap RS485 adapters, ship without one. Two identical CH340s
+# then produce by-id names that cannot distinguish them, so a user with two adapters can
+# unknowingly point two config entries at the same one. by-path cannot be ambiguous: it
+# names the socket the adapter is plugged into (#384).
+SERIAL_BY_PATH_DIR = "/dev/serial/by-path"
+
 MANUAL_PATH_SENTINEL = "manual"
 
 
 def _serial_port_options(current_path: str | None = None) -> dict[str, str]:
     """Build the device-path choices for a serial connection.
 
-    Lists the by-id symlinks first and says why, because the alternative is a path that
+    Lists the stable symlinks first and says why, because the alternative is a path that
     silently starts pointing at a different device. The reporter on #383 has a JK BMS on the
     same machine and loses the inverter whenever the two swap between ttyUSB0 and ttyUSB1.
+
+    Both stable forms are offered, because neither is right for everyone:
+
+    - **by-id** follows the adapter, so it survives being moved to a different socket. It
+      needs the adapter to have a serial number, and CH340s do not have one.
+    - **by-path** follows the USB socket, so it is unambiguous even with two identical
+      adapters, but changes if you replug into a different port.
 
     `current_path` is always included even when the device is absent right now. That is the
     whole point: this form exists to be used *after* a path has stopped working, and a
@@ -70,9 +85,17 @@ def _serial_port_options(current_path: str | None = None) -> dict[str, str]:
         if os.path.isdir(SERIAL_BY_ID_DIR):
             for name in sorted(os.listdir(SERIAL_BY_ID_DIR)):
                 path = f"{SERIAL_BY_ID_DIR}/{name}"
-                options[path] = f"{name}  (stable — recommended)"
+                options[path] = f"{name}  (stable — follows the adapter)"
     except OSError as err:
         _LOGGER.debug("Could not list %s: %s", SERIAL_BY_ID_DIR, err)
+
+    try:
+        if os.path.isdir(SERIAL_BY_PATH_DIR):
+            for name in sorted(os.listdir(SERIAL_BY_PATH_DIR)):
+                path = f"{SERIAL_BY_PATH_DIR}/{name}"
+                options[path] = f"{name}  (stable — follows the USB socket)"
+    except OSError as err:
+        _LOGGER.debug("Could not list %s: %s", SERIAL_BY_PATH_DIR, err)
 
     try:
         for port in serial.tools.list_ports.comports():
