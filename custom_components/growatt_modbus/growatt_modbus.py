@@ -512,6 +512,28 @@ class SharedModbusConnection:
         """Reset the per-poll recovery budget. Call once per poll, before any reads."""
         self._recoveries_this_poll = 0
 
+    def end_poll(self) -> None:
+        """Give an exclusive serial port back between polls.
+
+        A TCP socket is cheap to hold and reconnecting costs a round trip, so TCP keeps its
+        connection open across polls. A serial port is different: it is **exclusive**, and
+        holding it denies it to every other process on the machine — including a second
+        config entry that names the same adapter by a different path.
+
+        Before v1.7.0 the port was opened and closed per poll, so two such entries alternated
+        and mostly worked, with occasional collisions. Holding it open turned that into a
+        permanent lockout for whichever entry lost the race, with pyserial reporting
+        "Could not exclusively lock port" on every poll thereafter (#384).
+
+        Reopening a serial port costs about 2 ms, which is nothing next to a poll that reads
+        98 registers. The lock still serializes entries that do share a hub.
+        """
+        if not self.is_serial:
+            return
+        with self._lock:
+            self.disconnect()
+            self._client = None
+
     def _begin_recovery(self) -> bool:
         """True if a reset+retry is still within this poll's recovery budget."""
         if self._recoveries_this_poll >= self._max_recoveries_per_poll:
@@ -567,6 +589,25 @@ class SharedModbusConnection:
         if result:
             self._connected = True
             self._flush_receive_buffer()
+        elif self.is_serial:
+            # pyserial logs "[Errno 11] Could not exclusively lock port ..." and pymodbus
+            # turns it into a bare "Failed to connect", which tells the user nothing about
+            # the one cause that actually matters: somebody else already has this port.
+            #
+            # The usual somebody else is a second config entry naming the same adapter by a
+            # different path. That is easy to do by accident with cheap CH340 adapters
+            # (USB vendor 1a86), which ship without a serial number — so two of them produce
+            # by-id names that do not distinguish them, and the /dev/ttyUSBn numbering swaps
+            # on reboot. by-path is stable per physical socket and is the right choice there.
+            logger.warning(
+                "[SharedConn %s] Could not open the serial port. If the log above shows "
+                "'Could not exclusively lock port', another process or another Growatt "
+                "config entry already has it open. Check whether two entries point at the "
+                "same adapter under different names (/dev/ttyUSBn vs /dev/serial/by-id/... "
+                "vs /dev/serial/by-path/...) — run: ls -l /dev/serial/by-id/ "
+                "/dev/serial/by-path/",
+                self.connection_id,
+            )
         return result
 
     def disconnect(self) -> None:
@@ -1098,7 +1139,9 @@ class GrowattModbus:
     def disconnect(self):
         """Close connection and release resources (critical for preventing file descriptor leaks)"""
         if self._shared_conn is not None:
-            # Connection lifetime is managed by the hub.
+            # Connection lifetime is managed by the hub — except for serial, where the hub
+            # gives the port back between polls. See SharedModbusConnection.end_poll().
+            self._shared_conn.end_poll()
             return
         if self.client:
             try:

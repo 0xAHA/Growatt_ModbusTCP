@@ -165,6 +165,29 @@ The integration handles this for you: every entry pointing at the same device pa
 
 **Serial setups need v1.7.0 or later for this.** Before that, only TCP entries were coordinated — each serial entry opened its own client on the same adapter and paced only itself, which produced random read failures on *all* the inverters sharing that bus. If you have two entries on one adapter and see unexplained dropouts, this is the first thing to rule out.
 
+### Two adapters: check they are actually two
+
+The most common cheap USB-RS485 adapters use the **CH340** chip (USB vendor `1a86`), and CH340s ship **without a serial number**. That has two consequences if you own two of them:
+
+- Their `/dev/serial/by-id/` names do not distinguish them — you may see one entry, or two that differ only by an index that can move.
+- Their `/dev/ttyUSBn` numbers are assigned in enumeration order and **swap between reboots**.
+
+So it is entirely possible to configure two entries that both point at the *same* adapter under different names, leaving the second adapter unused. The symptom is one entry working and the other failing with:
+
+```
+[Errno 11] Could not exclusively lock port /dev/ttyUSB3: Resource temporarily unavailable
+```
+
+A serial port can only be held by one owner. If you see that, run:
+
+```bash
+ls -l /dev/serial/by-id/ /dev/serial/by-path/
+```
+
+Both listings show what each name resolves to. If two entries land on the same `ttyUSBn`, that is the problem.
+
+**For adapters without a serial number, prefer `/dev/serial/by-path/`.** It identifies the physical USB socket rather than the device, so it stays stable across reboots *and* distinguishes two identical adapters — which `by-id` cannot. Use `by-id` when the adapter does have a serial number (FTDI adapters usually do); it survives being moved to a different socket.
+
 Two consequences worth knowing:
 
 - **Polls queue, they do not overlap.** With several inverters the effective cycle is the sum of their polls. If a single poll takes 8 s, three inverters need an interval comfortably above 24 s.

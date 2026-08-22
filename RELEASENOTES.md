@@ -4,6 +4,31 @@
 
 ---
 
+## v1.7.3 (pre-release)
+
+Issues: #384
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+>
+> **Fixes a serial regression introduced in v1.7.0.** If you are on v1.7.0-v1.7.2 with a
+> USB-RS485 adapter, update.
+
+- **Serial ports are released between polls again.** v1.7.0 held the port open for the
+  lifetime of the entry. A serial port is exclusive, so on some setups the second config
+  entry could never open it and reported `Could not exclusively lock port` on every poll,
+  taking that inverter permanently offline. Reopening costs about 2 ms. Reported by
+  @dinkalin-ux. (#384)
+- **A serial port that cannot be opened now says why.** Previously this surfaced only as
+  `Failed to connect`, with the real reason buried in a pymodbus line above it. The warning
+  now names the likely cause and the command that confirms it.
+- **Documentation: choosing a stable serial path.** CH340 adapters — the most common cheap
+  USB-RS485 type — have no serial number, so `/dev/serial/by-id/` cannot tell two of them
+  apart and `/dev/ttyUSBn` numbering swaps between reboots. `by-path` is the right choice
+  for those. This makes it easy to configure two entries that unknowingly point at the same
+  adapter.
+
+---
+
 ## v1.7.2 (pre-release)
 
 Issues: #384

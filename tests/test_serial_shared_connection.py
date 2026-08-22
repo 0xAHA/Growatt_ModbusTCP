@@ -127,6 +127,34 @@ def test_the_serial_buffer_is_drained_with_pyserials_own_method(serial_hub):
     assert fake.reset_calls >= 1, "stale bytes were never drained on a serial connection"
 
 
+def test_a_serial_port_is_released_between_polls(serial_hub):
+    """A serial port is exclusive. Holding it open across polls denies it to every other
+    process, including a second config entry naming the same adapter by a different path —
+    which turned an intermittent collision into a permanent 'Could not exclusively lock
+    port' for one of them (#384)."""
+    serial_hub.ensure_connected()
+    assert serial_hub._client is not None
+
+    serial_hub.end_poll()
+    assert serial_hub._client is None, "the serial port is still held after the poll ended"
+
+    # ...and the next poll must be able to open it again.
+    assert serial_hub.ensure_connected() is True
+
+
+def test_a_tcp_socket_is_kept_open_between_polls():
+    """The opposite rule for TCP: a socket costs nothing to hold and reconnecting costs a
+    round trip, so end_poll() must leave it alone."""
+    hub = SharedModbusConnection(host="10.0.0.1", port=502)
+    hub._client = object()
+    hub.end_poll()
+    assert hub._client is not None, "TCP connections should persist across polls"
+
+
+def test_ending_a_poll_is_safe_before_anything_connected(serial_hub):
+    serial_hub.end_poll()  # must not raise
+
+
 def test_flushing_never_propagates_an_error(serial_hub):
     """A failed flush is non-critical and must not take down the poll."""
     serial_hub.ensure_connected()
