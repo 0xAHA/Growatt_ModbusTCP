@@ -73,8 +73,18 @@ BATTERY_SENSORS: Set[str] = {
     "priority_mode",
     # WIT: Battery SOH and BMS voltage
     "battery_soh", "battery_voltage_bms",
-    # WIT/SPF/MOD: AC charge/discharge energy
-    "ac_charge_energy_today", "ac_charge_energy_total", "ac_discharge_energy_total",
+    # AC charge energy — SPH reads these from registers 112-115, SPF/SPE from their own
+    # off-grid range.
+    "ac_charge_energy_today", "ac_charge_energy_total",
+    # NOT here: ac_discharge_energy_total. Protocol V1.39 has no AC-discharge counter at
+    # all — there is an EACharge_Total but no EADischarge anywhere in the input table. Only
+    # the off-grid protocol defines one (registers 66/67), so it belongs to SPF and SPE and
+    # is listed in their own groups below.
+    #
+    # While it sat here, 21 grid-tied profiles created the sensor with nothing behind it.
+    # It read 0.0 every poll, and _protect_energy_totals latched a single garbage frame
+    # (3215 << 16) and restored it forever after — one reporter saw 21,069,824 kWh on a
+    # 12 kWh battery, a value the integration could never clear on its own (#390).
 }
 
 _EXTRA_BATTERY_FIELDS = (
@@ -166,8 +176,10 @@ SPF_OFFGRID_SENSORS: Set[str] = {
     # Generator sensors (SPF with generator input)
     "generator_power", "generator_voltage",
     "generator_discharge_today", "generator_discharge_total",
-    # AC charge/discharge energy (from grid/generator)
-    "ac_charge_energy_today", "ac_discharge_energy_today",
+    # AC charge/discharge energy (from grid/generator). ac_discharge_energy_total is
+    # here rather than in BATTERY_SENSORS because only the off-grid protocol defines it
+    # (registers 66/67) — see the note there (#390).
+    "ac_charge_energy_today", "ac_discharge_energy_today", "ac_discharge_energy_total",
     # Operational discharge energy
     "op_discharge_energy_today", "op_discharge_energy_total",
     # Fan speeds
@@ -184,6 +196,7 @@ SPE_OFFGRID_SENSORS: Set[str] = {
     "grid_voltage",              # reg 20
     "grid_frequency",            # reg 21
     "ac_discharge_energy_today", # regs 64/65 (= grid import today on SPE)
+    "ac_discharge_energy_total", # regs 66/67 (= grid import total on SPE)
     "mppt_fan_speed",            # reg 81
     "inverter_fan_speed",        # reg 82
     "dcdc_temp",                 # reg 26

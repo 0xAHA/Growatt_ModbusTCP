@@ -3496,14 +3496,18 @@ class GrowattModbus:
                 value = self._get_register_value_with_fallback('battery_charge_today_low')
             if value is not None:
                 data.charge_energy_today = value
-                # SPF uses charge_energy_* registers for AC charging - populate both fields
-                data.ac_charge_energy_today = data.charge_energy_today
+                # On an off-grid inverter every charge is an AC charge, so the same counter
+                # serves both. On a grid-tied hybrid it does not: this register is total
+                # battery charge (PV + grid), while AC charge is grid-only and lives at
+                # 112-115. Copying it here made AC Charge Energy report battery charge —
+                # 13820.7 kWh against a true 7099.8 on the reporter's SPH (#390).
+                if self.register_map.get('offgrid_protocol', False):
+                    data.ac_charge_energy_today = data.charge_energy_today
                 # Log which register was used
                 addr = self._find_register_by_name('charge_energy_today_low') or self._find_register_by_name('battery_charge_today_low')
-                logger.debug(f"Charge energy today from register {addr}: {data.charge_energy_today} kWh (also populating ac_charge_energy_today for SPF)")
+                logger.debug(f"Charge energy today from register {addr}: {data.charge_energy_today} kWh")
             else:
                 data.charge_energy_today = 0.0
-                data.ac_charge_energy_today = 0.0
 
             # Discharge energy today
             # Try both naming conventions with smart fallback: "discharge_energy_today" and "battery_discharge_today"
@@ -3525,14 +3529,14 @@ class GrowattModbus:
                 value = self._get_register_value_with_fallback('battery_charge_total_low')
             if value is not None:
                 data.charge_energy_total = value
-                # SPF uses charge_energy_* registers for AC charging - populate both fields
-                data.ac_charge_energy_total = data.charge_energy_total
+                # Off-grid only — see the matching note on charge_energy_today above.
+                if self.register_map.get('offgrid_protocol', False):
+                    data.ac_charge_energy_total = data.charge_energy_total
                 # Log which register was used
                 addr = self._find_register_by_name('charge_energy_total_low') or self._find_register_by_name('battery_charge_total_low')
-                logger.debug(f"Charge energy total from register {addr}: {data.charge_energy_total} kWh (also populating ac_charge_energy_total for SPF)")
+                logger.debug(f"Charge energy total from register {addr}: {data.charge_energy_total} kWh")
             else:
                 data.charge_energy_total = 0.0
-                data.ac_charge_energy_total = 0.0
 
             # Discharge energy total
             # Try both naming conventions with smart fallback: "discharge_energy_total" and "battery_discharge_total"

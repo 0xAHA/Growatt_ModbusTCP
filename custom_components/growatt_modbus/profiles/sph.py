@@ -4,6 +4,42 @@ from .vpp_v201 import (
     VPP_V201_BATTERY2, VPP_V201_HOLDING_1P,
 )
 
+# AC charge energy — input registers 112-115, Storage Power interpretation.
+#
+# Protocol V1.39 gives this block two meanings, selected by device class. The rightmost
+# column of the spec table is the selector:
+#
+#   | Reg | MAX-class string inverter | Storage Power (SPH, SPA) |
+#   |-----|---------------------------|--------------------------|
+#   | 112 | Warn Maincode             | EACharge_Today_H         |
+#   | 113 | real Power Percent        | EACharge_Today_L         |
+#   | 114 | inv start delay time      | EACharge_Total_H         |
+#   | 115 | bINVAllFaultCode          | EACharge_Total_L         |
+#
+# SPH is a Storage Power model, so the energy reading applies to every profile in this
+# file. Until this was corrected these profiles mapped 112 as `warning_code` (the MAX
+# meaning) *and* 115 alone as `ac_charge_energy_total` (the Storage meaning) — two
+# interpretations of one block, which cannot both be right on one device (#390).
+#
+# Reading 115 without its high word at 114 also capped the lifetime total at 6553.5 kWh.
+# A reporter's scan read 114=1, 115=5462 → (1<<16)|5462 = 70998 → 7099.8 kWh, where 115
+# alone would have said 546.2.
+#
+# NOT applied to MIN/MID/MOD/MIC/TL3-S/TL-XH. Those also map 112 as warning_code, and for
+# the MAX-class ones that is correct; for the XH hybrids there is no evidence either way
+# and guessing which side of the column they fall on is how wrong-but-plausible values
+# get shipped.
+STORAGE_AC_CHARGE_ENERGY = {
+    112: {'name': 'ac_charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 113,
+          'desc': 'AC charge energy today HIGH (EACharge_Today_H)'},
+    113: {'name': 'ac_charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 112,
+          'combined_scale': 0.1, 'combined_unit': 'kWh'},
+    114: {'name': 'ac_charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 115,
+          'desc': 'AC charge energy total HIGH (EACharge_Total_H)'},
+    115: {'name': 'ac_charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 114,
+          'combined_scale': 0.1, 'combined_unit': 'kWh'},
+}
+
 # SPH 3000-6000 (Single-phase hybrid with battery)
 SPH_3000_6000 = {
     'name': 'SPH Series 3-6kW',
@@ -146,10 +182,9 @@ SPH_3000_6000 = {
         # Diagnostics
         104: {'name': 'derating_mode', 'scale': 1, 'unit': ''},
         105: {'name': 'fault_code', 'scale': 1, 'unit': ''},
-        112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
 
-        # Battery AC Charge Energy (SPH 3-6kW V201 with newer firmware)
-        115: {'name': 'ac_charge_energy_total', 'scale': 0.1, 'unit': 'kWh', 'desc': 'Total energy charged from AC/grid to battery'},
+        # AC charge energy today/total — see STORAGE_AC_CHARGE_ENERGY above.
+        **STORAGE_AC_CHARGE_ENERGY,
     },
     'holding_registers': {
         # Basic Control
@@ -445,7 +480,9 @@ SPH_7000_10000 = {
         # Diagnostics
         104: {'name': 'derating_mode', 'scale': 1, 'unit': ''},
         105: {'name': 'fault_code', 'scale': 1, 'unit': ''},
-        112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
+
+        # AC charge energy today/total — see STORAGE_AC_CHARGE_ENERGY above.
+        **STORAGE_AC_CHARGE_ENERGY,
     },
     'holding_registers': {
         # Basic Control
@@ -1007,11 +1044,9 @@ SPH_7000_10000_V201 = {
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
         31218: {'name': 'battery_soh', 'scale': 1, 'unit': '%', 'desc': 'Battery state of health'},
         # Note: Registers 31220-31221 appear to contain incorrect data when paired as 32-bit
-        # AC charge energy total is available in register 115 (legacy range) instead
+        # AC charge energy total is available in registers 114/115 (legacy range) instead,
+        # inherited from SPH_7000_10000 above.
         31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
-
-        # Battery AC Charge Energy (SPH 7-10kW V201 with newer firmware)
-        115: {'name': 'ac_charge_energy_total', 'scale': 0.1, 'unit': 'kWh', 'desc': 'Total energy charged from AC/grid to battery'},
 
         # Battery Cluster 2 State
         **VPP_V201_BATTERY2,

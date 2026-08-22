@@ -6,6 +6,7 @@ from .vpp_v201 import (
     VPP_V201_STATUS, VPP_V201_PV2_INPUT, VPP_V201_PV2_TOTAL,
     VPP_V201_TEMPERATURE_1P, VPP_V201_BATTERY2, VPP_V201_HOLDING_1P,
 )
+from .sph import STORAGE_AC_CHARGE_ENERGY
 
 SPH_TL3_3000_10000 = {
     'name': 'SPH-TL3 Series 3-10kW',
@@ -107,8 +108,12 @@ SPH_TL3_3000_10000 = {
 
         # Status
         105: {'name': 'fault_code', 'scale': 1, 'unit': ''},
-        112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
-        
+
+        # AC charge energy today/total. SPH-TL3 is a Storage Power model, so registers
+        # 112-115 carry energy rather than the warn/fault codes a MAX-class inverter puts
+        # there — see STORAGE_AC_CHARGE_ENERGY in sph.py for the protocol detail (#390).
+        **STORAGE_AC_CHARGE_ENERGY,
+
         # ============================================================================
         # STORAGE RANGE 1000-1124: Battery and Power Flow
         # ============================================================================

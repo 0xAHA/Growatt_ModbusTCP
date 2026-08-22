@@ -70,6 +70,29 @@ firmware.** They are mapped because the protocol defines them, but at least one 
 (RAAA191904/ZCBA-0004) accepts the write and immediately reverts the register. If yours does
 that, disable the entities - other firmware may well support them.
 
+### Energy sensors worth distinguishing
+
+Three lifetime counters look similar and mean different things:
+
+| Sensor | Registers | Measures |
+|---|---|---|
+| Battery Charge Total | 1058/1059 | **All** energy into the battery — PV and grid |
+| AC Charge Energy Total | 114/115 | Grid→battery only |
+| Battery Discharge Total | 1054/1055 | All energy out of the battery |
+
+So AC Charge Energy Total is normally *lower* than Battery Charge Total; the difference is
+what came from your panels. On one reporter's system the figures were 7,099.8 kWh against
+13,820.8 kWh.
+
+Registers 112–115 carry AC charge energy on SPH because it is a "Storage Power" model. The
+same addresses hold warning and fault codes on MAX-class string inverters — the protocol
+lists both meanings side by side, selected by device class.
+
+> **There is no AC Discharge Energy Total on SPH.** Protocol V1.39 defines no AC-discharge
+> counter at all; only off-grid models (SPF, SPE) have one. If you had this entity before
+> v1.7.6 it was never populated by a register, and any value it showed was a stale artefact.
+> It is removed automatically on upgrade. Use **Battery Discharge Total** instead.
+
 **Notes:**
 - All SPH variants share the same 1000+ register range — controls apply across 3–6kW, 7–10kW, and HU variants automatically.
 - Time periods use HHMM format: `530` = 05:30, `2300` = 23:00.
