@@ -1075,6 +1075,25 @@ class GrowattModbus:
                 self._flush_receive_buffer()
             else:
                 logger.error(f"[{self.register_map['name']}@{self.connection_id}] Failed to connect")
+                if self.connection_type == 'serial':
+                    # pyserial logs "[Errno 11] Could not exclusively lock port ..." and
+                    # pymodbus reduces it to a bare "Failed to connect", which says nothing
+                    # about the one cause that matters: somebody else already holds the port.
+                    #
+                    # Usually that is a second config entry naming the same adapter by a
+                    # different path. Easy to do by accident with CH340 adapters (USB vendor
+                    # 1a86), which ship without a serial number — two of them produce by-id
+                    # names that cannot be told apart, and /dev/ttyUSBn numbering is assigned
+                    # in enumeration order. by-path is stable per physical socket (#384).
+                    logger.warning(
+                        "[%s@%s] Could not open the serial port. If the line above reads "
+                        "'Could not exclusively lock port', another process or another "
+                        "Growatt config entry already has it open. Check whether two entries "
+                        "point at the same adapter under different names (/dev/ttyUSBn vs "
+                        "/dev/serial/by-id/... vs /dev/serial/by-path/...) — run: "
+                        "ls -l /dev/serial/by-id/ /dev/serial/by-path/",
+                        self.register_map['name'], self.connection_id,
+                    )
             return result
         except Exception as e:
             logger.error(f"[{self.register_map['name']}@{self.connection_id}] Connection error: {e}")

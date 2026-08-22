@@ -4,7 +4,32 @@
 
 ---
 
-## v1.7.4 (pre-release)
+## v1.7.5 (pre-release)
+
+Issues: #384
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+>
+> **If you use a USB-RS485 adapter and installed any of v1.7.0-v1.7.4, update.** Those
+> versions could not read from a serial inverter at all. They have been withdrawn.
+
+- **Serial connections work again.** v1.7.0 introduced a shared connection for serial
+  entries. It opened the port, while the polling client — which was never given the shared
+  connection — opened the same port a second time. A serial port can only be held once, so
+  every read failed with `Could not exclusively lock port` and the inverter went offline.
+  This affected **every** serial user, not only those with two inverters. The serial shared
+  connection has been removed and behaviour is back to v1.6.6. Reported by @dinkalin-ux with
+  the logs that identified it. (#384)
+- **A serial port that cannot be opened now explains itself**, instead of appearing as a bare
+  `Failed to connect` with the real reason buried in a line above it.
+
+Everything else from v1.7.0-v1.7.4 is unaffected and carried forward: the register scanner's
+single-register fallback, `/dev/serial/by-path/` paths in the port list, and the sensor
+changes from v1.6.6-v1.6.9.
+
+---
+
+## v1.7.4 (pre-release, withdrawn)
 
 Issues: #384
 
@@ -19,7 +44,7 @@ Issues: #384
 
 ---
 
-## v1.7.3 (pre-release)
+## v1.7.3 (pre-release, withdrawn)
 
 Issues: #384
 
@@ -44,7 +69,7 @@ Issues: #384
 
 ---
 
-## v1.7.2 (pre-release)
+## v1.7.2 (pre-release, withdrawn)
 
 Issues: #384
 
@@ -57,6 +82,10 @@ Issues: #384
   them separate connections and let them collide on the same bus, which is the exact problem
   it was meant to prevent. Paths are now resolved before matching. **Only affects setups with
   two or more entries on one adapter.** (#384)
+
+---
+
+## v1.7.1 (pre-release, withdrawn)
 
 Issues: #389
 
@@ -71,7 +100,7 @@ Issues: #389
 
 ---
 
-## v1.7.0 (pre-release)
+## v1.7.0 (pre-release, withdrawn)
 
 > **Pre-release for testing.** v1.6.2 remains the stable release.
 

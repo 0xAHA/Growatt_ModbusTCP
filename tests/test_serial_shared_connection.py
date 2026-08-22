@@ -173,49 +173,48 @@ def test_flushing_never_propagates_an_error(serial_hub):
 # The wiring in __init__.py
 # --------------------------------------------------------------------------
 
-def test_setup_creates_a_hub_for_serial_entries_too():
-    """The regression this fixes was a single `if connection_type == "tcp":` guard around
-    hub creation. Asserted against the source because building a real config entry needs
-    Home Assistant, which cannot be imported here (see tests_ha/)."""
-    source = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
-              / "__init__.py").read_text(encoding="utf-8")
+def test_setup_does_not_create_a_hub_for_serial_entries():
+    """Reverted in v1.7.5, and this test exists to stop it coming back by halves.
 
-    assert 'hub_key = f"serial:{resolved_device}"' in source, (
-        "serial entries do not get a connection hub, so two entries on one adapter still "
-        "open independent clients on the same bus"
-    )
-    assert "SharedModbusConnection(\n            device=device" in source, (
-        "the serial hub is not constructed with the device path"
-    )
-    # The old shape: hub creation nested inside a TCP-only branch.
-    assert 'if connection_type == "tcp":\n        from homeassistant.const import CONF_HOST' in source
-    assert "hub.acquire_ref()" in source
-    assert source.index("hub.acquire_ref()") > source.index("hub_key = f\"serial:{resolved_device}\""), (
-        "refcounting runs before the serial branch can set hub_key"
-    )
+    v1.7.0 created a hub for serial entries here. But `_fetch_data` routes every poll through
+    `_fetch_data_shared()` whenever a hub exists, and that opens the hub's connection — while
+    coordinator.py builds the serial client WITHOUT `shared_conn`, so the client kept its own
+    ModbusSerialClient and opened the same port a second time. A serial port is exclusive, so
+    every read failed with 'Could not exclusively lock port' and every serial user went
+    offline, not only multi-entry ones (#384).
 
-
-def test_the_hub_key_uses_the_resolved_device_path():
-    """One adapter answers to /dev/ttyUSB2, /dev/serial/by-id/... and /dev/serial/by-path/...
-    at the same time, and the docs recommend the by-id form — so two entries naming one port
-    differently is normal, not exotic.
-
-    A reporter's debug log showed exactly this shape: one entry logging as
-    /dev/serial/by-path/pci-0000:00:14.0-usb-0:5:1.0-port0 and another as /dev/ttyUSB2,
-    interleaving reads. Keying the hub on the raw string gives them separate connections and
-    lets them collide on one bus, which defeats the whole point of sharing.
+    Re-enabling serial hubs requires coordinator.py's serial branch to pass
+    `shared_conn=self._hub` in the same change. Until it does, creating one here is harmful.
     """
     source = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
               / "__init__.py").read_text(encoding="utf-8")
 
-    assert 'hub_key = f"serial:{device}"' not in source, (
-        "the hub is keyed on the configured path, so by-id and /dev/ttyUSBn forms of one "
-        "adapter get separate connections"
+    assert "hub_key = f\"serial:" not in source, (
+        "a hub is being created for serial entries again — check that coordinator.py's "
+        "serial branch passes shared_conn=self._hub, or the port is opened twice"
     )
-    assert "os.path.realpath" in source, "the device path is never resolved"
-    assert 'hub_key = f"serial:{resolved_device}"' in source
+    # Hub creation must stay inside the TCP-only branch.
+    assert 'if connection_type == "tcp":' in source
+    assert source.index("hub.acquire_ref()") > source.index('if connection_type == "tcp":'), (
+        "hub refcounting has escaped the TCP branch"
+    )
 
-    # Must not run on the event loop - that is the bug #384 reported against this file.
-    assert "async_add_executor_job(os.path.realpath" in source, (
-        "realpath is a filesystem call and is being made on the event loop"
-    )
+
+def test_the_coordinator_would_have_to_be_wired_up_too():
+    """The half that was missed. If someone re-adds serial hub creation without this, the
+    double-open returns — so the two halves are pinned together here rather than in a
+    comment nobody reads."""
+    source = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+              / "coordinator.py").read_text(encoding="utf-8")
+
+    serial_branch = source[source.index('else:  # serial'):]
+    serial_branch = serial_branch[:serial_branch.index("_LOGGER.debug")]
+    creates_serial_hub = "hub_key = f\"serial:" in (
+        Path(__file__).parent.parent / "custom_components" / "growatt_modbus" / "__init__.py"
+    ).read_text(encoding="utf-8")
+
+    if creates_serial_hub:
+        assert "shared_conn=self._hub" in serial_branch, (
+            "serial hubs are created but the serial client is not given one — it will open "
+            "the port a second time and every read will fail with Errno 11 (#384)"
+        )

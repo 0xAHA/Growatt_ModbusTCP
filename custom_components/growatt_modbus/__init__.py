@@ -2,7 +2,6 @@
 Growatt Modbus Integration for Home Assistant
 """
 import logging
-import os
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -19,9 +18,6 @@ from .const import (
     CONF_INVERTER_SERIES,
     CONF_REGISTER_MAP,
     CONF_CONNECTION_TYPE,
-    CONF_DEVICE_PATH,
-    CONF_BAUDRATE,
-    DEFAULT_BAUDRATE,
     CURRENT_DEVICE_STRUCTURE_VERSION,
     REGISTER_MAPS,
     WRITABLE_REGISTERS,
@@ -247,64 +243,43 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info("Removing stale number entity %s (WIT export_limit_w reg 203 not writable)", _stale_export_eid)
         entity_registry.async_remove(_stale_export_eid)
 
-    # Shared connection hub: every entry on the same transport — the same host:port for TCP,
-    # the same device path for serial — shares one client and a threading.Lock that
-    # serializes reads and writes, preventing RS485 cross-talk.
+    # Shared connection hub: all TCP entries on the same host:port share one ModbusTcpClient
+    # and a threading.Lock to serialize reads/writes and prevent RS485 cross-talk on the
+    # gateway. This is transparent for single-entry setups (hub refcount=1, no sharing).
     #
-    # Serial was excluded from this until v1.7.0, which had it backwards: an RS485 bus is
-    # precisely where two uncoordinated masters collide. Each entry opened its own
-    # ModbusSerialClient on the same adapter and paced itself with a per-instance
-    # min_read_interval, which says nothing about what the other entry is doing. Two
-    # inverters on one USB-RS485 adapter is the normal way to wire a parallel SPF stack.
+    # TCP ONLY — and deliberately so. v1.7.0 extended this to serial and the result was
+    # broken from the first commit: a hub was created here, `_fetch_data` routes every poll
+    # through `_fetch_data_shared()` whenever a hub exists, and the hub opens the port — but
+    # coordinator.py builds the serial client WITHOUT passing `shared_conn`, so that client
+    # kept its own ModbusSerialClient and opened the same port a second time. A serial port
+    # is exclusive, so every read then failed with
     #
-    # This is transparent for single-entry setups (hub refcount=1, no actual sharing).
+    #     [Errno 11] Could not exclusively lock port /dev/ttyUSBn
+    #
+    # taking every serial user offline, not only multi-entry ones (#384). Reverted in v1.7.5.
+    #
+    # SharedModbusConnection still supports serial and is tested for it. **Re-enabling it
+    # here is not sufficient on its own** — coordinator.py's serial branch must pass
+    # `shared_conn=self._hub` in the same change, or the double-open returns. Verify on
+    # hardware with two entries on one adapter before shipping it again.
     hub: SharedModbusConnection | None = None
     connection_type = entry.data.get(CONF_CONNECTION_TYPE, "tcp")
-    timeout = entry.options.get("timeout", 10)
-    connections = hass.data[DOMAIN].setdefault("_connections", {})
-
     if connection_type == "tcp":
         from homeassistant.const import CONF_HOST, CONF_PORT
         host = entry.data.get(CONF_HOST, "")
         port = entry.data.get(CONF_PORT, 502)
-        hub_key = f"{host}:{port}" if host else ""
-        hub_factory = lambda: SharedModbusConnection(host=host, port=port, timeout=timeout)
-    else:
-        device = entry.data.get(CONF_DEVICE_PATH, "")
-        baudrate = entry.data.get(CONF_BAUDRATE, DEFAULT_BAUDRATE)
-        # Key on the *resolved* path, not the configured one. One adapter is reachable as
-        # /dev/ttyUSB2, /dev/serial/by-id/usb-...-port0 and /dev/serial/by-path/pci-...-port0
-        # simultaneously, and we actively recommend the by-id form — so two entries naming
-        # the same physical port differently is the expected case, not an edge case. Keying
-        # on the raw string gave them separate hubs and let them collide on one bus, which
-        # is the entire defect v1.7.0 was meant to fix.
-        #
-        # realpath() is a filesystem call, so it goes through the executor; a blocking call
-        # on the event loop in this file is exactly what #384 reported. A path that does not
-        # resolve comes back unchanged, which is the right fallback.
-        resolved_device = (
-            await hass.async_add_executor_job(os.path.realpath, device) if device else ""
-        )
-        if resolved_device != device:
-            _LOGGER.debug("Serial path %s resolves to %s", device, resolved_device)
-        # baud rate is deliberately not part of the key: it is a property of the bus, so two
-        # entries disagreeing about it are misconfigured rather than entitled to separate
-        # clients.
-        hub_key = f"serial:{resolved_device}" if device else ""
-        hub_factory = lambda: SharedModbusConnection(
-            device=device, baudrate=baudrate, timeout=timeout
-        )
-
-    if hub_key:
+        timeout = entry.options.get("timeout", 10)
+        hub_key = f"{host}:{port}"
+        connections = hass.data[DOMAIN].setdefault("_connections", {})
         if hub_key not in connections:
-            connections[hub_key] = hub_factory()
+            connections[hub_key] = SharedModbusConnection(host=host, port=port, timeout=timeout)
             _LOGGER.debug("Created shared Modbus connection hub for %s", hub_key)
         hub = connections[hub_key]
         hub.acquire_ref()
         if hub._refcount > 1:
             _LOGGER.info(
                 "Shared Modbus connection mode: entry %s joined hub for %s (refcount=%d) — "
-                "RS485 cross-talk prevention active",
+                "RS485 gateway cross-talk prevention active",
                 entry.entry_id, hub_key, hub._refcount,
             )
 
