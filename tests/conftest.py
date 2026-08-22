@@ -59,11 +59,69 @@ def _stub_homeassistant() -> None:
 
     core.HomeAssistant = HomeAssistant
 
+    # diagnostic.py imports these at module scope. Only the register-reading helpers in it
+    # are exercised here — they take a client and plain ints — but the module has to import
+    # before those can be reached.
+    class ServiceCall:  # noqa: D401 - stand-in for an unused annotation
+        """Placeholder; never exercised by these tests."""
+
+    class SupportsResponse:  # noqa: D401 - stand-in for an unused annotation
+        """Placeholder; never exercised by these tests."""
+
+        ONLY = "only"
+        OPTIONAL = "optional"
+
+    core.ServiceCall = ServiceCall
+    core.SupportsResponse = SupportsResponse
+
+    helpers = types.ModuleType("homeassistant.helpers")
+    helpers.__path__ = []
+    device_registry = types.ModuleType("homeassistant.helpers.device_registry")
+    config_validation = types.ModuleType("homeassistant.helpers.config_validation")
+    # cv is only used to build voluptuous schemas at import time, and the set of validators
+    # referenced grows whenever a service schema does. PEP 562 module __getattr__ hands back
+    # a passthrough for any name rather than listing them and breaking on the next addition.
+    config_validation.__getattr__ = lambda name: (lambda value: value)
+    helpers.device_registry = device_registry
+    helpers.config_validation = config_validation
+
     ha.config_entries = config_entries
     ha.core = core
+    ha.helpers = helpers
     sys.modules["homeassistant"] = ha
     sys.modules["homeassistant.config_entries"] = config_entries
     sys.modules["homeassistant.core"] = core
+    sys.modules["homeassistant.helpers"] = helpers
+    sys.modules["homeassistant.helpers.device_registry"] = device_registry
+    sys.modules["homeassistant.helpers.config_validation"] = config_validation
+
+
+def _stub_voluptuous() -> None:
+    """Minimal voluptuous, for the same reason as the HA stub above.
+
+    Schemas in diagnostic.py are built at import time and never validated here, so every
+    construct only has to be constructible.
+    """
+    if importlib.util.find_spec("voluptuous") is not None:
+        return
+    if "voluptuous" in sys.modules:
+        return
+    vol = types.ModuleType("voluptuous")
+
+    class _Marker:
+        def __init__(self, schema=None, *args, **kwargs):
+            self.schema = schema
+
+        def __call__(self, value):
+            return value
+
+        def __hash__(self):
+            return hash(str(self.schema))
+
+    for _name in ("Schema", "Required", "Optional", "All", "Any", "In", "Range",
+                  "Coerce", "Length", "Invalid", "Exclusive", "Inclusive"):
+        setattr(vol, _name, type(_name, (_Marker,), {}))
+    sys.modules["voluptuous"] = vol
 
 
 def _bind_component_package() -> None:
@@ -80,6 +138,7 @@ def _bind_component_package() -> None:
 
 
 _stub_homeassistant()
+_stub_voluptuous()
 _bind_component_package()
 
 

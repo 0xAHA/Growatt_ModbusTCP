@@ -4,6 +4,21 @@
 
 ---
 
+## v1.7.1 (pre-release)
+
+Issues: #389
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **The register scanner now falls back to single-register reads when a gateway refuses
+  blocks.** It read 125 registers per request and never tried anything smaller, so a
+  bandwidth-limited bridge — LoRa gateways especially — returned an error for every register
+  and produced a scan that looked like a dead device. It now detects this on the first failed
+  block, drops to one register per request for the rest of the scan and says so in the log.
+  Slower, but it returns data instead of nothing. Reported by @Henxidou001. (#389)
+
+---
+
 ## v1.7.0 (pre-release)
 
 > **Pre-release for testing.** v1.6.2 remains the stable release.

@@ -1405,9 +1405,23 @@ def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk
     register_data = {}
     first_chunk = True
 
-    for chunk_start in range(0, count, chunk_size):
-        chunk_count = min(chunk_size, count - chunk_start)
-        chunk_address = start + chunk_start
+    # Adaptive block size (#389). A bridge that cannot relay a large block answers every
+    # request with an exception - 0x0B, "Gateway Target Failed to Respond", is the usual
+    # one - while single-register reads to the same device succeed. A reporter on a LoRa
+    # gateway got 2425 consecutive errors from this scanner and valid data on hundreds of
+    # registers using raw single-register frames, and reasonably concluded our scanner was
+    # broken. It was: it never tried anything but 125 at a time.
+    #
+    # So on the first failing block, probe once with a single-register read. If that works
+    # the bridge is bandwidth-limited rather than absent, and the rest of the scan runs at
+    # one register per request. Probing only once keeps a genuinely dead range cheap.
+    pos = 0
+    effective_chunk = chunk_size
+    probed_single = False
+
+    while pos < count:
+        chunk_count = min(effective_chunk, count - pos)
+        chunk_address = start + pos
 
         if delay_s and not first_chunk:
             time.sleep(delay_s)
@@ -1455,6 +1469,19 @@ def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk
                     }
                     error_msg = error_names.get(error_code, f"Error Code {error_code}")
 
+                if effective_chunk > 1 and not probed_single:
+                    probed_single = True
+                    if _single_register_read_works(client, chunk_address, slave_id, register_type):
+                        _LOGGER.warning(
+                            "Block read of %d registers at %d failed (%s) but a single-register "
+                            "read succeeded - the gateway cannot relay blocks this large. "
+                            "Continuing this scan at 1 register per request; it will be slower. "
+                            "Set 'Max Register Block Size' to 1 for normal polling too.",
+                            chunk_count, chunk_address, error_msg,
+                        )
+                        effective_chunk = 1
+                        continue  # re-read this chunk one register at a time
+
                 for i in range(chunk_count):
                     register_data[chunk_address + i] = {
                         'value': None,
@@ -1474,7 +1501,25 @@ def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk
                 }
             _LOGGER.debug(f"Chunk {chunk_address} exception: {e}")
 
+        pos += chunk_count
+
     return register_data
+
+
+def _single_register_read_works(client, address: int, slave_id: int, register_type: str) -> bool:
+    """One register, one request — does the device answer at all?
+
+    Distinguishes "this bridge cannot carry a block that big" from "nothing is there",
+    which look identical when every block read returns the same exception (#389).
+    """
+    try:
+        if register_type == 'holding':
+            response = client.read_holding_registers(address=address, count=1, device_id=slave_id)
+        else:
+            response = client.read_input_registers(address=address, count=1, device_id=slave_id)
+        return not response.isError()
+    except Exception:
+        return False
 
 
 def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str, str]:
