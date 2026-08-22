@@ -210,6 +210,37 @@ sets the global default:
 Time periods override this global default within defined windows. Periods use separate
 enable registers (not bit-packed like MOD).
 
+!!! warning "Priority Mode drives the first time slot — the firmware, not the integration"
+
+    Setting **Priority Mode** does not act alone. On SPH firmware the inverter implements it
+    by toggling the **enable bit of the first slot for that mode**, in the same second:
+
+    ```
+    08:00:37  Priority Mode                  -> Grid First
+    08:00:37  Grid First Period 1 Enable     -> Enabled
+    08:15:22  Priority Mode                  -> Load First
+    08:15:22  Grid First Period 1 Enable     -> Disabled
+    ```
+
+    | Priority Mode | Slot the firmware toggles | Register |
+    |---|---|---|
+    | Grid First | Grid First Period 1 Enable | 1082 |
+    | Battery First | Battery First Period 1 Enable | 1102 |
+
+    Two consequences:
+
+    - **That enable entity changing on its own is not a fault**, and not the Growatt cloud
+      overwriting you. It is the inverter doing what you asked.
+    - **Configure that first slot as `00:00`–`23:59`** and leave its enable alone. If the
+      window is narrow, or unset, the mode only takes effect inside that window — which
+      looks like Priority Mode being ignored at other times of day.
+
+    Confirmed on an SPH 4.6E (firmware RBBA060406/ZCBC-0006) from Home Assistant's own
+    activity log across two full cycles, reported on
+    [#388](https://github.com/0xAHA/Growatt_ModbusTCP/issues/388). The Grid First linkage is
+    directly observed; the Battery First one follows the same pattern and is expected rather
+    than confirmed.
+
 ![SPH time period layout](../images/sph-time-periods.svg)
 
 ### Available Time Period Entities
@@ -218,12 +249,16 @@ enable registers (not bit-packed like MOD).
 
 | Entity | Register | Purpose |
 |--------|----------|---------|
-| Time Period 1 Start / End | 1100, 1101 | AC charge window 1 |
-| Time Period 1 Enable | 1102 | Enable/disable slot 1 |
-| Time Period 2 Start / End | 1103, 1104 | AC charge window 2 |
-| Time Period 2 Enable | 1105 | Enable/disable slot 2 |
-| Time Period 3 Start / End | 1106, 1107 | AC charge window 3 |
-| Time Period 3 Enable | 1108 | Enable/disable slot 3 |
+| Battery First Period 1 Start / End | 1100, 1101 | Battery First window 1 |
+| Battery First Period 1 Enable | 1102 | Enable/disable slot 1 |
+| Battery First Period 2 Start / End | 1103, 1104 | Battery First window 2 |
+| Battery First Period 2 Enable | 1105 | Enable/disable slot 2 |
+| Battery First Period 3 Start / End | 1106, 1107 | Battery First window 3 |
+| Battery First Period 3 Enable | 1108 | Enable/disable slot 3 |
+
+> **Renamed in v1.6.7.** These displayed as "Time Period 1–3" and the Grid First slots below
+> as "Grid First Time Period 7–9", which matched neither the Growatt app nor the protocol.
+> Entity IDs are unchanged, so automations still work — only the displayed names moved.
 
 #### Battery First Extended Slots 4–6 (new in v0.6.8)
 
@@ -240,10 +275,10 @@ enable registers (not bit-packed like MOD).
 
 | Entity | Register | Purpose |
 |--------|----------|---------|
-| Grid First Time Period 4–6 Start/End | 1026–1033 | Grid First windows 4–6 |
-| Grid First Time Period 4–6 Enable | 1028, 1031, 1034 | Enable each slot |
-| Grid First Time Period 7–9 Start/End | 1080–1087 | Grid First windows 7–9 |
-| Grid First Time Period 7–9 Enable | 1082, 1085, 1088 | Enable each slot |
+| Grid First Period 4–6 Start/End | 1026–1033 | Grid First windows 4–6 |
+| Grid First Period 4–6 Enable | 1028, 1031, 1034 | Enable each slot |
+| Grid First Period 1–3 Start/End | 1080–1087 | Grid First windows 1–3 |
+| Grid First Period 1–3 Enable | 1082, 1085, 1088 | Enable each slot |
 
 > **SPH HU note:** The SPH 8000–10000 TL-HU uses a different holding register architecture.
 > Battery management registers (1044, 1070–1071, 1090–1108) return Modbus exceptions on HU
@@ -274,10 +309,17 @@ For each active slot:
 #### Example: Off-Peak Grid Charging (22:00–06:00)
 
 Set **Priority Mode** to `Grid First`, then:
-- Time Period 1 Start: `22:00`
-- Time Period 1 End: `06:00`
-- Time Period 1 Enable: `Enabled`
+- Battery First Period 1 Start: `22:00`
+- Battery First Period 1 End: `06:00`
+- Battery First Period 1 Enable: `Enabled`
 - All other periods: Disabled
+
+> **Check this against your own inverter before relying on it.** Registers 1100–1102 are the
+> *Battery First* slot 1, so this example pairs a Grid First priority with a Battery First
+> window. That combination is what was originally documented here and it may well be how SPH
+> firmware expects grid charging to be scheduled — but it has not been re-verified on
+> hardware since the slots were correctly named in v1.6.7. If your inverter behaves
+> differently, please say so on the issue tracker.
 
 ```yaml
 automation:
