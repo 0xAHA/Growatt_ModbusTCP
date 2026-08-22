@@ -4,6 +4,29 @@
 
 ---
 
+## v1.7.6 (pre-release)
+
+Issues: #390
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **SPH: AC Charge Energy Total now reports grid-to-battery energy, not total battery
+  charge.** It was showing the battery charge counter, which includes energy from your
+  panels — one reporter saw 13,820.7 kWh where the true grid figure was 7,099.8 kWh.
+  **Expect this sensor to step down on upgrade**; the new value is the correct one, and it
+  matches the "EAC Total" field on the Growatt app's raw device page. Confirmed on hardware
+  by @Vict20. (#390)
+- **SPH gains AC Charge Energy Today**, from the same corrected register block.
+- **SPH loses its Warning Code sensor.** On these models that register holds an energy value,
+  not a fault code, so the sensor has only ever reported 0. It is removed automatically.
+- **AC Discharge Energy Total is removed from grid-tied models.** No such register exists in
+  the protocol for them — the sensor had nothing behind it and could latch a stray reading
+  permanently, in one case showing 21,069,824 kWh on a 12 kWh battery. Off-grid models
+  (SPF, SPE) genuinely have this register and keep the sensor. Use **Battery Discharge
+  Total** instead. (#390)
+
+---
+
 ## v1.7.5 (pre-release)
 
 Issues: #384
