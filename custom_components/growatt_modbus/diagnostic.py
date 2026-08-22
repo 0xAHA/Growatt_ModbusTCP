@@ -47,6 +47,35 @@ def _coordinator_for_entry(hass: HomeAssistant, entry_id: str):
     return getattr(entry, "runtime_data", None) if entry else None
 
 
+def _config_entry_id_for_device(hass: HomeAssistant, device_entry) -> str | None:
+    """The loaded Growatt config entry backing a device, or None.
+
+    Every service that takes a `device_id` needs this, and each had its own copy of the
+    same five lines. That is the duplication pattern this project has been bitten by
+    before — v1.3.5 fixed a stored-format bug in one of two byte-identical blocks and
+    left the other raising on every poll.
+
+    It also isolates a deprecation. `DeviceEntry.config_entries` is a set of entry ids;
+    Core 2026.8 deprecates it in favour of the single `config_entry_id`, with removal in
+    2027.8, because a device now belongs to exactly one config entry. Reading the old
+    attribute on a new core writes a deprecation warning naming this integration into the
+    user's log — which is how somebody else's rename turns into bug reports here.
+
+    `hasattr` rather than a value check, deliberately: on a new core the old attribute
+    still exists behind a compatibility shim, so testing the value would touch it and
+    emit the warning we are avoiding.
+    """
+    if hasattr(device_entry, "config_entry_id"):
+        entry_ids = [device_entry.config_entry_id] if device_entry.config_entry_id else []
+    else:  # Core < 2026.8
+        entry_ids = list(device_entry.config_entries)
+
+    for entry_id in entry_ids:
+        if _coordinator_for_entry(hass, entry_id) is not None:
+            return entry_id
+    return None
+
+
 def _all_coordinators(hass: HomeAssistant):
     """Every loaded Growatt coordinator, as (entry_id, coordinator) pairs.
 
@@ -587,11 +616,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError(f"Device {device_id} not found")
 
         # Find the config entry for this device
-        config_entry_id = None
-        for entry_id in device_entry.config_entries:
-            if _coordinator_for_entry(hass, entry_id) is not None:
-                config_entry_id = entry_id
-                break
+        config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
         if not config_entry_id:
             _LOGGER.error("No config entry found for device %s", device_id)
@@ -642,11 +667,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError(f"Device {device_id} not found")
 
         # Find the config entry for this device
-        config_entry_id = None
-        for entry_id in device_entry.config_entries:
-            if _coordinator_for_entry(hass, entry_id) is not None:
-                config_entry_id = entry_id
-                break
+        config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
         if not config_entry_id:
             _LOGGER.error("No config entry found for device %s", device_id)
@@ -683,11 +704,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             if not device_entry:
                 raise ValueError(f"Device {device_id} not found")
 
-            config_entry_id = None
-            for entry_id in device_entry.config_entries:
-                if _coordinator_for_entry(hass, entry_id) is not None:
-                    config_entry_id = entry_id
-                    break
+            config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
             if not config_entry_id:
                 raise ValueError(f"No config entry found for device {device_id}")
@@ -890,11 +907,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError(f"Device {device_id} not found")
 
         # Find the config entry for this device
-        config_entry_id = None
-        for entry_id in device_entry.config_entries:
-            if _coordinator_for_entry(hass, entry_id) is not None:
-                config_entry_id = entry_id
-                break
+        config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
         if not config_entry_id:
             _LOGGER.error("No config entry found for device %s", device_id)
@@ -1087,11 +1100,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError(f"Device {device_id} not found")
 
         # Find the config entry for this device
-        config_entry_id = None
-        for entry_id in device_entry.config_entries:
-            if _coordinator_for_entry(hass, entry_id) is not None:
-                config_entry_id = entry_id
-                break
+        config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
         if not config_entry_id:
             raise ValueError(f"No config entry found for device {device_id}")
@@ -1192,11 +1201,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ValueError(f"Device {device_id} not found")
 
         # Find the config entry for this device
-        config_entry_id = None
-        for entry_id in device_entry.config_entries:
-            if _coordinator_for_entry(hass, entry_id) is not None:
-                config_entry_id = entry_id
-                break
+        config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
         if not config_entry_id:
             raise ValueError(f"No config entry found for device {device_id}")
@@ -1261,11 +1266,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         if not device_entry:
             raise ValueError(f"Device {device_id} not found")
 
-        config_entry_id = None
-        for entry_id in device_entry.config_entries:
-            if _coordinator_for_entry(hass, entry_id) is not None:
-                config_entry_id = entry_id
-                break
+        config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
         if not config_entry_id:
             raise ValueError(f"No config entry found for device {device_id}")
