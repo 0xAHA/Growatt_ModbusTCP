@@ -2,6 +2,8 @@
 Growatt Modbus Integration for Home Assistant
 """
 import logging
+import os
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
@@ -270,9 +272,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         device = entry.data.get(CONF_DEVICE_PATH, "")
         baudrate = entry.data.get(CONF_BAUDRATE, DEFAULT_BAUDRATE)
-        # Keyed on the device path alone: baud rate is a property of the bus, so two entries
-        # disagreeing about it are misconfigured rather than entitled to separate clients.
-        hub_key = f"serial:{device}" if device else ""
+        # Key on the *resolved* path, not the configured one. One adapter is reachable as
+        # /dev/ttyUSB2, /dev/serial/by-id/usb-...-port0 and /dev/serial/by-path/pci-...-port0
+        # simultaneously, and we actively recommend the by-id form — so two entries naming
+        # the same physical port differently is the expected case, not an edge case. Keying
+        # on the raw string gave them separate hubs and let them collide on one bus, which
+        # is the entire defect v1.7.0 was meant to fix.
+        #
+        # realpath() is a filesystem call, so it goes through the executor; a blocking call
+        # on the event loop in this file is exactly what #384 reported. A path that does not
+        # resolve comes back unchanged, which is the right fallback.
+        resolved_device = (
+            await hass.async_add_executor_job(os.path.realpath, device) if device else ""
+        )
+        if resolved_device != device:
+            _LOGGER.debug("Serial path %s resolves to %s", device, resolved_device)
+        # baud rate is deliberately not part of the key: it is a property of the bus, so two
+        # entries disagreeing about it are misconfigured rather than entitled to separate
+        # clients.
+        hub_key = f"serial:{resolved_device}" if device else ""
         hub_factory = lambda: SharedModbusConnection(
             device=device, baudrate=baudrate, timeout=timeout
         )

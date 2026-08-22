@@ -4,7 +4,19 @@
 
 ---
 
-## v1.7.1 (pre-release)
+## v1.7.2 (pre-release)
+
+Issues: #384
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **Serial connection sharing now recognises the same adapter under different path names.**
+  One USB adapter answers to `/dev/ttyUSB2`, `/dev/serial/by-id/...` and
+  `/dev/serial/by-path/...` at once, and the setup wizard recommends the by-id form — so two
+  entries can name one physical port differently. v1.7.0 keyed on the configured path, gave
+  them separate connections and let them collide on the same bus, which is the exact problem
+  it was meant to prevent. Paths are now resolved before matching. **Only affects setups with
+  two or more entries on one adapter.** (#384)
 
 Issues: #389
 
