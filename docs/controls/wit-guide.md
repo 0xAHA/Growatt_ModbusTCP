@@ -79,7 +79,15 @@ model rejects the write, use the inverter display panel or the manufacturer app 
 
 ### Remote Power Control (Registers 30407-30409)
 
-> **EEPROM-safe:** Registers 30407, 30408, and 30409 are explicitly marked **"Not storage"** in the VPP V2.03 spec — they bypass non-volatile memory entirely. High-frequency writes (e.g., updating charge/discharge power every minute based on spot prices or live consumption) do not risk wearing out the inverter's flash memory. All other writable VPP registers ARE written to EEPROM and should not be written at high frequency.
+> **EEPROM-safe:** Registers 30407, 30408, and 30409 are explicitly marked **"Not storage"** in the VPP V2.03 spec — they bypass non-volatile memory entirely. High-frequency writes (e.g., updating charge/discharge power every minute based on spot prices or live consumption) do not risk wearing out the inverter's flash memory.
+>
+> **About the other registers — this is an inference, not a specification.** Growatt marks
+> these three as "Not storage" and says nothing about the rest, so we assume the unmarked
+> ones *are* written to non-volatile memory and treat them conservatively. Growatt has not
+> stated that, we have not measured it, and the protocol documents carry no memory or
+> endurance column for the V1.39 ranges at all. Write infrequently to anything not marked
+> "Not storage", but understand that as caution rather than as a documented limit — see
+> [#392](https://github.com/0xAHA/Growatt_ModbusTCP/issues/392).
 
 #### Register 30407: Remote Power Control Enable
 - 0 = Disabled
