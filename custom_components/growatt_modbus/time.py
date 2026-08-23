@@ -246,6 +246,7 @@ class GrowattGenericTime(GrowattEntity, TimeEntity):
         )
         if triple is not None and len(triple) >= 3:
             current_start, current_end, current_enable = int(triple[0]), int(triple[1]), int(triple[2])
+            values_are_fresh = True
         else:
             _LOGGER.warning(
                 "%s: could not read fresh register triple (reg %d) — falling back to cached data",
@@ -255,9 +256,31 @@ class GrowattGenericTime(GrowattEntity, TimeEntity):
             current_start = int(getattr(data, start_name, 0) or 0) if data else 0
             current_end = int(getattr(data, end_name, 0) or 0) if data else 0
             current_enable = int(getattr(data, enable_name, 0) or 0) if data else 0
+            values_are_fresh = False
 
         new_start = raw_value if is_start else current_start
         new_end = raw_value if not is_start else current_end
+
+        # Skip a write that would change nothing (#392).
+        #
+        # These registers are believed to be held in non-volatile memory with finite write
+        # endurance — believed rather than known: Growatt marks a handful of VPP registers
+        # "Not storage" and documents nothing about the rest, so we treat the rest
+        # conservatively. A price-driven controller recomputing all nine slots daily will
+        # usually find most of them unchanged, and there is no reason to spend a write
+        # cycle proving it. `number.py` has done this since v1.6.6; the time entities did
+        # not, which is where a TOU scheduler actually writes.
+        #
+        # Only when the comparison is against a *fresh* read. On the cached fallback the
+        # values may be up to a scan interval old, and a skipped write that should have
+        # happened is worse than a redundant one — the same reasoning that makes this
+        # method re-read the siblings rather than trust coordinator.data at all.
+        if values_are_fresh and new_start == current_start and new_end == current_end:
+            _LOGGER.debug(
+                "%s: already reads start=0x%04X end=0x%04X — skipping write to register %d",
+                name, current_start, current_end, start_reg,
+            )
+            return
 
         _LOGGER.debug(
             "%s: atomic FC16 → reg %d [start=0x%04X, end=0x%04X, enable=%d]",
@@ -390,6 +413,7 @@ class GrowattModTouTime(GrowattEntity, TimeEntity):
         )
         if pair is not None and len(pair) >= 2:
             current_start, current_end = int(pair[0]), int(pair[1])
+            values_are_fresh = True
         else:
             _LOGGER.warning(
                 "MOD TOU period %d: could not read fresh register pair (reg %d) — falling back to cached data",
@@ -398,6 +422,7 @@ class GrowattModTouTime(GrowattEntity, TimeEntity):
             data = self.coordinator.data
             current_start = int(getattr(data, period["start_field"], 0) if data else 0)
             current_end = int(getattr(data, period["end_field"], 0) if data else 0)
+            values_are_fresh = False
 
         # Compute new start raw, preserving priority (bits 13-14) and enable (bit 15)
         if self._is_start:
@@ -412,6 +437,21 @@ class GrowattModTouTime(GrowattEntity, TimeEntity):
             new_end = current_end  # unchanged — keep current end when writing start
 
         slot = "start" if self._is_start else "end"
+
+        # Skip a write that would change nothing (#392) — see the matching note in
+        # GrowattGenericTime.async_set_value above. Only against a fresh read; the cached
+        # fallback may be a scan interval old, and a missed write is worse than a spare one.
+        #
+        # Comparing the raw words rather than the times matters here: new_start preserves
+        # the priority and enable bits (13-15) from the current value, so an equal
+        # comparison means the whole register is unchanged, not just the hour and minute.
+        if values_are_fresh and new_start == current_start and new_end == current_end:
+            _LOGGER.debug(
+                "MOD TOU period %d %s: already reads start=0x%04X end=0x%04X — skipping write",
+                self._period, slot, current_start, current_end,
+            )
+            return
+
         try:
             success = await self.hass.async_add_executor_job(
                 self.coordinator.modbus_client.write_registers,
