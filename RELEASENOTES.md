@@ -4,6 +4,39 @@
 
 ---
 
+## v1.7.7 (pre-release)
+
+Issues: #381, #384, #392
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **SPF: a PV reading of zero that the inverter's own registers contradict is now reported as
+  unknown instead of 0.** Some SPF units intermittently report 0 in their PV registers while
+  still producing — the Modbus read succeeds, the registers are simply wrong. One reporter's
+  poll showed 1,907 W of AC output with only 329 W from the battery, no grid and no
+  generator, and PV reading zero. The real figure cannot be recovered, but a gap in the graph
+  is honest where a zero is a fabricated measurement that stays in your statistics forever.
+  Only applies when every other supply reads zero and the shortfall exceeds 200 W, so genuine
+  night-time and battery-only readings are untouched. Reported by @dinkalin-ux. (#384)
+- **Battery direction is no longer thrown off by those false zeros.** The SPF sign correction
+  compares PV against load; a PV reading of 0 against a real load made it conclude the
+  battery must be discharging when it was not.
+- **Time period controls no longer write when the value has not changed.** A scheduler that
+  recomputes time slots on a timer was writing every slot on every run, including the ones
+  that were already correct. These registers are believed to be held in non-volatile memory
+  with a finite write budget. Raised by @KevlarD-67. (#392)
+- **Documentation: PV Energy Total vs Energy Total on hybrids.** The two sensor descriptions
+  contradicted each other — one said Energy Total would be higher, the other said lower. On a
+  hybrid, Energy Total counts battery discharge including energy the battery took from the
+  grid, so it is normally the larger of the two. Raised by @Vict20. (#381)
+- **Documentation: the EEPROM guidance is now labelled as inference.** Growatt marks a few
+  VPP registers "Not storage" and says nothing about the rest; treating the rest as
+  non-volatile is our caution, not a documented limit. Raised by @KevlarD-67. (#392)
+- **Internal: stopped using a device registry attribute Home Assistant deprecated in 2026.8**,
+  which would otherwise start writing warnings naming this integration into your log.
+
+---
+
 ## v1.7.6 (pre-release)
 
 Issues: #390
