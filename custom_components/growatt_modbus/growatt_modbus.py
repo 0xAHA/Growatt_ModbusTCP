@@ -1499,6 +1499,71 @@ class GrowattModbus:
             return
         setattr(data, field_name, value)
 
+    # Deficit, in watts, that AC output must exceed before a PV reading of zero is treated
+    # as impossible. Matches the margin the SPF sign correction uses for the same kind of
+    # power-balance reasoning (#345), so the two agree about what counts as significant.
+    PV_ZERO_BALANCE_MARGIN = 200.0
+
+    def _suppress_impossible_pv_zero(self, data: "GrowattData") -> None:
+        """Withhold a PV reading of zero the inverter's own registers contradict (#384).
+
+        An off-grid SPF intermittently reports 0 in its PV registers while still producing.
+        This is not a failed read — the block arrives complete, the registers are present,
+        and their contents are zero. A reporter's poll showed 1,907 W of AC output with the
+        battery supplying only 329 W, no grid, no generator, and PV reading 0. The missing
+        ~1,578 W had nowhere to come from but the panels.
+
+        We cannot recover the real figure; it is not in the response. But publishing zero
+        writes a fabricated measurement into long-term statistics that can never afterwards
+        be told from a genuine one, and it misleads the sign correction above, which reads a
+        false PV=0 against a real load and concludes the battery must be discharging.
+
+        So the field is marked unread and the sensor reports unknown — the same treatment a
+        failed read gets, for the same reason: a gap is honest about what we know.
+
+        Deliberately narrow, because the cost of a false positive is suppressing a genuine
+        zero:
+
+        * off-grid profiles only — this is where the behaviour is observed, and where the
+          power balance is simple enough to be conclusive
+        * every alternative source must read zero. An SPF has an AC input and a generator
+          input; if either is supplying the load then PV need not be
+        * the shortfall must exceed PV_ZERO_BALANCE_MARGIN, so a battery covering the load
+          on its own never trips it
+        * PV must read exactly zero. A low-but-nonzero reading may be real curtailment
+        """
+        if not self.register_map.get('offgrid_protocol', False):
+            return
+        if data.pv_total_power != 0:
+            return
+
+        ac_output = float(getattr(data, 'ac_power', 0.0) or 0.0)
+        if ac_output <= 0:
+            return  # nothing being produced — zero PV is entirely plausible
+
+        # Anything else that could be supplying the load. Each is a real register on SPF,
+        # and any of them being non-zero makes the balance inconclusive rather than wrong.
+        from_elsewhere = (
+            float(getattr(data, 'discharge_power', 0.0) or 0.0)
+            + float(getattr(data, 'ac_input_power', 0.0) or 0.0)
+            + float(getattr(data, 'generator_power', 0.0) or 0.0)
+        )
+
+        shortfall = ac_output - from_elsewhere
+        if shortfall <= self.PV_ZERO_BALANCE_MARGIN:
+            return
+
+        for field in ('pv_total_power', 'pv1_power', 'pv2_power', 'pv3_power', 'pv4_power'):
+            data.unread_fields.add(field)
+
+        logger.warning(
+            "[%s] PV reads 0 W while the inverter reports %.0f W of AC output with only "
+            "%.0f W from battery, grid and generator combined — %.0f W is unaccounted for, "
+            "so the PV registers cannot be correct. Reporting PV as unknown for this poll "
+            "rather than publishing a zero (#384).",
+            self.register_map.get('name', '?'), ac_output, from_elsewhere, shortfall,
+        )
+
     def _inherit_unread(self, data: "GrowattData", target: str, *sources: str) -> bool:
         """Mark a derived field unread when any input it is computed from was not read.
 
@@ -2478,6 +2543,8 @@ class GrowattModbus:
             dry_contact_state_addr = self._find_register_by_name('dry_contact_state')
             if dry_contact_state_addr:
                 data.dry_contact_state = int(self._get_register_value(dry_contact_state_addr) or 0)
+
+            self._suppress_impossible_pv_zero(data)
 
             logger.debug(f"Read data: PV={data.pv_total_power}W, AC={data.ac_power}W, Battery={getattr(data, 'battery_soc', 'N/A')}%, Temp={data.inverter_temp}°C")
             
