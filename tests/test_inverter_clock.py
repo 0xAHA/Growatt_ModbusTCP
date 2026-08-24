@@ -330,3 +330,50 @@ def test_the_service_is_registered_and_documented():
     services = yaml.safe_load((component / "services.yaml").read_text(encoding="utf-8"))
     assert "sync_inverter_time" in services, "the service is not exposed in the UI"
     assert set(services["sync_inverter_time"]["fields"]) == {"device_id", "min_drift_seconds"}
+
+
+def test_a_year_write_that_is_accepted_but_ignored_aborts_the_sync():
+    """The trap this project keeps meeting: a write can be acknowledged and do nothing.
+
+    A MIN TL-X refuses 2026 outright, returns success for 26, and leaves the register
+    holding 2000. Trusting "no exception" lets the probe pass, the other five fields get
+    written, and the clock ends up with a new date against an untouched year — the state
+    that appears to make this firmware reset its RTC (#393).
+    """
+    client = _client(registers=[26, 8, 22, 14, 8, 19, 6])   # reads as two-digit
+    touched = []
+
+    def refuse_block(register, values):
+        raise _gm.ModbusWriteError(register, values, "refused")
+
+    client.write_registers = refuse_block
+    # Every write is "accepted"...
+    client.write_single_register_any_fc = lambda r, v: touched.append(r) is None
+    # ...but the year register never changes.
+    client.read_holding_registers = lambda start, count: [2000] if count == 1 else [26, 8, 22, 14, 8, 19, 6][:count]
+
+    with pytest.raises(_gm.ModbusWriteError) as excinfo:
+        client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
+
+    assert touched == [45], (
+        f"the year was silently ignored but {touched[1:]} were written anyway"
+    )
+    assert "acknowledged and ignored" in str(excinfo.value)
+
+
+def test_a_year_that_reads_back_correctly_lets_the_sync_continue():
+    """The other direction — a working model must not be blocked by the read-back check."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    touched = []
+
+    def refuse_block(register, values):
+        raise _gm.ModbusWriteError(register, values, "refused")
+
+    client.write_registers = refuse_block
+    client.write_single_register_any_fc = lambda r, v: touched.append(r) is None
+    client.read_holding_registers = lambda start, count: (
+        [2026] if count == 1 else [2026, 8, 25, 9, 30, 5][:count]
+    )
+
+    assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
+    assert touched == [45, 46, 47, 48, 49, 50, 51]

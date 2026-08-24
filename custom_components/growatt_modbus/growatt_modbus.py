@@ -3105,13 +3105,32 @@ class GrowattModbus:
             logger.info("[CLOCK] Block write refused (%s) — trying one register at a time",
                         err.error_message)
 
-        if not self.write_single_register_any_fc(self.CLOCK_REGISTER_START, values[0]):
+        year_accepted = self.write_single_register_any_fc(self.CLOCK_REGISTER_START, values[0])
+
+        # Accepting a write is not the same as honouring it. A MIN TL-X refuses 2026 outright
+        # but returns success for 26 and leaves the register unchanged — the "Read OK means
+        # nothing" trap this project has been caught by before. Without reading back, the
+        # probe passes, the remaining five fields get written, and the clock ends up with a
+        # new date against an untouched year: exactly the state that appears to make this
+        # firmware reset its RTC (#393).
+        if year_accepted:
+            check = self.read_holding_registers(self.CLOCK_REGISTER_START, 1)
+            if check and int(check[0]) != values[0]:
+                logger.warning(
+                    "[CLOCK] Register %d accepted %d but still reads %d — the write was "
+                    "acknowledged and ignored",
+                    self.CLOCK_REGISTER_START, values[0], int(check[0]),
+                )
+                year_accepted = False
+
+        if not year_accepted:
             raise ModbusWriteError(
                 self.CLOCK_REGISTER_START, values[:6],
-                f"the inverter refused register {self.CLOCK_REGISTER_START} (year). Nothing "
-                f"was changed — the remaining fields are deliberately left alone, because a "
-                f"clock with a new date and an old year is worse than one that is merely "
-                f"slow. This model may not allow its clock to be set over Modbus.",
+                f"register {self.CLOCK_REGISTER_START} (year) could not be set — it was "
+                f"either refused or acknowledged and ignored. Nothing was changed: the "
+                f"remaining fields are deliberately left alone, because a clock with a new "
+                f"date against an old year is worse than one that is merely slow. This model "
+                f"does not allow its year to be set over Modbus; use the Growatt app.",
             )
 
         failures = []
