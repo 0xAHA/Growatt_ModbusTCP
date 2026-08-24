@@ -3023,8 +3023,25 @@ class GrowattModbus:
                 "register 51 differ from the documented V1.39 layout (#393)",
             )
 
+        # Decide the year convention by reading the register, never by trying one form and
+        # retrying the other. On a MIN TL-X a refused write to 45 was followed by the
+        # register reading 2000 where it had read 2026 before — so a rejected write is not
+        # necessarily a write that did nothing, and probing with a value the firmware may
+        # clamp can leave the clock worse than it started (#393).
+        #
+        # Whatever the register currently holds tells us which encoding this model uses:
+        # a value below 100 is an offset from 2000, anything else is a full year.
+        current_year = self.read_holding_registers(self.CLOCK_REGISTER_START, 1)
+        two_digit_year = bool(current_year) and 0 <= int(current_year[0]) < 100
+        if current_year is None:
+            logger.warning(
+                "[CLOCK] Could not read register %d to determine the year format — "
+                "assuming a four-digit year", self.CLOCK_REGISTER_START,
+            )
+
         values = [
-            when.year, when.month, when.day,
+            (when.year - 2000) if two_digit_year else when.year,
+            when.month, when.day,
             when.hour, when.minute, when.second,
             when.isoweekday(),  # Monday=1, matching the observed weekday field
         ]
@@ -3034,10 +3051,21 @@ class GrowattModbus:
             self.CLOCK_REGISTER_START, self.CLOCK_REGISTER_START + self.CLOCK_REGISTER_COUNT - 1,
         )
 
-        # Preferred: one atomic block, so the clock is never briefly holding a mix of old
-        # and new fields.
+        # The weekday (51) is written separately, never as part of the block.
+        #
+        # Not every model implements it — the MIN profiles map 45-50 and stop — and an FC16
+        # transaction spanning an address the firmware does not have fails as a whole,
+        # taking the six good registers down with it. The date and time are what schedules
+        # run against; the weekday is derivable and cosmetic, so it must not be able to cost
+        # us the rest (#393).
+        weekday_register = self.CLOCK_REGISTER_START + 6
+
+        # Preferred: one atomic block for 45-50, so the clock is never briefly holding a mix
+        # of old and new fields.
         try:
-            if self.write_registers(self.CLOCK_REGISTER_START, values):
+            if self.write_registers(self.CLOCK_REGISTER_START, values[:6]):
+                self.write_single_register_any_fc(weekday_register, values[6])
+                self._verify_clock_write(values[:6])
                 return True
             logger.info("[CLOCK] Block write returned false — falling back to single registers")
         except ModbusWriteError as err:
@@ -3065,27 +3093,11 @@ class GrowattModbus:
                 written_ok.append(register)
                 continue
 
-            # The year is the one field with two known conventions. V1.39 devices read back
-            # a full four-digit year and the SPH accepts it, but the off-grid protocol
-            # documents "Year offset is 2000" for the same address — and a MIN TL-X refused
-            # 2026 outright while accepting every other field (#393). Two digits is the only
-            # other encoding Growatt uses, so it is worth one attempt before giving up.
-            if register == self.CLOCK_REGISTER_START and value >= 2000:
-                if self.write_single_register_any_fc(register, value - 2000):
-                    logger.info(
-                        "[CLOCK] Register %d refused %d but accepted %d — this model stores "
-                        "the year as an offset from 2000",
-                        register, value, value - 2000,
-                    )
-                    written_ok.append(register)
-                    continue
-
             failures.append(register)
 
-        # The weekday is derivable from the date and several models appear not to accept it.
-        # A refusal here is worth a line in the log and nothing more — the clock itself is
+        # The weekday is derivable from the date and several models do not implement it at
+        # all. A refusal is worth a line in the log and nothing more — the clock itself is
         # what schedules run against.
-        weekday_register = self.CLOCK_REGISTER_START + 6
         if not self.write_single_register_any_fc(weekday_register, values[6]):
             logger.warning(
                 "[CLOCK] Register %d (weekday) was refused. The clock itself is set; only "
@@ -3106,7 +3118,37 @@ class GrowattModbus:
             )
 
         logger.info("[CLOCK] Clock set via single-register writes")
+        self._verify_clock_write(values[:6])
         return True
+
+    def _verify_clock_write(self, intended: list) -> None:
+        """Read the clock back and complain if it does not hold what we asked for.
+
+        A write that reports success is not proof the value landed. On a MIN TL-X the year
+        register was refused and afterwards read 2000, having read 2026 beforehand — so this
+        firmware can both reject a write and change the register. Silence about that is how
+        a schedule ends up running twenty-six years out with nothing in the log (#393).
+
+        Advisory only. The write already happened; this exists so the user finds out.
+        """
+        count = len(intended)
+        actual = self.read_holding_registers(self.CLOCK_REGISTER_START, count)
+        if not actual or len(actual) < count:
+            logger.debug("[CLOCK] Could not read the clock back to verify it")
+            return
+
+        mismatches = [
+            (self.CLOCK_REGISTER_START + i, intended[i], int(actual[i]))
+            for i in range(count)
+            if int(actual[i]) != intended[i]
+        ]
+        if mismatches:
+            logger.warning(
+                "[CLOCK] The inverter did not store what was written: %s. The clock may be "
+                "wrong — check it in the Growatt app before relying on time-based schedules.",
+                ", ".join(f"register {r} asked for {want}, holds {got}"
+                          for r, want, got in mismatches),
+            )
 
     def _check_wit_control_conflicts(self, register: int, value: int) -> None:
         """

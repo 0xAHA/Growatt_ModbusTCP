@@ -31,18 +31,30 @@ _gm = importlib.import_module("growatt_under_test.growatt_modbus")
 
 
 class _FakeClock:
-    """Records writes and serves a scripted clock reading."""
+    """Records writes and serves a scripted clock reading.
+
+    Both write paths are captured. The weekday (51) is always written on its own — never as
+    part of the block — because not every model implements it and an FC16 spanning a missing
+    address fails as a whole, taking the six good registers with it.
+    """
 
     def __init__(self, registers=None):
         self.registers = registers
-        self.written = None
+        self.written = None      # the FC16 block, if one was accepted
+        self.singles = {}        # register -> value, for single writes
 
     def read_holding_registers(self, start, count):
         self.last_read = (start, count)
-        return self.registers
+        if self.registers is None:
+            return None
+        return self.registers[:count]
 
     def write_registers(self, register, values):
         self.written = (register, list(values))
+        return True
+
+    def write_single(self, register, value):
+        self.singles[register] = value
         return True
 
 
@@ -53,6 +65,7 @@ def _client(offgrid=False, registers=None):
     fake = _FakeClock(registers)
     client.read_holding_registers = fake.read_holding_registers
     client.write_registers = fake.write_registers
+    client.write_single_register_any_fc = fake.write_single
     client._fake = fake
     return client
 
@@ -103,7 +116,9 @@ def test_the_clock_is_written_as_one_atomic_block():
 
     register, values = client._fake.written
     assert register == 45
-    assert values == [2026, 8, 25, 9, 30, 5, 2]  # 25 Aug 2026 is a Tuesday → 2
+    assert values == [2026, 8, 25, 9, 30, 5], "the block must cover 45-50 only"
+    # The weekday goes separately so a model without register 51 still gets its clock.
+    assert client._fake.singles == {51: 2}  # 25 Aug 2026 is a Tuesday → 2
 
 
 @pytest.mark.parametrize(
@@ -117,7 +132,7 @@ def test_the_clock_is_written_as_one_atomic_block():
 def test_the_weekday_field_counts_monday_as_one(when, weekday):
     client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
     client.write_inverter_time(when)
-    assert client._fake.written[1][6] == weekday
+    assert client._fake.singles[51] == weekday
 
 
 def test_a_refused_block_falls_back_to_single_registers():
@@ -182,42 +197,22 @@ def test_a_two_digit_year_is_decoded_as_this_century():
     assert client.read_inverter_time() == datetime(2026, 8, 22, 14, 8, 19)
 
 
-def test_a_refused_four_digit_year_is_retried_as_two_digits():
-    """A MIN TL-X accepted every clock field except the year, refusing 2026 outright. Two
-    digits is the only other encoding Growatt uses for that register (#393)."""
-    client = _client(registers=[26, 8, 22, 14, 8, 19, 6])
-    attempts = []
-
-    def refuse_block(register, values):
-        raise _gm.ModbusWriteError(register, values, "refused")
-
-    def single(register, value):
-        attempts.append((register, value))
-        # Reject the four-digit year, accept everything else.
-        return not (register == 45 and value > 99)
-
-    client.write_registers = refuse_block
-    client.write_single_register_any_fc = single
-
-    assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
-    assert (45, 2026) in attempts, "the full year should be tried first"
-    assert (45, 26) in attempts, "the two-digit fallback was never attempted"
-
-
-def test_the_two_digit_retry_is_not_used_when_the_full_year_works():
-    """It must stay a fallback — writing 26 to a model expecting 2026 would set the year to
-    the first century."""
-    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
-    attempts = []
-
-    def refuse_block(register, values):
-        raise _gm.ModbusWriteError(register, values, "refused")
-
-    client.write_registers = refuse_block
-    client.write_single_register_any_fc = lambda r, v: attempts.append((r, v)) is None
-
+def test_the_year_format_is_taken_from_the_register_not_guessed():
+    """A MIN TL-X refused 2026 and its year register afterwards read 2000, having read 2026
+    before — so a rejected write is not necessarily a write that did nothing. Probing with a
+    value the firmware may clamp can leave the clock worse than it started, so the encoding
+    is read rather than tried (#393)."""
+    client = _client(registers=[26, 8, 22, 14, 8, 19, 6])   # two-digit model
     client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
-    assert (45, 26) not in attempts
+    assert client._fake.written[1][0] == 26, "a two-digit model was sent a four-digit year"
+
+
+def test_a_four_digit_model_is_never_sent_two_digits():
+    """The dangerous direction. Writing 26 to a model expecting 2026 would set the year to
+    the first century, and on at least one model the firmware clamps rather than refusing."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
+    assert client._fake.written[1][0] == 2026
 
 
 def test_a_partial_write_is_reported_as_such():
@@ -244,9 +239,18 @@ def test_the_block_write_is_still_preferred():
     """The fallback must not become the normal path — an atomic write is what stops the
     clock briefly holding a mix of old and new fields."""
     client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
-    client.write_single_register_any_fc = lambda r, v: pytest.fail(
-        "fell back to single registers even though the block write succeeded"
-    )
+
+    def single(register, value):
+        # 51 is expected here — it is always written on its own. Any of 45-50 arriving
+        # individually means the block path was abandoned when it had worked.
+        if register != 51:
+            pytest.fail(
+                f"register {register} was written individually even though the block "
+                f"write succeeded"
+            )
+        return True
+
+    client.write_single_register_any_fc = single
     assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
     assert client._fake.written[0] == 45
 
