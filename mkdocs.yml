@@ -50,6 +50,7 @@ nav:
     - Auto-Detection: hardware/autodetection.md
   - Controls:
     - Entity Reference: controls/entity-reference.md
+    - Actions Reference: controls/actions.md
     - Battery & Scheduling: controls/battery-scheduling.md
     - WIT Inverter Guide: controls/wit-guide.md
   - Troubleshooting:

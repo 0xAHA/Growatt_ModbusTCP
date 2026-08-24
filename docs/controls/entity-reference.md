@@ -348,38 +348,9 @@ VPP Control Authority (30100), VPP Remote Power Control (30407), VPP Commanded P
 Time period schedules run against the **inverter's own clock**, not Home Assistant's. That
 clock drifts — one SPH was two minutes out, which made a 13:00 export window start at 13:02.
 
-The `growatt_modbus.sync_inverter_time` action sets it from Home Assistant's local time and
-reports the drift it corrected:
-
-```yaml
-automation:
-  - alias: "Growatt — weekly clock sync"
-    trigger:
-      - platform: time
-        at: "03:30:00"
-    condition:
-      - condition: time
-        weekday: sun
-    action:
-      - action: growatt_modbus.sync_inverter_time
-        data:
-          device_id: !input growatt_device
-          min_drift_seconds: 30
-```
-
-`min_drift_seconds` skips the write when the inverter is already close enough. Leave it at
-`0` for a manual one-off; set it for anything scheduled, so a run that finds no drift costs
-nothing. These are holding registers and most likely have a finite write endurance — see
-[#392](https://github.com/0xAHA/Growatt_ModbusTCP/issues/392).
-
-Weekly is plenty for a clock that drifts minutes per month. There is no benefit to running
-it hourly and a small cost each time.
-
-> **Not available on SPF/SPE.** The off-grid protocol stores the year as an offset from 2000
-> and uses register 51 for something other than the weekday. Writing the standard layout
-> would set the year wrongly and overwrite an unrelated register, so the action refuses
-> rather than guessing. If you have an off-grid model and can provide a register scan
-> covering 45-51, that is what is needed to add it.
+There is no entity for this; it is an action. See
+**[Actions Reference → Sync the inverter clock](actions.md#sync-the-inverter-clock)** for
+`growatt_modbus.sync_inverter_time`, a weekly automation example, and the SPF/SPE caveat.
 
 ---
 
