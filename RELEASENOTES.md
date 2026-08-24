@@ -4,7 +4,7 @@
 
 ---
 
-## v1.8.2 (pre-release)
+## v1.8.2 (pre-release, withdrawn)
 
 Issues: #393
 
@@ -21,7 +21,7 @@ Issues: #393
 
 ---
 
-## v1.8.1 (pre-release)
+## v1.8.1 (pre-release, withdrawn)
 
 Issues: #393
 
@@ -37,7 +37,7 @@ Issues: #393
 
 ---
 
-## v1.8.0 (pre-release)
+## v1.8.0 (pre-release, withdrawn)
 
 Issues: #393
 
