@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Tuple, Optional
 import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 
@@ -763,9 +764,19 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         # inside it can take a second or two, which is a large fraction of the error we are
         # trying to correct.
         now = dt_util.now().replace(tzinfo=None)
-        written = await hass.async_add_executor_job(client.write_inverter_time, now)
+        try:
+            written = await hass.async_add_executor_job(client.write_inverter_time, now)
+        except Exception as err:  # noqa: BLE001 - surfaced to the user, not swallowed
+            # Raised as HomeAssistantError so the message reaches the UI. A bare exception
+            # from a service handler shows only "Unknown error" and sends the user to the
+            # log to find out what happened.
+            raise HomeAssistantError(
+                f"Could not set the inverter clock: {err}. The clock registers (45-51) were "
+                f"tried as one block and then individually. If your model does not accept "
+                f"them, the time can still be set from the Growatt app."
+            ) from err
         if not written:
-            raise ValueError("The inverter rejected the clock write")
+            raise HomeAssistantError("The inverter rejected the clock write")
 
         _LOGGER.info(
             "Inverter clock set to %s (was %s, drift %s)",

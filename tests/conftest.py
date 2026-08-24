@@ -74,6 +74,13 @@ def _stub_homeassistant() -> None:
     core.ServiceCall = ServiceCall
     core.SupportsResponse = SupportsResponse
 
+    exceptions = types.ModuleType("homeassistant.exceptions")
+
+    class HomeAssistantError(Exception):
+        """Stand-in; diagnostic.py raises this to surface a message to the UI."""
+
+    exceptions.HomeAssistantError = HomeAssistantError
+
     helpers = types.ModuleType("homeassistant.helpers")
     helpers.__path__ = []
     device_registry = types.ModuleType("homeassistant.helpers.device_registry")
@@ -87,10 +94,12 @@ def _stub_homeassistant() -> None:
 
     ha.config_entries = config_entries
     ha.core = core
+    ha.exceptions = exceptions
     ha.helpers = helpers
     sys.modules["homeassistant"] = ha
     sys.modules["homeassistant.config_entries"] = config_entries
     sys.modules["homeassistant.core"] = core
+    sys.modules["homeassistant.exceptions"] = exceptions
     sys.modules["homeassistant.helpers"] = helpers
     sys.modules["homeassistant.helpers.device_registry"] = device_registry
     sys.modules["homeassistant.helpers.config_validation"] = config_validation

@@ -120,6 +120,72 @@ def test_the_weekday_field_counts_monday_as_one(when, weekday):
     assert client._fake.written[1][6] == weekday
 
 
+def test_a_refused_block_falls_back_to_single_registers():
+    """Reported on the maintainer's own inverter: FC 0x10 across 45-51 came back as an error
+    even though the registers are writable. Without a fallback the action failed outright."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    singles = {}
+
+    def refuse_block(register, values):
+        raise _gm.ModbusWriteError(register, values, "refused")
+
+    client.write_registers = refuse_block
+    client.write_single_register_any_fc = lambda r, v: singles.setdefault(r, v) is v
+
+    assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
+    assert singles == {45: 2026, 46: 8, 47: 25, 48: 9, 49: 30, 50: 5, 51: 2}
+
+
+def test_a_refused_weekday_does_not_fail_the_sync():
+    """The weekday is derivable and schedules do not use it. Losing it must not cost the
+    user a clock that would otherwise have been set."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    written = {}
+
+    def refuse_block(register, values):
+        raise _gm.ModbusWriteError(register, values, "refused")
+
+    def single(register, value):
+        if register == 51:
+            return False  # weekday refused
+        written[register] = value
+        return True
+
+    client.write_registers = refuse_block
+    client.write_single_register_any_fc = single
+
+    assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
+    assert set(written) == {45, 46, 47, 48, 49, 50}
+
+
+def test_a_clock_register_refused_both_ways_raises():
+    """If the date itself will not take, the caller must hear about it rather than believe
+    the clock was set."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+
+    def refuse_block(register, values):
+        raise _gm.ModbusWriteError(register, values, "refused")
+
+    client.write_registers = refuse_block
+    client.write_single_register_any_fc = lambda r, v: False
+
+    with pytest.raises(_gm.ModbusWriteError) as excinfo:
+        client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
+    # The message must name the registers, so the log says which one the model refuses.
+    assert "45" in str(excinfo.value)
+
+
+def test_the_block_write_is_still_preferred():
+    """The fallback must not become the normal path — an atomic write is what stops the
+    clock briefly holding a mix of old and new fields."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    client.write_single_register_any_fc = lambda r, v: pytest.fail(
+        "fell back to single registers even though the block write succeeded"
+    )
+    assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
+    assert client._fake.written[0] == 45
+
+
 def test_the_year_is_written_in_full():
     """The off-grid protocol offsets the year from 2000; V1.39 does not, and both scans read
     a full four-digit year."""

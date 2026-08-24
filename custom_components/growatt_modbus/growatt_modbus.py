@@ -3025,7 +3025,56 @@ class GrowattModbus:
             when.strftime("%Y-%m-%d %H:%M:%S"),
             self.CLOCK_REGISTER_START, self.CLOCK_REGISTER_START + self.CLOCK_REGISTER_COUNT - 1,
         )
-        return self.write_registers(self.CLOCK_REGISTER_START, values)
+
+        # Preferred: one atomic block, so the clock is never briefly holding a mix of old
+        # and new fields.
+        try:
+            if self.write_registers(self.CLOCK_REGISTER_START, values):
+                return True
+            logger.info("[CLOCK] Block write returned false — falling back to single registers")
+        except ModbusWriteError as err:
+            logger.info(
+                "[CLOCK] Block write of %d-%d refused (%s) — falling back to single registers",
+                self.CLOCK_REGISTER_START,
+                self.CLOCK_REGISTER_START + self.CLOCK_REGISTER_COUNT - 1, err,
+            )
+
+        # Fallback: some firmware refuses a seven-register block here and accepts the same
+        # values one at a time. Reported on the maintainer's own inverter, where FC 0x10
+        # across 45-51 came back as an error while the registers themselves are writable.
+        #
+        # Less precise by design — six sequential writes take a second or two, so the clock
+        # lands slightly behind. That is irrelevant against the minutes of drift this exists
+        # to correct, and it is strictly better than not setting it at all.
+        #
+        # Writing one at a time also tells us *which* register is refused, which a block
+        # write cannot: the whole transaction fails as one.
+        failures = []
+        for offset, value in enumerate(values[:6]):
+            register = self.CLOCK_REGISTER_START + offset
+            if not self.write_single_register_any_fc(register, value):
+                failures.append(register)
+
+        # The weekday is derivable from the date and several models appear not to accept it.
+        # A refusal here is worth a line in the log and nothing more — the clock itself is
+        # what schedules run against.
+        weekday_register = self.CLOCK_REGISTER_START + 6
+        if not self.write_single_register_any_fc(weekday_register, values[6]):
+            logger.warning(
+                "[CLOCK] Register %d (weekday) was refused. The clock itself is set; only "
+                "the day-of-week field is unchanged, which schedules do not use.",
+                weekday_register,
+            )
+
+        if failures:
+            raise ModbusWriteError(
+                self.CLOCK_REGISTER_START, values,
+                f"registers {failures} were refused both as a block and individually — "
+                f"this model may not allow the clock to be set over Modbus",
+            )
+
+        logger.info("[CLOCK] Clock set via single-register writes")
+        return True
 
     def _check_wit_control_conflicts(self, register: int, value: int) -> None:
         """

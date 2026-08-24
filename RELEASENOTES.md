@@ -4,6 +4,22 @@
 
 ---
 
+## v1.8.1 (pre-release)
+
+Issues: #393
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **Sync Inverter Clock now works on models that refuse a block write.** Some firmware
+  rejects writing registers 45-51 as one transaction even though the registers themselves
+  are writable, and the action failed outright with "Unknown error". It now retries one
+  register at a time, and a refused day-of-week field no longer costs you the clock —
+  schedules do not use it. (#393)
+- **Clock errors now explain themselves** instead of surfacing as "Unknown error", and the
+  log names the specific register a model refuses.
+
+---
+
 ## v1.8.0 (pre-release)
 
 Issues: #393
