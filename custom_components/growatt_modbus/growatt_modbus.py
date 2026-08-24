@@ -857,7 +857,14 @@ class SharedModbusConnection:
                 self.disconnect()
                 return False
 
-            return not (hasattr(result, 'isError') and callable(result.isError) and result.isError())
+            if hasattr(result, 'isError') and callable(result.isError) and result.isError():
+                # Same reasoning as write_registers above: keep the device's own reason.
+                logger.warning(
+                    "[SharedConn %s] write_register(%d, %d) refused by the device: %s",
+                    self.connection_id, register, value, result,
+                )
+                return False
+            return True
         return False
 
     def write_registers(self, register: int, values: list, slave_id: int) -> bool:
@@ -887,7 +894,18 @@ class SharedModbusConnection:
                 self.disconnect()
                 return False
 
-            return not (hasattr(result, 'isError') and callable(result.isError) and result.isError())
+            if hasattr(result, 'isError') and callable(result.isError) and result.isError():
+                # Surface the device's own reason. Reducing this to False threw away the
+                # only thing that distinguishes "this register does not exist" (Illegal
+                # Data Address) from "this value is not acceptable" (Slave Device Failure),
+                # and the caller could then only report "returned error" — which is what a
+                # clock write failure looked like from the outside (#393).
+                logger.warning(
+                    "[SharedConn %s] write_registers(%d, %d values) refused by the device: %s",
+                    self.connection_id, register, len(values), result,
+                )
+                return False
+            return True
         return False
 
 
