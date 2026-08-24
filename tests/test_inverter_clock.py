@@ -175,6 +175,71 @@ def test_a_clock_register_refused_both_ways_raises():
     assert "45" in str(excinfo.value)
 
 
+def test_a_two_digit_year_is_decoded_as_this_century():
+    """Some models store the year as an offset from 2000. Without this a "26" decodes as the
+    year 26 AD and the reported drift is two millennia."""
+    client = _client(registers=[26, 8, 22, 14, 8, 19, 6])
+    assert client.read_inverter_time() == datetime(2026, 8, 22, 14, 8, 19)
+
+
+def test_a_refused_four_digit_year_is_retried_as_two_digits():
+    """A MIN TL-X accepted every clock field except the year, refusing 2026 outright. Two
+    digits is the only other encoding Growatt uses for that register (#393)."""
+    client = _client(registers=[26, 8, 22, 14, 8, 19, 6])
+    attempts = []
+
+    def refuse_block(register, values):
+        raise _gm.ModbusWriteError(register, values, "refused")
+
+    def single(register, value):
+        attempts.append((register, value))
+        # Reject the four-digit year, accept everything else.
+        return not (register == 45 and value > 99)
+
+    client.write_registers = refuse_block
+    client.write_single_register_any_fc = single
+
+    assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
+    assert (45, 2026) in attempts, "the full year should be tried first"
+    assert (45, 26) in attempts, "the two-digit fallback was never attempted"
+
+
+def test_the_two_digit_retry_is_not_used_when_the_full_year_works():
+    """It must stay a fallback — writing 26 to a model expecting 2026 would set the year to
+    the first century."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    attempts = []
+
+    def refuse_block(register, values):
+        raise _gm.ModbusWriteError(register, values, "refused")
+
+    client.write_registers = refuse_block
+    client.write_single_register_any_fc = lambda r, v: attempts.append((r, v)) is None
+
+    client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
+    assert (45, 26) not in attempts
+
+
+def test_a_partial_write_is_reported_as_such():
+    """The single-register fallback cannot be atomic. If some fields landed and one did not,
+    the user needs to know the clock is part-updated rather than untouched."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+
+    def refuse_block(register, values):
+        raise _gm.ModbusWriteError(register, values, "refused")
+
+    client.write_registers = refuse_block
+    # Everything except the year succeeds, and the two-digit retry fails too.
+    client.write_single_register_any_fc = lambda r, v: r != 45
+
+    with pytest.raises(_gm.ModbusWriteError) as excinfo:
+        client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
+
+    message = str(excinfo.value)
+    assert "[45]" in message, "the refused register is not named"
+    assert "46" in message, "the registers that did land are not reported"
+
+
 def test_the_block_write_is_still_preferred():
     """The fallback must not become the normal path — an atomic write is what stops the
     clock briefly holding a mix of old and new fields."""

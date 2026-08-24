@@ -4,6 +4,23 @@
 
 ---
 
+## v1.8.2 (pre-release)
+
+Issues: #393
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **Clock sync now handles models that store the year as two digits.** A MIN TL-X accepted
+  every clock field except the year, refusing `2026` outright. Growatt uses both conventions
+  for that register — the off-grid protocol documents an offset from 2000 — so a refused
+  four-digit year is now retried as two. Reading handles both as well, otherwise a stored
+  `26` decoded as the year 26 AD and the reported drift was two millennia. (#393)
+- **A partial clock write now says so**, naming both the registers that were refused and the
+  ones that were updated. The single-register fallback cannot be atomic, so knowing the clock
+  is part-set rather than untouched matters.
+
+---
+
 ## v1.8.1 (pre-release)
 
 Issues: #393

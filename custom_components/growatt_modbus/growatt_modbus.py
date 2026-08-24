@@ -2990,6 +2990,14 @@ class GrowattModbus:
             return None
 
         year, month, day, hour, minute, second = (int(v) for v in regs[:6])
+
+        # Two conventions in the wild for the same register. Most V1.39 devices read back a
+        # full four-digit year; some store it as an offset from 2000, which the off-grid
+        # protocol documents explicitly. Without this a "26" would decode as the year 26 AD
+        # and the drift would come out as two millennia (#393).
+        if 0 <= year < 100:
+            year += 2000
+
         try:
             return datetime(year, month, day, hour, minute, second)
         except ValueError as err:
@@ -3050,10 +3058,29 @@ class GrowattModbus:
         # Writing one at a time also tells us *which* register is refused, which a block
         # write cannot: the whole transaction fails as one.
         failures = []
+        written_ok = []
         for offset, value in enumerate(values[:6]):
             register = self.CLOCK_REGISTER_START + offset
-            if not self.write_single_register_any_fc(register, value):
-                failures.append(register)
+            if self.write_single_register_any_fc(register, value):
+                written_ok.append(register)
+                continue
+
+            # The year is the one field with two known conventions. V1.39 devices read back
+            # a full four-digit year and the SPH accepts it, but the off-grid protocol
+            # documents "Year offset is 2000" for the same address — and a MIN TL-X refused
+            # 2026 outright while accepting every other field (#393). Two digits is the only
+            # other encoding Growatt uses, so it is worth one attempt before giving up.
+            if register == self.CLOCK_REGISTER_START and value >= 2000:
+                if self.write_single_register_any_fc(register, value - 2000):
+                    logger.info(
+                        "[CLOCK] Register %d refused %d but accepted %d — this model stores "
+                        "the year as an offset from 2000",
+                        register, value, value - 2000,
+                    )
+                    written_ok.append(register)
+                    continue
+
+            failures.append(register)
 
         # The weekday is derivable from the date and several models appear not to accept it.
         # A refusal here is worth a line in the log and nothing more — the clock itself is
@@ -3067,10 +3094,15 @@ class GrowattModbus:
             )
 
         if failures:
+            # Name what did land as well as what did not. The single-register fallback
+            # cannot be atomic, so a partial write is possible and the user should know the
+            # clock is now part-updated rather than untouched.
             raise ModbusWriteError(
                 self.CLOCK_REGISTER_START, values,
-                f"registers {failures} were refused both as a block and individually — "
-                f"this model may not allow the clock to be set over Modbus",
+                f"register(s) {failures} refused as a block, individually, and as a "
+                f"two-digit year where applicable. Registers {written_ok} were updated, so "
+                f"the clock is partially set — this model may not allow the field(s) above "
+                f"to be written over Modbus",
             )
 
         logger.info("[CLOCK] Clock set via single-register writes")
