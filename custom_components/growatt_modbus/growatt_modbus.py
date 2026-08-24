@@ -3078,64 +3078,62 @@ class GrowattModbus:
         # us the rest (#393).
         weekday_register = self.CLOCK_REGISTER_START + 6
 
-        # Preferred: one atomic block for 45-50, so the clock is never briefly holding a mix
-        # of old and new fields.
+        # Atomic first, then a guarded per-register fallback.
+        #
+        # A MIN TL-X answers FC 0x06 with Illegal Function and refuses FC 0x10 across six
+        # registers, but accepts FC 0x10 one value at a time — so the per-register path is
+        # the only one that works there, and removing it would remove the feature.
+        #
+        # The danger is a *partial* write. That same inverter ended up with a year of 2000
+        # where it had held 2026: five fields took, the year did not, and the firmware
+        # appears to have reset the clock rather than keep a date it considered inconsistent.
+        # Half a clock is worse than none — a schedule twenty-six years out is not a smaller
+        # problem than one two minutes out.
+        #
+        # So the fallback writes the YEAR FIRST. It is the field observed to be refused, and
+        # going first makes it a probe: if it fails, nothing else has been touched and we
+        # abort with the clock exactly as we found it (#393).
+        weekday_register = self.CLOCK_REGISTER_START + 6
+
         try:
             if self.write_registers(self.CLOCK_REGISTER_START, values[:6]):
                 self.write_single_register_any_fc(weekday_register, values[6])
                 self._verify_clock_write(values[:6])
                 return True
-            logger.info("[CLOCK] Block write returned false — falling back to single registers")
+            logger.info("[CLOCK] Block write refused — trying one register at a time")
         except ModbusWriteError as err:
-            logger.info(
-                "[CLOCK] Block write of %d-%d refused (%s) — falling back to single registers",
-                self.CLOCK_REGISTER_START,
-                self.CLOCK_REGISTER_START + self.CLOCK_REGISTER_COUNT - 1, err,
+            logger.info("[CLOCK] Block write refused (%s) — trying one register at a time",
+                        err.error_message)
+
+        if not self.write_single_register_any_fc(self.CLOCK_REGISTER_START, values[0]):
+            raise ModbusWriteError(
+                self.CLOCK_REGISTER_START, values[:6],
+                f"the inverter refused register {self.CLOCK_REGISTER_START} (year). Nothing "
+                f"was changed — the remaining fields are deliberately left alone, because a "
+                f"clock with a new date and an old year is worse than one that is merely "
+                f"slow. This model may not allow its clock to be set over Modbus.",
             )
 
-        # Fallback: some firmware refuses a seven-register block here and accepts the same
-        # values one at a time. Reported on the maintainer's own inverter, where FC 0x10
-        # across 45-51 came back as an error while the registers themselves are writable.
-        #
-        # Less precise by design — six sequential writes take a second or two, so the clock
-        # lands slightly behind. That is irrelevant against the minutes of drift this exists
-        # to correct, and it is strictly better than not setting it at all.
-        #
-        # Writing one at a time also tells us *which* register is refused, which a block
-        # write cannot: the whole transaction fails as one.
         failures = []
-        written_ok = []
-        for offset, value in enumerate(values[:6]):
+        for offset, value in enumerate(values[1:6], start=1):
             register = self.CLOCK_REGISTER_START + offset
-            if self.write_single_register_any_fc(register, value):
-                written_ok.append(register)
-                continue
+            if not self.write_single_register_any_fc(register, value):
+                failures.append(register)
 
-            failures.append(register)
-
-        # The weekday is derivable from the date and several models do not implement it at
-        # all. A refusal is worth a line in the log and nothing more — the clock itself is
-        # what schedules run against.
         if not self.write_single_register_any_fc(weekday_register, values[6]):
-            logger.warning(
-                "[CLOCK] Register %d (weekday) was refused. The clock itself is set; only "
-                "the day-of-week field is unchanged, which schedules do not use.",
-                weekday_register,
+            logger.debug(
+                "[CLOCK] Register %d (weekday) was refused — the clock itself is set, and "
+                "schedules do not use that field", weekday_register,
             )
 
         if failures:
-            # Name what did land as well as what did not. The single-register fallback
-            # cannot be atomic, so a partial write is possible and the user should know the
-            # clock is now part-updated rather than untouched.
             raise ModbusWriteError(
-                self.CLOCK_REGISTER_START, values,
-                f"register(s) {failures} refused as a block, individually, and as a "
-                f"two-digit year where applicable. Registers {written_ok} were updated, so "
-                f"the clock is partially set — this model may not allow the field(s) above "
-                f"to be written over Modbus",
+                self.CLOCK_REGISTER_START, values[:6],
+                f"register(s) {failures} were refused after the year had already been "
+                f"written, so the clock is now part-updated. Check it in the Growatt app.",
             )
 
-        logger.info("[CLOCK] Clock set via single-register writes")
+        logger.info("[CLOCK] Clock set one register at a time")
         self._verify_clock_write(values[:6])
         return True
 

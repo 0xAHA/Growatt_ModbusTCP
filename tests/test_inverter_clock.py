@@ -215,24 +215,51 @@ def test_a_four_digit_model_is_never_sent_two_digits():
     assert client._fake.written[1][0] == 2026
 
 
-def test_a_partial_write_is_reported_as_such():
-    """The single-register fallback cannot be atomic. If some fields landed and one did not,
-    the user needs to know the clock is part-updated rather than untouched."""
+def test_the_year_is_written_first_so_a_refusal_changes_nothing():
+    """The year is the field observed to be refused, so it goes first and acts as a probe.
+
+    A MIN TL-X ended up holding the year 2000 where it had held 2026 — five fields took, the
+    year did not, and the firmware appears to have reset the clock rather than keep a date it
+    considered inconsistent. Writing the year last made that possible; writing it first means
+    a refusal costs nothing."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    touched = []
+
+    def refuse_block(register, values):
+        raise _gm.ModbusWriteError(register, values, "refused")
+
+    def single(register, value):
+        touched.append(register)
+        return register != 45          # the year is refused, as on the MIN
+
+    client.write_registers = refuse_block
+    client.write_single_register_any_fc = single
+
+    with pytest.raises(_gm.ModbusWriteError) as excinfo:
+        client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
+
+    assert touched == [45], (
+        f"the year was refused but {touched[1:]} were written anyway — the clock is now "
+        f"part-updated, which is the failure this ordering exists to prevent"
+    )
+    assert "Nothing was changed" in str(excinfo.value)
+
+
+def test_a_later_field_failing_is_reported_as_a_partial_write():
+    """If the year lands and something after it does not, the clock really is part-updated
+    and the user needs to be told rather than left to notice."""
     client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
 
     def refuse_block(register, values):
         raise _gm.ModbusWriteError(register, values, "refused")
 
     client.write_registers = refuse_block
-    # Everything except the year succeeds, and the two-digit retry fails too.
-    client.write_single_register_any_fc = lambda r, v: r != 45
+    client.write_single_register_any_fc = lambda r, v: r != 48   # hour refused
 
     with pytest.raises(_gm.ModbusWriteError) as excinfo:
         client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
-
-    message = str(excinfo.value)
-    assert "[45]" in message, "the refused register is not named"
-    assert "46" in message, "the registers that did land are not reported"
+    assert "part-updated" in str(excinfo.value)
+    assert "48" in str(excinfo.value)
 
 
 def test_the_block_write_is_still_preferred():
