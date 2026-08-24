@@ -107,6 +107,7 @@ SERVICE_READ_REGISTER = "read_register"
 SERVICE_SET_BATTERY_MODE = "set_battery_mode"
 SERVICE_SYNC_TOU_SCHEDULE = "sync_tou_schedule"
 SERVICE_GET_REGISTER_DATA = "get_register_data"
+SERVICE_SYNC_INVERTER_TIME = "sync_inverter_time"
 
 # Universal scan ranges - covers all Grid-Tied Growatt series
 # Split into chunks of max 125 registers to respect Modbus limits
@@ -256,6 +257,19 @@ SERVICE_SYNC_TOU_SCHEDULE_SCHEMA = vol.Schema(
         vol.Optional("default_mode", default=0): vol.All(vol.Coerce(int), vol.Range(min=0, max=2)),
     }
 )
+SERVICE_SYNC_INVERTER_TIME_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): cv.string,
+        # Skip the write when the inverter is already close enough. Default 0 writes every
+        # time, which is what a one-off manual sync wants; a daily automation should raise
+        # it so it only spends a write when there is drift worth correcting. These are
+        # holding registers and very likely EEPROM-backed (#392).
+        vol.Optional("min_drift_seconds", default=0): vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=86400)
+        ),
+    }
+)
+
 SERVICE_GET_REGISTER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required("device_id"): cv.string,
@@ -692,6 +706,79 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         except ModbusWriteError as e:
             _LOGGER.error("Modbus write error: %s", e.error_message)
             raise ValueError(f"Modbus write failed: {e.error_message}")
+
+    async def sync_inverter_time(call: ServiceCall) -> dict:
+        """Set the inverter's clock from Home Assistant's local time (#393).
+
+        The inverter runs its own RTC and it drifts. That matters because time-of-use
+        windows fire against the *inverter's* idea of the time, not yours — a reporter's
+        13:00 export window started two minutes late, and the clock was the reason.
+
+        Reads first so the response can report what the drift actually was, and so
+        `min_drift_seconds` can skip a pointless write. Local time, not UTC: the inverter
+        has no timezone concept and its schedule is set in wall-clock terms.
+        """
+        import homeassistant.util.dt as dt_util
+
+        device_id = call.data["device_id"]
+        min_drift = call.data.get("min_drift_seconds", 0)
+
+        device_reg = dr.async_get(hass)
+        device_entry = device_reg.async_get(device_id)
+        if not device_entry:
+            raise ValueError(f"Device {device_id} not found")
+
+        config_entry_id = _config_entry_id_for_device(hass, device_entry)
+        if not config_entry_id:
+            raise ValueError(f"No config entry found for device {device_id}")
+
+        coordinator = _coordinator_for_entry(hass, config_entry_id)
+        client = coordinator.modbus_client
+
+        if not client.is_clock_supported:
+            raise ValueError(
+                "Clock sync is not available on off-grid profiles. The off-grid protocol "
+                "stores the year as an offset from 2000 and uses register 51 for something "
+                "other than the weekday, and no scan has confirmed the encoding (#393)."
+            )
+
+        now = dt_util.now().replace(tzinfo=None)
+
+        before = await hass.async_add_executor_job(client.read_inverter_time)
+        drift = (now - before).total_seconds() if before else None
+
+        if drift is not None and abs(drift) < min_drift:
+            _LOGGER.info(
+                "Inverter clock is %.0f s from Home Assistant, below the %d s threshold — "
+                "not writing", drift, min_drift,
+            )
+            return {
+                "written": False,
+                "inverter_time": before.isoformat(),
+                "home_assistant_time": now.isoformat(),
+                "drift_seconds": drift,
+            }
+
+        # Re-read the wall clock immediately before writing: the read above and any retry
+        # inside it can take a second or two, which is a large fraction of the error we are
+        # trying to correct.
+        now = dt_util.now().replace(tzinfo=None)
+        written = await hass.async_add_executor_job(client.write_inverter_time, now)
+        if not written:
+            raise ValueError("The inverter rejected the clock write")
+
+        _LOGGER.info(
+            "Inverter clock set to %s (was %s, drift %s)",
+            now.strftime("%Y-%m-%d %H:%M:%S"),
+            before.strftime("%Y-%m-%d %H:%M:%S") if before else "unreadable",
+            f"{drift:+.0f} s" if drift is not None else "unknown",
+        )
+        return {
+            "written": True,
+            "inverter_time": before.isoformat() if before else None,
+            "home_assistant_time": now.isoformat(),
+            "drift_seconds": drift,
+        }
 
     async def detect_grid_orientation(call: ServiceCall) -> None:
         """Detect if grid power CT clamp needs inversion based on current power flow."""
@@ -1337,6 +1424,14 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_WRITE_REGISTER,
         write_register,
         schema=SERVICE_WRITE_REGISTER_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SYNC_INVERTER_TIME,
+        sync_inverter_time,
+        schema=SERVICE_SYNC_INVERTER_TIME_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
     )
 
     hass.services.async_register(

@@ -4,6 +4,28 @@
 
 ---
 
+## v1.8.0 (pre-release)
+
+Issues: #393
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **New action: Sync Inverter Clock.** The inverter keeps its own real-time clock, and it
+  drifts — one SPH was two minutes out, which made a 13:00 export window start at 13:02.
+  Time period schedules run against the inverter's clock, not Home Assistant's, so that
+  drift moves your schedules. `growatt_modbus.sync_inverter_time` sets it from Home
+  Assistant's local time and reports the drift it corrected. Requested by @Vict20. (#393)
+- **`min_drift_seconds` skips the write when the clock is already close enough**, so a
+  scheduled automation costs nothing on the runs that find nothing to fix. Leave it at 0 for
+  a manual one-off.
+- **Not available on SPF/SPE.** The off-grid protocol stores the year as an offset from 2000
+  and uses register 51 for something other than the weekday, so the standard layout would
+  set the year wrongly and overwrite an unrelated register. The action refuses rather than
+  guessing; a register scan covering 45-51 from an off-grid model is what is needed to add
+  it.
+
+---
+
 ## v1.7.7 (pre-release)
 
 Issues: #381, #384, #392

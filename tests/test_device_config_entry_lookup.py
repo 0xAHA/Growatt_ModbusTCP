@@ -108,4 +108,7 @@ def test_the_duplicated_lookup_blocks_are_gone():
     )
     # The compatibility branch inside the helper is the one permitted read.
     assert source.count("device_entry.config_entries") == 1
-    assert source.count("_config_entry_id_for_device(hass, device_entry)") == 7
+    # At least the seven handlers that existed when this was de-duplicated. Not an exact
+    # count — a new service taking a device_id should use the helper too, and pinning the
+    # number would fail on the addition rather than on a regression.
+    assert source.count("_config_entry_id_for_device(hass, device_entry)") >= 7

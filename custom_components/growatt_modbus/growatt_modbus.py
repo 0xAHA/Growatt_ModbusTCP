@@ -19,6 +19,7 @@ Hardware Setup:
 import time
 import logging
 import threading
+from datetime import datetime
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, Tuple, Union
@@ -2948,6 +2949,83 @@ class GrowattModbus:
             error_msg = f"Exception: {type(e).__name__}: {e}"
             logger.error(f"[WRITE_MULTI] {error_msg}")
             raise ModbusWriteError(register, values, error_msg)
+
+    # ------------------------------------------------------------------
+    # Inverter real-time clock — holding registers 45-51 (#393)
+    # ------------------------------------------------------------------
+    #
+    # Protocol V1.39 documents the block as writable:
+    #
+    #   45 Sys Year | 46 Sys Month | 47 Sys Day
+    #   48 Sys Hour | 49 Sys Min   | 50 Sys Sec  | 51 Sys Weekly
+    #
+    # Confirmed on hardware from two unrelated device classes. An SPH 3600 scan read
+    # 2026/8/22 14:08:19 with weekday 6 — 22 August 2026 was a Saturday, so the weekday
+    # field counts Monday as 1. A GroHomeManager-X (DTC 82) on a different site read
+    # 2026/8/22 09:42:17 in the same registers. The year is the full four digits, not an
+    # offset.
+    #
+    # NOT off-grid. The off-grid protocol puts the clock at the same addresses but records
+    # "Year offset is 2000" and gives register 51 to Chip Select rather than a weekday, so
+    # writing this block unchanged to an SPF would set the year wrong and overwrite an
+    # unrelated register. No SPF scan has been offered to confirm the encoding, and guessing
+    # at a clock write is not worth the risk — see is_clock_supported().
+    CLOCK_REGISTER_START = 45
+    CLOCK_REGISTER_COUNT = 7  # 45-51 inclusive
+
+    @property
+    def is_clock_supported(self) -> bool:
+        """Whether this profile's clock encoding is confirmed."""
+        return not self.register_map.get('offgrid_protocol', False)
+
+    def read_inverter_time(self) -> Optional[datetime]:
+        """Read the inverter's real-time clock, or None if it cannot be decoded."""
+        if not self.is_clock_supported:
+            return None
+
+        regs = self.read_holding_registers(self.CLOCK_REGISTER_START, self.CLOCK_REGISTER_COUNT)
+        if not regs or len(regs) < 6:
+            logger.debug("[CLOCK] Could not read registers %d-%d",
+                         self.CLOCK_REGISTER_START, self.CLOCK_REGISTER_START + 5)
+            return None
+
+        year, month, day, hour, minute, second = (int(v) for v in regs[:6])
+        try:
+            return datetime(year, month, day, hour, minute, second)
+        except ValueError as err:
+            # A freshly reset or unconfigured inverter can hold zeroes or nonsense here.
+            # Returning None rather than raising lets the caller still set the clock.
+            logger.debug(
+                "[CLOCK] Registers %d-%d do not form a valid date (%s): %s",
+                self.CLOCK_REGISTER_START, self.CLOCK_REGISTER_START + 5, list(regs[:6]), err,
+            )
+            return None
+
+    def write_inverter_time(self, when: datetime) -> bool:
+        """Set the inverter's real-time clock, as a single atomic FC16 write.
+
+        All seven registers go in one transaction deliberately. Writing them individually
+        would leave the clock briefly holding a mix of old and new values, and a write that
+        straddled a minute boundary could set a time that never existed.
+        """
+        if not self.is_clock_supported:
+            raise ModbusWriteError(
+                self.CLOCK_REGISTER_START, [],
+                "clock sync is not supported on off-grid profiles — the year encoding and "
+                "register 51 differ from the documented V1.39 layout (#393)",
+            )
+
+        values = [
+            when.year, when.month, when.day,
+            when.hour, when.minute, when.second,
+            when.isoweekday(),  # Monday=1, matching the observed weekday field
+        ]
+        logger.info(
+            "[CLOCK] Setting inverter clock to %s (registers %d-%d)",
+            when.strftime("%Y-%m-%d %H:%M:%S"),
+            self.CLOCK_REGISTER_START, self.CLOCK_REGISTER_START + self.CLOCK_REGISTER_COUNT - 1,
+        )
+        return self.write_registers(self.CLOCK_REGISTER_START, values)
 
     def _check_wit_control_conflicts(self, register: int, value: int) -> None:
         """

@@ -225,6 +225,38 @@ write_register:
           max: 65535
           mode: box
 
+sync_inverter_time:
+  name: Sync Inverter Clock
+  description: >-
+    Set the inverter's real-time clock from Home Assistant's local time. The inverter's
+    clock drifts, and time-of-use windows fire against the inverter's idea of the time
+    rather than yours - so a schedule set for 13:00 starts whenever the drifted clock
+    reaches 13:00. Returns the drift that was corrected. Not available on off-grid (SPF/SPE)
+    models, where the clock encoding differs and is unconfirmed.
+  fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter whose clock should be set
+      required: true
+      selector:
+        device:
+          integration: growatt_modbus
+    min_drift_seconds:
+      name: Minimum drift
+      description: >-
+        Only write if the inverter is at least this many seconds out. Leave at 0 for a
+        manual one-off sync. For a scheduled automation, set something like 30 so it only
+        spends a write when there is drift worth correcting - these are holding registers
+        and most likely have a finite write endurance.
+      required: false
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+          mode: box
+
 detect_grid_orientation:
   name: Detect Grid CT Orientation
   description: Automatically detect if your grid power CT clamp needs inversion for correct Home Assistant display. Run this when solar is producing and exporting to grid.
