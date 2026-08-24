@@ -468,7 +468,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "pv_energy_total",
-        "description": "Lifetime DC energy captured from the solar panels (Epv). Measured before the inverter conversion stage, so it is slightly higher than Energy Total due to inverter losses (~2-7%). Unlike Energy Total, this is unaffected by battery charge/discharge cycles.",
+        "description": "Lifetime DC energy captured from the solar panels (Epv), measured before the inverter conversion stage. On a grid-tied inverter with no battery this is slightly higher than Energy Total, by the conversion loss (~2-7%). On a hybrid it is usually LOWER, because Energy Total counts everything the inverter has delivered including battery discharge — and a battery charged from the grid returns energy that never came from the panels. Unaffected by battery cycles itself.",
     },
 
     # Energy Breakdown (storage/hybrid models)
