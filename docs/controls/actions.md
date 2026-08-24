@@ -90,6 +90,33 @@ actions:
             Schedules may have been firing at the wrong time.
 ```
 
+### Models that will not accept it
+
+The action does not change anything unless the whole clock can be set. If your model refuses
+part of it, you get an error and the inverter is left exactly as it was.
+
+| Model | Status |
+|---|---|
+| SPH | Registers behave as documented |
+| **MIN TL-X** | **Year cannot be set — see below** |
+| SPF / SPE (off-grid) | Not attempted — see below |
+
+!!! failure "MIN TL-X: the year register will not take a value"
+
+    Confirmed on a MIN 7000-10000TL-X. Holding register 45 (year):
+
+    * rejects a four-digit year outright — `ExceptionResponse(function_code=144, exception_code=0)`
+    * **accepts** a two-digit year and then ignores it, still reading its old value afterwards
+    * does not support single-register writes at all — FC `0x06` returns Illegal Function
+
+    A write being acknowledged is not the same as it being applied. The action therefore
+    writes the year first and reads it straight back; if it did not change, nothing else is
+    written and you get an error. That ordering matters: an earlier version wrote the year
+    last, five fields landed, the year did not, and the inverter reset its clock to the year
+    2000 rather than keep a date it considered inconsistent.
+
+    On these models set the time from the Growatt app or the inverter's own display.
+
 !!! warning "Not available on SPF/SPE"
 
     The off-grid protocol uses the same addresses but stores the year as an offset from 2000
