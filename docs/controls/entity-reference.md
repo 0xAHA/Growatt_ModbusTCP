@@ -70,6 +70,30 @@ firmware.** They are mapped because the protocol defines them, but at least one 
 (RAAA191904/ZCBA-0004) accepts the write and immediately reverts the register. If yours does
 that, disable the entities - other firmware may well support them.
 
+### Verifying PV Energy Total
+
+`PV Energy Total` comes from registers 91/92 and is meant to be lifetime **DC** harvest. On
+most hardware it is: measurements from WIT, MOD, MID and an SPH all agree with the sum of
+their own per-string counters to within a fraction of a percent.
+
+**On one SPH 3600 it did not.** It read 23,184.7 kWh where PV1 + PV2 totalled 19,597.9 —
+about 18% high — and sat within 91 kWh of that unit's AC `Energy Total`, i.e. it was tracking
+AC generation rather than DC harvest. A second SPH 3600 of the same model, on the same
+integration version, behaved normally. So the difference is per unit, most likely firmware,
+and there is nothing in the protocol that declares which convention a given inverter follows
+([#381](https://github.com/0xAHA/Growatt_ModbusTCP/issues/381)).
+
+To check your own, enable **PV1 Energy Total** and **PV2 Energy Total** — they are
+disabled by default, under `+N entities not shown` on the device page — and compare:
+
+| Result | Meaning |
+|---|---|
+| Per-string sum ≈ PV Energy Total | Normal. Either figure is your DC harvest |
+| PV Energy Total well above the sum, and close to Energy Total | Your unit reports AC there. **Use the per-string sum** and hide PV Energy Total |
+
+The per-string counters matched both units' own Growatt app figures exactly, so they are the
+reliable measure when the two disagree.
+
 ### Energy sensors worth distinguishing
 
 Three lifetime counters look similar and mean different things:

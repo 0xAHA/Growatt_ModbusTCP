@@ -468,7 +468,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "pv_energy_total",
-        "description": "Lifetime DC energy captured from the solar panels (Epv), measured before the inverter conversion stage. On a grid-tied inverter with no battery this is slightly higher than Energy Total, by the conversion loss (~2-7%). On a hybrid it is usually LOWER, because Energy Total counts everything the inverter has delivered including battery discharge — and a battery charged from the grid returns energy that never came from the panels. Unaffected by battery cycles itself.",
+        "description": "Lifetime DC energy captured from the solar panels (Epv), measured before the inverter conversion stage. On a grid-tied inverter with no battery this is slightly higher than Energy Total, by the conversion loss (~2-7%). On a hybrid it is usually LOWER, because Energy Total counts everything the inverter has delivered including battery discharge — and a battery charged from the grid returns energy that never came from the panels. Unaffected by battery cycles itself. NOTE: on at least one SPH this register tracked AC generation instead of DC harvest, reading ~18% above the sum of its own per-string counters. To check yours, compare it against PV1 Energy Total + PV2 Energy Total (both disabled by default); if they disagree, trust the per-string sum.",
     },
 
     # Energy Breakdown (storage/hybrid models)
