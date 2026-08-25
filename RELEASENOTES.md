@@ -4,6 +4,38 @@
 
 ---
 
+## v1.8.3 (pre-release)
+
+Issues: #393
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+>
+> **Replaces v1.8.0-v1.8.2, which were withdrawn.** Those could leave a MIN TL-X holding the
+> wrong year.
+
+- **New action: Sync Inverter Clock — experimental.** The inverter keeps its own real-time
+  clock and it drifts, and time period schedules run against that clock rather than Home
+  Assistant's, so a window set for 13:00 starts whenever the drifted clock reaches 13:00.
+  `growatt_modbus.sync_inverter_time` sets it and reports the drift corrected. (#393)
+- **It changes nothing unless the whole clock can be set.** The year is written first and
+  read back; if the inverter refuses it, or accepts it and ignores it, nothing else is
+  written and your clock is left exactly as it was. This matters — an earlier build wrote the
+  year last, five fields landed, and the inverter reset its clock to the year 2000 rather
+  than keep a date it considered inconsistent.
+- **Known not to work on MIN TL-X.** That model rejects a four-digit year, silently discards
+  a two-digit one, and does not support single-register writes at all. Set the time from the
+  Growatt app on those.
+- **Not attempted on off-grid (SPF/SPE)**, where the year encoding differs and register 51
+  means something else entirely.
+- **No model has yet been confirmed accepting a full clock write**, so the action says so in
+  the UI and in the log every time it runs. If you try it, please report the outcome on
+  [#393](https://github.com/0xAHA/Growatt_ModbusTCP/issues/393) either way.
+- **Every write failure now reports the device's own reason** instead of "returned error" —
+  the Modbus exception code distinguishes a register that does not exist from a value that
+  was rejected, and we were discarding it.
+
+---
+
 ## v1.8.2 (pre-release, withdrawn)
 
 Issues: #393

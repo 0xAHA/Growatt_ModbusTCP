@@ -377,3 +377,23 @@ def test_a_year_that_reads_back_correctly_lets_the_sync_continue():
 
     assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
     assert touched == [45, 46, 47, 48, 49, 50, 51]
+
+
+def test_the_action_warns_that_it_is_unconfirmed():
+    """Four defects in this feature were found by one user on real hardware, none predicted
+    by the protocol document — which lists all seven clock registers as writable, and on a
+    MIN TL-X four of those claims are wrong. Until a full clock write is confirmed landing,
+    anyone running this is testing it, and should be told so (#393)."""
+    from pathlib import Path
+    import yaml
+
+    component = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+
+    source = (component / "diagnostic.py").read_text(encoding="utf-8")
+    assert "Clock sync is experimental" in source, "no runtime warning is emitted"
+    assert "issues/393" in source, "the warning does not say where to report the outcome"
+
+    services = yaml.safe_load((component / "services.yaml").read_text(encoding="utf-8"))
+    description = services["sync_inverter_time"]["description"]
+    assert "EXPERIMENTAL" in description, "the UI description does not flag it"
+    assert "MIN TL-X" in description, "the known-failing model is not named in the UI"
