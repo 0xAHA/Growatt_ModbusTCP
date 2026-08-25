@@ -4,6 +4,115 @@
 
 ---
 
+## v1.8.8
+
+Issues: #353 #361 #376 #377 #378 #379 #381 #383 #384 #385 #386 #389 #390 #392 #393
+
+The first stable release since v1.6.2, consolidating 15 pre-releases.
+
+## Read this before upgrading
+
+Four changes are visible immediately. None needs action, but they will look like faults if they arrive unannounced.
+
+**Sensors now go `unknown` instead of `0` when a read fails.** Previously a dropped Modbus frame published 0 for every register behind it, putting a vertical drop in the graph that could never afterwards be told apart from a real measurement. You will now see a gap instead. Genuine zeros are still recorded. This applies to every profile and to 69 sensors - solar, AC, grid, load, temperatures and every energy counter. If you have templates doing `| float` over these, check them.
+
+**SPH: AC Charge Energy Total steps down.** It was reporting the battery charge counter, which includes solar - one reporter saw 13,820.7 kWh where the true grid-to-battery figure was 7,099.8 kWh. The new, lower value is the correct one and matches "EAC Total" on the Growatt app's raw device page.
+
+**Three entities are removed automatically:**
+
+| Entity | Why | Use instead |
+|---|---|---|
+| SPH Warning Code | That register holds an energy value on these models, so it only ever reported 0 | - |
+| AC Discharge Energy Total (grid-tied only) | No such register exists in the protocol for them; it could latch a stray reading permanently, in one case 21,069,824 kWh on a 12 kWh battery | Battery Discharge Total |
+
+Off-grid models (SPF, SPE) genuinely have the discharge register and keep the sensor.
+
+**SPH time-slot entities are renamed.** The Grid First slots showed as "Period 7/8/9" but are slots **1, 2 and 3** in the Growatt app and the protocol. Entity IDs are unchanged, so automations and dashboards keep working - only the displayed names move.
+
+---
+
+## New
+
+### Inverter clock
+
+The inverter runs its own RTC and it drifts. Time-of-use windows fire against **that** clock, not Home Assistant's, so a window set for 13:00 starts whenever the inverter believes it is 13:00. One SPH was two minutes out.
+
+- **`growatt_modbus.sync_inverter_time`** sets it from Home Assistant's local time and returns the drift it corrected. `min_drift_seconds` skips the write when the clock is already close enough, so a scheduled automation costs nothing on the runs that find nothing to fix.
+- **Inverter Clock** sensor - the inverter's time as readable local text, with `timestamp`, `drift_seconds` and `drift_minutes` attributes.
+- **Inverter Clock Sync** button - the same write, on press.
+
+Both entities are **disabled by default** and sit together under Diagnostic on the inverter device. The sensor adds one register read per poll and reads nothing at all until you enable it; the button writes six holding registers per press. Neither is offered on off-grid (SPF/SPE) profiles, where the year encoding differs and register 51 means something else.
+
+Confirmed working on MIN TL-X. Requested and researched by @Vict20. (#393)
+
+### Configuration
+
+- **Connection settings can be changed after setup.** USB/serial port, baud rate, host and TCP port are editable from Configure. Previously the only route was deleting the entry, which loses entity IDs and with them automations, dashboards and statistics history. Requested by @dartyukh-afk. (#383)
+- **A wrong protocol variant can be corrected without deleting the integration.** Ten inverter families exist as two register maps chosen by auto-detection, and a wrong choice was unrecoverable. Configure now has a **Protocol variant** field (Auto / Legacy V1.39 / VPP V2.01) and names the register map currently loaded. Leaving it on Auto changes nothing. (#385)
+- **The serial port picker offers `/dev/serial/by-id/` and `/dev/serial/by-path/` paths**, labelled by what they follow. `by-id` needs the adapter to have a serial number, which CH340 chips - most cheap USB-RS485 adapters - do not have, so `by-path` is the right choice there. (#383, #384)
+
+### Entities
+
+- **SPF Bulk and Float Charge Voltage** controls, 48.0-58.4 V, on a self-defined battery type. Disabled by default: an in-range but wrong value affects your battery rather than a reading. Requested by @dinkalin-ux. (#384)
+- **SPF 3000-6000 ES Plus: Max Charge Current**, 10-100 A across solar and utility. Unavailable when Battery Type is Lithium, which the inverter does not allow. Reported by @dinkalin-ux. (#376)
+- **SPH: AC Charge Energy Today**, from the corrected register block. (#390)
+- **PV3 Energy Today and Total** on three-string systems. (#381)
+
+---
+
+## Fixes
+
+### Data integrity
+
+- **No sensor publishes a zero for a reading it could not take.** Derived values - total solar power, per-phase power calculated from voltage and current - inherit the read state of their inputs, so they go unknown too rather than quietly summing missing data. Battery charge and discharge power no longer both read 0 W on a failed read, which was indistinguishable from an idle battery. Reported by @dinkalin-ux. (#384)
+- **SPF: a PV reading of zero that the inverter's own registers contradict is reported as unknown.** Some SPF units intermittently report 0 in their PV registers while still producing - the read succeeds, the registers are simply wrong. One poll showed 1,907 W of AC output with 329 W from the battery, no grid and no generator, and PV reading zero. Only applies when every other supply reads zero and the shortfall exceeds 200 W, so night-time and battery-only readings are untouched. Reported by @dinkalin-ux. (#384)
+- **SPF battery direction is no longer thrown off by those false zeros.** The sign correction compares PV against load, and a false zero made it conclude the battery was discharging when it was charging.
+
+### Register mappings
+
+- **SPH 3-6kW and 7-10kW report battery charge and discharge energy.** These published a constant 0 because the registers were never mapped. Load consumption energy arrives at the same time. Reported by @igotyou, confirmed against ShinePhone. (#377)
+- **SPH V2.01 profiles read battery energy on hardware without VPP support.** A V1.39 inverter on a V2.01 profile never reads the 31000 range, so Battery Charge/Discharge Today and Total sat at 0.0 while voltage and SOC worked. Reported by @igotyou. (#377)
+- **Three-string MOD, MID and SPH 7-10kW no longer under-report daily solar.** PV3 had no energy counter, and the daily figure is the sum of the per-string counters - so a whole string was missing. On a MID 25KTL3-XH that was 17.6 kWh against the portal's 29.5. Reported by @as-wallpen, registers derived and confirmed with @KevlarD-67. (#381)
+- **MIN TL-XH2 reports inverter temperature.** That model answers Illegal Function across the base register range, where every other profile reads it, so it had no temperature source. It now uses VPP register 31114. Reported by @Richardmarkink. (#361)
+- SPH V2.01 profiles had registers 1052-1055 labelled as grid import, which is battery discharge energy. No entity changes. (#378)
+
+### Writes
+
+- **WIT grid charging works on models that reject Write Single Register.** Register 30410 accepts only FC 0x10 on some WIT hardware; the refusal was logged and stepped over, so every other register in the mode sequence succeeded and grid charging silently never engaged. It now falls back to FC 0x10, and reports a real failure when neither function code works. Reported by @jekmanis. (#353)
+- **Setting a control to the value it already has no longer writes to the inverter.** These registers are believed to be EEPROM-backed with a finite write budget. A scheduler recomputing time slots on a timer was writing every slot on every run, including the ones already correct. Raised by @dinkalin-ux and @KevlarD-67. (#384, #392)
+- **Every write failure reports the device's own reason** instead of "returned error". The Modbus exception code distinguishes a register that does not exist from a value that was rejected, and it was being discarded.
+
+### Connection and diagnostics
+
+- **A serial port that cannot be opened explains itself**, instead of a bare `Failed to connect` with the real reason buried in a pymodbus line above it.
+- **The register scanner falls back to single-register reads when a gateway refuses blocks.** It read 125 registers per request and never tried smaller, so a bandwidth-limited bridge - LoRa gateways especially - produced a scan that looked like a dead device. Reported by @Henxidou001. (#389)
+- **Register scans name the register map instead of reporting UNKNOWN.** Diagnostic output only. (#379)
+- **Changing connection settings no longer logs a blocking-call warning.** Opening the options page on a serial setup enumerated ports on the event loop, which Home Assistant reports with a traceback asking you to file a bug. (#384)
+- **SPF: routine battery-direction corrections no longer appear as errors.** In status 12 the SPF reports an unreliable sign, so direction is resolved from the power balance - normal operation that can fire a dozen times on a sunny day. It was logged at warning level, which put it in the error log under "originated from a custom integration". Now debug. Reported by @dinkalin-ux. (#384)
+- **Stopped using a device registry attribute Home Assistant deprecated in 2026.8**, which would otherwise write warnings naming this integration into your log.
+
+---
+
+## Documentation
+
+- **PV Energy Total vs Energy Total on hybrids.** The two descriptions contradicted each other. On a hybrid, Energy Total counts battery discharge including energy the battery took from the grid, so it is normally the larger. Raised by @Vict20. (#381)
+- **The EEPROM guidance is labelled as inference.** Growatt marks a few VPP registers "Not storage" and says nothing about the rest; treating the rest as non-volatile is our caution, not a documented limit. Raised by @KevlarD-67. (#392)
+- **Choosing a stable serial path** - why `by-path` suits CH340 adapters and `/dev/ttyUSBn` numbering cannot be relied on.
+- **New Actions Reference** covering all nine actions with YAML examples.
+- Register 30476 (WIT priority mode) is no longer described as read-only; the TOU Default Mode control writes it. (#353)
+
+---
+
+## Note on v1.7.0-v1.7.4
+
+Those pre-releases added a shared serial connection that broke serial polling and were withdrawn; v1.7.5 reverted it. They were never offered as a stable release, so if you are upgrading from v1.6.2 you were never exposed. Everything else from that range is carried forward.
+
+---
+
+Thanks to @dinkalin-ux, @Vict20, @KevlarD-67, @igotyou, @as-wallpen, @jekmanis, @Richardmarkink, @Henxidou001, @dartyukh-afk and @Wojak129 for the reports, scans and hardware confirmations behind this release.
+
+---
+
 ## v1.8.7 (pre-release)
 
 Issues: #393
