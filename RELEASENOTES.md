@@ -4,15 +4,29 @@
 
 ---
 
+## v1.8.7 (pre-release)
+
+Issues: #393
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **Inverter Clock now shows the time.** It was published as a timestamp sensor, which Home
+  Assistant renders as relative time - a counter ticking up every second, indistinguishable
+  from a "last updated" field. The state is now the inverter's wall-clock time, e.g.
+  `2026-08-26 14:32:05`. The parseable form moves to a `timestamp` attribute alongside
+  `drift_seconds` and `drift_minutes`. Affects anyone who enabled the sensor in v1.8.6.
+
+---
+
 ## v1.8.6 (pre-release)
 
 Issues: #393
 
 > **Pre-release for testing.** v1.6.2 remains the stable release.
 
-- **New entity: Inverter Clock.** A timestamp sensor showing the inverter's own real-time
-  clock, with `drift_seconds` and `drift_minutes` attributes so you can alert on drift.
-  Time-of-use windows fire against this clock rather than Home Assistant's.
+- **New entity: Inverter Clock.** Shows the inverter's own real-time clock as readable
+  local time, with `timestamp`, `drift_seconds` and `drift_minutes` attributes so you can
+  alert on drift. Time-of-use windows fire against this clock rather than Home Assistant's.
 - **New entity: Inverter Clock Sync.** A button that sets the inverter's clock on press -
   the same write as the `sync_inverter_time` action, without the options.
 - **Both are disabled by default** and sit together under Diagnostic on the inverter

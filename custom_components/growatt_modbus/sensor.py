@@ -1486,7 +1486,11 @@ class GrowattInverterClockSensor(GrowattEntity, SensorEntity):
     does not read the RTC at all until this sensor asks it to.
     """
 
-    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    # Deliberately NOT SensorDeviceClass.TIMESTAMP. Home Assistant renders a timestamp
+    # sensor as relative time - "12 seconds ago", ticking every second - which is useless
+    # for reading a clock and looks like a broken "last updated" field. The point of this
+    # entity is to show what time the inverter thinks it is, so the state is the formatted
+    # wall-clock time and the machine-readable form is an attribute.
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
     _attr_icon = "mdi:clock-outline"
@@ -1525,28 +1529,26 @@ class GrowattInverterClockSensor(GrowattEntity, SensorEntity):
         )
 
     @property
-    def native_value(self) -> datetime | None:
-        """Return the inverter clock as an aware datetime.
-
-        The registers hold wall-clock time with no timezone, so Home Assistant's local
-        zone is attached. TIMESTAMP sensors must be aware or HA rejects the state.
-        """
+    def native_value(self) -> str | None:
+        """Return the inverter's clock as readable local wall-clock time."""
         value = self.coordinator.inverter_clock
         if value is None:
             return None
-        return value.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
+        return value.strftime("%Y-%m-%d %H:%M:%S")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Expose the drift, which is the number people actually want.
+        """Drift, plus the timestamp in a form templates and automations can parse.
 
-        Positive means the inverter is ahead of Home Assistant.
+        Positive drift means the inverter is ahead of Home Assistant. The registers hold
+        wall-clock time with no timezone, so the local zone is attached for `timestamp`.
         """
         value = self.coordinator.inverter_clock
         if value is None:
             return {}
         drift = (value - dt_util.now().replace(tzinfo=None)).total_seconds()
         return {
+            "timestamp": value.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE).isoformat(),
             "drift_seconds": round(drift),
             "drift_minutes": round(drift / 60, 1),
         }

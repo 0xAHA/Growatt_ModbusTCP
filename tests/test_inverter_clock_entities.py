@@ -165,3 +165,31 @@ def test_clock_entities_have_names_in_both_string_files():
         assert (
             data["entity"]["button"]["sync_inverter_clock"]["name"] == "Inverter Clock Sync"
         ), filename
+
+
+def test_the_clock_sensor_is_not_a_timestamp_device_class():
+    """Home Assistant renders a timestamp sensor as relative time - "12 seconds ago",
+    ticking every second. For a clock that is unreadable, and it looks like a broken "last
+    updated" field rather than the inverter's time; that is exactly how it was first
+    reported. The state is the formatted wall-clock time instead, with the parseable form
+    kept as the `timestamp` attribute."""
+    source = _source("sensor.py")
+    body = _function_body(source, "GrowattInverterClockSensor", "native_value")
+    assert "strftime" in body, "the clock sensor no longer formats a readable time"
+
+    tree = ast.parse(source)
+    cls = next(
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.ClassDef) and node.name == "GrowattInverterClockSensor"
+    )
+    assigns = {
+        target.id: ast.get_source_segment(source, node.value)
+        for node in cls.body if isinstance(node, ast.Assign)
+        for target in node.targets if isinstance(target, ast.Name)
+    }
+    assert "_attr_device_class" not in assigns, (
+        "the clock sensor has a device class again; TIMESTAMP renders as relative time"
+    )
+
+    attrs = _function_body(source, "GrowattInverterClockSensor", "extra_state_attributes")
+    assert "timestamp" in attrs, "the parseable timestamp attribute is gone"

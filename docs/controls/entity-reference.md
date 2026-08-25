@@ -377,7 +377,7 @@ Two entities cover it, both on the **inverter** device under **Diagnostic**, and
 
 | Entity | What it does |
 |---|---|
-| `sensor.<name>_inverter_clock` | The inverter's own clock, with `drift_seconds` and `drift_minutes` as attributes |
+| `sensor.<name>_inverter_clock` | The inverter's own clock as readable local time, e.g. `2026-08-26 14:32:05` |
 | `button.<name>_inverter_clock_sync` | Sets the inverter's clock from Home Assistant's, on press |
 
 They are off by default for different reasons. The sensor costs one extra register read on
@@ -389,7 +389,17 @@ leave where it can be pressed absent-mindedly.
 
 Neither appears on off-grid (SPF/SPE) profiles, which encode the clock differently.
 
-The sensor is a timestamp, so a drift alert is straightforward:
+The state is formatted wall-clock text rather than a Home Assistant timestamp, because a
+timestamp sensor renders as relative time ("12 seconds ago", ticking) and is unreadable as
+a clock. Three attributes carry the machine-readable side:
+
+| Attribute | |
+|---|---|
+| `timestamp` | ISO 8601, timezone-aware - use this in templates |
+| `drift_seconds` | Positive means the inverter is ahead of Home Assistant |
+| `drift_minutes` | The same, rounded to one decimal |
+
+So a drift alert is straightforward:
 
 ```yaml
 automation:
