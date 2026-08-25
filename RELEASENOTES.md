@@ -4,6 +4,28 @@
 
 ---
 
+## v1.8.6 (pre-release)
+
+Issues: #393
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **New entity: Inverter Clock.** A timestamp sensor showing the inverter's own real-time
+  clock, with `drift_seconds` and `drift_minutes` attributes so you can alert on drift.
+  Time-of-use windows fire against this clock rather than Home Assistant's.
+- **New entity: Inverter Clock Sync.** A button that sets the inverter's clock on press -
+  the same write as the `sync_inverter_time` action, without the options.
+- **Both are disabled by default** and sit together under Diagnostic on the inverter
+  device. Enable them in the entity settings. The sensor adds one register read per poll
+  and reads nothing at all until enabled; the button writes six holding registers per
+  press. Neither is offered on off-grid (SPF/SPE) profiles.
+- **Clock sync confirmed working on MIN TL-X.** The action no longer asks for reports or
+  logs a notice on every run.
+- The clock drift notification now points at the button and the action rather than telling
+  you to use the ShinePhone app.
+
+---
+
 ## v1.8.5 (pre-release)
 
 Issues: #384

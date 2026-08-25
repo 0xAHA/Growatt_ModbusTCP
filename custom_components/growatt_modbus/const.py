@@ -905,6 +905,9 @@ SENSOR_DEVICE_MAP = {
     # Inverter device - system health and status
     DEVICE_TYPE_INVERTER: {
         'status', 'last_update', 'fault_code', 'warning_code', 'derating_mode',
+        # Inverter RTC. Not register-driven like the rest - see sensor.py - but it still
+        # needs a device assignment, and it belongs with the sync button on the inverter.
+        'inverter_clock',
         'inverter_temp', 'ipm_temp', 'boost_temp', 'dcdc_temp',
         'battery_derating_mode',  # Battery-related status on inverter
         # SPF Off-Grid fan speeds

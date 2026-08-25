@@ -655,6 +655,14 @@
       },
       "warning_code": {
         "name": "Warning Code"
+      },
+      "inverter_clock": {
+        "name": "Inverter Clock"
+      }
+    },
+    "button": {
+      "sync_inverter_clock": {
+        "name": "Inverter Clock Sync"
       }
     }
   }

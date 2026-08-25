@@ -220,6 +220,45 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # delivered as a persistent notification by _async_update_data() on the event loop.
         self._pending_clock_notification: dict | None = None
 
+        # Inverter RTC, refreshed each poll for the Inverter Clock sensor. That sensor is
+        # disabled by default and an extra holding-register read per poll is not free on a
+        # gateway that needs small blocks, so nothing is read until something asks.
+        self._inverter_clock: datetime | None = None
+        self._clock_poll_wanted: bool = False
+
+    @property
+    def inverter_clock(self) -> datetime | None:
+        """The inverter's real-time clock as of the last poll, naive local time.
+
+        None until the Inverter Clock sensor enables polling, and None again whenever the
+        registers cannot be read or do not form a valid date.
+        """
+        return self._inverter_clock
+
+    def enable_clock_polling(self) -> None:
+        """Start refreshing the inverter clock on each poll.
+
+        Called by the Inverter Clock sensor when it is added. There is no matching
+        disable: entity removal does not reliably reach us, and one extra read until the
+        next reload is not worth the bookkeeping.
+        """
+        self._clock_poll_wanted = True
+
+    def _refresh_inverter_clock(self) -> None:
+        """Read the inverter RTC into _inverter_clock. Runs in the executor.
+
+        Called from both fetch paths. There are two of them and they have diverged before
+        - v1.3.5 fixed block-size parsing in the shared path only - so this lives in one
+        method that both reach rather than being written out twice.
+        """
+        if not self._clock_poll_wanted:
+            return
+        try:
+            self._inverter_clock = self._client.read_inverter_time()
+        except Exception as err:
+            _LOGGER.debug("Could not read inverter clock this poll: %s", err)
+            self._inverter_clock = None
+
     @property
     def has_real_data(self) -> bool:
         """True once the inverter has responded with real data at least once this session.
@@ -1119,8 +1158,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         # starts from a clean connect instead of a stale session.
                         hub.reset("retry poll returned no data")
 
-            if data is not None and not self._serial_number:
-                self._read_device_identification()
+            if data is not None:
+                if not self._serial_number:
+                    self._read_device_identification()
+                self._refresh_inverter_clock()
 
             time.sleep(inter_slave_delay)
             return data
@@ -1178,6 +1219,8 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     # slow/offline inverters. Called here while the connection is still open.
                     if not self._serial_number:
                         self._read_device_identification()
+                    # Before the disconnect - this path closes the socket on its way out.
+                    self._refresh_inverter_clock()
                     self._client.disconnect()
                     return data
 
@@ -1471,8 +1514,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         f"at its own midnight, not HA midnight. A large clock offset causes daily "
                         f"energy sensors to reset at the wrong time, which can produce incorrect "
                         f"daily totals and confuse the energy dashboard.\n\n"
-                        f"**To fix:** Set the correct time on the inverter via the ShinePhone app, "
-                        f"the inverter LCD menu, or the Growatt web portal."
+                        f"**To fix:** Enable the **Inverter Clock Sync** button on the inverter "
+                        f"device and press it, or call the `growatt_modbus.sync_inverter_time` "
+                        f"action. Failing that, set the time via the ShinePhone app, the inverter "
+                        f"LCD menu, or the Growatt web portal."
                     ),
                     "notification_id": "growatt_clock_drift",
                 }

@@ -21,6 +21,7 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant, callback
+import homeassistant.util.dt as dt_util
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -1409,6 +1410,12 @@ async def async_setup_entry(
             )
         )
     
+    # Not register-driven, so it is not in SENSOR_DEFINITIONS: it reads the RTC directly
+    # rather than coming out of a GrowattData field. Off-grid profiles encode the year
+    # differently and are excluded, same as the sync button (#393).
+    if coordinator.modbus_client.is_clock_supported:
+        entities.append(GrowattInverterClockSensor(coordinator, config_entry))
+
     _LOGGER.info("Created %d sensors for %s", len(entities), inverter_series)
     async_add_entities(entities)
 
@@ -1464,6 +1471,85 @@ async def async_setup_entry(
 
         _remove_listener = coordinator.async_add_listener(_async_check_deferred_sensors)
         config_entry.async_on_unload(_remove_listener)
+
+
+class GrowattInverterClockSensor(GrowattEntity, SensorEntity):
+    """The inverter's own real-time clock.
+
+    Worth exposing because time-of-use windows fire against *this* clock, not Home
+    Assistant's: a window set for 13:00 starts whenever the inverter believes it is 13:00.
+    A reporter's export window was running two minutes late for exactly that reason, and
+    there was no way to see it without a manual register read.
+
+    Disabled by default and diagnostic, which puts it next to the Inverter Clock Sync
+    button. Enabling it costs one extra holding-register read per poll - the coordinator
+    does not read the RTC at all until this sensor asks it to.
+    """
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+    _attr_icon = "mdi:clock-outline"
+    _attr_translation_key = "inverter_clock"
+
+    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
+        """Initialise the inverter clock sensor."""
+        super().__init__(
+            coordinator,
+            config_entry,
+            unique_key="inverter_clock",
+            device_type=get_device_type_for_sensor("inverter_clock"),
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Ask the coordinator to start reading the RTC.
+
+        Disabled entities are never added, so a user who leaves this off never pays for
+        the extra read.
+        """
+        await super().async_added_to_hass()
+        self.coordinator.enable_clock_polling()
+
+    @property
+    def available(self) -> bool:
+        """Unavailable until the clock has actually been read.
+
+        The first poll after enabling has usually not happened yet, and on a model whose
+        RTC registers do not decode it never will - better unavailable than a made-up
+        timestamp.
+        """
+        return (
+            self.coordinator.last_update_success
+            and self.coordinator.is_online
+            and self.coordinator.inverter_clock is not None
+        )
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return the inverter clock as an aware datetime.
+
+        The registers hold wall-clock time with no timezone, so Home Assistant's local
+        zone is attached. TIMESTAMP sensors must be aware or HA rejects the state.
+        """
+        value = self.coordinator.inverter_clock
+        if value is None:
+            return None
+        return value.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Expose the drift, which is the number people actually want.
+
+        Positive means the inverter is ahead of Home Assistant.
+        """
+        value = self.coordinator.inverter_clock
+        if value is None:
+            return {}
+        drift = (value - dt_util.now().replace(tzinfo=None)).total_seconds()
+        return {
+            "drift_seconds": round(drift),
+            "drift_minutes": round(drift / 60, 1),
+        }
 
 
 class GrowattModbusSensor(GrowattEntity, SensorEntity):

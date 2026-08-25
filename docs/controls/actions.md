@@ -34,6 +34,12 @@ data:
   device_id: 1a2b3c4d5e6f7890abcdef1234567890
 ```
 
+There is also an **Inverter Clock Sync** button and an **Inverter Clock** sensor on the
+inverter device, both disabled by default — see
+[Entity Reference](entity-reference.md#keeping-the-inverters-clock-accurate). The button is
+the same write with no options; the action is what you want for anything scheduled, because
+of `min_drift_seconds` and the response below.
+
 It returns what it found, so you can see the drift it corrected:
 
 ```yaml

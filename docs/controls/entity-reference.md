@@ -372,9 +372,42 @@ VPP Control Authority (30100), VPP Remote Power Control (30407), VPP Commanded P
 Time period schedules run against the **inverter's own clock**, not Home Assistant's. That
 clock drifts — one SPH was two minutes out, which made a 13:00 export window start at 13:02.
 
-There is no entity for this; it is an action. See
-**[Actions Reference → Sync the inverter clock](actions.md#sync-the-inverter-clock)** for
-`growatt_modbus.sync_inverter_time`, a weekly automation example, and the SPF/SPE caveat.
+Two entities cover it, both on the **inverter** device under **Diagnostic**, and both
+**disabled by default** — enable them in the entity settings if you want them:
+
+| Entity | What it does |
+|---|---|
+| `sensor.<name>_inverter_clock` | The inverter's own clock, with `drift_seconds` and `drift_minutes` as attributes |
+| `button.<name>_inverter_clock_sync` | Sets the inverter's clock from Home Assistant's, on press |
+
+They are off by default for different reasons. The sensor costs one extra register read on
+every poll, which is not free on a gateway that needs small blocks — nothing is read at all
+until you enable it. The button writes six holding registers per press, and those are very
+likely EEPROM-backed with a finite write budget
+([#392](https://github.com/0xAHA/Growatt_ModbusTCP/issues/392)), so it is not something to
+leave where it can be pressed absent-mindedly.
+
+Neither appears on off-grid (SPF/SPE) profiles, which encode the clock differently.
+
+The sensor is a timestamp, so a drift alert is straightforward:
+
+```yaml
+automation:
+  - alias: "Growatt - warn on inverter clock drift"
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.growatt_inverter_clock
+        attribute: drift_minutes
+        above: 5
+    actions:
+      - action: notify.persistent_notification
+        data:
+          message: "The inverter clock has drifted; schedules will fire late."
+```
+
+For a scheduled sync, or to act on the drift the write corrected, use the action instead —
+it takes a `min_drift_seconds` threshold and returns what it found. See
+**[Actions Reference → Sync the inverter clock](actions.md#sync-the-inverter-clock)**.
 
 ---
 

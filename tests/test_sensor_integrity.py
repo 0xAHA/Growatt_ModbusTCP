@@ -34,6 +34,10 @@ KNOWN_MAP_WITHOUT_DEF: frozenset = frozenset({
     # definition yet — device assignment is pre-reserved.
     "energy_to_user_today",
     "energy_to_user_total",
+    # Inverter RTC. Deliberately not in SENSOR_DEFINITIONS: that pipeline reads a
+    # GrowattData field, and this one reads the clock registers directly through
+    # GrowattInverterClockSensor in sensor.py. It still needs a device assignment (#393).
+    "inverter_clock",
 })
 
 
