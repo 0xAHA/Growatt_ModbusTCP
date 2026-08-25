@@ -243,26 +243,31 @@ def test_the_service_is_registered_and_documented():
     assert set(services["sync_inverter_time"]["fields"]) == {"device_id", "min_drift_seconds"}
 
 
-def test_the_undocumented_year_encoding_is_flagged_to_users():
+def test_the_undocumented_year_encoding_stays_documented():
     """The year register takes two digits and reports four. That is in neither protocol
-    document, it is the reason three earlier builds failed, and it is the thing most likely
-    to differ on hardware nobody here has. Both the UI description and the log say so, and
-    both point at the issue for reports (#393)."""
+    document and it is the reason three earlier builds failed, so the explanation has to
+    survive somewhere a maintainer will find it.
+
+    It now lives in the docs rather than being repeated in the service picker: the action
+    is confirmed working on a MIN TL-X, so the encoding is implementation detail rather
+    than a caveat every user needs at the point of use. What the UI description must still
+    carry is the scope limit, because that one changes what the action will do (#393)."""
     from pathlib import Path
     import yaml
 
-    component = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+    root = Path(__file__).parent.parent
+    component = root / "custom_components" / "growatt_modbus"
 
-    source = (component / "diagnostic.py").read_text(encoding="utf-8")
-    # Matched in pieces: the message is wrapped across source lines.
-    assert "two-digit value and" in source, "no runtime notice is emitted"
-    assert "reports four" in source
-    assert "issues/393" in source, "the notice does not say where to report the outcome"
+    docs = (root / "docs" / "controls" / "actions.md").read_text(encoding="utf-8")
+    assert "two-digit year" in docs, "the docs no longer explain the year encoding"
+    assert "MIN TL-X" in docs, "the docs do not name the model it is confirmed on"
+    assert "issues/393" in docs, "the docs do not say where to report other models"
 
     services = yaml.safe_load((component / "services.yaml").read_text(encoding="utf-8"))
     description = services["sync_inverter_time"]["description"]
-    assert "two-digit" in description, "the UI description does not mention the encoding"
-    assert "393" in description, "the UI description does not point at the issue"
+    assert "SPF/SPE" in description, (
+        "the UI description does not state that off-grid models are excluded"
+    )
 
 
 def test_routine_spf_sign_corrections_are_not_logged_as_warnings():

@@ -100,6 +100,11 @@ the full year and the inverter rejects the write outright. This was established 
 published ESP32 implementation for an SPH5000 and an ESPHome forum finding, after both a MIN
 TL-X and an SPH refused everything else that was tried.
 
+**Confirmed on a MIN TL-X.** The write was accepted, and a subsequent reload of the
+integration no longer raised the clock drift notification that had appeared on the restart
+before it. That is the only model confirmed so far; if you run the action on anything else,
+[#393](https://github.com/0xAHA/Growatt_ModbusTCP/issues/393) is the place to say so.
+
 Two consequences for how the action behaves:
 
 - Each field is written **individually**, not as a block. Both models above refused a

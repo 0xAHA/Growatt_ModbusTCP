@@ -231,11 +231,9 @@ sync_inverter_time:
     Set the inverter's real-time clock from Home Assistant's local time. The inverter's
     clock drifts, and time-of-use windows fire against the inverter's idea of the time
     rather than yours, so a schedule set for 13:00 starts whenever the drifted clock
-    reaches 13:00. Returns the drift that was corrected. The year register takes a
-    two-digit value and reports back four digits, which is undocumented and was the reason
-    earlier builds failed - this is handled. Each field is written separately and the year
-    goes first, so a refusal leaves your clock untouched rather than half-set. Not
-    attempted on off-grid (SPF/SPE) models. Please report the outcome on GitHub issue 393.
+    reaches 13:00. Returns the drift that was corrected. Confirmed working on MIN TL-X.
+    Each field is written separately and the year goes first, so a refusal leaves your
+    clock untouched rather than half-set. Not attempted on off-grid (SPF/SPE) models.
   fields:
     device_id:
       name: Device

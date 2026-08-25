@@ -743,13 +743,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 "other than the weekday, and no scan has confirmed the encoding (#393)."
             )
 
-        # Still worth a line per call. The method now follows a published working
-        # implementation, but it has been wrong three times on real hardware and the
-        # protocol document does not describe the year encoding at all (#393).
-        _LOGGER.info(
+        # One line per call, at debug. Confirmed working on a MIN TL-X in v1.8.4: the write
+        # was accepted and a subsequent reload found no drift. The encoding is still absent
+        # from the protocol document, so the note stays for anyone reading a debug log on a
+        # model that has not been tried (#393).
+        _LOGGER.debug(
             "Setting the inverter clock. The year register takes a two-digit value and "
-            "reports four — handled here, but undocumented, so please report the outcome "
-            "at https://github.com/0xAHA/Growatt_ModbusTCP/issues/393"
+            "reports four — undocumented, and confirmed on MIN TL-X only"
         )
 
         now = dt_util.now().replace(tzinfo=None)
