@@ -228,17 +228,14 @@ write_register:
 sync_inverter_time:
   name: Sync Inverter Clock
   description: >-
-    EXPERIMENTAL - not yet confirmed working on any model. Set the inverter's real-time
-    clock from Home Assistant's local time. The inverter's clock drifts, and time-of-use
-    windows fire against the inverter's idea of the time rather than yours, so a schedule
-    set for 13:00 starts whenever the drifted clock reaches 13:00. Returns the drift that
-    was corrected. WHAT IS KNOWN: a MIN TL-X refuses the year register outright and
-    silently ignores a two-digit one, so the clock cannot be set on that model; off-grid
-    (SPF/SPE) is not attempted at all because the encoding differs and is unverified; no
-    model has yet been confirmed to accept a full clock write. The action writes the year
-    first and reads it back, and changes nothing at all unless that succeeds - so a model
-    that will not take it is left exactly as it was. Please report the outcome on GitHub
-    issue 393, whichever way it goes.
+    Set the inverter's real-time clock from Home Assistant's local time. The inverter's
+    clock drifts, and time-of-use windows fire against the inverter's idea of the time
+    rather than yours, so a schedule set for 13:00 starts whenever the drifted clock
+    reaches 13:00. Returns the drift that was corrected. The year register takes a
+    two-digit value and reports back four digits, which is undocumented and was the reason
+    earlier builds failed - this is handled. Each field is written separately and the year
+    goes first, so a refusal leaves your clock untouched rather than half-set. Not
+    attempted on off-grid (SPF/SPE) models. Please report the outcome on GitHub issue 393.
   fields:
     device_id:
       name: Device

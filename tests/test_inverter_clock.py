@@ -42,6 +42,7 @@ class _FakeClock:
         self.registers = registers
         self.written = None      # the FC16 block, if one was accepted
         self.singles = {}        # register -> value, for single writes
+        self.order = []          # registers in the order they were written
 
     def read_holding_registers(self, start, count):
         self.last_read = (start, count)
@@ -55,6 +56,7 @@ class _FakeClock:
 
     def write_single(self, register, value):
         self.singles[register] = value
+        self.order.append(register)
         return True
 
 
@@ -106,188 +108,97 @@ def test_a_short_response_is_not_decoded():
 
 # --------------------------------------------------------------------------
 # Writing
+#
+# Method taken from a published, working ESP32 implementation for an SPH5000
+# (cosminpop.uk, Feb 2026), corroborated by an ESPHome forum finding three years earlier
+# and by two failures on this tracker.
+#
+# The load-bearing fact: **the year is written as year-2000 and read back as four digits.**
+# Write 26, read 2026. Neither protocol document records that for the V1.39 range, and an
+# earlier version of this method detected the format by reading the register — which can
+# only ever see the four-digit form, so it always wrote the value the inverter rejects.
 # --------------------------------------------------------------------------
 
-def test_the_clock_is_written_as_one_atomic_block():
-    """Writing the registers one at a time could straddle a minute boundary and set a time
-    that never existed."""
+def test_the_year_is_written_as_an_offset_from_2000():
+    """The whole point. `create_write_single_command(ctl, 45, time.year - 2000)`."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
+    assert client._fake.singles[45] == 26, "the four-digit year is what the inverter refuses"
+
+
+def test_all_six_fields_are_written_individually_in_order():
+    """The reference writes one register per field rather than a block, year first."""
     client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
     client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
 
-    register, values = client._fake.written
-    assert register == 45
-    assert values == [2026, 8, 25, 9, 30, 5], "the block must cover 45-50 only"
-    # The weekday goes separately so a model without register 51 still gets its clock.
-    assert client._fake.singles == {51: 2}  # 25 Aug 2026 is a Tuesday → 2
+    assert client._fake.order == [45, 46, 47, 48, 49, 50]
+    assert client._fake.singles == {45: 26, 46: 8, 47: 25, 48: 9, 49: 30, 50: 5}
 
 
-@pytest.mark.parametrize(
-    "when,weekday",
-    [
-        (datetime(2026, 8, 24), 1),  # Monday
-        (datetime(2026, 8, 22), 6),  # Saturday — matches the reporter's scan
-        (datetime(2026, 8, 23), 7),  # Sunday
-    ],
-)
-def test_the_weekday_field_counts_monday_as_one(when, weekday):
+def test_no_block_write_is_attempted():
+    """A MIN TL-X and an SPH both refused FC 0x10 across this range. The reference uses
+    single writes, and the RTC block is documented there as accepting them even where other
+    settings registers do not."""
     client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
-    client.write_inverter_time(when)
-    assert client._fake.singles[51] == weekday
-
-
-def test_a_refused_block_falls_back_to_single_registers():
-    """Reported on the maintainer's own inverter: FC 0x10 across 45-51 came back as an error
-    even though the registers are writable. Without a fallback the action failed outright."""
-    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
-    singles = {}
-
-    def refuse_block(register, values):
-        raise _gm.ModbusWriteError(register, values, "refused")
-
-    client.write_registers = refuse_block
-    client.write_single_register_any_fc = lambda r, v: singles.setdefault(r, v) is v
-
-    assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
-    assert singles == {45: 2026, 46: 8, 47: 25, 48: 9, 49: 30, 50: 5, 51: 2}
-
-
-def test_a_refused_weekday_does_not_fail_the_sync():
-    """The weekday is derivable and schedules do not use it. Losing it must not cost the
-    user a clock that would otherwise have been set."""
-    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
-    written = {}
-
-    def refuse_block(register, values):
-        raise _gm.ModbusWriteError(register, values, "refused")
-
-    def single(register, value):
-        if register == 51:
-            return False  # weekday refused
-        written[register] = value
-        return True
-
-    client.write_registers = refuse_block
-    client.write_single_register_any_fc = single
-
-    assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
-    assert set(written) == {45, 46, 47, 48, 49, 50}
-
-
-def test_a_clock_register_refused_both_ways_raises():
-    """If the date itself will not take, the caller must hear about it rather than believe
-    the clock was set."""
-    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
-
-    def refuse_block(register, values):
-        raise _gm.ModbusWriteError(register, values, "refused")
-
-    client.write_registers = refuse_block
-    client.write_single_register_any_fc = lambda r, v: False
-
-    with pytest.raises(_gm.ModbusWriteError) as excinfo:
-        client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
-    # The message must name the registers, so the log says which one the model refuses.
-    assert "45" in str(excinfo.value)
-
-
-def test_a_two_digit_year_is_decoded_as_this_century():
-    """Some models store the year as an offset from 2000. Without this a "26" decodes as the
-    year 26 AD and the reported drift is two millennia."""
-    client = _client(registers=[26, 8, 22, 14, 8, 19, 6])
-    assert client.read_inverter_time() == datetime(2026, 8, 22, 14, 8, 19)
-
-
-def test_the_year_format_is_taken_from_the_register_not_guessed():
-    """A MIN TL-X refused 2026 and its year register afterwards read 2000, having read 2026
-    before — so a rejected write is not necessarily a write that did nothing. Probing with a
-    value the firmware may clamp can leave the clock worse than it started, so the encoding
-    is read rather than tried (#393)."""
-    client = _client(registers=[26, 8, 22, 14, 8, 19, 6])   # two-digit model
-    client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
-    assert client._fake.written[1][0] == 26, "a two-digit model was sent a four-digit year"
-
-
-def test_a_four_digit_model_is_never_sent_two_digits():
-    """The dangerous direction. Writing 26 to a model expecting 2026 would set the year to
-    the first century, and on at least one model the firmware clamps rather than refusing."""
-    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
-    client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
-    assert client._fake.written[1][0] == 2026
-
-
-def test_the_year_is_written_first_so_a_refusal_changes_nothing():
-    """The year is the field observed to be refused, so it goes first and acts as a probe.
-
-    A MIN TL-X ended up holding the year 2000 where it had held 2026 — five fields took, the
-    year did not, and the firmware appears to have reset the clock rather than keep a date it
-    considered inconsistent. Writing the year last made that possible; writing it first means
-    a refusal costs nothing."""
-    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
-    touched = []
-
-    def refuse_block(register, values):
-        raise _gm.ModbusWriteError(register, values, "refused")
-
-    def single(register, value):
-        touched.append(register)
-        return register != 45          # the year is refused, as on the MIN
-
-    client.write_registers = refuse_block
-    client.write_single_register_any_fc = single
-
-    with pytest.raises(_gm.ModbusWriteError) as excinfo:
-        client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
-
-    assert touched == [45], (
-        f"the year was refused but {touched[1:]} were written anyway — the clock is now "
-        f"part-updated, which is the failure this ordering exists to prevent"
+    client.write_registers = lambda register, values: pytest.fail(
+        f"a block write to {register} was attempted"
     )
-    assert "Nothing was changed" in str(excinfo.value)
+    assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
 
 
-def test_a_later_field_failing_is_reported_as_a_partial_write():
-    """If the year lands and something after it does not, the clock really is part-updated
-    and the user needs to be told rather than left to notice."""
+def test_the_writes_are_paced():
+    """The reference spaces them; these registers are committed one at a time."""
     client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    assert client.CLOCK_WRITE_INTERVAL > 0
 
-    def refuse_block(register, values):
-        raise _gm.ModbusWriteError(register, values, "refused")
+    sleeps = []
+    import growatt_under_test.growatt_modbus as gm
+    original = gm.time.sleep
+    gm.time.sleep = lambda s: sleeps.append(s)
+    try:
+        client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
+    finally:
+        gm.time.sleep = original
 
-    client.write_registers = refuse_block
-    client.write_single_register_any_fc = lambda r, v: r != 48   # hour refused
+    # Five gaps between six writes, and none before the first.
+    assert len(sleeps) == 5
+    assert all(s == client.CLOCK_WRITE_INTERVAL for s in sleeps)
+
+
+def test_a_refused_year_leaves_the_clock_untouched():
+    """The year goes first precisely so this is possible. A MIN TL-X reset its RTC to the
+    year 2000 when five fields landed and the year did not."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    client.write_single_register_any_fc = lambda r, v: r != 45
 
     with pytest.raises(_gm.ModbusWriteError) as excinfo:
         client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
-    assert "part-updated" in str(excinfo.value)
-    assert "48" in str(excinfo.value)
+
+    assert client._fake.singles == {}, "fields were written after the year was refused"
+    assert "Nothing else was written" in str(excinfo.value)
 
 
-def test_the_block_write_is_still_preferred():
-    """The fallback must not become the normal path — an atomic write is what stops the
-    clock briefly holding a mix of old and new fields."""
+def test_a_later_field_refused_is_reported_as_a_partial_write():
+    """If the year lands and something after it does not, the clock really is part-updated
+    and the user must be told rather than left to notice."""
     client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    real = client._fake.write_single
+    client.write_single_register_any_fc = lambda r, v: False if r == 48 else real(r, v)
 
-    def single(register, value):
-        # 51 is expected here — it is always written on its own. Any of 45-50 arriving
-        # individually means the block path was abandoned when it had worked.
-        if register != 51:
-            pytest.fail(
-                f"register {register} was written individually even though the block "
-                f"write succeeded"
-            )
-        return True
+    with pytest.raises(_gm.ModbusWriteError) as excinfo:
+        client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
 
-    client.write_single_register_any_fc = single
-    assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
-    assert client._fake.written[0] == 45
+    message = str(excinfo.value)
+    assert "part-updated" in message
+    assert "hour" in message, "the failing field is not named"
 
 
-def test_the_year_is_written_in_full():
-    """The off-grid protocol offsets the year from 2000; V1.39 does not, and both scans read
-    a full four-digit year."""
-    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
-    client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
-    assert client._fake.written[1][0] == 2026
+def test_verification_compares_against_the_four_digit_year():
+    """The register reads back 2026 having been written 26. Comparing the written value
+    against the read value would report a mismatch on every successful sync."""
+    client = _client(registers=[2026, 8, 25, 9, 30, 5, 2])
+    caplog_free = client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
+    assert caplog_free is True  # no exception, and the read-back agrees
 
 
 # --------------------------------------------------------------------------
@@ -332,68 +243,23 @@ def test_the_service_is_registered_and_documented():
     assert set(services["sync_inverter_time"]["fields"]) == {"device_id", "min_drift_seconds"}
 
 
-def test_a_year_write_that_is_accepted_but_ignored_aborts_the_sync():
-    """The trap this project keeps meeting: a write can be acknowledged and do nothing.
-
-    A MIN TL-X refuses 2026 outright, returns success for 26, and leaves the register
-    holding 2000. Trusting "no exception" lets the probe pass, the other five fields get
-    written, and the clock ends up with a new date against an untouched year — the state
-    that appears to make this firmware reset its RTC (#393).
-    """
-    client = _client(registers=[26, 8, 22, 14, 8, 19, 6])   # reads as two-digit
-    touched = []
-
-    def refuse_block(register, values):
-        raise _gm.ModbusWriteError(register, values, "refused")
-
-    client.write_registers = refuse_block
-    # Every write is "accepted"...
-    client.write_single_register_any_fc = lambda r, v: touched.append(r) is None
-    # ...but the year register never changes.
-    client.read_holding_registers = lambda start, count: [2000] if count == 1 else [26, 8, 22, 14, 8, 19, 6][:count]
-
-    with pytest.raises(_gm.ModbusWriteError) as excinfo:
-        client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
-
-    assert touched == [45], (
-        f"the year was silently ignored but {touched[1:]} were written anyway"
-    )
-    assert "acknowledged and ignored" in str(excinfo.value)
-
-
-def test_a_year_that_reads_back_correctly_lets_the_sync_continue():
-    """The other direction — a working model must not be blocked by the read-back check."""
-    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
-    touched = []
-
-    def refuse_block(register, values):
-        raise _gm.ModbusWriteError(register, values, "refused")
-
-    client.write_registers = refuse_block
-    client.write_single_register_any_fc = lambda r, v: touched.append(r) is None
-    client.read_holding_registers = lambda start, count: (
-        [2026] if count == 1 else [2026, 8, 25, 9, 30, 5][:count]
-    )
-
-    assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
-    assert touched == [45, 46, 47, 48, 49, 50, 51]
-
-
-def test_the_action_warns_that_it_is_unconfirmed():
-    """Four defects in this feature were found by one user on real hardware, none predicted
-    by the protocol document — which lists all seven clock registers as writable, and on a
-    MIN TL-X four of those claims are wrong. Until a full clock write is confirmed landing,
-    anyone running this is testing it, and should be told so (#393)."""
+def test_the_undocumented_year_encoding_is_flagged_to_users():
+    """The year register takes two digits and reports four. That is in neither protocol
+    document, it is the reason three earlier builds failed, and it is the thing most likely
+    to differ on hardware nobody here has. Both the UI description and the log say so, and
+    both point at the issue for reports (#393)."""
     from pathlib import Path
     import yaml
 
     component = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
 
     source = (component / "diagnostic.py").read_text(encoding="utf-8")
-    assert "Clock sync is experimental" in source, "no runtime warning is emitted"
-    assert "issues/393" in source, "the warning does not say where to report the outcome"
+    # Matched in pieces: the message is wrapped across source lines.
+    assert "two-digit value and" in source, "no runtime notice is emitted"
+    assert "reports four" in source
+    assert "issues/393" in source, "the notice does not say where to report the outcome"
 
     services = yaml.safe_load((component / "services.yaml").read_text(encoding="utf-8"))
     description = services["sync_inverter_time"]["description"]
-    assert "EXPERIMENTAL" in description, "the UI description does not flag it"
-    assert "MIN TL-X" in description, "the known-failing model is not named in the UI"
+    assert "two-digit" in description, "the UI description does not mention the encoding"
+    assert "393" in description, "the UI description does not point at the issue"

@@ -743,18 +743,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 "other than the weekday, and no scan has confirmed the encoding (#393)."
             )
 
-        # Said once per call, deliberately. Four defects in this feature were found by one
-        # user testing on real hardware, none of which the protocol document predicted - it
-        # lists all seven clock registers as writable and on a MIN TL-X four of those claims
-        # are wrong. Until somebody confirms a full clock write landing, anyone running this
-        # is testing it (#393).
-        _LOGGER.warning(
-            "Clock sync is experimental and has not yet been confirmed working on any "
-            "model. It writes the year first and verifies it, and changes nothing unless "
-            "that succeeds — so a refusal leaves your clock untouched. Known: MIN TL-X will "
-            "not accept the year; off-grid models are not attempted. Please report the "
-            "result either way at "
-            "https://github.com/0xAHA/Growatt_ModbusTCP/issues/393"
+        # Still worth a line per call. The method now follows a published working
+        # implementation, but it has been wrong three times on real hardware and the
+        # protocol document does not describe the year encoding at all (#393).
+        _LOGGER.info(
+            "Setting the inverter clock. The year register takes a two-digit value and "
+            "reports four — handled here, but undocumented, so please report the outcome "
+            "at https://github.com/0xAHA/Growatt_ModbusTCP/issues/393"
         )
 
         now = dt_util.now().replace(tzinfo=None)

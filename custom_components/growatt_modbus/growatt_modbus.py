@@ -2991,6 +2991,16 @@ class GrowattModbus:
     CLOCK_REGISTER_START = 45
     CLOCK_REGISTER_COUNT = 7  # 45-51 inclusive
 
+    # Pacing between the six single-register clock writes. The reference implementation
+    # spaces them by 200 ms; these registers are committed individually and are not a
+    # burst target.
+    CLOCK_WRITE_INTERVAL = 0.2
+
+    # How far the read-back may differ before it is reported. Six paced writes take about a
+    # second, and the seconds field is written first-to-last, so the clock legitimately
+    # lands a little behind the value asked for.
+    CLOCK_VERIFY_TOLERANCE = 5.0
+
     @property
     def is_clock_supported(self) -> bool:
         """Whether this profile's clock encoding is confirmed."""
@@ -3028,162 +3038,105 @@ class GrowattModbus:
             return None
 
     def write_inverter_time(self, when: datetime) -> bool:
-        """Set the inverter's real-time clock, as a single atomic FC16 write.
+        """Set the inverter's real-time clock.
 
-        All seven registers go in one transaction deliberately. Writing them individually
-        would leave the clock briefly holding a mix of old and new values, and a write that
-        straddled a minute boundary could set a time that never existed.
+        Follows the method in a published, working ESP32 implementation for an SPH5000
+        (cosminpop.uk, Feb 2026), corroborated by an ESPHome forum finding three years
+        earlier and by two failures on this tracker:
+
+        **The year is written as `year - 2000`, and read back as the full four digits.**
+        Write 26, read 2026. That asymmetry is the whole problem — it is not in either
+        protocol document for the V1.39 range, and an earlier version of this method
+        detected the format by reading the register, which can only ever produce the
+        four-digit form and therefore always wrote a value the inverter rejects (#393).
+
+        Each field is written on its own with FC 0x06, spaced apart, in the reference's
+        order. Its author notes that settings registers on that hardware generally need
+        FC 0x10 and answer FC 0x06 with Illegal Function, but that the RTC block at 45-50
+        is an exception and does take single writes.
+
+        The year goes first on purpose. It is the field observed to fail, so a refusal
+        leaves the clock untouched rather than half-written — a MIN TL-X reset its RTC to
+        the year 2000 when five fields landed and the year did not.
         """
         if not self.is_clock_supported:
             raise ModbusWriteError(
                 self.CLOCK_REGISTER_START, [],
-                "clock sync is not supported on off-grid profiles — the year encoding and "
-                "register 51 differ from the documented V1.39 layout (#393)",
+                "clock sync is not supported on off-grid profiles — register 51 carries "
+                "Chip Select there rather than a weekday, and no scan has confirmed the "
+                "rest of the block (#393)",
             )
 
-        # Decide the year convention by reading the register, never by trying one form and
-        # retrying the other. On a MIN TL-X a refused write to 45 was followed by the
-        # register reading 2000 where it had read 2026 before — so a rejected write is not
-        # necessarily a write that did nothing, and probing with a value the firmware may
-        # clamp can leave the clock worse than it started (#393).
-        #
-        # Whatever the register currently holds tells us which encoding this model uses:
-        # a value below 100 is an offset from 2000, anything else is a full year.
-        current_year = self.read_holding_registers(self.CLOCK_REGISTER_START, 1)
-        two_digit_year = bool(current_year) and 0 <= int(current_year[0]) < 100
-        if current_year is None:
-            logger.warning(
-                "[CLOCK] Could not read register %d to determine the year format — "
-                "assuming a four-digit year", self.CLOCK_REGISTER_START,
-            )
-
-        values = [
-            (when.year - 2000) if two_digit_year else when.year,
-            when.month, when.day,
-            when.hour, when.minute, when.second,
-            when.isoweekday(),  # Monday=1, matching the observed weekday field
+        # Year first, and as an offset. The remaining fields are plain values.
+        fields = [
+            (self.CLOCK_REGISTER_START,     when.year - 2000, "year"),
+            (self.CLOCK_REGISTER_START + 1, when.month,       "month"),
+            (self.CLOCK_REGISTER_START + 2, when.day,         "day"),
+            (self.CLOCK_REGISTER_START + 3, when.hour,        "hour"),
+            (self.CLOCK_REGISTER_START + 4, when.minute,      "minute"),
+            (self.CLOCK_REGISTER_START + 5, when.second,      "second"),
         ]
+
         logger.info(
-            "[CLOCK] Setting inverter clock to %s (registers %d-%d)",
-            when.strftime("%Y-%m-%d %H:%M:%S"),
-            self.CLOCK_REGISTER_START, self.CLOCK_REGISTER_START + self.CLOCK_REGISTER_COUNT - 1,
+            "[CLOCK] Setting inverter clock to %s (year written as %d)",
+            when.strftime("%Y-%m-%d %H:%M:%S"), when.year - 2000,
         )
 
-        # The weekday (51) is written separately, never as part of the block.
-        #
-        # Not every model implements it — the MIN profiles map 45-50 and stop — and an FC16
-        # transaction spanning an address the firmware does not have fails as a whole,
-        # taking the six good registers down with it. The date and time are what schedules
-        # run against; the weekday is derivable and cosmetic, so it must not be able to cost
-        # us the rest (#393).
-        weekday_register = self.CLOCK_REGISTER_START + 6
+        for index, (register, value, label) in enumerate(fields):
+            if index:
+                # The reference paces its writes; these registers are not a burst target
+                # and the inverter has to commit each one.
+                time.sleep(self.CLOCK_WRITE_INTERVAL)
 
-        # Atomic first, then a guarded per-register fallback.
-        #
-        # A MIN TL-X answers FC 0x06 with Illegal Function and refuses FC 0x10 across six
-        # registers, but accepts FC 0x10 one value at a time — so the per-register path is
-        # the only one that works there, and removing it would remove the feature.
-        #
-        # The danger is a *partial* write. That same inverter ended up with a year of 2000
-        # where it had held 2026: five fields took, the year did not, and the firmware
-        # appears to have reset the clock rather than keep a date it considered inconsistent.
-        # Half a clock is worse than none — a schedule twenty-six years out is not a smaller
-        # problem than one two minutes out.
-        #
-        # So the fallback writes the YEAR FIRST. It is the field observed to be refused, and
-        # going first makes it a probe: if it fails, nothing else has been touched and we
-        # abort with the clock exactly as we found it (#393).
-        weekday_register = self.CLOCK_REGISTER_START + 6
+            if self.write_single_register_any_fc(register, value):
+                continue
 
-        try:
-            if self.write_registers(self.CLOCK_REGISTER_START, values[:6]):
-                self.write_single_register_any_fc(weekday_register, values[6])
-                self._verify_clock_write(values[:6])
-                return True
-            logger.info("[CLOCK] Block write refused — trying one register at a time")
-        except ModbusWriteError as err:
-            logger.info("[CLOCK] Block write refused (%s) — trying one register at a time",
-                        err.error_message)
-
-        year_accepted = self.write_single_register_any_fc(self.CLOCK_REGISTER_START, values[0])
-
-        # Accepting a write is not the same as honouring it. A MIN TL-X refuses 2026 outright
-        # but returns success for 26 and leaves the register unchanged — the "Read OK means
-        # nothing" trap this project has been caught by before. Without reading back, the
-        # probe passes, the remaining five fields get written, and the clock ends up with a
-        # new date against an untouched year: exactly the state that appears to make this
-        # firmware reset its RTC (#393).
-        if year_accepted:
-            check = self.read_holding_registers(self.CLOCK_REGISTER_START, 1)
-            if check and int(check[0]) != values[0]:
-                logger.warning(
-                    "[CLOCK] Register %d accepted %d but still reads %d — the write was "
-                    "acknowledged and ignored",
-                    self.CLOCK_REGISTER_START, values[0], int(check[0]),
+            if index == 0:
+                raise ModbusWriteError(
+                    register, [value],
+                    f"the inverter refused register {register} (year, written as "
+                    f"{value}). Nothing else was written, so the clock is exactly as it "
+                    f"was. This model may not allow its clock to be set over Modbus.",
                 )
-                year_accepted = False
 
-        if not year_accepted:
             raise ModbusWriteError(
-                self.CLOCK_REGISTER_START, values[:6],
-                f"register {self.CLOCK_REGISTER_START} (year) could not be set — it was "
-                f"either refused or acknowledged and ignored. Nothing was changed: the "
-                f"remaining fields are deliberately left alone, because a clock with a new "
-                f"date against an old year is worse than one that is merely slow. This model "
-                f"does not allow its year to be set over Modbus; use the Growatt app.",
+                register, [value],
+                f"register {register} ({label}) was refused after the year had already "
+                f"been written, so the clock is now part-updated. Check it in the Growatt "
+                f"app.",
             )
 
-        failures = []
-        for offset, value in enumerate(values[1:6], start=1):
-            register = self.CLOCK_REGISTER_START + offset
-            if not self.write_single_register_any_fc(register, value):
-                failures.append(register)
-
-        if not self.write_single_register_any_fc(weekday_register, values[6]):
-            logger.debug(
-                "[CLOCK] Register %d (weekday) was refused — the clock itself is set, and "
-                "schedules do not use that field", weekday_register,
-            )
-
-        if failures:
-            raise ModbusWriteError(
-                self.CLOCK_REGISTER_START, values[:6],
-                f"register(s) {failures} were refused after the year had already been "
-                f"written, so the clock is now part-updated. Check it in the Growatt app.",
-            )
-
-        logger.info("[CLOCK] Clock set one register at a time")
-        self._verify_clock_write(values[:6])
+        self._verify_clock_write(when)
         return True
 
-    def _verify_clock_write(self, intended: list) -> None:
-        """Read the clock back and complain if it does not hold what we asked for.
+    def _verify_clock_write(self, intended: datetime) -> None:
+        """Read the clock back and complain if it does not match.
 
-        A write that reports success is not proof the value landed. On a MIN TL-X the year
-        register was refused and afterwards read 2000, having read 2026 beforehand — so this
-        firmware can both reject a write and change the register. Silence about that is how
-        a schedule ends up running twenty-six years out with nothing in the log (#393).
+        Compares against the four-digit year, because that is what the register reports
+        regardless of the two-digit value used to set it.
 
-        Advisory only. The write already happened; this exists so the user finds out.
+        Advisory only — the write has already happened. This exists because a write can be
+        acknowledged and quietly discarded, which is how a MIN TL-X reported success for a
+        year it never stored.
         """
-        count = len(intended)
-        actual = self.read_holding_registers(self.CLOCK_REGISTER_START, count)
-        if not actual or len(actual) < count:
+        actual = self.read_inverter_time()
+        if actual is None:
             logger.debug("[CLOCK] Could not read the clock back to verify it")
             return
 
-        mismatches = [
-            (self.CLOCK_REGISTER_START + i, intended[i], int(actual[i]))
-            for i in range(count)
-            if int(actual[i]) != intended[i]
-        ]
-        if mismatches:
+        drift = abs((actual - intended).total_seconds())
+        if drift > self.CLOCK_VERIFY_TOLERANCE:
             logger.warning(
-                "[CLOCK] The inverter did not store what was written: %s. The clock may be "
-                "wrong — check it in the Growatt app before relying on time-based schedules.",
-                ", ".join(f"register {r} asked for {want}, holds {got}"
-                          for r, want, got in mismatches),
+                "[CLOCK] The inverter did not store what was written: asked for %s, reads "
+                "%s. The clock may be wrong — check it in the Growatt app before relying "
+                "on time-based schedules.",
+                intended.strftime("%Y-%m-%d %H:%M:%S"),
+                actual.strftime("%Y-%m-%d %H:%M:%S"),
             )
+        else:
+            logger.info("[CLOCK] Verified: inverter now reads %s",
+                        actual.strftime("%Y-%m-%d %H:%M:%S"))
+
 
     def _check_wit_control_conflicts(self, register: int, value: int) -> None:
         """

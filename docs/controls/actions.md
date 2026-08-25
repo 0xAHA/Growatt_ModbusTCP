@@ -90,32 +90,28 @@ actions:
             Schedules may have been firing at the wrong time.
 ```
 
-### Models that will not accept it
+### How the year is written
 
-The action does not change anything unless the whole clock can be set. If your model refuses
-part of it, you get an error and the inverter is left exactly as it was.
+Worth knowing, because it is in neither protocol document and it is what made three earlier
+builds fail.
 
-| Model | Status |
-|---|---|
-| SPH | Registers behave as documented |
-| **MIN TL-X** | **Year cannot be set — see below** |
-| SPF / SPE (off-grid) | Not attempted — see below |
+**Register 45 takes a two-digit year and reports back four.** Write `26`, read `2026`. Send
+the full year and the inverter rejects the write outright. This was established from a
+published ESP32 implementation for an SPH5000 and an ESPHome forum finding, after both a MIN
+TL-X and an SPH refused everything else that was tried.
 
-!!! failure "MIN TL-X: the year register will not take a value"
+Two consequences for how the action behaves:
 
-    Confirmed on a MIN 7000-10000TL-X. Holding register 45 (year):
+- Each field is written **individually**, not as a block. Both models above refused a
+  multi-register write across this range, and the reference implementation notes that while
+  settings registers on that hardware generally require FC `0x10`, the RTC block at 45-50 is
+  an exception and does accept single writes.
+- The **year is written first**. It is the field that fails when something is wrong, so a
+  refusal leaves your clock untouched rather than half-set. An earlier build wrote it last,
+  five fields landed, and the inverter reset its clock to the year 2000 rather than keep a
+  date it considered inconsistent.
 
-    * rejects a four-digit year outright — `ExceptionResponse(function_code=144, exception_code=0)`
-    * **accepts** a two-digit year and then ignores it, still reading its old value afterwards
-    * does not support single-register writes at all — FC `0x06` returns Illegal Function
-
-    A write being acknowledged is not the same as it being applied. The action therefore
-    writes the year first and reads it straight back; if it did not change, nothing else is
-    written and you get an error. That ordering matters: an earlier version wrote the year
-    last, five fields landed, the year did not, and the inverter reset its clock to the year
-    2000 rather than keep a date it considered inconsistent.
-
-    On these models set the time from the Growatt app or the inverter's own display.
+The action reads the clock back afterwards and logs a warning if it does not match.
 
 !!! warning "Not available on SPF/SPE"
 

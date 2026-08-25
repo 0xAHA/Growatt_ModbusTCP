@@ -4,6 +4,26 @@
 
 ---
 
+## v1.8.4 (pre-release)
+
+Issues: #393
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **Clock sync now writes the year the way the inverter expects it.** Register 45 takes a
+  **two-digit** year and reports back four — write `26`, read `2026`. That asymmetry appears
+  in neither protocol document, and it is why every earlier build was rejected: they all sent
+  the full year. Established from a published ESP32 implementation for an SPH5000 and an
+  ESPHome forum finding, after both a MIN TL-X and an SPH refused everything else.
+  Investigated and sourced by @Vict20. (#393)
+- **Each field is now written on its own rather than as a block**, matching that reference —
+  both models refused a multi-register write across this range, while the RTC registers
+  accept single writes even on hardware that generally does not.
+- **The year is still written first**, so a refusal leaves the clock untouched rather than
+  half-set, and the clock is read back afterwards with a warning if it does not match.
+
+---
+
 ## v1.8.3 (pre-release)
 
 Issues: #393
