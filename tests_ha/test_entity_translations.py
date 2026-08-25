@@ -22,6 +22,14 @@ from custom_components.growatt_modbus.sensor import SENSOR_DEFINITIONS
 
 COMPONENT = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
 
+# Sensors that have their own entity class instead of a SENSOR_DEFINITIONS entry, because
+# they do not read a GrowattData field. They still need translated names, so they are not
+# orphans - but SENSOR_DEFINITIONS will never list them.
+STANDALONE_SENSORS = {
+    # Reads the RTC registers directly via GrowattInverterClockSensor (#393)
+    "inverter_clock",
+}
+
 
 def _entity_names(filename: str) -> dict[str, str]:
     data = json.loads((COMPONENT / filename).read_text(encoding="utf-8"))
@@ -40,7 +48,9 @@ def test_every_sensor_has_translated_text(filename):
 @pytest.mark.parametrize("filename", ["strings.json", "translations/en.json"])
 def test_no_orphaned_translation_entries(filename):
     """Text for a sensor that no longer exists is dead weight and misleads translators."""
-    orphans = sorted(set(_entity_names(filename)) - set(SENSOR_DEFINITIONS))
+    orphans = sorted(
+        set(_entity_names(filename)) - set(SENSOR_DEFINITIONS) - STANDALONE_SENSORS
+    )
     assert not orphans, f"{filename} names sensors that do not exist: {orphans}"
 
 

@@ -23,6 +23,7 @@ to an SPF would set the year wrong and clobber an unrelated register.
 from __future__ import annotations
 
 import importlib
+from pathlib import Path
 from datetime import datetime
 
 import pytest
@@ -228,19 +229,41 @@ def test_off_grid_writes_are_refused_rather_than_guessed():
 # Service wiring
 # --------------------------------------------------------------------------
 
-def test_the_service_is_registered_and_documented():
-    from pathlib import Path
-    import yaml
+COMPONENT = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
 
-    component = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
-    source = (component / "diagnostic.py").read_text(encoding="utf-8")
+
+def _service_block(name: str) -> str:
+    """Return the lines of services.yaml belonging to one top-level service key.
+
+    A text slice rather than yaml.safe_load: this suite is the "no HA" job and runs on a
+    bare Python with no third-party packages. Importing PyYAML here turned the whole job
+    red for a day without anything else noticing (#393).
+    """
+    lines = (COMPONENT / "services.yaml").read_text(encoding="utf-8").splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith(f"{name}:"))
+    end = next(
+        (i for i in range(start + 1, len(lines)) if lines[i] and not lines[i][0].isspace()),
+        len(lines),
+    )
+    return "\n".join(lines[start:end])
+
+
+def test_the_service_is_registered_and_documented():
+    source = (COMPONENT / "diagnostic.py").read_text(encoding="utf-8")
     assert 'SERVICE_SYNC_INVERTER_TIME = "sync_inverter_time"' in source
     assert "async def sync_inverter_time(call: ServiceCall)" in source
     assert "supports_response=SupportsResponse.OPTIONAL" in source
 
-    services = yaml.safe_load((component / "services.yaml").read_text(encoding="utf-8"))
-    assert "sync_inverter_time" in services, "the service is not exposed in the UI"
-    assert set(services["sync_inverter_time"]["fields"]) == {"device_id", "min_drift_seconds"}
+    block = _service_block("sync_inverter_time")
+    assert block, "the service is not exposed in the UI"
+
+    after_fields = block.split("  fields:", 1)[1]
+    fields = {
+        line.strip().rstrip(":")
+        for line in after_fields.splitlines()
+        if line.startswith("    ") and not line.startswith("     ") and line.rstrip().endswith(":")
+    }
+    assert fields == {"device_id", "min_drift_seconds"}, fields
 
 
 def test_the_undocumented_year_encoding_stays_documented():
@@ -252,20 +275,14 @@ def test_the_undocumented_year_encoding_stays_documented():
     is confirmed working on a MIN TL-X, so the encoding is implementation detail rather
     than a caveat every user needs at the point of use. What the UI description must still
     carry is the scope limit, because that one changes what the action will do (#393)."""
-    from pathlib import Path
-    import yaml
-
     root = Path(__file__).parent.parent
-    component = root / "custom_components" / "growatt_modbus"
 
     docs = (root / "docs" / "controls" / "actions.md").read_text(encoding="utf-8")
     assert "two-digit year" in docs, "the docs no longer explain the year encoding"
     assert "MIN TL-X" in docs, "the docs do not name the model it is confirmed on"
     assert "issues/393" in docs, "the docs do not say where to report other models"
 
-    services = yaml.safe_load((component / "services.yaml").read_text(encoding="utf-8"))
-    description = services["sync_inverter_time"]["description"]
-    assert "SPF/SPE" in description, (
+    assert "SPF/SPE" in _service_block("sync_inverter_time"), (
         "the UI description does not state that off-grid models are excluded"
     )
 
