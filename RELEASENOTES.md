@@ -4,6 +4,23 @@
 
 ---
 
+## v1.8.5 (pre-release)
+
+Issues: #384
+
+> **Pre-release for testing.** v1.6.2 remains the stable release.
+
+- **SPF: routine battery-direction corrections no longer appear as errors.** In status 12
+  (PV Charge + Discharge) the SPF reports an unreliable sign on battery power, so the
+  integration resolves the direction from the power balance instead. That is normal
+  operation and can fire a dozen times on a sunny day, but it was logged at warning level,
+  which put it in Home Assistant's error log under "originated from a custom integration".
+  It now logs at debug. The correction itself is unchanged. Reported by @dinkalin-ux. (#384)
+- Corrections that flag a genuine contradiction between the reported sign and the inverter's
+  own status (#174) still log at warning, as they should.
+
+---
+
 ## v1.8.4 (pre-release)
 
 Issues: #393
