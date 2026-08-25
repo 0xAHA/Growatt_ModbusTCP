@@ -263,3 +263,22 @@ def test_the_undocumented_year_encoding_is_flagged_to_users():
     description = services["sync_inverter_time"]["description"]
     assert "two-digit" in description, "the UI description does not mention the encoding"
     assert "393" in description, "the UI description does not point at the issue"
+
+
+def test_routine_spf_sign_corrections_are_not_logged_as_warnings():
+    """Status 12 corrections fire many times a day on an off-grid inverter in normal
+    operation. At warning level they land in Home Assistant's error log looking like a
+    fault, and a reporter raised them twice as "this error" while chasing something
+    unrelated. The code's own comment says the hardware sign is *expected* to be unreliable
+    in that state, so the correction working is not news (#384)."""
+    from pathlib import Path
+
+    source = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+              / "growatt_modbus.py").read_text(encoding="utf-8")
+
+    block = source[source.index("if status == 12:"):]
+    block = block[:block.index("return battery_power")]
+    assert "logger.warning" not in block, (
+        "a routine status-12 sign correction is still logged at warning level"
+    )
+    assert block.count("logger.debug") == 2, "both correction branches should log at debug"
