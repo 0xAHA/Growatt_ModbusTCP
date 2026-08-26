@@ -64,7 +64,7 @@ nav:
     - Protocol Reference:
       - Overview: developer/protocol-database.md
       - Modbus RTU V1.39: developer/protocol-v139.md
-      - VPP Protocol: developer/protocol-vpp.md
+      - VPP Protocol (V2.03): developer/protocol-vpp.md
       - Off-Grid V0.26: developer/protocol-offgrid.md
   - Release Notes: release-notes.md
 

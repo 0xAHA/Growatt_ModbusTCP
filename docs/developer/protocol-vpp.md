@@ -1,6 +1,17 @@
-# VPP Protocol
+# VPP Protocol (V2.03)
 
-> **Source documents:** Growatt VPP Communication Protocol of Inverter V2.01 / V2.03
+!!! info "This page is current to V2.03"
+
+    The integration labels profiles and the protocol-variant option **"VPP V2.01"**, and
+    that name is kept for compatibility with existing configurations. The register
+    information here is **not** limited to V2.01 - it is taken from the V2.03 specification
+    dated 2025.9.1 and includes the V2.03 additions, such as register 30209 (automatic
+    on/off-grid switch) and the bypass value on register 30101.
+
+    If a distributor hands you "V2.03" documentation, it is the same document we work from.
+
+> **Source documents:** Growatt VPP Communication Protocol of Inverter V2.03, with V2.01
+> for comparison
 > (`GI-BK-E060_GROWATT.VPP.COMMUNICATION.PROTOCOL.OF.INVERTER_V2.03.xlsx`,
 > `growatt_vpp_protocol_v2.01_registers.csv`)
 >
