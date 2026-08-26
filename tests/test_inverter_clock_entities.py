@@ -193,3 +193,28 @@ def test_the_clock_sensor_is_not_a_timestamp_device_class():
 
     attrs = _function_body(source, "GrowattInverterClockSensor", "extra_state_attributes")
     assert "timestamp" in attrs, "the parseable timestamp attribute is gone"
+
+
+def test_the_clock_sensor_is_excluded_from_the_sensor_key_set():
+    """`created_keys` feeds the deferred-registration block, and it is built from the same
+    list the clock sensor is appended to. Only GrowattModbusSensor carries `_sensor_key`,
+    so an unguarded comprehension raises AttributeError there - which is what shipped in
+    v1.8.6 and aborted sensor setup after the unconditioned entities had been added,
+    silently removing every condition-gated sensor for every user (#399)."""
+    source = _source("sensor.py")
+    tree = ast.parse(source)
+
+    setup = _function_body(source, None, "async_setup_entry")
+    assert "created_keys" in setup, "created_keys moved; this guard needs rewriting"
+
+    node = next(
+        n for n in ast.walk(ast.parse(setup.strip()))
+        if isinstance(n, ast.Assign)
+        and any(getattr(t, "id", None) == "created_keys" for t in n.targets)
+    )
+    comp = node.value
+    assert isinstance(comp, ast.SetComp), "created_keys is no longer a set comprehension"
+    assert comp.generators[0].ifs, (
+        "created_keys iterates every entity unguarded; the clock sensor has no "
+        "_sensor_key and this raises AttributeError, aborting sensor setup"
+    )

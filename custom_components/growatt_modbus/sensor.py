@@ -1431,7 +1431,14 @@ async def async_setup_entry(
     # arrives (coordinator.has_real_data becomes True). Any that now pass are added via
     # async_add_entities. The listener removes itself when all deferred sensors are
     # resolved or the config entry is unloaded.
-    created_keys = {e._sensor_key for e in entities}
+    # Only the register-driven sensors carry a _sensor_key. GrowattInverterClockSensor
+    # does not, and it is in this same list - iterating all of them raised AttributeError
+    # in v1.8.6-v1.8.8, which aborted setup right here, after the unconditioned sensors
+    # had been added and before the deferred block below ever ran. Every condition-gated
+    # sensor silently ceased to exist, with no repair and no automation warning (#399).
+    created_keys = {
+        e._sensor_key for e in entities if isinstance(e, GrowattModbusSensor)
+    }
     deferred: list[tuple[str, dict]] = [
         (sk, sd)
         for sk, sd in SENSOR_DEFINITIONS.items()

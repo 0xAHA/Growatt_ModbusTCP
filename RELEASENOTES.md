@@ -4,6 +4,26 @@
 
 ---
 
+## v1.8.9
+
+Issues: #399 #393
+
+**Update if you are on v1.8.6, v1.8.7 or v1.8.8.**
+
+- **Conditional sensors were not being created.** Sensor setup aborted partway through, so
+  every sensor whose creation depends on a value - PV energy totals, PV3 counters, Backup
+  Box entities, and others by profile - was never created and read `unavailable` no matter
+  how many times it was enabled, reloaded or restarted. Sensors without such a condition
+  were unaffected, which is why the fault looked selective. Reported by @as-wallpen. (#399)
+- **Automations triggering on an affected entity could not fire**, and nothing surfaced it:
+  no repair, no log entry, no warning on the automation. Worth checking any automation that
+  triggers on a Backup Box entity.
+- Clock sync now compensates for its own write latency, so the inverter clock lands on the
+  requested time rather than about 1.5 s behind it, and `drift_seconds` measures the
+  inverter rather than partly measuring us. Reported by @Vict20. (#393)
+
+---
+
 ## v1.8.8
 
 Issues: #353 #361 #376 #377 #378 #379 #381 #383 #384 #385 #386 #389 #390 #392 #393
