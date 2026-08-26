@@ -19,7 +19,7 @@ Hardware Setup:
 import time
 import logging
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, Tuple, Union
@@ -3007,6 +3007,11 @@ class GrowattModbus:
     # lands a little behind the value asked for.
     CLOCK_VERIFY_TOLERANCE = 5.0
 
+    # Worst-case wall time for the six paced writes including Modbus round-trips. Used
+    # only to keep the sequence off a minute boundary; being generous here costs at most
+    # this many seconds of waiting, and only on a sync that starts late in a minute.
+    CLOCK_WRITE_BUDGET = 6.0
+
     @property
     def is_clock_supported(self) -> bool:
         """Whether this profile's clock encoding is confirmed."""
@@ -3073,7 +3078,25 @@ class GrowattModbus:
                 "rest of the block (#393)",
             )
 
-        # Year first, and as an offset. The remaining fields are plain values.
+        # Seconds is written last, roughly 1.2-1.5 s after the first field on TCP and
+        # longer on a slow gateway. Writing `when.second` therefore lands the clock that
+        # far behind: a reporter measured a consistent 1.4-1.6 s residual immediately
+        # after every sync, which was this and not his inverter (#393). The seconds value
+        # is computed at the moment it is written instead, from elapsed monotonic time.
+        #
+        # That compensation can only push seconds forward, so it must never cross a minute
+        # boundary - the minute has already been written by then. If there is not room in
+        # the current minute, wait for the next one and start there.
+        if when.second + self.CLOCK_WRITE_BUDGET >= 60:
+            wait = 60 - when.second
+            logger.debug(
+                "[CLOCK] Starting %.0f s late in the minute; waiting for the next one so "
+                "the write cannot cross the boundary", when.second,
+            )
+            time.sleep(wait)
+            when = when + timedelta(seconds=wait)
+
+        # Year first, and as an offset. Seconds is a placeholder - see below.
         fields = [
             (self.CLOCK_REGISTER_START,     when.year - 2000, "year"),
             (self.CLOCK_REGISTER_START + 1, when.month,       "month"),
@@ -3088,11 +3111,18 @@ class GrowattModbus:
             when.strftime("%Y-%m-%d %H:%M:%S"), when.year - 2000,
         )
 
+        started = time.monotonic()
+
         for index, (register, value, label) in enumerate(fields):
             if index:
                 # The reference paces its writes; these registers are not a burst target
                 # and the inverter has to commit each one.
                 time.sleep(self.CLOCK_WRITE_INTERVAL)
+
+            if label == "second":
+                # How long the five preceding writes actually took, rather than an
+                # assumption about it - a LoRa bridge is far slower than TCP.
+                value = when.second + int(round(time.monotonic() - started))
 
             if self.write_single_register_any_fc(register, value):
                 continue

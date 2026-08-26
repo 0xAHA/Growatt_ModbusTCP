@@ -133,7 +133,40 @@ def test_all_six_fields_are_written_individually_in_order():
     client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
 
     assert client._fake.order == [45, 46, 47, 48, 49, 50]
-    assert client._fake.singles == {45: 26, 46: 8, 47: 25, 48: 9, 49: 30, 50: 5}
+    # Date and time down to the minute are written verbatim. Seconds is not - it is
+    # compensated for how long the preceding writes took, so it is asserted separately.
+    assert {r: v for r, v in client._fake.singles.items() if r != 50} == {
+        45: 26, 46: 8, 47: 25, 48: 9, 49: 30,
+    }
+
+
+def test_the_seconds_field_compensates_for_how_long_the_write_took():
+    """Seconds is written last, about 1.2-1.5 s after the first field on TCP and longer on
+    a slow gateway. Writing the captured value lands the clock that far behind, and a
+    reporter measured exactly that as a consistent 1.4-1.6 s residual after every sync -
+    his inverter was fine, our write path was late (#393).
+
+    The compensation must be measured rather than assumed, because a LoRa bridge is far
+    slower than TCP."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
+
+    written = client._fake.singles[50]
+    assert written > 5, "seconds was written verbatim; the clock will land behind"
+    assert written <= 5 + client.CLOCK_WRITE_BUDGET, (
+        f"seconds compensated by more than the write budget: {written}"
+    )
+
+
+def test_a_sync_late_in_the_minute_waits_for_the_next_one():
+    """The seconds compensation only moves forward, and the minute has already been
+    written by the time it applies - so it must never push seconds past 59. Starting with
+    less than the write budget left in the minute would do exactly that."""
+    client = _client(registers=[2026, 8, 22, 14, 8, 19, 6])
+    client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 58))
+
+    assert client._fake.singles[49] == 31, "the minute was not advanced past the boundary"
+    assert client._fake.singles[50] < 60, "seconds overflowed the minute"
 
 
 def test_no_block_write_is_attempted():
