@@ -4,6 +4,29 @@
 
 ---
 
+## v1.8.10 (pre-release)
+
+Issues: #395 #398
+
+> **Pre-release for testing.** v1.8.9 remains the stable release.
+
+- **Legacy SPH profiles now read grid import and export energy.** `SPH_3000_6000` and
+  `SPH_7000_10000` had no grid energy register mapped at all, so Import/Export Energy Today
+  and Total had nothing behind them and published a value that never moved - one reporter
+  saw a lifetime export of 0.1 kWh, another 3.4 kWh. The V2.01 variants of these profiles
+  were unaffected. **Expect these four sensors to jump to their real values on upgrade.**
+  Confirmed on an SPH 5000 against ShinePhone by @ian-mcarthur-oxford. (#395)
+- **Serial connections no longer fail intermittently on concurrent read and write.** A
+  coordinator poll and a control write could use the same serial client at once; when one
+  reconnected after a timeout, the other was left with a closed handle and the write failed
+  with `[Errno 9] Bad file descriptor` - about ten times a day for someone running TOU
+  automations on a timer. Bus access is now serialised per client. Reported by
+  @rinuskroon. (#398)
+- This is a lock, not a return of the shared serial connection withdrawn in v1.7.5. Nothing
+  opens the port twice; the client still owns its own socket.
+
+---
+
 ## v1.8.9
 
 Issues: #399 #393

@@ -130,6 +130,22 @@ SPH_3000_6000 = {
         # NOT added here: 1044-1051 (Etouser / Etogrid). They read plausibly on the same
         # device, but the export lifetime total disagreed with the portal (7561.0 kWh
         # against 6362), so they want their own evidence rather than riding along on this.
+        # Grid import/export energy. Absent from these two legacy maps until v1.8.10 while
+        # their V2.01 siblings had them, so Export/Import Energy Today and Total had no
+        # register behind them at all and published a default that never moved. Confirmed
+        # on an SPH 5000 against ShinePhone and the Growatt cloud, and corroborated by a
+        # second user's diagnostics on a different unit (#395).
+        #
+        # INPUT space. Holding 1044 in this same profile is priority_mode - a different
+        # register that happens to share the address.
+        1044: {'name': 'energy_to_user_today_high', 'scale': 1, 'unit': '', 'pair': 1045, 'desc': 'Grid import energy today'},
+        1045: {'name': 'energy_to_user_today_low', 'scale': 1, 'unit': '', 'pair': 1044, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1046: {'name': 'energy_to_user_total_high', 'scale': 1, 'unit': '', 'pair': 1047, 'desc': 'Grid import energy total'},
+        1047: {'name': 'energy_to_user_total_low', 'scale': 1, 'unit': '', 'pair': 1046, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1048: {'name': 'energy_to_grid_today_high', 'scale': 1, 'unit': '', 'pair': 1049, 'desc': 'Grid export energy today'},
+        1049: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 1048, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1050: {'name': 'energy_to_grid_total_high', 'scale': 1, 'unit': '', 'pair': 1051, 'desc': 'Grid export energy total'},
+        1051: {'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 1050, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge energy today HIGH (Edischarge1_today)'},
         1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge energy total HIGH (Edischarge1_total)'},
@@ -420,6 +436,22 @@ SPH_7000_10000 = {
         # NOT added here: 1044-1051 (Etouser / Etogrid). They read plausibly on the same
         # device, but the export lifetime total disagreed with the portal (7561.0 kWh
         # against 6362), so they want their own evidence rather than riding along on this.
+        # Grid import/export energy. Absent from these two legacy maps until v1.8.10 while
+        # their V2.01 siblings had them, so Export/Import Energy Today and Total had no
+        # register behind them at all and published a default that never moved. Confirmed
+        # on an SPH 5000 against ShinePhone and the Growatt cloud, and corroborated by a
+        # second user's diagnostics on a different unit (#395).
+        #
+        # INPUT space. Holding 1044 in this same profile is priority_mode - a different
+        # register that happens to share the address.
+        1044: {'name': 'energy_to_user_today_high', 'scale': 1, 'unit': '', 'pair': 1045, 'desc': 'Grid import energy today'},
+        1045: {'name': 'energy_to_user_today_low', 'scale': 1, 'unit': '', 'pair': 1044, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1046: {'name': 'energy_to_user_total_high', 'scale': 1, 'unit': '', 'pair': 1047, 'desc': 'Grid import energy total'},
+        1047: {'name': 'energy_to_user_total_low', 'scale': 1, 'unit': '', 'pair': 1046, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1048: {'name': 'energy_to_grid_today_high', 'scale': 1, 'unit': '', 'pair': 1049, 'desc': 'Grid export energy today'},
+        1049: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 1048, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        1050: {'name': 'energy_to_grid_total_high', 'scale': 1, 'unit': '', 'pair': 1051, 'desc': 'Grid export energy total'},
+        1051: {'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 1050, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge energy today HIGH (Edischarge1_today)'},
         1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge energy total HIGH (Edischarge1_total)'},

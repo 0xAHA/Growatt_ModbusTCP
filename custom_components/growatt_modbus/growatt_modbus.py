@@ -933,6 +933,23 @@ class GrowattModbus:
                 operations are delegated to the hub and connect/disconnect become no-ops.
         """
         self._shared_conn = shared_conn
+
+        # Serialises bus access when there is no shared hub - which is every serial entry,
+        # since the hub is TCP-only. Without it a coordinator poll and a service-call write
+        # could use the same client concurrently; when one path hit a transport timeout and
+        # reconnected, the other was left holding a closed file descriptor and the write
+        # died with [Errno 9] Bad file descriptor, roughly ten times a day for one reporter
+        # (#398).
+        #
+        # Reentrant for the same reason the hub's lock is: write_batch() holds it across a
+        # sequence while the individual writes still take it themselves. Reentrancy is
+        # per-thread, so a batched sequence must run in one executor job.
+        #
+        # This is NOT the serial shared connection that was reverted in v1.7.5. Nothing
+        # here opens the port - the client still owns its own socket. It only stops two
+        # callers using that socket at once.
+        self._local_bus_lock = threading.RLock()
+
         self.connection_type = connection_type
         self.slave_id = slave_id
         self.client: Optional[Union['ModbusTcpClient', 'ModbusSerialClient']] = None
@@ -1234,6 +1251,11 @@ class GrowattModbus:
         self.last_read_time = time.time()
     
     def read_input_registers(self, start_address: int, count: int, log_errors: bool = True) -> Optional[list]:
+        """Read registers, holding the bus for the transaction (#398)."""
+        with self._bus("read"):
+            return self._read_input_registers_locked(start_address, count, log_errors)
+
+    def _read_input_registers_locked(self, start_address: int, count: int, log_errors: bool = True) -> Optional[list]:
         """Read input registers with error handling.
 
         Args:
@@ -1331,6 +1353,11 @@ class GrowattModbus:
             return None
     
     def read_holding_registers(self, start_address: int, count: int) -> Optional[list]:
+        """Read registers, holding the bus for the transaction (#398)."""
+        with self._bus("read"):
+            return self._read_holding_registers_locked(start_address, count)
+
+    def _read_holding_registers_locked(self, start_address: int, count: int) -> Optional[list]:
         """Read holding registers with error handling and slave_id compatibility fallback."""
         self._enforce_read_interval()
 
@@ -2623,6 +2650,30 @@ class GrowattModbus:
             logger.info(f"{tag} Reconnect successful (no is_socket_open available)")
 
     @contextmanager
+    def _bus(self, what: str = "bus operation"):
+        """Hold the bus for the duration of the block.
+
+        Returns the hub's lock when a shared connection is in use and the per-client lock
+        otherwise, so both transports serialise the same way. Both are RLocks, so the
+        nested acquisition inside the individual read/write methods re-enters rather than
+        deadlocking.
+        """
+        from .const import SHARED_LOCK_TIMEOUT
+
+        lock = (
+            self._shared_conn._lock if self._shared_conn is not None
+            else self._local_bus_lock
+        )
+        if not lock.acquire(timeout=SHARED_LOCK_TIMEOUT):
+            raise ModbusWriteError(
+                0, [], f"Modbus bus busy (lock timeout after {SHARED_LOCK_TIMEOUT}s on {what})"
+            )
+        try:
+            yield
+        finally:
+            lock.release()
+
+    @contextmanager
     def write_batch(self, what: str = "write sequence"):
         """Hold the shared bus for a sequence of writes that must not be interleaved.
 
@@ -2671,6 +2722,11 @@ class GrowattModbus:
             logger.debug("[BATCH] Released shared bus after %s", what)
 
     def write_register(self, register: int, value: int) -> bool:
+        """Write, holding the bus for the transaction (#398)."""
+        with self._bus("write"):
+            return self._write_register_locked(register, value)
+
+    def _write_register_locked(self, register: int, value: int) -> bool:
         """
         Write a single holding register.
 
@@ -2892,6 +2948,11 @@ class GrowattModbus:
         return (True, False)
 
     def write_registers(self, register: int, values: list) -> bool:
+        """Write, holding the bus for the transaction (#398)."""
+        with self._bus("write"):
+            return self._write_registers_locked(register, values)
+
+    def _write_registers_locked(self, register: int, values: list) -> bool:
         """
         Write multiple consecutive holding registers (Modbus function 0x10).
 
