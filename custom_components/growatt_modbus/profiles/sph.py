@@ -146,6 +146,19 @@ SPH_3000_6000 = {
         1049: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 1048, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1050: {'name': 'energy_to_grid_total_high', 'scale': 1, 'unit': '', 'pair': 1051, 'desc': 'Grid export energy total'},
         1051: {'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 1050, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # BMS block, input space. Confirmed on an SPH3600 against independent instruments
+        # rather than against other registers (#397):
+        #   1086 = 68    while the SOC sensor read 68 %
+        #   1087 = 5420  while the battery measured 54.2 V
+        #   1088 = 1640  against a clamp DC ammeter reading 16.4 A
+        #
+        # The ammeter fixes the scale at 0.01, not the 0.1 that SPH_8000_10000_HU declares
+        # for the same address. Left as measured rather than harmonised with that map: the
+        # two were confirmed on different hardware and only this one against a meter.
+        #
+        # battery_current had no register at all on these profiles before this, so the
+        # entity published its default of 0.00 A permanently - the same shape as #395.
+        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (confirmed vs clamp meter, #397)'},
         1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge energy today HIGH (Edischarge1_today)'},
         1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge energy total HIGH (Edischarge1_total)'},
@@ -452,6 +465,19 @@ SPH_7000_10000 = {
         1049: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 1048, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1050: {'name': 'energy_to_grid_total_high', 'scale': 1, 'unit': '', 'pair': 1051, 'desc': 'Grid export energy total'},
         1051: {'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 1050, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        # BMS block, input space. Confirmed on an SPH3600 against independent instruments
+        # rather than against other registers (#397):
+        #   1086 = 68    while the SOC sensor read 68 %
+        #   1087 = 5420  while the battery measured 54.2 V
+        #   1088 = 1640  against a clamp DC ammeter reading 16.4 A
+        #
+        # The ammeter fixes the scale at 0.01, not the 0.1 that SPH_8000_10000_HU declares
+        # for the same address. Left as measured rather than harmonised with that map: the
+        # two were confirmed on different hardware and only this one against a meter.
+        #
+        # battery_current had no register at all on these profiles before this, so the
+        # entity published its default of 0.00 A permanently - the same shape as #395.
+        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (confirmed vs clamp meter, #397)'},
         1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge energy today HIGH (Edischarge1_today)'},
         1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge energy total HIGH (Edischarge1_total)'},
@@ -840,6 +866,19 @@ SPH_3000_6000_V201 = {
         # its poll never touches the 31000 range at all, so the only mapping under the name
         # the coordinator looks for was one the hardware never answers. Voltage and SOC
         # worked on the same device precisely because they follow this convention.
+        # BMS block, input space. Confirmed on an SPH3600 against independent instruments
+        # rather than against other registers (#397):
+        #   1086 = 68    while the SOC sensor read 68 %
+        #   1087 = 5420  while the battery measured 54.2 V
+        #   1088 = 1640  against a clamp DC ammeter reading 16.4 A
+        #
+        # The ammeter fixes the scale at 0.01, not the 0.1 that SPH_8000_10000_HU declares
+        # for the same address. Left as measured rather than harmonised with that map: the
+        # two were confirmed on different hardware and only this one against a meter.
+        #
+        # battery_current had no register at all on these profiles before this, so the
+        # entity published its default of 0.00 A permanently - the same shape as #395.
+        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (confirmed vs clamp meter, #397)'},
         1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge today (Edischarge1_today)'},
         1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge total (Edischarge1_total)'},
@@ -1000,6 +1039,19 @@ SPH_7000_10000_V201 = {
         # its poll never touches the 31000 range at all, so the only mapping under the name
         # the coordinator looks for was one the hardware never answers. Voltage and SOC
         # worked on the same device precisely because they follow this convention.
+        # BMS block, input space. Confirmed on an SPH3600 against independent instruments
+        # rather than against other registers (#397):
+        #   1086 = 68    while the SOC sensor read 68 %
+        #   1087 = 5420  while the battery measured 54.2 V
+        #   1088 = 1640  against a clamp DC ammeter reading 16.4 A
+        #
+        # The ammeter fixes the scale at 0.01, not the 0.1 that SPH_8000_10000_HU declares
+        # for the same address. Left as measured rather than harmonised with that map: the
+        # two were confirmed on different hardware and only this one against a meter.
+        #
+        # battery_current had no register at all on these profiles before this, so the
+        # entity published its default of 0.00 A permanently - the same shape as #395.
+        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (confirmed vs clamp meter, #397)'},
         1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge today (Edischarge1_today)'},
         1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge total (Edischarge1_total)'},

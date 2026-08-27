@@ -84,3 +84,35 @@ def test_input_1044_and_holding_1044_stay_distinct(profile_name):
     profile = getattr(_sph, profile_name)
     assert profile["input_registers"][1044]["name"] == "energy_to_user_today_high"
     assert profile["holding_registers"][1044]["name"] == "priority_mode"
+
+
+BATTERY_CURRENT_PROFILES = [
+    "SPH_3000_6000", "SPH_7000_10000", "SPH_3000_6000_V201", "SPH_7000_10000_V201",
+]
+
+
+@pytest.mark.parametrize("profile_name", BATTERY_CURRENT_PROFILES)
+def test_battery_current_is_mapped(profile_name):
+    """These four had no battery_current register at all, so the entity published its
+    dataclass default of 0.00 A permanently while the BMS held a real value - the same
+    shape as the grid energy gap above.
+
+    Confirmed on an SPH3600 with a clamp DC ammeter: register 1088 read 1640 against a
+    measured 16.4 A (#397)."""
+    registers = getattr(_sph, profile_name)["input_registers"]
+    assert 1088 in registers, f"{profile_name} does not map battery current"
+    assert registers[1088]["name"] == "battery_current"
+    assert registers[1088]["signed"] is True, "battery current must be signed or charging reads as a huge positive"
+
+
+@pytest.mark.parametrize("profile_name", BATTERY_CURRENT_PROFILES)
+def test_battery_current_uses_the_measured_scale(profile_name):
+    """0.01, from the ammeter comparison - not the 0.1 that SPH_8000_10000_HU declares for
+    the same address. Deliberately not harmonised: different hardware, and only this one
+    was checked against an instrument. A wrong scale here is a plausible number, which is
+    harder to notice than the zero it replaced."""
+    registers = getattr(_sph, profile_name)["input_registers"]
+    assert registers[1088]["scale"] == 0.01, (
+        f"{profile_name} battery current scale is {registers[1088]['scale']}; "
+        f"1640 must read as 16.4 A"
+    )

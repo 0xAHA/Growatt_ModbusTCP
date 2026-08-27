@@ -42,7 +42,7 @@ def _function_body(source: str, class_name: str | None, func_name: str) -> str:
 # The two fetch paths
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("fetch_path", ["_fetch_data_shared", "_fetch_data"])
+@pytest.mark.parametrize("fetch_path", ["_fetch_data_shared", "_fetch_data_direct"])
 def test_both_fetch_paths_refresh_the_clock(fetch_path):
     """The coordinator has a shared-connection fetch path and a direct one, and they have
     diverged before: v1.3.5 fixed block-size parsing in the shared path only and the other
@@ -52,6 +52,16 @@ def test_both_fetch_paths_refresh_the_clock(fetch_path):
     assert "_refresh_inverter_clock()" in body, (
         f"{fetch_path} does not refresh the inverter clock"
     )
+
+
+def test_the_direct_poll_still_runs_under_the_bus_lock():
+    """_fetch_data delegates to _fetch_data_direct inside self._client._bus(), so the whole
+    poll is atomic against writes rather than only its individual transactions. Holding it
+    per transaction leaves the gap between blocks open, and a write landing there closes
+    the port out from under the poll (#398)."""
+    body = _function_body(_source("coordinator.py"), "GrowattModbusCoordinator", "_fetch_data")
+    assert "_bus(" in body, "the direct poll no longer holds the bus for its whole duration"
+    assert "_fetch_data_direct()" in body, "the direct poll body is no longer delegated"
 
 
 def test_the_clock_is_not_read_until_something_asks():

@@ -4,6 +4,24 @@
 
 ---
 
+## v1.8.12 (pre-release)
+
+Issues: #397 #398
+
+> **Pre-release for testing.** v1.8.9 remains the stable release.
+
+- **Serial: the whole poll now holds the bus, not each transaction.** v1.8.10 stopped a read
+  and a write running at the same instant but left the gap between register blocks open, so
+  a write landing there ran its own connect/disconnect and closed the port out from under
+  the poll. `[Errno 9] Bad file descriptor` and `[Errno 11] Could not exclusively lock port`
+  both returned as soon as a reporter drove writes hard. Reported by @rinuskroon. (#398)
+- **SPH: battery current now reads.** `SPH_3000_6000`, `SPH_7000_10000` and both V2.01
+  variants had no register mapped for it at all, so the entity showed 0.00 A permanently
+  while the BMS held a real value. Confirmed on an SPH3600 with a clamp DC ammeter -
+  register 1088 read 1640 against a measured 16.4 A. Reported by @Vict20. (#397)
+
+---
+
 ## v1.8.11 (pre-release)
 
 Issues: #397 #399 #400

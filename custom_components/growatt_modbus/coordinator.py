@@ -37,7 +37,7 @@ from .const import (
 
 from .const import REGISTER_MAPS, resolve_block_size
 
-from .growatt_modbus import GrowattModbus, GrowattData, SharedModbusConnection
+from .growatt_modbus import GrowattModbus, GrowattData, SharedModbusConnection, ModbusWriteError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1180,6 +1180,34 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         if self._hub is not None:
             return self._fetch_data_shared()
 
+        # Hold the bus for the WHOLE poll, exactly as the shared path does.
+        #
+        # v1.8.10 gave the client a per-transaction lock, which stopped a read and a write
+        # executing at the same instant but left the gap between blocks open - and this
+        # path connects, reads many blocks, then disconnects. A write landing between two
+        # blocks takes the bus legitimately, runs its own connect/disconnect cycle, and
+        # closes the port out from under the poll. What comes back is the pair of errors
+        # this was meant to remove:
+        #
+        #     [Errno 9]  Bad file descriptor              - poll reads a closed handle
+        #     [Errno 11] Could not exclusively lock port  - write connects while poll holds it
+        #
+        # The unit that must be atomic is the poll, not the transaction. The lock is an
+        # RLock and everything below runs in this one executor job, so the per-transaction
+        # acquisitions inside re-enter rather than deadlock. Reported by @rinuskroon on
+        # v1.8.10 (#398).
+        try:
+            with self._client._bus("poll"):
+                return self._fetch_data_direct()
+        except ModbusWriteError as err:
+            _LOGGER.warning(
+                "Modbus bus busy for %s - skipping this poll: %s",
+                self.config.get(CONF_DEVICE_PATH) or self.config.get(CONF_HOST), err,
+            )
+            return None
+
+    def _fetch_data_direct(self) -> GrowattData | None:
+        """Poll over a connection this client owns outright. Bus already held."""
         max_retries = 3
         retry_delay = 3  # seconds - increased from 2
 
