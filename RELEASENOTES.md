@@ -4,6 +4,34 @@
 
 ---
 
+## v1.8.11 (pre-release)
+
+Issues: #397 #399 #400
+
+> **Pre-release for testing.** v1.8.9 remains the stable release. Includes everything in
+> v1.8.10.
+
+- **PV3 and PV4 daily energy no longer vanish overnight.** Those two sensors were created
+  only while their own value was above zero, so a restart during darkness left them absent
+  until the first watt-hour of the morning, while PV1 and PV2 sat at 0.0 as normal. They
+  now key off the lifetime counter, which still hides them on hardware that has no such
+  string. Raised by @as-wallpen. (#399)
+- **Set Battery Mode (VPP) now refuses models it does not support.** The action is written
+  for WIT and WIS, and its HOLD mode depends on register behaviour those models have. On a
+  MIN TL-XH it was offered anyway and HOLD charged the battery toward a stuck SOC limit -
+  the opposite of standby - importing from the grid to do it. It now returns a clear error
+  naming the missing registers. Reported by @GoncaloRibeiro11. (#400)
+- **A write that is accepted but ignored now says what may have happened.** The warning
+  named only a cloud override; some firmware silently discards out-of-range SOC limits,
+  which sends people looking at the wrong thing. (#400)
+- **Battery temperature is corrected on firmware that reports whole degrees.** One SPH3600
+  reports 25 where the protocol specifies tenths, which showed as 2.5 C. The documented
+  scale is unchanged and still used everywhere it is correct; the correction applies only
+  to readings a working battery could not hold, and stops for good once a device proves it
+  follows the spec. Reported by @Vict20. (#397)
+
+---
+
 ## v1.8.10 (pre-release)
 
 Issues: #395 #398

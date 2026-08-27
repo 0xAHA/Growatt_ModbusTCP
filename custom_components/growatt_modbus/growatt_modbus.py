@@ -950,6 +950,11 @@ class GrowattModbus:
         # callers using that socket at once.
         self._local_bus_lock = threading.RLock()
 
+        # Battery temperature scale detection (#397). Latched per connection so the
+        # decision cannot flap between polls as the temperature moves.
+        self._battery_temp_scale_confirmed = False
+        self._battery_temp_whole_degrees = False
+
         self.connection_type = connection_type
         self.slave_id = slave_id
         self.client: Optional[Union['ModbusTcpClient', 'ModbusSerialClient']] = None
@@ -1474,6 +1479,82 @@ class GrowattModbus:
                 return -battery_power
 
         return battery_power
+
+    # Battery temperature scale detection (#397).
+    #
+    # A raw value of 100 or more can only come from a tenths device: it would mean 100 C
+    # or hotter read as whole degrees, which no battery reaches. Seeing one proves the
+    # documented scale is right and ends the question for this connection.
+    _TEMP_TENTHS_PROOF_RAW = 100
+
+    # The window in which a reading is implausible as tenths but ordinary as whole
+    # degrees: raw 15-45 is 1.5-4.5 C on the documented scale. A battery that is actively
+    # charging or discharging does not sit there, and 15-45 C is unremarkable.
+    #
+    # Deliberately narrow. Widening it to raw 50 would misread a spec-compliant inverter
+    # at 5.0 C as 50 C - the exact failure of the "three digits means tenths" rule that
+    # was proposed, which breaks in cold weather and nowhere else.
+    _TEMP_WHOLE_DEGREE_RAW_MIN = 15
+    _TEMP_WHOLE_DEGREE_RAW_MAX = 45
+    _TEMP_IMPLAUSIBLE_AS_TENTHS_C = 5.0
+
+    def _resolve_battery_temp_scale(self, register: int, scaled_value: float) -> float:
+        """Correct battery temperature on firmware that reports whole degrees.
+
+        V1.39 specifies register 1040 as 0.1 C and most hardware follows it: 24.0 C
+        arrives as 240. An SPH3600 reports whole degrees instead - 25 for 25 C - which the
+        documented scale renders as 2.5 C. Confirmed on that unit against an independent
+        BMS temperature register reading the same 25, and against a thermal camera (#397).
+
+        The two cases are genuinely ambiguous from a single reading: raw 25 is 25 C on one
+        firmware and 2.5 C on the other. So this corrects only where the documented scale
+        yields a value a working battery could not hold, and stops correcting for good the
+        moment the device proves itself spec-compliant.
+
+        Biased towards leaving the reading alone. The spec says tenths, exactly one unit is
+        known to disagree, and reporting a wrong-but-plausible temperature is worse than
+        reporting a right-but-odd one.
+        """
+        if scaled_value is None:
+            return scaled_value
+
+        definition = self.register_map.get('input_registers', {}).get(register, {})
+        scale = definition.get('scale', 1)
+        if scale == 1:
+            return scaled_value  # nothing to undo
+
+        raw = round(scaled_value / scale)
+
+        # Proof of a tenths device. Latch it and never intervene again on this connection,
+        # so a cold morning later in the session cannot undo the conclusion.
+        if raw >= self._TEMP_TENTHS_PROOF_RAW:
+            if not self._battery_temp_scale_confirmed:
+                self._battery_temp_scale_confirmed = True
+                logger.debug(
+                    "[TEMP] Register %d reports the documented tenths scale (raw %d); "
+                    "no correction will be applied on this connection.", register, raw,
+                )
+            return scaled_value
+
+        if self._battery_temp_scale_confirmed:
+            return scaled_value
+
+        if (
+            self._TEMP_WHOLE_DEGREE_RAW_MIN <= raw <= self._TEMP_WHOLE_DEGREE_RAW_MAX
+            and scaled_value < self._TEMP_IMPLAUSIBLE_AS_TENTHS_C
+        ):
+            if not self._battery_temp_whole_degrees:
+                self._battery_temp_whole_degrees = True
+                logger.info(
+                    "[TEMP] Battery temperature register %d appears to report whole "
+                    "degrees on this firmware rather than the documented tenths: raw %d "
+                    "reads as %.1f C, which a working battery would not hold. Reporting "
+                    "%d C. If this is wrong, say so on issue #397.",
+                    register, raw, scaled_value, raw,
+                )
+            return float(raw)
+
+        return scaled_value
 
     def _detect_battery_power_scale(self, voltage: float, current: float, power_register_value: int) -> Optional[float]:
         """
@@ -3691,6 +3772,7 @@ class GrowattModbus:
             addr = self._find_register_by_name_with_fallback('battery_temp')
             if addr:
                 self._set_from_register(data, 'battery_temp', addr)
+                data.battery_temp = self._resolve_battery_temp_scale(addr, data.battery_temp)
                 logger.debug(f"Battery temp from reg {addr}: {data.battery_temp}°C")
 
             # Battery State of Health (WIT-only - only set if register exists in profile)

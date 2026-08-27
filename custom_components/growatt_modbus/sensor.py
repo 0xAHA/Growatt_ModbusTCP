@@ -197,7 +197,13 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "pv3_energy_today",
         "disabled_by_default": True,
-        "condition": lambda data: data.pv3_energy_today > 0,
+        # Gated on the LIFETIME counter, not on itself. The gate exists to hide PV3 on
+        # two-string hardware, and lifetime does that job without the side effect: a
+        # daily counter gated on its own value is absent after any restart that happens
+        # while it reads zero, so an overnight restart loses it until sunrise. Lifetime
+        # is monotonic - zero forever on an unpopulated string, non-zero on a real one
+        # once commissioned. Raised by @as-wallpen (#399).
+        "condition": lambda data: data.pv3_energy_total > 0,
     },
     "pv3_energy_total": {
         "name": "PV3 Energy Total",
@@ -247,7 +253,8 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfEnergy.KILO_WATT_HOUR,
         "attr": "pv4_energy_today",
         "disabled_by_default": True,
-        "condition": lambda data: data.pv4_energy_today > 0,
+        # See pv3_energy_today - same reasoning (#399).
+        "condition": lambda data: data.pv4_energy_total > 0,
     },
     "pv4_energy_total": {
         "name": "PV4 Energy Total",

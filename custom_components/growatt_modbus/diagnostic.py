@@ -1219,6 +1219,24 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         client = coordinator._client
 
+        # This action was written for WIT/WIS and its HOLD branch depends on the TOU
+        # +1% workaround, which in turn depends on the SOC-limit registers accepting a
+        # value near the current SOC. On a MIN TL-XH they accept high values and silently
+        # discard low ones, so HOLD charges the battery toward the stuck limit - the
+        # opposite of standby - and imports from the grid to do it. The action was offered
+        # on every model regardless, with the WIT scope stated only in its description
+        # (#400).
+        holding = client.register_map.get('holding_registers', {})
+        missing = [r for r in (30100, 30407, 30409) if r not in holding]
+        if missing:
+            raise HomeAssistantError(
+                f"Set Battery Mode (VPP) is not available on this model. Its profile "
+                f"({client.register_map.get('name', 'unknown')}) does not carry the VPP "
+                f"control registers {missing}. This action is for WIT and WIS inverters; "
+                f"on other models use the Battery First / Grid First time period controls "
+                f"instead. See issue #400."
+            )
+
         # VPP Register addresses
         VPP_CONTROL_AUTHORITY = 30100
         VPP_AC_CHARGE_ENABLE = 30410

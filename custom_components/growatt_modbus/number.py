@@ -355,8 +355,16 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
             if verified:
                 _LOGGER.info("Set %s to %.1f (raw=%d, verified)", self._control_name, value, raw_value)
             else:
+                # Two quite different causes, and the message used to name only the
+                # first. A MIN TL-XH accepts high SOC limits and silently discards low
+                # ones - the write reports success and the register keeps its old value,
+                # with no exception returned. Someone reading "cloud override" will go
+                # looking at their ShineStick rather than at the firmware (#400).
                 _LOGGER.warning(
-                    "%s: write succeeded but value reverted (possible cloud override)",
+                    "%s: the write was accepted but the register did not take the value. "
+                    "Either the inverter firmware rejected it silently (some models "
+                    "discard out-of-range SOC limits this way) or the Growatt cloud "
+                    "overwrote it.",
                     self._control_name,
                 )
             self.coordinator.track_write(register, raw_value, self._control_name)
