@@ -98,6 +98,16 @@ MOD_6000_15000TL3_XH = {
         # The scan returned exactly 15424, and 67/68 returned 119, giving 11.9 kWh for the
         # day. PV1 9.4 + PV2 8.2 + PV3 11.9 = 29.5, matching the portal's daily solar figure
         # to the decimal.
+        #
+        # Independently re-confirmed on a second MID 25KTL3-XH (#399). That reporter had
+        # decoded 59-70 himself into template sensors before v1.6.3 shipped, and read both
+        # at the same moment after retiring the workaround:
+        #
+        #     PV1 1451.3 = 1451.3   PV2 929.4 = 929.4   PV3 1792.3 = 1792.3
+        #
+        # Exact on all three. Two independent decodes of the same addresses agreeing to the
+        # decimal is as strong as this gets short of a manufacturer statement - the pairing,
+        # the word order and the 0.1 scale are all settled.
         67: {'name': 'pv3_energy_today_high', 'scale': 1, 'unit': '', 'pair': 68, 'desc': 'PV3 DC energy today HIGH (Epv3_today)'},
         68: {'name': 'pv3_energy_today_low', 'scale': 1, 'unit': '', 'pair': 67, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'PV3 DC energy today LOW'},
         69: {'name': 'pv3_energy_total_high', 'scale': 1, 'unit': '', 'pair': 70, 'desc': 'PV3 DC energy total HIGH (Epv3_total)'},
