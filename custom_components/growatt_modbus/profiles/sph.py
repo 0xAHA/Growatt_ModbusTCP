@@ -760,9 +760,27 @@ SPH_8000_10000_HU = {
         1084: {'name': 'bms_error_old', 'scale': 1, 'unit': '', 'desc': 'Error info Old from BMS'},
         1085: {'name': 'bms_error', 'scale': 1, 'unit': '', 'desc': 'Error information from BMS'},
         1086: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'SOC from BMS (actual battery state of charge)'},
-        1087: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery voltage from BMS'},
-        1088: {'name': 'battery_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Battery current from BMS', 'signed': True},
-        1089: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Battery temperature from BMS', 'signed': True},
+        # Scales here come from the ESS Protocol, which V1.39 names as the reference for
+        # this whole block (see Protocols/1xSxxP_ESS_Protocol_rev2.3_20171128.pdf and
+        # docs/developer/protocol-ess.md). Its Status Query table gives:
+        #   0x0016 Voltage      10 mV  -> 0.01 V
+        #   0x0017 Current      10 mA  -> 0.01 A, two's complement
+        #   0x0018 Temperature  degC   -> whole degrees, range -127..127
+        #
+        # 1088 was 0.1 here, which is neither documented nor measured - most likely taken
+        # by analogy from register 3170 (Ibat), which really is 0.1 A on the MIN/MOD range.
+        # Corrected to the documented 0.01, matching the four other SPH maps where it was
+        # also confirmed against a clamp meter (#397).
+        #
+        # 1087 and 1089 left as they are, deliberately:
+        #   - 1087 is shadowed by 1013, which carries the same name and is found first, so
+        #     this scale is never exercised. Changing it would be an untested no-op.
+        #   - 1089 reads whole degrees per the spec, but the runtime detection added for
+        #     #397 already corrects that at read time on any firmware that does so.
+        # Neither has a device report behind it and no HU owner has measured either.
+        1087: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery voltage from BMS (shadowed by 1013; scale unverified)'},
+        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'desc': 'Battery current from BMS (ESS Protocol 0x0017, 10 mA)', 'signed': True},
+        1089: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Battery temperature from BMS (whole degrees per ESS; corrected at read time)', 'signed': True},
         1090: {'name': 'bms_max_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Max charge/discharge current from BMS'},
         1091: {'name': 'bms_gauge_rm', 'scale': 1, 'unit': '', 'desc': 'Gauge RM from BMS'},
         1092: {'name': 'bms_gauge_fcc', 'scale': 1, 'unit': '', 'desc': 'Gauge FCC from BMS'},

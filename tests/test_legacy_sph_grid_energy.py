@@ -116,3 +116,48 @@ def test_battery_current_uses_the_measured_scale(profile_name):
         f"{profile_name} battery current scale is {registers[1088]['scale']}; "
         f"1640 must read as 16.4 A"
     )
+
+
+def test_every_sph_map_agrees_on_the_battery_current_scale():
+    """The ESS Protocol, which V1.39 names as the reference for the BMS block, documents
+    register 0x0017 in units of 10 mA - so 0.01 A. SPH_8000_10000_HU carried 0.1, which was
+    neither documented nor measured and most likely came by analogy from register 3170
+    (Ibat), which really is 0.1 A on a different range.
+
+    All five maps now agree. A single map drifting back would give one family readings ten
+    times out, which is plausible enough not to be noticed (#397)."""
+    for profile_name in BATTERY_CURRENT_PROFILES + ["SPH_8000_10000_HU"]:
+        registers = getattr(_sph, profile_name)["input_registers"]
+        assert registers[1088]["scale"] == 0.01, (
+            f"{profile_name} declares {registers[1088]['scale']} for battery current; "
+            f"the ESS Protocol documents 10 mA"
+        )
+
+
+def test_the_ess_protocol_reference_survives_in_the_docs():
+    """V1.39 documents the BMS block by name only and defers units, scales and bitfields to
+    the ESS Protocol. Our markdown extraction dropped that note, which is how the block came
+    to be mapped by guesswork - twice with the wrong scale.
+
+    The note and the page it points at are the only record that the source document exists.
+    """
+    from pathlib import Path
+
+    root = Path(__file__).parent.parent
+    v139 = (root / "docs" / "developer" / "protocol-v139.md").read_text(encoding="utf-8")
+    assert "GrowattxxSxxP ESS Protocol" in v139, "the ESS cross-reference has been lost again"
+    assert "protocol-ess.md" in v139, "the note does not link to the extracted page"
+
+    ess = root / "docs" / "developer" / "protocol-ess.md"
+    assert ess.exists(), "the ESS protocol page is missing"
+    body = ess.read_text(encoding="utf-8")
+    for expected in ("10 mA", "10 mV", "-127 to 127", "0x0017"):
+        assert expected in body, f"the ESS page no longer documents {expected!r}"
+
+    nav = (root / "mkdocs.yml").read_text(encoding="utf-8")
+    assert "developer/protocol-ess.md" in nav, (
+        "the page is not in the mkdocs nav, so it is unreachable from the site"
+    )
+
+    pdf = root / "Protocols" / "1xSxxP_ESS_Protocol_rev2.3_20171128.pdf"
+    assert pdf.exists(), "the source PDF is not checked in"

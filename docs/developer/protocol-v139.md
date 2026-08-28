@@ -1178,6 +1178,7 @@
 | 1080 | loadpercent | Load percent of UPS output | 1% | 0–100 |
 | 1081 | PF | Power factor | 0.1 | Primary value + 1 |
 | *BMS information — 1082–1124* | | | | |
+| | | **The source workbook carries one note against register 1082: "Detail information, refer to document: GrowattxxSxxP ESS Protocol". The units, scales and bitfields for this whole block live there, not here — see [ESS Protocol](protocol-ess.md).** | | |
 | 1082 | BMS_StatusOld | Status old from BMS | — | |
 | 1083 | BMS_Status | Status from BMS | — | W/R |
 | 1084 | BMS_ErrorOld | Error info old from BMS | — | |

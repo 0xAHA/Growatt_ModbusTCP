@@ -4,6 +4,24 @@
 
 ---
 
+## v1.8.13 (pre-release)
+
+Issues: #397
+
+> **Pre-release for testing.** v1.8.9 remains the stable release.
+
+- **SPH 8000-10000TL-HU: battery current was reading ten times too high.** That profile
+  declared a 0.1 A scale for the BMS current register where the other four SPH maps use
+  0.01. The Growatt ESS Protocol - which V1.39 names as the reference for this whole
+  register block - documents it in units of 10 mA, so 0.01 is correct. **Expect this sensor
+  to drop by a factor of ten on upgrade**; the new value is the right one. No HU owner has
+  measured it, so please report if it now looks wrong.
+- Documentation: a new **ESS Protocol** page records the units, scales and bit meanings for
+  the BMS block at registers 1082-1124, which V1.39 documents by name only. The source PDF
+  is now checked in.
+
+---
+
 ## v1.8.12 (pre-release)
 
 Issues: #397 #398
