@@ -82,9 +82,21 @@ Plain two's complement. That is why these registers carry `'signed': True`.
     positive. Whether charging reads positive is a property of the firmware, not of this
     document.
 
-    On an SPH3620, charging reads **positive** — 44.30 A at 54 V while charging at ~2.4 kW.
-    That is one measurement on one model, not a general rule. See
-    [Invert Battery Power](../hardware/models.md) if your battery power reads backwards.
+    On an SPH3620 it is the standard one — **positive charging, negative discharging** —
+    confirmed in both directions against the reported power
+    ([#397](https://github.com/0xAHA/Growatt_ModbusTCP/issues/397)):
+
+    | State | Current | Voltage | Implied | Reported |
+    |---|---|---|---|---|
+    | Charging | **+44.30 A** | 54 V | 2392 W | ~2.4 kW |
+    | Discharging | **-54.00 A** | 53 V | 2862 W | 2.8 kW |
+    | Discharging | **-4.20 A** | 53 V | 223 W | 220 W |
+
+    Those also confirm the 0.01 scale across a 13x range of magnitudes, from 4.2 A to 54 A.
+
+    Still one model, though. See [Invert Battery Power](../hardware/models.md) if your
+    battery power reads backwards — noting that option affects battery *power* and not
+    battery *current*.
 
 ### Temperature is whole degrees
 
