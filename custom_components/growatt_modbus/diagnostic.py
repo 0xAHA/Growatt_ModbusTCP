@@ -1407,6 +1407,28 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         VPP_TOU_DEFAULT_MODE = 30476
         VPP_TOU_PERIOD_BASE = 30412
 
+        # This action writes the VPP TOU block and nothing else. Only the WIT maps carry
+        # it - every SPH, MOD, MID and MIN profile lacks 30411/30412 entirely, and their
+        # own time-of-use schedules live in a different register space altogether (SPH uses
+        # holding 1080-1108). Offered ungated, it wrote to addresses that do not exist and
+        # reported partial failure rather than saying it did not apply (#396).
+        #
+        # Gated on 30411 and 30412 only, deliberately. 30100 and 30476 failures are already
+        # warned-and-continued, so requiring them would block a profile that could still do
+        # the useful part; and the period count is not checked either, because the maps
+        # cover ten periods while the schema accepts twenty - a profile mapping fewer
+        # periods than the hardware supports should not be refused outright.
+        holding = client.register_map.get('holding_registers', {})
+        if VPP_TOU_NUM_PERIODS not in holding or VPP_TOU_PERIOD_BASE not in holding:
+            raise HomeAssistantError(
+                f"Sync TOU Schedule is not available on this model. Its profile "
+                f"({client.register_map.get('name', 'unknown')}) does not carry the VPP "
+                f"time-of-use registers ({VPP_TOU_NUM_PERIODS}, {VPP_TOU_PERIOD_BASE}). "
+                f"This action is for WIT inverters. On SPH, MOD, MID and MIN the schedule "
+                f"is set through the Time Period controls instead - see the Battery & "
+                f"Scheduling documentation."
+            )
+
         try:
             # Step 1: Enable VPP control authority
             success = await hass.async_add_executor_job(client.write_register, VPP_CONTROL_AUTHORITY, 1)
