@@ -952,6 +952,10 @@ class GrowattModbus:
 
         # Battery temperature scale detection (#397). Latched per connection so the
         # decision cannot flap between polls as the temperature moves.
+        # Registers already warned about for 32-bit underflow, so a persistent case is
+        # reported once rather than every poll (#401).
+        self._underflow_warned: set = set()
+
         self._battery_temp_scale_confirmed = False
         self._battery_temp_whole_degrees = False
 
@@ -1774,6 +1778,54 @@ class GrowattModbus:
             if reg_info.get('signed') or pair_info.get('signed'):
                 if combined > 0x7FFFFFFF:  # If sign bit is set
                     combined = combined - 0x100000000
+            elif combined > 0x7FFFFFFF:
+                # Sign bit set on a pair that is not declared signed: the inverter has
+                # written a small negative value and we are reading it as a huge positive
+                # one. Around the midnight rollover a daily counter can dip just below
+                # zero, and -17 arrives as 4,294,967,279 - which at 0.1 kWh is
+                # 429,496,727.9 kWh (#401).
+                #
+                # Every unsigned 32-bit pair we map is a physical quantity: energy in kWh,
+                # power in W or VA, reactive power, charge in Ah, runtime. At the scales
+                # involved a genuine value with this bit set would mean something like
+                # 214 million kWh or 214 MW, so there is no case where it is real.
+                #
+                # Withheld rather than converted or clamped. Converting publishes a
+                # negative daily energy to a total_increasing sensor; clamping to zero
+                # invents a reading. Returning None marks the field unread, so the sensor
+                # goes unknown for that poll and recovers on the next one - the same
+                # treatment every other untrustworthy reading gets.
+                # Two quite different faults land here and they cannot be told apart from
+                # one reading:
+                #
+                #   * the register really is unsigned and the inverter glitched - rare,
+                #     transient, nothing to fix (this issue)
+                #   * the register is signed and the profile forgot the flag - persistent,
+                #     and exactly how AC power shipped as 429,496,471 W in v1.2.1 (#361)
+                #
+                # Withholding is right for the reader either way; neither garbage nor a
+                # wrongly-signed value belongs on a dashboard. But silently withholding
+                # would hide the second case, which used to announce itself with an absurd
+                # number somebody reported. So: warn once per register per session, naming
+                # the value it would have had if signed, then drop to debug. A missing flag
+                # shows up on the first negative reading; a rollover glitch costs one line
+                # a day rather than one per poll.
+                name = reg_info.get('name') or pair_info.get('name')
+                if name not in self._underflow_warned:
+                    self._underflow_warned.add(name)
+                    logger.warning(
+                        "[UNDERFLOW] %s (registers %d/%d) read %d, which has the sign bit "
+                        "set on a pair not declared signed. As a signed value that is %s. "
+                        "Withholding it. If this repeats, the profile is probably missing "
+                        "'signed': True for this register (#401).",
+                        name, address, pair_addr, combined, combined - 0x100000000,
+                    )
+                else:
+                    logger.debug(
+                        "[UNDERFLOW] %s: %d withheld again (signed: %s)",
+                        name, combined, combined - 0x100000000,
+                    )
+                return None
 
             # WIT Battery Power Scale Override (auto-detected if needed)
             reg_name = reg_info.get('name') or pair_info.get('name')

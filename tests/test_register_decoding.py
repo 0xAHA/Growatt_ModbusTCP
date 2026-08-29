@@ -26,10 +26,17 @@ GrowattModbus = importlib.import_module("growatt_under_test.growatt_modbus").Gro
 
 
 def _client(input_registers: dict, cache: dict) -> GrowattModbus:
-    """Build a client with a synthetic register map and cache, no I/O."""
+    """Build a client with a synthetic register map and cache, no I/O.
+
+    `__init__` is bypassed deliberately - it opens connections. The cost is that any
+    instance state the decode path relies on has to be set here explicitly, so a new
+    attribute in `__init__` surfaces as an AttributeError in these tests rather than in
+    production. Add it below when that happens.
+    """
     client = GrowattModbus.__new__(GrowattModbus)  # bypass __init__ / no connection
     client.register_map = {"name": "TEST", "input_registers": input_registers}
     client._register_cache = dict(cache)
+    client._underflow_warned = set()   # warn-once tracking, see #401
     return client
 
 
@@ -78,11 +85,16 @@ def test_signed_pair_decodes_negative_value():
     assert client._get_register_value(31101) == pytest.approx(-258.6)
 
 
-def test_unsigned_pair_produces_the_reported_bad_value():
-    """Documents the exact failure: same registers WITHOUT the signed flag.
+def test_unsigned_pair_with_the_sign_bit_set_is_withheld():
+    """Same registers WITHOUT the signed flag — the #361 shape.
 
-    Guards against the flag being dropped again — this asserts the broken behaviour
-    so the contrast with the test above is explicit.
+    This used to return 429,496,471.0, and that absurd number is how the missing flag was
+    noticed. It is now withheld instead: publishing garbage is worse for the reader than
+    publishing nothing, and the same decode path is what turned a daily counter dipping
+    below zero at midnight into 429,496,727.9 kWh (#401).
+
+    The diagnosis is not lost — the withholding logs a warning naming the register and the
+    value it would have had if signed. See the underflow tests for that.
     """
     regs = {
         31100: {"name": "power_to_grid_high", "scale": 1, "pair": 31101},
@@ -90,7 +102,7 @@ def test_unsigned_pair_produces_the_reported_bad_value():
                 "combined_scale": 0.1},  # no 'signed'
     }
     client = _client(regs, {31100: 0xFFFF, 31101: 62950})
-    assert client._get_register_value(31101) == pytest.approx(429496471.0)
+    assert client._get_register_value(31101) is None
 
 
 def test_signed_flag_on_either_register_of_the_pair_applies():
@@ -203,3 +215,80 @@ def test_zero_is_a_real_value_and_distinct_from_missing():
 def test_single_register_scaling(raw, scale, expected):
     regs = {500: {"name": "value", "scale": scale}}
     assert _client(regs, {500: raw})._get_register_value(500) == pytest.approx(expected)
+
+
+# --------------------------------------------------------------------------
+# 32-bit underflow at the midnight rollover (#401)
+#
+# A daily counter can dip just below zero around the reset. Read unsigned, -17 arrives
+# as 4,294,967,279, which at 0.1 kWh is 429,496,727.9 kWh. The energy guard rejected the
+# spike but the decode kept producing it, once per poll, until the counter climbed back.
+# --------------------------------------------------------------------------
+
+def _energy_client(cache: dict) -> GrowattModbus:
+    return _client(
+        {
+            1060: {"name": "load_energy_today_high", "scale": 1, "pair": 1061},
+            1061: {"name": "load_energy_today_low", "scale": 1, "pair": 1060,
+                   "combined_scale": 0.1},
+        },
+        cache,
+    )
+
+
+@pytest.mark.parametrize("raw,as_signed", [
+    (4294967279, -17),   # the reporter's 429,496,727.9 kWh
+    (4294967280, -16),
+    (4294967295, -1),    # -0.1 kWh, the smallest possible dip
+    (0x80000000, -2147483648),  # exactly the sign bit
+])
+def test_a_negative_daily_counter_is_withheld_not_published(raw, as_signed):
+    """Neither 429 million kWh nor a negative daily total is publishable. The field goes
+    unread for that poll and recovers on the next one."""
+    client = _energy_client({1060: raw >> 16, 1061: raw & 0xFFFF})
+    assert client._get_register_value(1061) is None
+
+
+def test_the_largest_legitimate_value_is_still_returned():
+    """0x7FFFFFFF has the sign bit clear, so it decodes normally. Absurd as a reading, but
+    the rule is about the sign bit and not about plausibility - drawing the line anywhere
+    else would need a per-quantity threshold."""
+    raw = 0x7FFFFFFF
+    client = _energy_client({1060: raw >> 16, 1061: raw & 0xFFFF})
+    assert client._get_register_value(1061) == pytest.approx(raw * 0.1)
+
+
+def test_a_normal_daily_reading_is_unaffected():
+    raw = 123          # 12.3 kWh
+    client = _energy_client({1060: 0, 1061: raw})
+    assert client._get_register_value(1061) == pytest.approx(12.3)
+
+
+def test_a_declared_signed_pair_still_converts_rather_than_withholding():
+    """The guard must not swallow registers that are legitimately negative - battery and
+    grid power go negative in normal operation."""
+    regs = {
+        31100: {"name": "power_to_grid_high", "scale": 1, "pair": 31101, "signed": True},
+        31101: {"name": "power_to_grid_low", "scale": 1, "pair": 31100,
+                "combined_scale": 0.1, "signed": True},
+    }
+    client = _client(regs, {31100: 0xFFFF, 31101: 0xFFEF})
+    assert client._get_register_value(31101) == pytest.approx(-1.7)
+
+
+def test_the_first_withheld_reading_warns_and_the_rest_do_not(caplog):
+    """A missing 'signed' flag is persistent and used to announce itself with an absurd
+    number somebody reported (#361). Withholding silently would hide it. One warning per
+    register per session keeps that visible without a line per poll for a rollover glitch.
+    """
+    import logging
+
+    client = _energy_client({1060: 0xFFFF, 1061: 0xFFEF})
+    with caplog.at_level(logging.DEBUG):
+        for _ in range(5):
+            assert client._get_register_value(1061) is None
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1, f"expected exactly one warning, got {len(warnings)}"
+    assert "load_energy_today" in warnings[0].getMessage()
+    assert "-17" in warnings[0].getMessage(), "the warning does not show the signed value"
