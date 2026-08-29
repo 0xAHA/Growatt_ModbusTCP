@@ -75,6 +75,28 @@ see [#392](https://github.com/0xAHA/Growatt_ModbusTCP/issues/392).
 **Weekly is plenty** for a clock drifting a couple of minutes a month. Hourly buys nothing
 and spends writes.
 
+### Does the Growatt cloud not do this for you?
+
+No. Tested over two nights on a cloud-connected SPH with a ShineWiFi dongle attached
+([#393](https://github.com/0xAHA/Growatt_ModbusTCP/issues/393)): the clock was deliberately
+left five minutes slow and was **still five to six minutes slow the next morning**, twice.
+
+The same test answered a more useful question in passing. Time period changes made locally
+over Modbus **appeared correctly in the app and were not reverted** overnight. So the portal
+reflects what is on the inverter rather than pushing its own copy back down — your local
+schedule changes are safe from it.
+
+### How accurate can it get?
+
+About half a second, and no better — the registers hold whole seconds, so the write lands on
+a second boundary whatever you do.
+
+Measured on an SPH after the write-latency compensation was added in v1.8.9: **0.38 s, 1.01 s
+and 1.13 s** residual immediately after a sync, against 1.4-3.3 s before it. What is left is
+the quantisation, not the integration.
+
+That is far below anything a schedule cares about. Time periods run to the minute.
+
 ### Acting on the drift
 
 Because the action returns a value, you can react to it:
