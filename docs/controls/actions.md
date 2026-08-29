@@ -64,13 +64,24 @@ automation:
       - action: growatt_modbus.sync_inverter_time
         data:
           device_id: 1a2b3c4d5e6f7890abcdef1234567890
-          min_drift_seconds: 30
+          min_drift_seconds: 10
 ```
 
 `min_drift_seconds` skips the write when the inverter is already close enough. Leave it at
-`0` for a manual one-off; set it for anything scheduled, so a run that finds nothing to fix
-costs nothing. These are holding registers and most likely have a finite write endurance —
-see [#392](https://github.com/0xAHA/Growatt_ModbusTCP/issues/392).
+`0` for a manual one-off. These are holding registers and most likely have a finite write
+endurance — see [#392](https://github.com/0xAHA/Growatt_ModbusTCP/issues/392).
+
+!!! warning "Set it below your actual drift, or the automation never fires"
+
+    A threshold larger than the drift accumulated between runs means the write is skipped
+    **every time**, and the automation looks like it is working while doing nothing.
+
+    One measured SPH drifts **2.5 seconds a day** — about 17 s a week. A weekly sync with
+    `min_drift_seconds: 30` on that inverter would never write at all.
+
+    Measure yours first: run the action manually a few days apart and read `drift_seconds`
+    from the response. Then set the threshold well under what you expect to accumulate
+    between runs, or leave it at `0` — a weekly sync costs one write a week either way.
 
 **Weekly is plenty** for a clock drifting a couple of minutes a month. Hourly buys nothing
 and spends writes.
