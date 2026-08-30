@@ -224,10 +224,33 @@ def test_setting_the_current_value_does_not_write():
               / "number.py").read_text(encoding="utf-8")
     guard = source[source.index("async def async_set_native_value"):]
     guard = guard[:guard.index("write_register_verified")]
-    assert "int(current_raw) == raw_value" in guard, (
+    assert "int(current_raw[0]) == (raw_value & 0xFFFF)" in guard, (
         "a write is issued even when the register already holds the requested value"
     )
     assert "return" in guard
+
+
+def test_the_guard_compares_against_a_fresh_read_not_the_cache():
+    """coordinator.data is up to a scan interval old. A register changed since the last
+    poll - by the Growatt cloud, another controller, or the firmware - still reads there as
+    the value being set, so the write is skipped and the correction never happens.
+
+    The flow that hits it is: set a value, see on the inverter display that it did not
+    take, set it again. That second attempt is the one a stale cache drops.
+
+    time.py re-reads its siblings before an atomic write for a closely related reason; this
+    keeps the single-register path consistent with it."""
+    source = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+              / "number.py").read_text(encoding="utf-8")
+    guard = source[source.index("async def async_set_native_value"):]
+    guard = guard[:guard.index("write_register_verified")]
+
+    assert "read_holding_registers" in guard, (
+        "the no-op guard compares against cached data rather than reading the register"
+    )
+    assert "self.coordinator.data" not in guard, (
+        "the guard still consults the coordinator cache"
+    )
 
 
 def test_the_guard_needs_a_current_reading():

@@ -342,17 +342,38 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         # while that is not attributable to anything here, there is no reason to spend
         # cycles on writes that cannot change the value.
         #
-        # Gated on having a current reading: when the register has not been read yet the
-        # comparison is meaningless and the write goes ahead. A skipped write that should
-        # have happened is worse than a redundant one.
-        current_raw = getattr(self.coordinator.data, self._control_name, None) \
-            if self.coordinator.data is not None else None
-        if current_raw is not None and int(current_raw) == raw_value:
+        # Compared against a FRESH read, not coordinator.data. The cache is up to a scan
+        # interval old, so a register changed since the last poll - by the Growatt cloud,
+        # by another controller on the bus, or by the firmware itself - still reads as the
+        # value the user is now trying to set, and the write is silently skipped.
+        #
+        # The flow that hits it is the obvious one: set a value, see on the inverter's own
+        # display that it did not take, set it again. That second attempt is exactly the
+        # one a stale cache drops, and numeric entry (#402) makes it a more likely thing
+        # to do than dragging a slider was.
+        #
+        # time.py already re-reads its sibling registers before an atomic write, for a
+        # closely related reason - trusting the cache there made back-to-back writes
+        # revert each other. This brings the single-register path in line with it.
+        #
+        # One extra read, on a user-initiated write only. Nothing here writes by itself.
+        current_raw = await self.hass.async_add_executor_job(
+            self.coordinator.modbus_client.read_holding_registers, register, 1
+        )
+        if current_raw is not None and len(current_raw) >= 1:
+            if int(current_raw[0]) == (raw_value & 0xFFFF):
+                _LOGGER.debug(
+                    "%s already reads %s (raw %d) — skipping write to register %d",
+                    self._control_name, value, raw_value, register,
+                )
+                return
+        else:
+            # Unreadable: the comparison is meaningless, so the write goes ahead. A
+            # skipped write that should have happened is worse than a redundant one.
             _LOGGER.debug(
-                "%s already reads %s (raw %d) — skipping write to register %d",
-                self._control_name, value, raw_value, register,
+                "%s: could not read register %d before writing - proceeding without the "
+                "no-op check", self._control_name, register,
             )
-            return
         try:
             write_ok, verified = await self.hass.async_add_executor_job(
                 self.coordinator.modbus_client.write_register_verified,

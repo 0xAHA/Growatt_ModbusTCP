@@ -4,6 +4,19 @@
 
 ---
 
+## Unreleased
+
+Staged for the next release. **Not yet published** — v1.8.14 is the current stable.
+
+- **A setting re-entered after it failed to apply is no longer skipped.** The check that
+  avoids rewriting a register that already holds the requested value compared against
+  cached data, up to a poll interval old. So if something else changed the register — the
+  Growatt cloud, another controller — and you set it again to the value you wanted, the
+  write could be dropped as redundant when it was not. It now reads the register first.
+  Follow-up to #402.
+
+---
+
 ## v1.8.14
 
 Issues: #396 #401 #402
