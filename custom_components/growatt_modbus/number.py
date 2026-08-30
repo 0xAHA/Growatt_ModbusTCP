@@ -154,7 +154,19 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
     """Generic number entity for any numeric control."""
 
     # has_entity_name comes from GrowattEntity, as do unique_id and device_info.
-    _attr_mode = NumberMode.SLIDER
+    # BOX, not SLIDER. Home Assistant's number row fires its write on the DOM `change`
+    # event: for a text box that is once, on blur or Enter; for a slider it is once per
+    # step while dragging.
+    #
+    # So dragging a slider to set a battery threshold wrote every value it passed through.
+    # A reporter aiming for 48.0 V left his inverter on 49.6 V, confirmed on the LCD
+    # (#402). Every control on this platform is a persistent holding register, likely
+    # EEPROM-backed (#392), so the intermediate values cost write cycles as well as
+    # landing on the wrong one.
+    #
+    # A box is also simply better here: bat_low_to_uti spans a thousand steps, which
+    # nobody can hit precisely by dragging on a phone.
+    _attr_mode = NumberMode.BOX
     _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(
@@ -375,7 +387,8 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
 class GrowattExportLimitPowerNumber(GrowattEntity, NumberEntity):
     """Number entity for export limit power percentage."""
 
-    _attr_mode = NumberMode.SLIDER
+    # Box rather than slider - see GrowattGenericNumber (#402).
+    _attr_mode = NumberMode.BOX
     _attr_native_min_value = 0.0
     _attr_native_max_value = 100.0
     _attr_native_step = 0.1
@@ -449,7 +462,8 @@ class GrowattExportLimitPowerNumber(GrowattEntity, NumberEntity):
 class GrowattActivePowerRateNumber(GrowattEntity, NumberEntity):
     """Number entity for active power rate (max output power %)."""
 
-    _attr_mode = NumberMode.SLIDER
+    # Box rather than slider - see GrowattGenericNumber (#402).
+    _attr_mode = NumberMode.BOX
     _attr_native_min_value = 0.0
     _attr_native_max_value = 100.0
     _attr_native_step = 1.0
@@ -521,7 +535,8 @@ class GrowattActivePowerRateNumber(GrowattEntity, NumberEntity):
 class GrowattWitExportLimitWNumber(GrowattEntity, NumberEntity):
     """WIT VPP: Export limit in watts (holding register 203)."""
 
-    _attr_mode = NumberMode.SLIDER
+    # Box rather than slider - see GrowattGenericNumber (#402).
+    _attr_mode = NumberMode.BOX
     _attr_native_min_value = 0.0
     _attr_native_max_value = 20000.0
     _attr_native_step = 1.0
@@ -582,7 +597,8 @@ class GrowattWitActivePowerRateNumber(GrowattEntity, NumberEntity):
     We re-assert work_mode before writing power rate when possible.
     """
 
-    _attr_mode = NumberMode.SLIDER
+    # Box rather than slider - see GrowattGenericNumber (#402).
+    _attr_mode = NumberMode.BOX
     _attr_native_min_value = 0.0
     _attr_native_max_value = 100.0
     _attr_native_step = 1.0
@@ -668,7 +684,8 @@ class GrowattWitVppPowerPercentNumber(GrowattEntity, NumberEntity):
     It's stored locally and used by the Battery Mode select entity.
     """
 
-    _attr_mode = NumberMode.SLIDER
+    # Box rather than slider - see GrowattGenericNumber (#402).
+    _attr_mode = NumberMode.BOX
     _attr_native_min_value = 1.0
     _attr_native_max_value = 100.0
     _attr_native_step = 1.0
@@ -704,7 +721,8 @@ class GrowattWitVppPowerPercentNumber(GrowattEntity, NumberEntity):
 class GrowattWitVppChargeCutoffSocNumber(GrowattEntity, NumberEntity):
     """WIT VPP: Charge cutoff SOC (30404) - stop charging when SOC reaches this %."""
 
-    _attr_mode = NumberMode.SLIDER
+    # Box rather than slider - see GrowattGenericNumber (#402).
+    _attr_mode = NumberMode.BOX
     _attr_native_min_value = 10.0
     _attr_native_max_value = 100.0
     _attr_native_step = 1.0
@@ -757,7 +775,8 @@ class GrowattWitVppChargeCutoffSocNumber(GrowattEntity, NumberEntity):
 class GrowattWitVppDischargeCutoffSocNumber(GrowattEntity, NumberEntity):
     """WIT VPP: Discharge cutoff SOC (30405) - stop discharging when SOC drops to this %."""
 
-    _attr_mode = NumberMode.SLIDER
+    # Box rather than slider - see GrowattGenericNumber (#402).
+    _attr_mode = NumberMode.BOX
     _attr_native_min_value = 10.0
     _attr_native_max_value = 100.0
     _attr_native_step = 1.0
@@ -879,7 +898,8 @@ class GrowattWitVppTouPeriodNumber(GrowattEntity, NumberEntity):
     _attr_native_max_value = 100.0
     _attr_native_step = 1.0
     _attr_native_unit_of_measurement = '%'
-    _attr_mode = NumberMode.SLIDER
+    # Box rather than slider - see GrowattGenericNumber (#402).
+    _attr_mode = NumberMode.BOX
     _attr_icon = 'mdi:battery-arrow-up-outline'
 
     def __init__(

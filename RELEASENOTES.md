@@ -4,6 +4,35 @@
 
 ---
 
+## v1.8.14
+
+Issues: #396 #401 #402
+
+**Recommended for everyone.** Promotes v1.8.10-v1.8.13 to stable and adds two fixes that
+protect your inverter's settings.
+
+- **Writable settings are now numeric input boxes, not sliders.** Home Assistant writes on
+  every step of a slider drag, so setting a battery voltage threshold wrote each value it
+  passed through - one reporter aiming for 48.0 V left his inverter on 49.6 V, confirmed on
+  the LCD. Enter the value and press Enter, and exactly one write is sent. Reported by
+  @horiace. (#402)
+- **A write is no longer repeated when the inverter is slow to commit.** The read-back
+  check used to re-write on a mismatch, up to three times. On hardware that commits slowly
+  it reads back the previous value, which is indistinguishable from a reversion, so ordinary
+  writes were tripled. The write is now sent once and the register polled until it settles.
+  These registers are likely EEPROM-backed, so this matters beyond the wrong values. (#402)
+- **A daily energy counter dipping below zero no longer reads as 429,496,728 kWh.** Around
+  the midnight reset the register can go briefly negative, and read as unsigned that became
+  a spike large enough to flatten every other reading in your history. Such values are now
+  withheld, leaving a short gap that recovers on the next poll. Applies to every 32-bit
+  counter, not only the one reported. Reported by @gionci and @Vict20. (#401)
+- **Sync TOU Schedule now refuses models it does not support**, instead of writing to
+  registers that do not exist on them. It applies to WIT inverters only. (#396)
+- Documentation: the clock sync guidance no longer suggests a drift threshold that would
+  stop a weekly automation writing at all. (#393)
+
+---
+
 ## v1.8.13 (pre-release)
 
 Issues: #397

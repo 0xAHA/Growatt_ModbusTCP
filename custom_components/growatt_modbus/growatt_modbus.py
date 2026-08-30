@@ -120,7 +120,8 @@ def _format_modbus_error(result) -> str:
 # =============================================================================
 
 WRITE_VERIFY_DELAY = 0.5           # seconds — delay before read-back after write
-WRITE_VERIFY_MAX_RETRIES = 3       # maximum write+verify attempts
+WRITE_VERIFY_MAX_RETRIES = 3       # read-back checks after the single write (#402)
+WRITE_VERIFY_MAX_DELAY = 2.0       # seconds - ceiling for the backoff between checks
 WRITE_VERIFY_RETRY_DELAY = 1.5     # seconds — delay between retry attempts
 
 
@@ -3023,60 +3024,66 @@ class GrowattModbus:
             - (True, False)  — write succeeded but read-back differs (value reverted)
             - (False, False) — write itself failed (Modbus error)
         """
+        # ONE write, then read until it settles. Never re-write.
+        #
+        # This used to write, wait 0.5 s, read, and write again on a mismatch - up to three
+        # times. On an inverter that commits slowly the read-back returns the *previous*
+        # value, which is indistinguishable from a reversion, so every write was re-issued
+        # two more times for no reason. A reporter dragging a slider produced this on an
+        # SPF 6000, each read-back showing the value from the write before it (#402).
+        #
+        # That is the wrong response twice over. The Modbus write already succeeded - the
+        # inverter acknowledged it - so re-writing is speculative, and these registers are
+        # likely EEPROM-backed (#392), so it spends a write cycle to learn nothing. A
+        # genuine cloud override re-reverts anyway and the extra writes do not win the
+        # race; a genuine firmware rejection is deterministic and will refuse them all.
+        #
+        # So the read-back is now purely diagnostic: write once, then poll the register
+        # with a growing delay until it either matches or the budget runs out.
+        try:
+            self.write_register(register, value)
+        except ModbusWriteError:
+            raise
+
+        expected = value & 0xFFFF
+        delay = WRITE_VERIFY_DELAY
+        last_seen = None
+
         for attempt in range(WRITE_VERIFY_MAX_RETRIES):
-            try:
-                self.write_register(register, value)
-            except ModbusWriteError:
-                if attempt == 0:
-                    raise  # First attempt failure is a real error
-                logger.warning(
-                    "[WRITE VERIFY] Retry %d/%d for register %d failed (Modbus error)",
-                    attempt + 1, WRITE_VERIFY_MAX_RETRIES, register,
-                )
-                return (False, False)
+            time.sleep(delay)
 
-            # Wait for inverter to commit the value
-            time.sleep(WRITE_VERIFY_DELAY)
-
-            # Read back to verify
             read_back = self.read_holding_registers(register, 1)
             if read_back is None:
                 logger.debug(
-                    "[WRITE VERIFY] Could not read back register %d (comm error) — treating as unverifiable",
-                    register,
+                    "[WRITE VERIFY] Could not read back register %d (comm error) - "
+                    "treating as unverifiable", register,
                 )
-                return (True, True)  # Don't fail write on read error
+                return (True, True)  # Don't fail the write on a read error
 
-            if read_back[0] == (value & 0xFFFF):
-                if attempt > 0:
-                    logger.info(
-                        "[WRITE VERIFY] Register %d verified on retry %d (value=%d)",
-                        register, attempt + 1, value,
+            last_seen = read_back[0]
+            if last_seen == expected:
+                if attempt:
+                    logger.debug(
+                        "[WRITE VERIFY] Register %d settled to %d after %.1f s - this "
+                        "inverter commits slowly, which is normal",
+                        register, value, delay * attempt,
                     )
                 else:
                     logger.debug("[WRITE VERIFY] Register %d verified (value=%d)", register, value)
                 return (True, True)
 
-            # Mismatch — value didn't stick
-            logger.warning(
-                "[WRITE VERIFY] Register %d: wrote %d but read back %d (attempt %d/%d). "
-                "Value reverted — possible causes: ShineWiFi/cloud override, inverter firmware "
-                "rejecting the value, or a prerequisite register not set.",
-                register, value, read_back[0], attempt + 1, WRITE_VERIFY_MAX_RETRIES,
-            )
+            # Not there yet. Give it longer before looking again rather than writing again.
+            delay = min(delay * 2, WRITE_VERIFY_MAX_DELAY)
 
-            if attempt < WRITE_VERIFY_MAX_RETRIES - 1:
-                time.sleep(WRITE_VERIFY_RETRY_DELAY)
-
-        # All retries exhausted — value keeps reverting
-        logger.error(
-            "[WRITE VERIFY] Register %d: value %d reverted %d time(s) after writing. "
-            "Possible causes: (1) ShineWiFi/cloud dongle overriding local writes — "
-            "disconnect it or disable remote control in the Growatt app; "
-            "(2) inverter firmware rejecting the value — check prerequisite settings "
-            "(e.g. Allow Grid Charge for MOD TOU); "
-            "(3) the register is read-only or unsupported on this firmware.",
-            register, value, WRITE_VERIFY_MAX_RETRIES,
+        # Never settled. The write was accepted at the Modbus level and the register still
+        # does not hold it, which is the silent-rejection case (#400) or an override.
+        logger.warning(
+            "[WRITE VERIFY] Register %d: wrote %d, still reads %s after %d checks. The "
+            "write was accepted but the value did not stick. Either the inverter firmware "
+            "rejected it silently - some models discard out-of-range SOC limits and "
+            "voltages this way - the Growatt cloud overwrote it, or a prerequisite "
+            "register is not set. No further write was attempted.",
+            register, value, last_seen, WRITE_VERIFY_MAX_RETRIES,
         )
         return (True, False)
 
