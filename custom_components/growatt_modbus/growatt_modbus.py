@@ -957,6 +957,9 @@ class GrowattModbus:
         # reported once rather than every poll (#401).
         self._underflow_warned: set = set()
 
+        # Impossible-PV-zero suppressions this session. Warned once, then debug (#384).
+        self._impossible_pv_zero_count: int = 0
+
         self._battery_temp_scale_confirmed = False
         self._battery_temp_whole_degrees = False
 
@@ -1694,13 +1697,37 @@ class GrowattModbus:
         for field in ('pv_total_power', 'pv1_power', 'pv2_power', 'pv3_power', 'pv4_power'):
             data.unread_fields.add(field)
 
-        logger.warning(
-            "[%s] PV reads 0 W while the inverter reports %.0f W of AC output with only "
-            "%.0f W from battery, grid and generator combined — %.0f W is unaccounted for, "
-            "so the PV registers cannot be correct. Reporting PV as unknown for this poll "
-            "rather than publishing a zero (#384).",
-            self.register_map.get('name', '?'), ac_output, from_elsewhere, shortfall,
-        )
+        # Warn once per session, then debug.
+        #
+        # The condition is worth knowing about - the inverter is contradicting itself, and
+        # the reporter found it useful to see the suppression working. But it is a firmware
+        # fault we cannot cure, so once you know your unit does it, every further line is
+        # noise. The frequency is unbounded: nine in three days on the reporting hardware,
+        # but nothing stops a worse-affected inverter doing it on every poll.
+        #
+        # It also lands in Home Assistant's error log under "originated from a custom
+        # integration", and the same reporter twice raised a different routine warning as
+        # "this error" on that basis. One line tells them; a thousand tells them the
+        # integration is broken.
+        #
+        # Same shape as the 32-bit underflow warning (#401).
+        self._impossible_pv_zero_count += 1
+        if self._impossible_pv_zero_count == 1:
+            logger.warning(
+                "[%s] PV reads 0 W while the inverter reports %.0f W of AC output with only "
+                "%.0f W from battery, grid and generator combined — %.0f W is unaccounted "
+                "for, so the PV registers cannot be correct. Reporting PV as unknown for "
+                "this poll rather than publishing a zero. This is a known firmware fault on "
+                "some units; further occurrences are logged at debug level (#384).",
+                self.register_map.get('name', '?'), ac_output, from_elsewhere, shortfall,
+            )
+        else:
+            logger.debug(
+                "[%s] Impossible PV zero #%d: %.0f W AC output, %.0f W from elsewhere, "
+                "%.0f W unaccounted - PV withheld (#384)",
+                self.register_map.get('name', '?'), self._impossible_pv_zero_count,
+                ac_output, from_elsewhere, shortfall,
+            )
 
     def _inherit_unread(self, data: "GrowattData", target: str, *sources: str) -> bool:
         """Mark a derived field unread when any input it is computed from was not read.

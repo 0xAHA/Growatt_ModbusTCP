@@ -155,3 +155,39 @@ def test_the_margin_matches_the_sign_correction():
     as a significant difference would let one fire while the other does not."""
     client = _client()
     assert client.PV_ZERO_BALANCE_MARGIN == 200.0
+
+
+def test_the_suppression_warns_once_then_drops_to_debug(caplog):
+    """The condition is a firmware fault we cannot cure, so one line tells the user their
+    inverter does it and every further line is noise. The frequency is unbounded - nine in
+    three days on the reporting hardware, but nothing stops a worse unit doing it on every
+    poll, and it lands in Home Assistant's error log under "originated from a custom
+    integration" (#384)."""
+    import logging
+
+    client = _client()
+    with caplog.at_level(logging.DEBUG):
+        for _ in range(6):
+            data = _data(pv_total_power=0.0, ac_power=1907.0, discharge_power=329.0)
+            client._suppress_impossible_pv_zero(data)
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    debugs = [r for r in caplog.records
+              if r.levelno == logging.DEBUG and "Impossible PV zero" in r.getMessage()]
+
+    assert len(warnings) == 1, f"expected one warning across six suppressions, got {len(warnings)}"
+    assert len(debugs) == 5, f"expected five debug lines, got {len(debugs)}"
+    assert "further occurrences are logged at debug" in warnings[0].getMessage(), (
+        "the warning does not tell the user the rest are suppressed"
+    )
+
+
+def test_suppression_still_withholds_every_time_not_just_the_first(caplog):
+    """Quieter logging must not mean a quieter fix - the reading is withheld on every poll
+    where the inverter contradicts itself, regardless of what is logged."""
+    client = _client()
+    for _ in range(4):
+        data = _data(pv_total_power=0.0, ac_power=1907.0, discharge_power=329.0)
+        client._suppress_impossible_pv_zero(data)
+        assert "pv1_power" in data.unread_fields
+        assert "pv_total_power" in data.unread_fields

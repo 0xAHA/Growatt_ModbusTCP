@@ -8,6 +8,12 @@
 
 Staged for the next release. **Not yet published** — v1.8.14 is the current stable.
 
+- **SPF: the impossible-PV-zero message no longer repeats in the log.** The suppression
+  warns once per restart and logs further occurrences at debug. It stays a warning the first
+  time, because knowing your inverter reports 0 W PV while producing over a kilowatt is
+  worth one line - but the fault can recur on every poll, and it appears in Home Assistant's
+  error log, so repeating it says the integration is broken rather than the inverter.
+  Raised by @dinkalin-ux. (#384)
 - **A setting re-entered after it failed to apply is no longer skipped.** The check that
   avoids rewriting a register that already holds the requested value compared against
   cached data, up to a poll interval old. So if something else changed the register — the
