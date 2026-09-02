@@ -122,6 +122,10 @@ def _format_modbus_error(result) -> str:
 WRITE_VERIFY_DELAY = 0.5           # seconds — delay before read-back after write
 WRITE_VERIFY_MAX_RETRIES = 3       # read-back checks after the single write (#402)
 WRITE_VERIFY_MAX_DELAY = 2.0       # seconds - ceiling for the backoff between checks
+
+# Minimum battery power before the WIT scale detection will draw a conclusion (#406).
+# Below this the current registers disagree and the comparison is meaningless.
+_BATTERY_SCALE_MIN_POWER_W = 500.0
 WRITE_VERIFY_RETRY_DELAY = 1.5     # seconds — delay between retry attempts
 
 
@@ -1637,8 +1641,18 @@ class GrowattModbus:
         # Calculate expected power from V×I
         expected_power = abs(voltage * current)
 
-        # Skip detection if power is too small (avoid noise/measurement errors)
-        if expected_power < 50:  # Less than 50W
+        # Skip detection unless the battery is genuinely working.
+        #
+        # The threshold was 50 W, which is far too low to tell a 10x scale error apart from
+        # a bad current reading. A reporter upgraded while his battery was full and his
+        # house ran on PV alone: with almost no current flowing, detection fired at 144 W,
+        # chose the wrong scale and latched it, giving 40 kW readings on a 6.5 kW battery.
+        # Rebooting later while the battery was actually working produced the right scale
+        # immediately - his own test, and the clearest evidence for this threshold (#406).
+        #
+        # At real load the current registers agree and the comparison means something. Near
+        # idle they do not, and the arithmetic amplifies whichever one is wrong.
+        if expected_power < _BATTERY_SCALE_MIN_POWER_W:
             return None
 
         # Test both possible scales

@@ -15,13 +15,18 @@ Staged for the next release. **Not yet published** — v1.8.14 is the current st
   raises a repair notice suggesting the better profile. **Nothing is changed automatically.**
   Off-grid models are excluded from the check entirely, because reading those registers can
   power-cycle an SPF. (#405, #228)
+- **SPH-TL3: Battery Current now reads.** That profile mapped no register for it, so the
+  entity showed 0.00 A permanently while the BMS held a real value. Confirmed against a
+  5170 W discharge on a 219.9 V ARK pack. Reported by @Doprintityourself. (#403)
 - **WIT: battery power no longer reads ten times too high.** The scale is chosen at runtime
   by comparing the power register against voltage x current, and on some units several
   registers claim to be battery current while disagreeing wildly - one inverter offered
   -0.1 A, 6.3 A and -4.3 A at the same instant. The largest was used, the wrong scale
   matched it, and the choice stuck for the session, giving 40 kW readings on a 6.5 kW
   battery. When the current registers disagree, no scale is now inferred and the
-  documented one is used. Reported by @sebastianries. (#406)
+  documented one is used. The scale is also no longer guessed while the battery is nearly
+  idle - the reporter upgraded with a full battery and the house on solar, which is exactly
+  when the comparison is least reliable. Reported by @sebastianries. (#406)
 - **SPF: the impossible-PV-zero message no longer repeats in the log.** The suppression
   warns once per restart and logs further occurrences at debug. It stays a warning the first
   time, because knowing your inverter reports 0 W PV while producing over a kilowatt is

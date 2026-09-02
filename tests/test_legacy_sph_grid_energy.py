@@ -17,6 +17,7 @@ import pytest
 sys.path.insert(0, "tests")
 
 _sph = importlib.import_module("growatt_under_test.profiles.sph")
+_sph_tl3 = importlib.import_module("growatt_under_test.profiles.sph_tl3")
 
 GRID_ENERGY_BLOCK = {
     1044: "energy_to_user_today_high",
@@ -161,3 +162,32 @@ def test_the_ess_protocol_reference_survives_in_the_docs():
 
     pdf = root / "Protocols" / "1xSxxP_ESS_Protocol_rev2.3_20171128.pdf"
     assert pdf.exists(), "the source PDF is not checked in"
+
+
+TL3_PROFILES = ["SPH_TL3_3000_10000", "SPH_TL3_3000_10000_V201"]
+
+
+@pytest.mark.parametrize("profile_name", TL3_PROFILES)
+def test_tl3_battery_current_is_mapped(profile_name):
+    """These had no battery current register at all, so the entity published 0.00 A
+    permanently while the BMS held a real value - the same shape as #395 and #397 (#403)."""
+    registers = getattr(_sph_tl3, profile_name)["input_registers"]
+    assert 1088 in registers, f"{profile_name} does not map battery current"
+    assert registers[1088]["name"] == "battery_current"
+    assert registers[1088]["signed"] is True
+
+
+@pytest.mark.parametrize("profile_name", TL3_PROFILES)
+def test_tl3_battery_current_uses_the_measured_scale(profile_name):
+    """0.01, confirmed against a 5170 W discharge on a 219.9 V ARK pack: raw 63026 is
+    -2510 signed, or -25.10 A, which is about 5.5 kW at that voltage. At 0.1 it would be
+    251 A and 55 kW.
+
+    Worth pinning because the scales are NOT uniform across this block on a high-voltage
+    pack - BMS voltage at 1087 reads 0.1 V there while current is 0.01 A, the same as on
+    the 48 V units. Assuming either way round would have been wrong."""
+    registers = getattr(_sph_tl3, profile_name)["input_registers"]
+    assert registers[1088]["scale"] == 0.01, (
+        f"{profile_name} battery current scale is {registers[1088]['scale']}; "
+        f"raw 63026 must read as -25.10 A"
+    )

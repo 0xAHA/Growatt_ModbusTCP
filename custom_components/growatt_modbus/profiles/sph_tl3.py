@@ -171,6 +171,23 @@ SPH_TL3_3000_10000 = {
         1047: {'name': 'energy_to_user_total_low', 'scale': 1, 'unit': '', 'pair': 1046, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1048: {'name': 'energy_to_grid_today_high', 'scale': 1, 'unit': '', 'pair': 1049},
         1049: {'name': 'energy_to_grid_today_low', 'scale': 1, 'unit': '', 'pair': 1048, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+
+        # BMS current. Absent until now, so the Battery Current entity published its
+        # default of 0.00 A permanently on every SPH-TL3 - the same shape as #395 and
+        # #397. Inherited by the V2.01 variant below.
+        #
+        # Scale confirmed on hardware rather than copied: an SPH 10000 TL3 BH-UP with a
+        # 219.9 V ARK pack read raw 63026 while discharging 5170 W. As a signed value
+        # that is -2510, and at 0.01 it is -25.10 A, which against the pack voltage is
+        # about 5.5 kW - agreeing with the reported discharge to within the voltage sag
+        # under load. At 0.1 it would be 251 A and 55 kW (#403).
+        #
+        # Worth noting the scales are not uniform across this block on a high-voltage
+        # pack: BMS voltage at 1087 reads 0.1 V there, while current is 0.01 A as it is
+        # on the 48 V units. Checking beat assuming in both directions.
+        #
+        # Negative is discharging, matching the convention confirmed on SPH in #397.
+        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (confirmed against 5170 W discharge, #403)'},
         1050: {'name': 'energy_to_grid_total_high', 'scale': 1, 'unit': '', 'pair': 1051},
         1051: {'name': 'energy_to_grid_total_low', 'scale': 1, 'unit': '', 'pair': 1050, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1052: {'name': 'discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 1053},

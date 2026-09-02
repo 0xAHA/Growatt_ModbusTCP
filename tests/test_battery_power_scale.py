@@ -79,12 +79,25 @@ class TestDetectionRefusesBadInput:
 
     def test_it_still_detects_when_the_current_is_trustworthy(self):
         """Refusing on bad input must not disable detection altogether - the firmware
-        variant it exists for is real."""
+        variant it exists for is real, and the reporter confirmed that rebooting under
+        real load selected the correct scale straight away."""
         c = self._client()
-        # 53.2 V x 2.2 A = 117 W; raw 1210 reads as 121 W at 0.1 and 1210 W at 1.0
+        # 53.2 V x 40 A = 2128 W; raw 21280 reads as 2128 W at 0.1 and 21280 W at 1.0
         for _ in range(3):
-            result = c._detect_battery_power_scale(53.2, 2.2, 1210)
+            result = c._detect_battery_power_scale(53.2, 40.0, 21280)
         assert result == 0.1
+
+    def test_it_does_not_decide_while_the_battery_is_nearly_idle(self):
+        """The reporter upgraded with a full battery and the house on PV alone. Detection
+        fired at 144 W, chose wrong and latched. Near idle the current registers disagree
+        and the arithmetic amplifies whichever one is wrong, so no conclusion is drawn."""
+        c = self._client()
+        assert c._detect_battery_power_scale(53.5, 2.7, 1590) is None
+        assert c._battery_power_scale_validated is False
+
+    def test_the_threshold_is_high_enough_to_exclude_the_reported_failure(self):
+        """144 W is the value that produced a 40 kW reading on a 6.5 kW battery."""
+        assert _gm._BATTERY_SCALE_MIN_POWER_W > 144.0
 
     def test_a_refusal_is_not_cached_as_a_decision(self):
         """Declining to decide must leave the question open for a later poll where the
