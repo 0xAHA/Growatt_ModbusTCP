@@ -960,6 +960,11 @@ class GrowattModbus:
         # Impossible-PV-zero suppressions this session. Warned once, then debug (#384).
         self._impossible_pv_zero_count: int = 0
 
+        # Whether the battery current candidates agreed on the last poll, and whether we
+        # have already said so. Gates the battery power scale detection (#406).
+        self._battery_current_candidates_agree: bool = True
+        self._battery_power_scale_input_warned: bool = False
+
         self._battery_temp_scale_confirmed = False
         self._battery_temp_whole_degrees = False
 
@@ -1564,6 +1569,25 @@ class GrowattModbus:
 
         return scaled_value
 
+    @staticmethod
+    def _candidates_agree(values: list) -> bool:
+        """Do these candidate readings describe the same quantity?
+
+        A single candidate agrees with itself. Several agree when they point the same way
+        and are the same size; disagreement means at least one of them is not the register
+        we think it is, and none of them can be trusted to validate anything.
+        """
+        if len(values) <= 1:
+            return True
+        signed = [v for v in values if abs(v) > 0.2]   # ignore near-zero noise for sign
+        if signed and not (all(v > 0 for v in signed) or all(v < 0 for v in signed)):
+            return False
+        mags = [abs(v) for v in values]
+        lo, hi = min(mags), max(mags)
+        if hi - lo <= 0.5:            # same size to within half an amp
+            return True
+        return hi <= lo * 2.0         # or at least the same order of magnitude
+
     def _detect_battery_power_scale(self, voltage: float, current: float, power_register_value: int) -> Optional[float]:
         """
         Auto-detect correct battery power scale using V×I validation.
@@ -1582,6 +1606,33 @@ class GrowattModbus:
         # Skip detection if already validated
         if self._battery_power_scale_validated:
             return self._battery_power_scale_override
+
+        # Refuse to decide when the inputs are untrustworthy.
+        #
+        # This check compares the power register against voltage x current. That is only
+        # meaningful if the current is right, and on some WIT hardware several registers
+        # claim to be battery current while disagreeing by orders of magnitude. One
+        # reporter's inverter offered -0.1 A, 6.3 A and -4.3 A simultaneously; the largest
+        # was selected, the expected power came out roughly ten times too high, the 1.0
+        # scale was chosen to match it, and the decision then latched for the session -
+        # producing 40 kW readings on a 6.5 kW battery (#406).
+        #
+        # The three-sample consistency check did not catch it, because the current was
+        # consistently wrong rather than noisy. Consistency is not accuracy.
+        #
+        # So when the candidates do not agree, no decision is made and the profile's
+        # scale stands. That scale comes from the VPP specification, and the commit that
+        # restored it (v0.1.8) recorded it as correct for 95%+ of WIT inverters, so it is
+        # the right thing to fall back to rather than a guess built on a bad input.
+        if not getattr(self, '_battery_current_candidates_agree', True):
+            if not self._battery_power_scale_input_warned:
+                self._battery_power_scale_input_warned = True
+                logger.info(
+                    "[SCALE] Not auto-detecting the battery power scale: the battery "
+                    "current registers disagree, so voltage x current cannot validate it. "
+                    "Using the profile's documented scale instead (#406)."
+                )
+            return None
 
         # Calculate expected power from V×I
         expected_power = abs(voltage * current)
@@ -3820,8 +3871,18 @@ class GrowattModbus:
                 _best_addr, _best_val = max(current_candidates, key=lambda c: abs(c[1]))
                 data.battery_current = _best_val
                 logger.debug(f"Battery current: {_best_val}A (selected from {len(current_candidates)} candidate(s), reg {_best_addr})")
+
+                # Record whether the candidates actually agree. Several registers claim to
+                # be battery current and on some WIT hardware they disagree wildly - one
+                # reporter's inverter returned -0.1 A, 6.3 A and -4.3 A at the same instant
+                # (#406). Picking the largest is a guess; what matters here is that the
+                # guess must not then be used to validate anything else.
+                self._battery_current_candidates_agree = self._candidates_agree(
+                    [v for _a, v in current_candidates]
+                )
             else:
                 data.battery_current = 0.0
+                self._battery_current_candidates_agree = False
 
             # Battery SOC (use smart fallback if multiple ranges available)
             value = self._get_register_value_with_fallback('battery_soc')

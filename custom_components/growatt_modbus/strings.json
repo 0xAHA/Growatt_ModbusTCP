@@ -121,6 +121,10 @@
     "gateway_malformed_frames": {
       "title": "Growatt: RS485 gateway returning mismatched responses",
       "description": "The gateway at **{gateway}** answered **{percent}%** of requests with a frame that did not match the request — typically a complete response to an *earlier* request, replayed.\n\n**Your data is not affected.** These responses are detected and discarded rather than decoded, which is what this check is for. But the reads are lost, so sensors update less often than they should.\n\nThis is a gateway problem, not an inverter problem. Things that have helped others:\n\n- Set **Max Register Block Size** to 25 in the integration options.\n- Check the gateway is in **Modbus TCP to RTU** mode, not transparent passthrough.\n- If it has a TCP timeout setting, make sure it is enabled rather than disabled, so dead sessions are cleaned up.\n\nSee the linked guide for gateways known to work and the settings they use."
+    },
+    "profile_mismatch": {
+      "title": "Growatt: this inverter may be on the wrong profile",
+      "description": "Your inverter reports device type code **{dtc}** ({model}), which indicates the **{suggested}** profile. The integration is currently using **{configured}**.\n\n**Nothing has been changed.** Your setup is working; it may simply be missing sensors and controls your inverter supports, because the profile in use maps fewer registers than the one your hardware reports.\n\nThis usually happens when the device type code could not be read during setup - a single timed-out request at that moment is enough - and detection fell back to a best guess.\n\n**To change it:** Settings → Devices & services → Growatt Modbus → Configure, and select **{suggested}**. Your entity IDs are preserved, so automations, dashboards and history carry over.\n\nIf the current profile is deliberate, or the suggested one behaves worse, please say so on GitHub - the device type code mapping may be wrong for your model and that is worth knowing."
     }
   },
   "entity": {

@@ -8,6 +8,20 @@
 
 Staged for the next release. **Not yet published** — v1.8.14 is the current stable.
 
+- **Your inverter now tells you if it is on the wrong profile.** Detection ran once during
+  setup and was never revisited, so a single timed-out read at that moment could leave an
+  inverter on a profile that maps fewer registers than it supports - with nothing to say so.
+  The device type code is now re-checked against a working connection, and a mismatch
+  raises a repair notice suggesting the better profile. **Nothing is changed automatically.**
+  Off-grid models are excluded from the check entirely, because reading those registers can
+  power-cycle an SPF. (#405, #228)
+- **WIT: battery power no longer reads ten times too high.** The scale is chosen at runtime
+  by comparing the power register against voltage x current, and on some units several
+  registers claim to be battery current while disagreeing wildly - one inverter offered
+  -0.1 A, 6.3 A and -4.3 A at the same instant. The largest was used, the wrong scale
+  matched it, and the choice stuck for the session, giving 40 kW readings on a 6.5 kW
+  battery. When the current registers disagree, no scale is now inferred and the
+  documented one is used. Reported by @sebastianries. (#406)
 - **SPF: the impossible-PV-zero message no longer repeats in the log.** The suppression
   warns once per restart and logs further occurrences at debug. It stays a warning the first
   time, because knowing your inverter reports 0 W PV while producing over a kilowatt is

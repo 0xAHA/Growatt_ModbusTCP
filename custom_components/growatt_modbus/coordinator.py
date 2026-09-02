@@ -21,6 +21,7 @@ from .const import (
     CONF_DEVICE_PATH,
     CONF_BAUDRATE,
     CONF_INVERT_BATTERY_POWER,
+    CONF_INVERTER_SERIES,
     CONF_DEVICE_STRUCTURE_VERSION,
     CURRENT_DEVICE_STRUCTURE_VERSION,
     get_sensor_type,
@@ -226,6 +227,13 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self._inverter_clock: datetime | None = None
         self._clock_poll_wanted: bool = False
 
+        # Profile re-check (#405). Detection runs once, in the config flow, and is never
+        # revisited - so one failed read of register 30000 at setup strands an inverter
+        # on a lesser profile permanently, with nothing telling the owner. Checked once
+        # per session against a live connection instead.
+        self._profile_recheck_done: bool = False
+        self._pending_profile_issue: dict | None = None
+
     @property
     def inverter_clock(self) -> datetime | None:
         """The inverter's real-time clock as of the last poll, naive local time.
@@ -243,6 +251,73 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         next reload is not worth the bookkeeping.
         """
         self._clock_poll_wanted = True
+
+    def _recheck_profile_against_dtc(self) -> None:
+        """Re-read the device type code and check it agrees with the profile in use.
+
+        Auto-detection runs once, during the config flow, and is never revisited. A single
+        failed read of register 30000 at that moment - on a gateway that times out under
+        load, say - assigns a lesser profile for good, and nothing tells the owner. One
+        reporter spent weeks hunting a grid power register by hand when his own DTC already
+        named a profile that mapped it (#405, #228).
+
+        Runs once per session, in the executor, on a connection that is demonstrably
+        working. Raises a repair issue; never switches anything. Changing someone's
+        register map unasked would alter their entities, and a false positive would do real
+        damage.
+        """
+        if self._profile_recheck_done:
+            return
+
+        # NEVER read VPP registers on an off-grid profile.
+        #
+        # auto_detection.py carries the warning in capitals: reading 30000+ causes POWER
+        # RESETS on SPF inverters. This check exists to be helpful and must not be able to
+        # switch somebody's inverter off to do it. Off-grid profiles keep their own DTC at
+        # input 44 / holding 43 and are simply not eligible here.
+        if self._client.register_map.get('offgrid_protocol', False):
+            self._profile_recheck_done = True
+            return
+
+        try:
+            regs = self._client.read_holding_registers(30000, 1)
+        except Exception as err:
+            _LOGGER.debug("Profile re-check: could not read DTC: %s", err)
+            return
+
+        # A silent register means "no information", never "wrong profile". Left unmarked
+        # so a later poll can try again - the whole point is that one failed read should
+        # not decide anything permanently.
+        if not regs or len(regs) < 1:
+            return
+
+        self._profile_recheck_done = True
+        dtc = int(regs[0])
+
+        from .auto_detection import detect_profile_from_dtc, DTC_REGISTRY
+        suggested = detect_profile_from_dtc(dtc)
+        if not suggested:
+            _LOGGER.debug("Profile re-check: DTC %s is not in the registry", dtc)
+            return
+
+        configured = self.config_entry.data.get(CONF_INVERTER_SERIES, "")
+        if suggested == configured:
+            _LOGGER.debug("Profile re-check: DTC %s agrees with the profile in use", dtc)
+            return
+
+        entry = DTC_REGISTRY.get(dtc)
+        _LOGGER.warning(
+            "Profile mismatch: this inverter reports DTC %s (%s), which indicates profile "
+            "'%s', but '%s' is configured. The configured profile may be missing registers "
+            "your inverter supports. Nothing has been changed (#405).",
+            dtc, entry.model if entry else "unknown", suggested, configured,
+        )
+        self._pending_profile_issue = {
+            "dtc": str(dtc),
+            "model": entry.model if entry else "unknown",
+            "suggested": suggested,
+            "configured": configured or "unknown",
+        }
 
     def _refresh_inverter_clock(self) -> None:
         """Read the inverter RTC into _inverter_clock. Runs in the executor.
@@ -1020,6 +1095,33 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
             # Deliver pending clock-drift notification (populated by _check_inverter_clock
             # on the first successful poll; cleared immediately so it only fires once).
+            # Profile mismatch found by the DTC re-check (#405). Raised as a repair issue
+            # rather than acted on: this offers the correction, it does not impose it.
+            if self._pending_profile_issue:
+                info = self._pending_profile_issue
+                self._pending_profile_issue = None
+                try:
+                    ir.async_create_issue(
+                        self.hass,
+                        DOMAIN,
+                        f"profile_mismatch_{self.config_entry.entry_id}",
+                        is_fixable=False,
+                        severity=ir.IssueSeverity.WARNING,
+                        translation_key="profile_mismatch",
+                        translation_placeholders={
+                            "dtc": info["dtc"],
+                            "model": info["model"],
+                            "suggested": info["suggested"],
+                            "configured": info["configured"],
+                        },
+                        learn_more_url=(
+                            "https://github.com/0xAHA/Growatt_ModbusTCP/blob/main/"
+                            "docs/hardware/autodetection.md"
+                        ),
+                    )
+                except Exception as err:
+                    _LOGGER.debug("Could not create profile mismatch issue: %s", err)
+
             if self._pending_clock_notification:
                 notif = self._pending_clock_notification
                 self._pending_clock_notification = None
@@ -1162,6 +1264,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 if not self._serial_number:
                     self._read_device_identification()
                 self._refresh_inverter_clock()
+                self._recheck_profile_against_dtc()
 
             time.sleep(inter_slave_delay)
             return data
@@ -1249,6 +1352,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         self._read_device_identification()
                     # Before the disconnect - this path closes the socket on its way out.
                     self._refresh_inverter_clock()
+                    self._recheck_profile_against_dtc()
                     self._client.disconnect()
                     return data
 
