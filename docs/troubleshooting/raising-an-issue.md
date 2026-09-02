@@ -39,6 +39,8 @@ Please paste log lines as text in a code block rather than a screenshot. Screens
 !!! tip "Is there anything under Settings → Repairs?"
     The integration raises repair notices for problems it can detect itself, such as an inverter reverting your settings or a gateway returning malformed responses. If one is showing, say so — it usually names the cause outright.
 
+    One of them answers the most common question here before you ask it. **"This inverter may be on the wrong profile"** appears when your inverter's device type code points at a different profile from the one in use — which is what usually lies behind *my model should have sensor X and does not*. Detection runs once at setup, and one timed-out read at that moment can leave you on a profile that maps fewer registers than your hardware supports. Nothing is changed automatically; the notice names the profile to switch to. If you have set the **Protocol variant** option by hand, the check stays silent and does not second-guess you.
+
 ---
 
 ## Then: what kind of problem is it?

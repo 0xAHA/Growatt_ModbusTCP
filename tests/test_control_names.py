@@ -66,8 +66,22 @@ def test_the_cryptic_register_abbreviations_are_gone(key):
     control from #402 where a slider drag left an inverter on the wrong threshold."""
     name = display_name(key)
     # Whole words only - "Utility" legitimately begins with the mangled token "Uti".
-    assert not re.search(r"(Uti|Bat|Volt)", name), f"{key} still reads as {name!r}"
-    assert "Voltage" in name, f"{key} should say what it is: {name!r}"
+    assert not re.search(r"\b(Uti|Bat|Volt)\b", name), f"{key} still reads as {name!r}"
+    assert "Switchover" in name, f"{key} should say what it is: {name!r}"
+
+
+@pytest.mark.parametrize("key", ["bat_low_to_uti", "ac_to_bat_volt"])
+def test_the_battery_dependent_controls_do_not_name_a_unit(key):
+    """These two switch unit at runtime: number.py gives them "%" on a lithium battery
+    (type 3) and "V" on anything else, because the register means SOC on one and volts on
+    the other. A name saying "Voltage" is therefore wrong for every lithium owner -
+    "Battery to Utility Voltage: 92 %" - and one saying "SOC" is wrong for everyone else.
+
+    The label is fixed at creation and cannot follow the unit, so it must not claim one."""
+    name = display_name(key)
+    assert not re.search(r"(?i)\b(voltage|volts?|soc|percent)\b", name), (
+        f"{key} names a unit it only has on some batteries: {name!r}"
+    )
 
 
 def test_number_entities_read_the_shared_label():

@@ -36,6 +36,28 @@ WARNING - ✗ DTC Detection - Unknown DTC code: 9999 (not in supported models)
 INFO - DTC and model name detection failed, trying register-based detection...
 ```
 
+### The failures above are silent, and they are permanent
+
+All three leave detection falling back to register probing or model-name matching. That
+often lands on a workable profile, so what you see is a working integration with fewer
+entities than your inverter supports — which looks exactly like the limit of your model.
+
+Detection runs **once**, during setup, and the result is stored. A single timed-out read at
+that moment used to decide the profile for good.
+
+Since v1.9.0 the device type code is re-read once against a working connection after
+startup, and if it names a different profile you get a repair notice under **Settings →
+Repairs** saying so. **Nothing is switched automatically** — the notice names the profile
+and you decide. Two things deliberately suppress it:
+
+- **Off-grid profiles are excluded entirely.** Reading the 30000 range causes power resets
+  on SPF inverters, so the check never runs there.
+- **A hand-picked Protocol variant silences it.** If you set that option yourself, the
+  integration takes it as a decision rather than a fault.
+
+If the notice names a profile that behaves worse than the one you have, say so on GitHub —
+that means the DTC mapping is wrong for your model, which is worth knowing.
+
 ## Valid DTC Codes
 
 DTC codes are read from holding register 30000 (VPP models) or register 43 (legacy models). Each code maps to a specific profile.

@@ -439,7 +439,9 @@ WRITABLE_REGISTERS = {
     # Battery-type-dependent registers (special handling required)
     'bat_low_to_uti': {
         'register': 37,
-        'label': 'Battery to Utility Voltage',
+        # Not "... Voltage": number.py switches this entity's unit between "%" and "V" on
+        # battery type, so a name claiming either is wrong for half the owners.
+        'label': 'Battery to Utility Switchover',
         'scale': 0.1,
         'valid_range': (0, 1000),  # Full range: Lithium 0-100%, Non-Lithium 20.0-64.0V
         'unit': 'V/%',  # Unit depends on battery_type
@@ -448,7 +450,7 @@ WRITABLE_REGISTERS = {
     },
     'ac_to_bat_volt': {
         'register': 95,
-        'label': 'Utility to Battery Voltage',
+        'label': 'Utility to Battery Switchover',  # see bat_low_to_uti above
         'scale': 0.1,
         'valid_range': (0, 1000),  # Full range: Lithium 0-100%, Non-Lithium 20.0-64.0V
         'unit': 'V/%',  # Unit depends on battery_type

@@ -22,6 +22,7 @@ from .const import (
     CONF_BAUDRATE,
     CONF_INVERT_BATTERY_POWER,
     CONF_INVERTER_SERIES,
+    PROTOCOL_VARIANT_AUTO,
     CONF_DEVICE_STRUCTURE_VERSION,
     CURRENT_DEVICE_STRUCTURE_VERSION,
     get_sensor_type,
@@ -267,6 +268,25 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         damage.
         """
         if self._profile_recheck_done:
+            return
+
+        # Say nothing when the owner has chosen the protocol variant by hand.
+        #
+        # Nearly every DTC in the registry points at a _v201 profile, so this check finds
+        # two populations: people whose detection read failed and left them on a legacy
+        # map - the case it exists for - and people who deliberately moved to legacy
+        # because V2.01 misbehaved on their hardware. The Protocol variant selector was
+        # added in #385 precisely so the second group could escape a wrong detection.
+        #
+        # Without this guard the notice would find exactly those people and tell them to go
+        # back to the profile they had a bad time with, on every restart. A stated
+        # preference is not a fault to be corrected (#405).
+        variant = self.config_entry.options.get("protocol_variant", PROTOCOL_VARIANT_AUTO)
+        if variant != PROTOCOL_VARIANT_AUTO:
+            _LOGGER.debug(
+                "Profile re-check skipped: protocol variant was set to '%s' by hand", variant,
+            )
+            self._profile_recheck_done = True
             return
 
         # NEVER read VPP registers on an off-grid profile.

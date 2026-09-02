@@ -4,9 +4,9 @@
 
 ---
 
-## Unreleased
+## v1.9.0
 
-Staged for the next release. **Not yet published** — v1.8.14 is the current stable.
+Issues: #384 #402 #403 #405 #406 #407 #228
 
 - **Your inverter now tells you if it is on the wrong profile.** Detection ran once during
   setup and was never revisited, so a single timed-out read at that moment could leave an
@@ -14,16 +14,27 @@ Staged for the next release. **Not yet published** — v1.8.14 is the current st
   The device type code is now re-checked against a working connection, and a mismatch
   raises a repair notice suggesting the better profile. **Nothing is changed automatically.**
   Off-grid models are excluded from the check entirely, because reading those registers can
-  power-cycle an SPF. (#405, #228)
+  power-cycle an SPF, and the notice stays silent if you have set the Protocol variant by
+  hand - a stated preference is not a fault to be corrected. (#405, #228)
 - **Control names corrected.** Twenty writable controls were displaying mangled acronyms -
   "Ac Charge Enable", "Charge Stopped Soc", "Vpp Export Limit Enable" - and two showed raw
-  register abbreviations: "Bat Low To Uti" is the battery-to-utility switchover voltage, now
-  named as such. The AC charge controls are also prefixed so they read as one group, since
+  register abbreviations: "Bat Low To Uti" is the point at which an SPF switches over to
+  utility, and now reads **Battery to Utility Switchover**. It is not named for a unit
+  because it does not have a fixed one - that entity shows % on a lithium battery and V on
+  anything else. The AC charge controls are also prefixed so they read as one group, since
   they operate together. **Display names only** - entity IDs are unchanged, so automations,
   dashboards and history are unaffected. Raised by @Doprintityourself. (#407)
+- **Documentation: the SPH battery controls are three independent blocks**, and the entity
+  list gave no hint of it. AC Charge (1090-1092) governs grid charging only - an AC Charge
+  Stop SOC of 92 % will not stop solar charging at 92 % - while Battery First and Grid First
+  schedule when charging and discharging are allowed. None of them overrides another.
+  Measured and raised by @Doprintityourself. (#403)
 - **SPH-TL3: Battery Current now reads.** That profile mapped no register for it, so the
   entity showed 0.00 A permanently while the BMS held a real value. Confirmed against a
-  5170 W discharge on a 219.9 V ARK pack. Reported by @Doprintityourself. (#403)
+  5170 W discharge on a 219.9 V ARK high-voltage pack. **If you have an SPH-TL3 with a
+  low-voltage battery, please check the reading looks right** - the scale is confirmed on
+  one pack type only, and the same block is known to use different scales for different
+  batteries. Reported by @Doprintityourself. (#403)
 - **WIT: battery power no longer reads ten times too high.** The scale is chosen at runtime
   by comparing the power register against voltage x current, and on some units several
   registers claim to be battery current while disagreeing wildly - one inverter offered

@@ -89,3 +89,21 @@ def test_it_runs_from_a_poll_that_succeeded():
     assert source.count("_recheck_profile_against_dtc()") >= 2, (
         "the re-check is not called from both the shared and direct fetch paths"
     )
+
+
+def test_a_hand_picked_protocol_variant_silences_the_check():
+    """Nearly every DTC in the registry points at a _v201 profile, so this check finds two
+    populations: people whose detection read failed - the case it exists for - and people
+    who deliberately moved to legacy because V2.01 misbehaved on their hardware.
+
+    The Protocol variant selector exists (#385) so the second group can escape a wrong
+    detection. Without this guard the notice would find exactly them and tell them to go
+    back to the profile they had a bad time with, on every restart."""
+    body = _method("_recheck_profile_against_dtc")
+
+    assert "protocol_variant" in body, "a hand-picked variant does not suppress the notice"
+    guard = body[:body.index("read_holding_registers")]
+    assert "protocol_variant" in guard, (
+        "the variant is checked after the register read rather than before it"
+    )
+    assert "PROTOCOL_VARIANT_AUTO" in body, "the comparison is against a literal, not the const"

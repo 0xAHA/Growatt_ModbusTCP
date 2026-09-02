@@ -42,9 +42,9 @@ All writes use **read-back verification** — after writing, the integration rea
 | Priority Mode | Select | 1044 | Load First (0), Battery First (1), Grid First (2) | Sets the primary power source priority |
 | AC Charge Enable | Select | 1092 | Disabled (0), Enabled (1) | Allows/prevents charging from grid |
 | Discharge Power Rate | Number | 1070 | 0–100 % | Maximum battery discharge power rate |
-| Discharge Stop SOC | Number | 1071 | 0–100 % | SOC level at which discharge stops |
-| Charge Power Rate | Number | 1090 | 0–100 % | Maximum battery charge power rate |
-| Charge Stop SOC | Number | 1091 | 0–100 % | SOC level at which charging stops |
+| Discharge Stopped SOC | Number | 1071 | 0–100 % | SOC level at which discharge stops |
+| AC Charge Power Rate | Number | 1090 | 0–100 % | Maximum battery charge power rate |
+| AC Charge Stop SOC | Number | 1091 | 0–100 % | SOC level at which charging stops |
 | System Enable | Select | 1008 | Disabled (0), Enabled (1) | System enable control (HU models only) |
 | Battery First Period 1 Start | Time | 1100 | HH:MM | Charge schedule slot 1 start |
 | Battery First Period 1 End | Time | 1101 | HH:MM | Charge schedule slot 1 end |
@@ -64,6 +64,25 @@ conflict - confirmed on an SPH 3600 running one of each simultaneously for sever
 The slot numbers shown match the Growatt app and Protocol V1.39. The underlying entity IDs
 use an older numbering (`grid_first_time_period_7/8/9` for Grid First 1-3, `time_period_*`
 for Battery First), which is kept so existing automations continue to work.
+
+**Three independent control blocks, and none of them overrides another.** This is the part
+that catches people out, because the entities sort alphabetically and nothing in the list
+says which ones belong together:
+
+| Block | Registers | What it governs |
+|---|---|---|
+| **AC Charge** | 1090, 1091, 1092 | Charging **from the grid** only |
+| **Battery First** | 1100-1108 | *When* the inverter is allowed to charge |
+| **Grid First** | 1080-1088 | *When* it is allowed to discharge or export |
+
+Setting one does not constrain the others. **AC Charge Stop SOC** (1091) at 92 % stops grid
+charging at 92 % and does nothing to solar charging, which will continue to 100 % - measured
+on an SPH-TL3 ([#403](https://github.com/0xAHA/Growatt_ModbusTCP/issues/403)). The three
+controls at 1090-1092 are named as one group for that reason; the name describes the
+register block, not an operating mode.
+
+If you want a charge ceiling that applies to **all** sources on this family, there is no
+single register for it - Battery First scheduling is the lever.
 
 **Slots 4-6 (registers 1017-1034) are documented but may not be implemented on your
 firmware.** They are mapped because the protocol defines them, but at least one SPH 3600
@@ -143,8 +162,8 @@ lists both meanings side by side, selected by device class.
 | Float Charge Voltage | Number | 36 | 48.0–58.4 V | Floating charging voltage (LCD Program 20). Disabled by default |
 | AC Charge Current | Number | 38 | 0–80 A | Max charging current from AC/grid (LCD Program 11) |
 | Generator Charge Current | Number | 83 | 0–80 A | Max charging current from generator |
-| Battery to Utility SOC | Number | 37 | 0–100 % (Lithium) / 20–64 V (Lead-acid) | SOC/voltage to switch from battery to utility |
-| Utility to Battery SOC | Number | 95 | 0–100 % (Lithium) / 20–64 V (Lead-acid) | SOC/voltage to switch back from utility to battery |
+| Battery to Utility Switchover | Number | 37 | 0–100 % (Lithium) / 20–64 V (Lead-acid) | SOC/voltage to switch from battery to utility |
+| Utility to Battery Switchover | Number | 95 | 0–100 % (Lithium) / 20–64 V (Lead-acid) | SOC/voltage to switch back from utility to battery |
 
 **Output Priority options:**
 - `SBU` — Solar → Battery → Utility (battery-first, self-consumption focused)
@@ -185,7 +204,7 @@ what your model allows will be rejected by the inverter and the entity will reve
 **Notes:**
 - SPF is an off-grid inverter — there is no grid export. The grid is treated as an AC input source for charging/backup.
 - `battery_type` (register 39) controls charging voltage thresholds. Changing this incorrectly can damage batteries. Verify your battery chemistry before writing.
-- `bat_low_to_uti` and `ac_to_bat_volt` operate in different units depending on battery type: percentage (0–100%) for Lithium, voltage (20.0–64.0V) for lead-acid types.
+- `bat_low_to_uti` and `ac_to_bat_volt` operate in different units depending on battery type: percentage (0–100%) for Lithium, voltage (20.0–64.0V) for lead-acid types. This is why they are named **Switchover** rather than SOC or Voltage — the unit shown on the entity follows your battery type, so a name claiming either would be wrong for half of you. Read the unit on the entity itself.
 
 ---
 
@@ -250,7 +269,7 @@ See [WIT Control Guide](wit-guide.md) for full protocol documentation.
     charging stops short of your configured limit, check this entity.
 
 !!! info "Registers 1090 and 1092 are not available on this hardware"
-    Earlier versions offered **Charge Power Rate (1090)** and **AC Charge Enable (1092)**
+    Earlier versions offered **AC Charge Power Rate (1090)** and **AC Charge Enable (1092)**
     on MOD. The entire holding block 1000–1124 is unimplemented on this family — a full
     sweep read zero across all 125 registers, and writes are rejected outright with Modbus
     exception 2 ([#371](https://github.com/0xAHA/Growatt_ModbusTCP/issues/371)).
@@ -359,7 +378,7 @@ VPP Control Authority (30100), VPP Remote Power Control (30407), VPP Commanded P
 | Model Family | Battery Control | Control Method | Select Entities | Number Entities |
 |---|---|---|---|---|
 | **SPH** (3–10kW) | Yes | Persistent writes | Priority Mode, AC Charge Enable, Time Period Enables (×3), System Enable (HU) | Discharge Rate, Discharge Stop SOC, Charge Rate, Charge Stop SOC, Time Period Start/End (×3) |
-| **SPF** ES PLUS | Yes | Persistent writes | Output Priority, Charge Priority, AC Input Mode, Battery Type | Max Charge Current, AC Charge Current, Gen Charge Current, Battery→Utility SOC, Utility→Battery SOC |
+| **SPF** ES PLUS | Yes | Persistent writes | Output Priority, Charge Priority, AC Input Mode, Battery Type | Max Charge Current, AC Charge Current, Gen Charge Current, Battery→Utility Switchover, Utility→Battery Switchover |
 | **WIT** (4–15kW) | Yes (timed) | VPP overrides | Work Mode, Control Authority, VPP Export Limit Enable, Remote Power Control | Active Power Rate, Export Limit, VPP Export Rate, Remote Duration, Remote Power |
 | **MOD / MID** TL3-XH | Yes | Persistent writes | Allow Grid Charge, Time Period Priority/Enable (×9) | Charge Rate, Charge Stop SOC, Grid Charge Stop SOC, Discharge Rate, Discharge Stop SOC, Time Period Start/End (×9) |
 | **MIN / TL-XH** | No | — | — | — |
