@@ -63,7 +63,7 @@ that model has, for most entries, never been verified against hardware. See
 | 3725 | SPA-TL3 4-10kW | SPA-TL3 (AC Storage, 3-Phase) 4-10kW | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
 | 3735 | SPA 3000TL BL-UP | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
 | 5001 | MID 17-25KTL3-X; MID 20-30KTL3-X2; MID 25-30KTL3-X2 Pro/X2 Pro.E; MID 33-50KTL3-X2/X2 Pro/X2 Pro.E; MID 30-40KTL3-X; MID 33-36KTL3-X(Pro.E); MID 3-33KTL3-X3 | MID (15-25kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
-| 5002 | MOD 3-15KTL3-X; MOD 3-15KTL3-X2(Pro); MOD 12-20KTL3-X2; MOD 12-20KTL3-X2(E); MOD 3-33KTL3-X3 | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 5002 | MOD 3-15KTL3-X; MOD 3-15KTL3-X2(Pro); MOD 12-20KTL3-X2; MOD 12-20KTL3-X2(E); MOD 3-33KTL3-X3 | MID (15-25kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
 | 5003 | MAC 30-70KTL3-X; MAC 15-36KTL3-XL; MAC 50-70KTL3-X2; MAC 30-36KTL3-XL2 | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
 | 5000 | MAX 50-100KTL3 LV/MV | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
 | 5500 | MAX 175-253KTL3-X HV | MID (15-25kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |

@@ -112,7 +112,7 @@ These statuses live in `DTC_REGISTRY` in `auto_detection.py`, which is the singl
 | 5400 | MOD 3-10KTL3-XH/BP; MID 11-30KTL3-XH; MID 8-15KTL3-XHL/JP | mod_6000_15000tl3_xh_v201 | ✅ Confirmed (#313, #362) |
 | 5401 | MOD 3-15KTL3-HU; MID 33-50KTL3-HU | mod_6000_15000tl3_xh_v201 | ✅ Confirmed (scan #228) |
 | 5001 | MID 17-25KTL3-X; MID 20-30KTL3-X2; MID 25-30KTL3-X2 Pro/X2 Pro.E; MID 33-50KTL3-X2/X2 Pro/X2 Pro.E; MID 30-40KTL3-X; MID 33-36KTL3-X(Pro.E); MID 3-33KTL3-X3 | mid_15000_25000tl3_x_v201 | ✅ Confirmed (#242) |
-| 5002 | MOD 3-15KTL3-X; MOD 3-15KTL3-X2(Pro); MOD 12-20KTL3-X2; MOD 12-20KTL3-X2(E); MOD 3-33KTL3-X3 | mid_15000_25000tl3_x_v201 | ⚠️ Unconfirmed |
+| 5002 | MOD 3-15KTL3-X; MOD 3-15KTL3-X2(Pro); MOD 12-20KTL3-X2; MOD 12-20KTL3-X2(E); MOD 3-33KTL3-X3 | mid_15000_25000tl3_x_v201 | ✅ Confirmed |
 | 5003 | MAC 30-70KTL3-X; MAC 15-36KTL3-XL; MAC 50-70KTL3-X2; MAC 30-36KTL3-XL2 | mid_15000_25000tl3_x_v201 | ⚠️ Unconfirmed — no dedicated MAC profile |
 
 ### MAX / MAX-X Series — Large Commercial Grid-Tied

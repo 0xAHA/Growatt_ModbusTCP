@@ -595,9 +595,15 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
     ),
 
     # -- MOD/MID/MAC-X series — grid-tied (no battery, no CT meter) --
-    # These report VPP 2.01 registers (31100-31115 active) but grid-power
-    # registers (3041-3044, 31112-31113) are always zero — no built-in CT at the
-    # grid connection point.
+    # These report VPP 2.01 registers (31100-31115 active). Grid-power registers
+    # (3041-3044, 31112-31113) read zero on units with no CT at the grid connection
+    # point, which is the common case — but NOT always. A MOD 5000TL3-X with an
+    # external DTSU6666 meter fitted returned 31112/31113 = 65535/63424, which is
+    # -2112 signed, or -211.2 W exporting, and it tracked load changes across the
+    # zero crossing (#228). So the register is dead without a meter, not dead on the
+    # family. If mapping it, declare it signed: read unsigned that value is
+    # 429,496,518 W, which the 32-bit underflow guard withholds (#401) - so a careless
+    # mapping makes grid power vanish precisely when exporting.
     # The MID models split cleanly across these two codes: 5001 is every MID, 5002 is
     # every MOD. The last two MID entries fall at the top of the following page in
     # Table 3-1 under a merged cell, so they read as belonging to 5002 unless you check
@@ -614,7 +620,7 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
         'MOD 3-15KTL3-X; MOD 3-15KTL3-X2(Pro); MOD 12-20KTL3-X2; '
         'MOD 12-20KTL3-X2(E); MOD 3-33KTL3-X3',
         'mid_15000_25000tl3_x_v201',
-        ASSUMED, 'no device report on this DTC',
+        CONFIRMED, 'issue #228 - MOD 5000TL3-X scan, DTC 5002 read from register 30000',
     ),
     5003: DtcEntry(
         'MAC 30-70KTL3-X; MAC 15-36KTL3-XL; MAC 50-70KTL3-X2; MAC 30-36KTL3-XL2',
