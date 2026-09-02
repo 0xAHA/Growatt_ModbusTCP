@@ -204,6 +204,12 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # reports before it clears its own daily counters (~30–90 s after HA midnight).
         self._midnight_grace_expires: datetime | None = None
 
+        # Attributes already warned about for a rejected spike. The condition can persist
+        # for every poll of a session — a register the model never populates, or a daily
+        # counter the inverter is slow to clear — and a guard working as designed should
+        # not file an error-log line a minute for hours (#412, same reasoning as #384).
+        self._spike_warned: set[str] = set()
+
         # Cloud override detection: tracks recently written register values
         # Format: {register_address: (expected_value, write_timestamp, control_name, mismatch_count)}
         # mismatch_count debounces the check — see _check_for_cloud_overrides (Issue #358).
@@ -698,6 +704,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # Clear daily total retention so new day starts fresh
         self._retained_daily_totals = {}
 
+        # A new day may hit the spike guard for new reasons, and one line per day is worth
+        # having. Without this the first session-warning is the only one ever logged (#412).
+        self._spike_warned = set()
+
         # Open a grace window so _protect_energy_totals() can suppress the stale
         # pre-reset values the inverter reports before it clears its own daily counters
         # (typically 30–90 s after HA midnight on this hardware; allow 3 minutes).
@@ -852,7 +862,17 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     _spike = True
 
                 if _spike:
-                    _LOGGER.warning(
+                    # Warn once per attribute per session, then drop to debug. The
+                    # condition is not always transient: a register the model never
+                    # populates, or a daily counter this inverter clears late, repeats on
+                    # every poll — one reporter's error log carried a line every 62 s
+                    # indefinitely, which reads as a fault rather than a guard working
+                    # (#412).
+                    _log = (
+                        _LOGGER.warning if attr not in self._spike_warned else _LOGGER.debug
+                    )
+                    self._spike_warned.add(attr)
+                    _log(
                         "[ENERGY_GUARD] Daily total spike rejected for %s: %.3f kWh "
                         "(retained=%.3f kWh, delta=%.3f kWh, threshold=%.1f kWh) — "
                         "likely register glitch during startup or midnight reset",
@@ -861,9 +881,26 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         value - (retained if retained is not None else 0.0),
                         _SPIKE_THRESHOLD_KWH,
                     )
-                    # Leave retention unchanged — do not persist the garbage value.
-                    # The next legitimate reading (near 0 after the inverter settles)
-                    # will be accepted normally.
+
+                    # Withhold the value as well as declining to retain it.
+                    #
+                    # This branch used to do neither: it left `data` untouched, so the
+                    # rejected reading was published to the sensor and into long-term
+                    # statistics exactly as read. "Rejected" meant only that it was kept
+                    # out of _retained_daily_totals. That inverts the point of the guard,
+                    # which exists to stop a total_increasing sensor recording an
+                    # impossible jump — one reporter was publishing 135,777,726 kWh on
+                    # every poll while this warning fired (#412).
+                    #
+                    # Prefer the last real value; with none, report nothing at all. A gap
+                    # is honest about what happened, where a number the inverter never
+                    # meaningfully produced is a claim we cannot support (#384).
+                    if retained is not None and retained > 0:
+                        setattr(data, attr, retained)
+                    else:
+                        _unread = getattr(data, 'unread_fields', None)
+                        if _unread is not None:
+                            _unread.add(attr)
                 else:
                     if self._retained_daily_totals.get(attr) != value:
                         _LOGGER.debug(

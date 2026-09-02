@@ -4,6 +4,24 @@
 
 ---
 
+## v1.9.1
+
+Issues: #412
+
+- **An impossible energy reading is no longer published.** The guard that detects a
+  daily counter jumping to a physically impossible value kept it out of the integration's
+  own memory but still passed it to Home Assistant, so it reached your sensor and your
+  long-term statistics - which is the counter reset it exists to prevent. One reporter's
+  Generator Discharge Today was reporting 135,777,726 kWh on every poll. Such readings are
+  now withheld: the last real value is shown where there is one, otherwise the sensor reads
+  unknown and history shows a gap. Found in a log attached by @horiace to #410. (#412)
+- **That guard no longer writes a warning every poll.** When the cause persists - a
+  register your model never populates, or a daily counter the inverter is slow to clear
+  after midnight - it warned on every scan, indefinitely. It now warns once per counter,
+  then logs at debug, and warns again the next day. (#412)
+
+---
+
 ## v1.9.0
 
 Issues: #384 #402 #403 #405 #406 #407 #228
