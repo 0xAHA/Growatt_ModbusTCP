@@ -8,6 +8,14 @@
 
 Staged for the next release. **Not yet published** — v1.8.14 is the current stable.
 
+- **A multi-register control can no longer be interrupted halfway on a direct connection.**
+  Controls that write several registers together (the WIT VPP mode select writes six to eight)
+  hold the Modbus bus for the whole sequence, so a poll cannot land in the middle of it. That
+  protection was skipped whenever the connection was not shared between config entries, on the
+  reasoning that such a client owns its socket outright - which stopped being true in v1.8.12,
+  when a whole poll started holding the per-client bus lock. On those setups a poll could still
+  interleave, and a write partway through the sequence could time out with the inverter left
+  half-configured. Shared connections are unaffected. (#331, #398)
 - **Your inverter now tells you if it is on the wrong profile.** Detection ran once during
   setup and was never revisited, so a single timed-out read at that moment could leave an
   inverter on a profile that maps fewer registers than it supports - with nothing to say so.

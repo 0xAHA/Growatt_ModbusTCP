@@ -2924,28 +2924,39 @@ class GrowattModbus:
         2. Keep the block short. The poll waits on this same lock, so a long batch delays
            polling for every entity on the connection.
 
-        A no-op when there is no shared connection: the client owns its socket outright and
-        there is nothing to contend with.
-        """
-        if self._shared_conn is None:
-            yield
-            return
+        It is NOT a no-op without a shared connection. That was the original shape, on the
+        reasoning that a direct client owns its socket outright and has nothing to contend
+        with — true when it was written, false since #398 gave the direct path a
+        `_local_bus_lock` and made a whole poll hold it. With the no-op, each write inside
+        the batch took and released that lock on its own, so a poll could land between two
+        registers of the sequence, and a mid-sequence acquisition could time out with
+        authority already granted and no setpoint written — exactly the half-applied
+        command this method exists to prevent, reached on the one transport that was
+        supposed to be exempt from it.
 
+        Both locks are RLocks, so holding the local one here and re-entering it per write
+        behaves identically to the shared path.
+        """
         from .const import SHARED_LOCK_TIMEOUT
-        acquired = self._shared_conn._lock.acquire(timeout=SHARED_LOCK_TIMEOUT)
-        if not acquired:
+
+        lock = (
+            self._shared_conn._lock if self._shared_conn is not None
+            else self._local_bus_lock
+        )
+        scope = "shared" if self._shared_conn is not None else "local"
+        if not lock.acquire(timeout=SHARED_LOCK_TIMEOUT):
             raise ModbusWriteError(
-                0, [], f"Shared connection busy (lock timeout on {what})"
+                0, [], f"Modbus bus busy (lock timeout on {what})"
             )
         try:
-            logger.debug("[BATCH] Holding shared bus for %s", what)
+            logger.debug("[BATCH] Holding %s bus for %s", scope, what)
             yield
         finally:
             # Released even if a write inside raised. A leaked lock would stall every
             # subsequent poll on this connection — a worse failure than the one this
             # method exists to prevent.
-            self._shared_conn._lock.release()
-            logger.debug("[BATCH] Released shared bus after %s", what)
+            lock.release()
+            logger.debug("[BATCH] Released %s bus after %s", scope, what)
 
     def write_register(self, register: int, value: int) -> bool:
         """Write, holding the bus for the transaction (#398)."""
