@@ -288,6 +288,16 @@ what your model allows will be rejected by the inverter and the entity will reve
 | Remote Power Control | Select | 30407 | Disabled (0), Enabled (1) | Enable timed charge/discharge override |
 | Remote Control Duration | Number | 30408 | 0–1440 min | Duration for remote power control override |
 | Remote Charge/Discharge Power | Number | 30409 | -100–+100 % | Power level (negative=discharge, positive=charge) |
+| VPP AC Charge Enable | Select | 30410 | Disabled (0), PV priority (1), AC priority (2) | Whether the battery may charge from the grid, and what takes priority |
+
+**The seven VPP controls (30100, 30200-30201, 30407-30410) go unavailable when their
+register block does not answer a poll.** Those blocks are read best-effort, because not
+every firmware implements them, and a block that is missed leaves the integration with no
+reading rather than a stale one. An occasional flick to unavailable is a dropped Modbus
+frame; permanently unavailable means your firmware does not implement the block. In
+neither case is a "Disabled" or 0 shown that the inverter did not report
+([#370](https://github.com/0xAHA/Growatt_ModbusTCP/issues/370),
+[#409](https://github.com/0xAHA/Growatt_ModbusTCP/pull/409)).
 
 **Important notes:**
 - WIT uses a **time-limited override** model. Commands via registers 30407–30409 expire after the configured duration or when HA restarts. The inverter then returns to its TOU schedule default.

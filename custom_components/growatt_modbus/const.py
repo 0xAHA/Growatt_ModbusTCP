@@ -944,6 +944,32 @@ DAILY_TOTAL_ATTRS = [
 ]
 
 
+# Optional VPP holding blocks (30100, 30200-30201, 30407-30410) are read best-effort: a
+# Modbus error, or the backoff window that follows repeated errors, makes a whole block
+# miss a poll. GrowattData is rebuilt per poll, so a missed block leaves the dataclass
+# defaults, which look exactly like a real "Disabled"/0 reading. Control entities backed
+# by one of these blocks must therefore report unavailable when its flag is False rather
+# than publishing the default - the control-side counterpart of withholding a sensor
+# reading that was not read.
+#
+# control name -> GrowattData flag that is set only when the block actually responded
+VPP_CONTROL_AVAILABILITY_FLAG = {
+    'control_authority': 'vpp_control_authority_available',               # 30100
+    'vpp_export_limit_enable': 'vpp_export_limit_available',              # 30200
+    'vpp_export_limit_power_rate': 'vpp_export_limit_available',          # 30201
+    'remote_power_control_enable': 'vpp_remote_power_available',          # 30407
+    'remote_power_control_charging_time': 'vpp_remote_power_available',   # 30408
+    'remote_charge_and_discharge_power': 'vpp_remote_power_available',    # 30409
+    # 30410 is read by the same read_holding_registers(30407, 4) call and covered by the
+    # same flag, so leaving it out ungated it on both platforms: on the very failure this
+    # was written for - a WIT that lost 30407-30410 for 30 hours - three controls would
+    # have correctly reported unavailable while this one carried on publishing its
+    # dataclass default of 0, displayed as "Disabled". Of the four it is the worst one to
+    # fabricate: it reads as "grid charging is off" when nobody said so.
+    'vpp_ac_charge_enable': 'vpp_remote_power_available',                 # 30410
+}
+
+
 # ============================================================================
 # DEVICE STRUCTURE - Multi-Device Organization
 # ============================================================================

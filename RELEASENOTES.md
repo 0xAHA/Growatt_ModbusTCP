@@ -4,6 +4,36 @@
 
 ---
 
+## v2.0.4-b1
+
+Issues: #370, PR #409
+
+- **A single dropped Modbus frame no longer blanks the VPP controls.** The optional VPP
+  register blocks — control authority, export limit, remote power control — are skipped for
+  a while after a failed read, so firmware that does not implement them is not asked on
+  every poll. **One** failure was enough to trigger that, and a timeout on a healthy
+  inverter looks exactly like a register that does not exist. On one WIT a single transient
+  failure took registers 30407-30410 out of service while the inverter went on answering
+  them correctly for 30 hours.
+
+  A block is now skipped only after **three consecutive** failures; the skip is dropped when
+  the connection is re-established, because a dead socket says nothing about a register; and
+  a block that was genuinely refused on a working socket stays skipped, so the poll does not
+  pay for its timeout again.
+
+- **A VPP control whose block was not read now reports unavailable** rather than publishing
+  the value it was built with. That default reads as a real "Disabled" or 0 — which for
+  `VPP AC Charge Enable` means "grid charging is off" when nobody said so.
+
+  **Affects the seven controls on those blocks**: Control Authority, VPP Export Limit
+  Enable and Power Rate, Remote Power Control Enable, Charging Time, Charge/Discharge Power,
+  and VPP AC Charge Enable. They will show as unavailable in the moments the block does not
+  answer, where previously they showed a number.
+
+  Contributed by @jekmanis, as a follow-up to their own #370 work.
+
+---
+
 ## v2.0.3
 
 Issues: #433
