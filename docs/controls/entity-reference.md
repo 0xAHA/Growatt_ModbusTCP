@@ -209,6 +209,14 @@ what your model allows will be rejected by the inverter and the entity will reve
 | Remote Control Duration | Number | 30408 | 0–1440 min | Duration for remote power control override |
 | Remote Charge/Discharge Power | Number | 30409 | -100–+100 % | Power level (negative=discharge, positive=charge) |
 
+**The six VPP controls (30100, 30200-30201, 30407-30409) go unavailable when their
+register block does not answer a poll.** Those blocks are read best-effort, because not
+every firmware implements them, and a block that is missed leaves the integration with no
+reading rather than a stale one. An occasional flick to unavailable is a dropped Modbus
+frame; permanently unavailable means your firmware does not implement the block. In
+neither case is a "Disabled" or 0 shown that the inverter did not report
+([#370](https://github.com/0xAHA/Growatt_ModbusTCP/issues/370)).
+
 **Important notes:**
 - WIT uses a **time-limited override** model. Commands via registers 30407–30409 expire after the configured duration or when HA restarts. The inverter then returns to its TOU schedule default.
 - Register 30476 (`priority_mode`) on WIT shows the base TOU mode. Writability **varies by model** - it was documented as read-only, but has been written successfully for months on a WIT 8000TL3-HU ([#353](https://github.com/0xAHA/Growatt_ModbusTCP/issues/353)). The TOU Default Mode control writes it; if your model rejects the write, use the inverter display or Growatt app instead.

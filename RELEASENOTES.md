@@ -8,6 +8,19 @@
 
 Staged for the next release. **Not yet published** — v1.8.14 is the current stable.
 
+- **A single dropped Modbus frame no longer blanks the VPP controls.** The optional VPP
+  register blocks (control authority, export limit, remote power control) are skipped for
+  a while after a failed read, so firmware that does not implement them is not asked every
+  poll. One failure was enough to trigger that, and a timeout on a healthy inverter looks
+  exactly like a register that does not exist - so a control could stop reflecting the
+  inverter for five minutes at a time, repeatedly, with nothing said about it. A block is
+  now skipped only after three failures in a row, the skip is dropped when the connection
+  is re-established (a dead socket says nothing about a register), and a block that was
+  genuinely not answered stays skipped so the poll does not pay a timeout for it again.
+  Entities backed by a block that was not read now report **unavailable** instead of
+  publishing the default they were built with, which reads as a real "Disabled" or 0.
+  Follow-up to #370.
+
 - **Your inverter now tells you if it is on the wrong profile.** Detection ran once during
   setup and was never revisited, so a single timed-out read at that moment could leave an
   inverter on a profile that maps fewer registers than it supports - with nothing to say so.
