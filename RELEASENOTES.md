@@ -15,6 +15,12 @@ Staged for the next release. **Not yet published** — v1.8.14 is the current st
   raises a repair notice suggesting the better profile. **Nothing is changed automatically.**
   Off-grid models are excluded from the check entirely, because reading those registers can
   power-cycle an SPF. (#405, #228)
+- **Control names corrected.** Twenty writable controls were displaying mangled acronyms -
+  "Ac Charge Enable", "Charge Stopped Soc", "Vpp Export Limit Enable" - and two showed raw
+  register abbreviations: "Bat Low To Uti" is the battery-to-utility switchover voltage, now
+  named as such. The AC charge controls are also prefixed so they read as one group, since
+  they operate together. **Display names only** - entity IDs are unchanged, so automations,
+  dashboards and history are unaffected. Raised by @Doprintityourself. (#407)
 - **SPH-TL3: Battery Current now reads.** That profile mapped no register for it, so the
   entity showed 0.00 A permanently while the BMS held a real value. Confirmed against a
   5170 W discharge on a 219.9 V ARK pack. Reported by @Doprintityourself. (#403)

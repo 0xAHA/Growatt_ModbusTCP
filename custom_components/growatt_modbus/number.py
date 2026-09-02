@@ -216,7 +216,17 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
             # not tell a user which of the two applies to them.
             'grid_charge_stopped_soc': 'Grid Charge Stopped SOC',
         }
-        friendly_name = friendly_overrides.get(control_name, control_name.replace('_', ' ').title())
+        # 'label' in WRITABLE_REGISTERS first: select.py and time.py already read names
+        # from there, and a control's name should not depend on which platform happens to
+        # create it. The overrides above stay for names that carry reasoning of their own.
+        #
+        # The title-cased fallback is last because it is the one that produced 'Ac Charge
+        # Enable', 'Charge Stopped Soc' and 'Bat Low To Uti' (#407).
+        friendly_name = (
+            control_config.get('label')
+            or friendly_overrides.get(control_name)
+            or control_name.replace('_', ' ').title()
+        )
         self._attr_name = friendly_name
 
         # Set icon
