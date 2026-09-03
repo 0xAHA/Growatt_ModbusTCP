@@ -4,6 +4,32 @@
 
 ---
 
+## v1.9.3
+
+Issues: #228
+
+- **Grid meter readings now reach the sensors on inverters without a battery.** If your
+  inverter has no battery, the integration could never use a grid value from the VPP
+  register range - the choice of which register to read was made by *battery* range
+  detection, and with no battery every test it scores reads zero, so it always picked the
+  older range. On hardware where the older registers return 0, the metered value at
+  31112/31113 was unreachable no matter how good your meter. A reporter with a working
+  DTSU666 was reading -211.2 W from those registers with his own script while the
+  integration showed him a fabricated figure. Grid flow now simply uses whichever mapped
+  register answers. Reported by @majliSK. (#228)
+
+- **Documentation: Invert Grid Power is a display convention, not a fault.** Three pages
+  said most users should have it off and described it as a rare hardware quirk. Growatt
+  reports grid flow positive-for-export; most Home Assistant dashboards expect
+  positive-for-import, so **having it enabled is normal and common**. The pages now say so,
+  explain how to choose, and make clear it never affects Grid Export Power or Grid Import
+  Power. No behaviour has changed and your existing setting is untouched.
+
+- The setup wizard no longer reports "using default (no inversion)" when it could not
+  measure anything. It says what it could not determine and how to re-run the check.
+
+---
+
 ## v1.9.2
 
 Issues: #228 #410

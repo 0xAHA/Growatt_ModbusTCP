@@ -121,6 +121,12 @@ def _detect_grid_orientation(client: GrowattModbus) -> tuple[bool, str]:
 
     Integration convention is positive = export, negative = import. Inversion is
     only enabled when the inverter reports the opposite (negative while exporting).
+
+    Note this measures *hardware polarity*, which is not the only reason to turn the
+    option on. Many owners enable it deliberately so that the signed Grid Power sensor
+    reads positive-for-import, which is what most Home Assistant dashboards expect - a
+    presentation choice this function cannot and should not decide. So a False here means
+    "the registers match our internal convention", never "you should leave this off".
     Handles SPH-TL3 dual-register configuration (power_to_grid + power_to_user).
 
     Returns:
@@ -130,7 +136,7 @@ def _detect_grid_orientation(client: GrowattModbus) -> tuple[bool, str]:
         # Read current data from inverter
         data = client.read_all_data()
         if not data:
-            return False, "⚠️ Could not read data - using default (no inversion)"
+            return False, "⚠️ Could not read the inverter - leaving Invert Grid Power OFF for now. This is a default, not a measurement: check the Grid Power sign once you are exporting, and run `growatt_modbus.detect_grid_orientation` if it looks wrong."
 
         pv_power = getattr(data, "pv_total_power", 0)
         consumption = getattr(data, "house_consumption", 0) or getattr(data, "power_to_load", 0)
@@ -142,11 +148,11 @@ def _detect_grid_orientation(client: GrowattModbus) -> tuple[bool, str]:
 
         # Check if conditions are good for detection
         if pv_power < 1000:
-            return False, f"⚠️ Solar production too low ({pv_power:.0f}W) - using default (no inversion). Run detection service later."
+            return False, f"⚠️ Solar production too low to tell ({pv_power:.0f}W) - leaving Invert Grid Power OFF for now. Nothing has been measured; run `growatt_modbus.detect_grid_orientation` while exporting in good sun."
 
         expected_export = pv_power - consumption
         if expected_export < 100:
-            return False, f"⚠️ Not exporting enough ({expected_export:.0f}W) - using default (no inversion). Run detection service later."
+            return False, f"⚠️ Not exporting enough to tell ({expected_export:.0f}W) - leaving Invert Grid Power OFF for now. Nothing has been measured; run `growatt_modbus.detect_grid_orientation` while genuinely exporting."
 
         # Determine which register has the actual grid power value.
         # Integration convention: positive = export, negative = import.
@@ -166,7 +172,7 @@ def _detect_grid_orientation(client: GrowattModbus) -> tuple[bool, str]:
             # Negative while exporting = inverter reports opposite sign → inversion needed
             return True, f"✅ Auto-detected: negative = export ({register_name}={power_to_grid if register_name == 'power_to_grid' else power_to_user:.0f}W while exporting) - inversion enabled"
         else:
-            return False, f"⚠️ Grid power near zero (power_to_grid={power_to_grid:.0f}W, power_to_user={power_to_user:.0f}W) - using default (no inversion). Run detection service later."
+            return False, f"⚠️ Grid power near zero (power_to_grid={power_to_grid:.0f}W, power_to_user={power_to_user:.0f}W) - leaving Invert Grid Power OFF for now. Nothing has been measured; run `growatt_modbus.detect_grid_orientation` while genuinely exporting."
 
     except Exception as e:
         _LOGGER.debug(f"Grid orientation detection failed: {e}")

@@ -180,7 +180,7 @@ The integration pre-configures sensors with the correct `state_class` and `devic
 | Battery in | `sensor.{name}_charge_energy_today` *(use total variant)* |
 | Battery out | `sensor.{name}_discharge_energy_today` *(use total variant)* |
 
-> If `Grid Power` shows the wrong sign, run the `detect_grid_orientation` service. If `Grid Export Power` and `Grid Import Power` appear swapped after upgrading to v0.9.1b1, disable **Invert Grid Power** in the integration options (Settings → Devices & Services → Growatt Modbus → Configure) — it was incorrectly enabled by the setup wizard's auto-detection in previous versions. Most users should have this option off.
+> If `Grid Power` reads the opposite sign to what your dashboard expects, toggle **Invert Grid Power** (Settings → Devices & Services → Growatt Modbus → Configure). Growatt reports positive = export while most Home Assistant cards want positive = import, so having it **on is normal and common** — it is a display convention, not a fault. `Grid Export Power` / `Grid Import Power` are unaffected by it. See [Invert Grid Power](hardware/models.md#invert-grid-power).
 
 ---
 
