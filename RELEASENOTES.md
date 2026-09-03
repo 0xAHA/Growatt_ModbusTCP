@@ -4,6 +4,22 @@
 
 ---
 
+## v1.9.5
+
+Issues: #411
+
+- **A write made through the diagnostic services no longer reports itself as a
+  reversion.** When a control entity writes a register, the integration remembers the
+  value and warns if a later poll disagrees - that is how it catches a ShineWiFi dongle
+  or the Growatt cloud overriding your settings. The `write_register` and
+  `write_registers` actions changed the same registers without updating that record, so
+  an automation that set an entity and then called one of those actions on the same
+  register had its own second write reported as **"Write reversion detected"**. Both
+  actions now clear the record for the registers they write. Reported by @Vict20, who
+  spent a week tracing it. (#411)
+
+---
+
 ## v1.9.4
 
 Issues: #331 #398

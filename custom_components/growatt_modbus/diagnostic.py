@@ -654,6 +654,24 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
             if success:
                 _LOGGER.info("Successfully wrote value %d to register %d", value, register)
+                # Drop any pending write-check on the registers we just changed.
+                #
+                # Entity writes register an expected value via coordinator.track_write(), and a
+                # later poll that disagrees raises "Write reversion detected". These services write
+                # the same registers without going near that bookkeeping, so a service write landing
+                # after an entity write left the tracker still expecting the entity's value - and it
+                # duly reported the service's own value as a reversion.
+                #
+                # Not hypothetical: a reporter whose automation set a time entity and then called
+                # write_registers on the same slot chased three "reversion" reports over a week
+                # before finding the duplicate write. The warning was ours, not his inverter's
+                # (#411).
+                #
+                # Cleared rather than re-tracked: track_write() keys its expectation to a
+                # GrowattData attribute name, and these services take a raw address with no such
+                # mapping. Forgetting the old expectation is the honest option - we no longer have
+                # grounds for it.
+                coordinator._pending_write_checks.pop(register, None)
                 await coordinator.async_request_refresh()
             else:
                 _LOGGER.warning("Write to register %d was rate-limited", register)
@@ -702,6 +720,25 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 coordinator._client.write_registers, register, values
             )
             _LOGGER.info("Successfully wrote %d values to registers starting at %d", len(values), register)
+            # Drop any pending write-check on the registers we just changed.
+            #
+            # Entity writes register an expected value via coordinator.track_write(), and a
+            # later poll that disagrees raises "Write reversion detected". These services write
+            # the same registers without going near that bookkeeping, so a service write landing
+            # after an entity write left the tracker still expecting the entity's value - and it
+            # duly reported the service's own value as a reversion.
+            #
+            # Not hypothetical: a reporter whose automation set a time entity and then called
+            # write_registers on the same slot chased three "reversion" reports over a week
+            # before finding the duplicate write. The warning was ours, not his inverter's
+            # (#411).
+            #
+            # Cleared rather than re-tracked: track_write() keys its expectation to a
+            # GrowattData attribute name, and these services take a raw address with no such
+            # mapping. Forgetting the old expectation is the honest option - we no longer have
+            # grounds for it.
+            for _offset in range(len(values)):
+                coordinator._pending_write_checks.pop(register + _offset, None)
             await coordinator.async_request_refresh()
 
         except ModbusWriteError as e:
