@@ -2670,8 +2670,14 @@ class GrowattModbus:
             power_to_user_addr = self._find_register_by_name('power_to_user_low')
             power_to_load_addr = self._find_register_by_name('power_to_load_low')
 
-            # power_to_grid: prefer native 3044, fall back to VPP active_power (31101 maps_to power_to_grid_low)
-            # On some MID/MOD V2.01 firmware the 3000-range registers return 0 while VPP registers are correct.
+            # power_to_grid: prefer native 3044, fall back to whatever the profile aims at
+            # power_to_grid_low in the VPP range. On some MID/MOD V2.01 firmware the
+            # 3000-range registers return 0 while the VPP ones are correct.
+            #
+            # That fallback is 31113 meter_power, NOT 31101 active power, and the difference
+            # matters: on a grid-tied MID, 31100/31101 is the inverter's own 3-phase output,
+            # while 31112/31113 is metered grid exchange. v0.8.6 remapped it for exactly that
+            # reason. Do not restore the old comment's claim without re-reading mid.py.
             power_to_grid_addr = self._find_register_by_name('power_to_grid_low')
             if power_to_grid_addr:
                 ptg_val = self._get_register_value(power_to_grid_addr)
@@ -2685,8 +2691,14 @@ class GrowattModbus:
                             logger.debug(f"power_to_grid 3044=0, using VPP active power reg {vpp_addr}: {ptg_val}W")
                 data.power_to_grid = ptg_val if ptg_val is not None else 0.0
 
-            # power_to_user: prefer native 3042, fall back to VPP meter_power (31113 maps_to power_to_user_low)
-            # On some MID/MOD V2.01 firmware the 3000-range registers return 0 while VPP registers are correct.
+            # power_to_user: prefer native 3042, fall back to a VPP register aimed at
+            # power_to_user_low. NOTE: since v0.8.6 no profile aims anything there — 31113
+            # was remapped to power_to_grid_low — so on MID/MOD V2.01 this fallback resolves
+            # to the same address it started from and cannot fire.
+            #
+            # Import direction therefore arrives as a *negative* power_to_grid (mid.py
+            # negates meter_power on combine), and it is sensor.py's _signed_grid_power that
+            # has to understand that. It did not, which is #228.
             if power_to_user_addr:
                 ptu_val = self._get_register_value(power_to_user_addr)
                 if ptu_val is None or ptu_val == 0.0:

@@ -111,18 +111,23 @@ The **MOD** column below represents the **MOD TL3-XH** (hybrid, with battery). T
 
 ## Smart Meter Requirement
 
-Several sensors only populate if a **Growatt smart meter** (GOSS-W or SPM-S CT clamp) is physically installed between the inverter and the grid connection. Without a meter the inverter has no way to measure AC import/export directly — the sensors appear in Home Assistant but always read zero.
+Several sensors only populate if a **Growatt smart meter** (GOSS-W or SPM-S CT clamp) is physically installed between the inverter and the grid connection. Without a meter the inverter has no way to measure AC import/export directly — the sensors appear in Home Assistant but report **unknown**.
+
+!!! info "Unknown, not zero (changed in v1.9.2)"
+    These sensors used to read 0 W, and on grid-tied models without a battery they could report something worse: the integration estimated grid flow from `solar - load`, and with no load register either that reduced to **solar power wearing a grid label**. One reporter importing 240 W was shown 74 W of *export*, which was exactly his PV output ([#228](https://github.com/0xAHA/Growatt_ModbusTCP/issues/228)).
+
+    Without a meter the grid flow is not measurable, so the integration now says so rather than publishing a figure it cannot support. **If these sensors have gone unknown after upgrading, that is this change** — and the numbers you were seeing before were not grid readings.
 
 ### Which sensors are affected
 
 | Sensor group | Without meter | With meter |
 | --- | --- | --- |
-| Grid Export / Import Power | Always 0 W | Live reading |
+| Grid Export / Import Power | **Unknown** | Live reading |
 | Power to Grid / Power to User (registers) | Always 0 W | Live reading |
 | Energy to Grid Today / Total | Always 0 kWh | Accumulating |
 | Load Energy Today / Total (register-based) | Always 0 kWh | Accumulating |
 
-> **`house_consumption` is never affected.** It is a calculated sensor (`solar_total_power + grid_import_power − grid_export_power`) and always reflects actual consumption regardless of meter presence — it just falls back to being solar-only when grid readings are zero.
+> **`house_consumption` falls back to solar-only** when there is no grid reading. It is a calculated sensor (`solar_total_power + grid_import_power − grid_export_power`), so without a meter it reports your generation rather than your consumption. That is a floor, not a measurement — anything you draw from the grid is invisible to it.
 
 ### Which models are affected
 
@@ -131,7 +136,7 @@ Several sensors only populate if a **Growatt smart meter** (GOSS-W or SPM-S CT c
 | **MOD 6000-15000TL3-X** (grid-tied, no battery) | **Yes** — 3000+ register range returns all zeros without meter |
 | **MOD 6000-15000TL3-XH** (hybrid) | Yes, for accurate grid registers; battery-side sensors unaffected |
 | **SPH-TL3, SPH, MIN TL-XH, WIT** (hybrid) | Yes, for meter-based grid registers; calculated `house_consumption` always works |
-| **MIC, MIN TL-X, MID** (grid-tied, no battery) | No — grid power is inferred from the inverter's own AC measurement |
+| **MIC, MIN TL-X, MID** (grid-tied, no battery) | **Yes**, for any grid figure at all. These have no battery and usually no load register, so there is nothing to infer grid flow from — the inverter measures only its own AC output. Corrected in v1.9.2; this row previously claimed grid power was inferred, which is what produced the wrong readings on [#228](https://github.com/0xAHA/Growatt_ModbusTCP/issues/228) |
 | **SPF** (off-grid) | N/A — grid connection is AC input only, no export |
 
 ### What hardware to get

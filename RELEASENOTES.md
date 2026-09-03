@@ -4,6 +4,40 @@
 
 ---
 
+## v1.9.2
+
+Issues: #228 #410
+
+- **Grid power is no longer estimated from solar when there is nothing to estimate from.**
+  On a grid-tied inverter with no smart meter, the grid registers read 0 and there is no
+  battery or load reading to balance against - so the calculation reduced to solar power,
+  published under a grid label. A reporter importing 240 W was shown 74 W of export, which
+  was his PV output to the watt. **These sensors now read unknown instead**, because
+  without a meter the grid flow is not measurable. If Grid Power, Grid Export Power or
+  Grid Import Power go unavailable after upgrading, that is this change - and the figures
+  you saw before were not grid readings. See
+  [Smart Meter Requirement](https://0xaha.github.io/Growatt_ModbusTCP/hardware/models/#smart-meter-requirement).
+  Reported by @majliSK. (#228)
+- **A metered import is no longer discarded.** On MID V2.01 the meter is one signed
+  register and an import arrives as a negative value. Nothing handled the negative case, so
+  the meter reading was thrown away exactly when it said "importing", and replaced by the
+  estimate above. Affects anyone on that profile **with** a smart meter. (#228)
+- **A daily counter reading zero is now believed.** On a day with no activity of that kind
+  the register correctly reads 0, and the integration was treating that as a sleeping
+  inverter and re-publishing yesterday's figure - all day. One reporter's AC Discharge
+  Energy Today sat at 2.90 kWh through a day with no AC discharge at all. The protection
+  for genuinely dormant inverters is unchanged; it now applies only when the lifetime
+  totals are silent too, which is what actually distinguishes the two. Reported by
+  @horiace. (#410)
+- **The midnight rollover no longer depends on how fast your inverter clears its
+  counters.** The old behaviour allowed a fixed 10 minutes; one SPF took **16**, and in the
+  gap yesterday's totals were adopted as today's starting values. Whether a given counter
+  was affected came down to whether its total happened to exceed an unrelated threshold.
+  Each counter is now held until the register actually changes, however long that takes.
+  (#410)
+
+---
+
 ## v1.9.1
 
 Issues: #412

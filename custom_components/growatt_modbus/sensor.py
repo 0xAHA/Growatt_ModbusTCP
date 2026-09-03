@@ -1568,6 +1568,55 @@ class GrowattInverterClockSensor(GrowattEntity, SensorEntity):
         }
 
 
+def _signed_grid_power(data) -> float | None:
+    """Grid power as one signed number, positive = export. None when it is not knowable.
+
+    Grid Power, Grid Export Power and Grid Import Power are three views of one quantity,
+    and each used to derive it with its own byte-identical copy of this logic. Two defects
+    lived in all three copies at once (#228):
+
+    **A negative reading was ignored.** `meter_power` is a single signed register; the MID
+    V2.01 profile negates it on combine so that an importing site arrives here as a
+    *negative* `power_to_grid`. Nothing tested for that - `export > 0` failed, `import_power
+    > 0` failed, and the deliberately-produced signed meter reading was discarded in favour
+    of the estimate below, precisely when it said "importing".
+
+    **The estimate ran with nothing to estimate from.** With no smart meter the directional
+    registers read 0, and on a grid-tied profile `charge_power` and `discharge_power` are
+    not mapped at all. `(solar + 0) - (0 + 0)` is just `solar`, so a reporter importing
+    240 W was shown 74 W of export - which was his PV output wearing a grid label. The
+    MID profile already documents that these registers read 0 without a meter and says to
+    use the AC power entities instead; the sensor was overriding that with a fabrication.
+
+    Returning None makes the entity unknown, which is the honest answer: without a meter
+    we do not know the grid flow.
+    """
+    export = getattr(data, "power_to_grid", 0) or 0
+    import_power = getattr(data, "power_to_user", 0) or 0
+
+    # A directional register carrying a real reading always wins.
+    if export > 0:
+        return float(export)
+    if import_power > 0:
+        return float(-import_power)
+    if export < 0:
+        # Signed meter reading indicating import. See above.
+        return float(export)
+
+    solar = getattr(data, "pv_total_power", 0) or 0
+    load = getattr(data, "power_to_load", 0) or 0
+    charge = getattr(data, "charge_power", 0) or 0
+    discharge = getattr(data, "discharge_power", 0) or 0
+
+    if load == 0 and charge == 0 and discharge == 0:
+        # Nothing to balance solar against. With no generation either, the site really is
+        # idle and zero is a fair answer; with generation, the expression degenerates to
+        # `solar` and would be published as grid flow.
+        return 0.0 if solar == 0 else None
+
+    return float((solar + discharge) - (load + charge))
+
+
 class GrowattModbusSensor(GrowattEntity, SensorEntity):
     """Representation of a Growatt Modbus sensor."""
 
@@ -1648,23 +1697,9 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
                 # Positive = export, Negative = import
                 # Per VPP V2.03: power_to_grid = "Total reverse power (grid export)"
                 # Per VPP V2.03: power_to_user = "Total forward power (grid import)"
-                export = getattr(data, "power_to_grid", 0)
-                import_power = getattr(data, "power_to_user", 0)
-
-                # Use direct register values when available (more accurate than calculation)
-                if export > 0:
-                    # Exporting to grid (positive)
-                    grid_power = export
-                elif import_power > 0:
-                    # Importing from grid (negative)
-                    grid_power = -import_power
-                else:
-                    # Fallback calculation when no direct register values
-                    solar = getattr(data, "pv_total_power", 0)
-                    load = getattr(data, "power_to_load", 0)
-                    charge = getattr(data, "charge_power", 0)
-                    discharge = getattr(data, "discharge_power", 0)
-                    grid_power = (solar + discharge) - (load + charge)
+                grid_power = _signed_grid_power(data)
+                if grid_power is None:
+                    return None
 
                 # Apply inversion if configured (CT clamp backwards)
                 if invert_grid_power:
@@ -1679,23 +1714,12 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
                 # Export power (always positive or 0)
                 # Per VPP V2.03: power_to_grid = "Total reverse power (grid export)"
                 # Per VPP V2.03: power_to_user = "Total forward power (grid import)"
-                export = getattr(data, "power_to_grid", 0)
-                import_power = getattr(data, "power_to_user", 0)
-
-                # Compute raw signed grid power (positive = export) from physical registers.
-                # invert_grid_power is a sign-convention correction for the signed grid_power
-                # sensor only — do NOT apply it here. The always-positive sensors derive from
-                # the directional register values directly, regardless of sign convention.
-                if export > 0:
-                    grid_power = export
-                elif import_power > 0:
-                    grid_power = -import_power
-                else:
-                    solar = getattr(data, "pv_total_power", 0)
-                    load = getattr(data, "power_to_load", 0)
-                    charge = getattr(data, "charge_power", 0)
-                    discharge = getattr(data, "discharge_power", 0)
-                    grid_power = (solar + discharge) - (load + charge)
+                # invert_grid_power is a sign-convention correction for the signed
+                # grid_power sensor only — do NOT apply it here. The always-positive
+                # sensors derive from the directional values directly.
+                grid_power = _signed_grid_power(data)
+                if grid_power is None:
+                    return None
 
                 # Export = positive portion of raw signed value
                 raw_value = round(max(0, grid_power), 1)
@@ -1705,20 +1729,10 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
                 # Import power (always positive or 0)
                 # Per VPP V2.03: power_to_user = "Total forward power (grid import)"
                 # Per VPP V2.03: power_to_grid = "Total reverse power (grid export)"
-                export = getattr(data, "power_to_grid", 0)
-                import_power = getattr(data, "power_to_user", 0)
-
-                # Same raw derivation — no inversion applied (see grid_export_power comment).
-                if export > 0:
-                    grid_power = export
-                elif import_power > 0:
-                    grid_power = -import_power
-                else:
-                    solar = getattr(data, "pv_total_power", 0)
-                    load = getattr(data, "power_to_load", 0)
-                    charge = getattr(data, "charge_power", 0)
-                    discharge = getattr(data, "discharge_power", 0)
-                    grid_power = (solar + discharge) - (load + charge)
+                # Same derivation — no inversion applied (see grid_export_power comment).
+                grid_power = _signed_grid_power(data)
+                if grid_power is None:
+                    return None
 
                 # Import = negative portion of raw signed value, flipped to positive
                 raw_value = round(max(0, -grid_power), 1)

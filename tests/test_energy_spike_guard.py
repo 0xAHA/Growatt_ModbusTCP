@@ -83,10 +83,11 @@ def _load_guard(logger):
 
 
 class _Coordinator:
-    def __init__(self, retained_daily=None):
+    def __init__(self, retained_daily=None, pre_midnight=None):
         self._retained_lifetime_totals: dict[str, float] = {}
         self._retained_daily_totals: dict[str, float] = dict(retained_daily or {})
         self._midnight_grace_expires = None
+        self._pre_midnight_daily_totals: dict[str, float] = dict(pre_midnight or {})
         self._register_map_key = "spf_3000_6000_es_plus"
         self._spike_warned: set[str] = set()
 
