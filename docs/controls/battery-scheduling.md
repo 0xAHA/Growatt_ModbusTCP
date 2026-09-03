@@ -349,6 +349,32 @@ ShineWiFi cloud service overwriting registers during its sync window. To reduce 
 - Or time HA writes to avoid the typical cloud sync window (often 00:00–01:00)
 - Debug logging will show `write succeeded but value reverted` if cloud interference occurs
 
+### Overlapping periods are refused by the inverter
+
+Writing a time period that overlaps an **already-enabled** period is rejected outright:
+
+```
+WARNING: write_registers(1106, 3 values) refused by the device:
+         ExceptionResponse(dev_id=1, function_code=144, exception_code=4)
+```
+
+Exception code 4 is *Slave Device Failure*. This applies both to two periods of the **same**
+mode and — confirmed on an SPH-TL3 — to a **charge window overlapping an active discharge
+window** ([#411](https://github.com/0xAHA/Growatt_ModbusTCP/issues/411)).
+
+**This is correct behaviour, not a fault.** The write is refused as a whole, nothing is
+partially applied, and the schedule already running continues uninterrupted.
+
+If you drive slots from an automation or a price optimiser, disable the conflicting slot
+before writing the new one — write `[23:59, 23:59, 0]` to the opposing slot as one atomic
+triple, allow it to settle, then write the period you want.
+
+!!! note "The inverter's SoC reserve is a separate protection"
+    A discharge window does not run the battery flat. Discharge throttles to near zero as
+    SoC approaches your configured reserve floor, whatever the schedule says — observed
+    ending about 20 minutes before a scheduled window closed. The schedule and the reserve
+    are independent limits and the inverter respects whichever binds first.
+
 ---
 
 ## WIT TL3 — VPP Remote Control
