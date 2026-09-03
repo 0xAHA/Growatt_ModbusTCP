@@ -14,5 +14,5 @@
     "pymodbus>=3.0.0",
     "pyserial>=3.4"
   ],
-  "version": "1.9.3"
+  "version": "1.9.4"
 }
