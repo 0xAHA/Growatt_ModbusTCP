@@ -185,9 +185,8 @@ def test_the_bus_is_released_when_a_write_inside_the_batch_raises():
     assert freed == [True], "the bus was not released after the batch raised"
 
 
-def test_batch_is_a_no_op_without_a_shared_connection():
-    """Direct connections own their socket outright — there is nothing to contend with,
-    and the batch must not require a hub to exist."""
+def test_the_batch_does_not_require_a_hub_to_exist():
+    """A direct client must still be able to run a batch."""
     client = GrowattModbus(connection_type="tcp", host="10.0.0.1", port=502, slave_id=1)
     client._shared_conn = None
 
@@ -195,6 +194,75 @@ def test_batch_is_a_no_op_without_a_shared_connection():
     with client.write_batch("no hub"):
         entered = True
     assert entered
+
+
+def test_the_batch_holds_the_local_bus_when_there_is_no_hub():
+    """It used to yield immediately without taking any lock, on the reasoning that a
+    direct client owns its socket outright. That stopped being true when #398 gave the
+    direct path `_local_bus_lock` and made `_fetch_data` hold it for a WHOLE poll: with
+    the no-op, each write inside the batch took and released that lock on its own, so a
+    poll could land between two registers of the sequence and a mid-sequence acquisition
+    could time out — the half-applied command this method exists to prevent, on the one
+    transport that was supposed to be exempt from it.
+    """
+    client = GrowattModbus(connection_type="tcp", host="10.0.0.1", port=502, slave_id=1)
+    client._shared_conn = None
+
+    poll_got_in = []
+    inside = threading.Event()
+    finish = threading.Event()
+
+    def _poll():
+        inside.wait(timeout=5)
+        # Non-blocking: the question is whether the bus is free WHILE the batch is open.
+        got = client._local_bus_lock.acquire(blocking=False)
+        poll_got_in.append(got)
+        if got:
+            client._local_bus_lock.release()
+        finish.set()
+
+    t = threading.Thread(target=_poll, daemon=True)
+    t.start()
+    with client.write_batch("direct sequence"):
+        inside.set()
+        finish.wait(timeout=5)
+    t.join(timeout=5)
+
+    assert poll_got_in == [False], "a poll could interleave between two writes of a batch"
+    # ...and released afterwards, or the next poll would stall forever.
+    assert client._local_bus_lock.acquire(blocking=False)
+    client._local_bus_lock.release()
+
+
+def test_a_busy_local_bus_fails_the_batch_before_any_write_lands():
+    """Same guarantee as the shared path: "busy" must mean "nothing was applied"."""
+    client = GrowattModbus(connection_type="tcp", host="10.0.0.1", port=502, slave_id=1)
+    client._shared_conn = None
+
+    held = threading.Event()
+    release = threading.Event()
+
+    def _hold():
+        client._local_bus_lock.acquire()
+        held.set()
+        release.wait(timeout=10)
+        client._local_bus_lock.release()
+
+    t = threading.Thread(target=_hold, daemon=True)
+    t.start()
+    held.wait(timeout=5)
+
+    import growatt_under_test.const as _const
+    original = _const.SHARED_LOCK_TIMEOUT
+    _const.SHARED_LOCK_TIMEOUT = 1
+    try:
+        with pytest.raises(ModbusWriteError):
+            with client.write_batch("direct sequence"):
+                raise AssertionError("the batch body must not run on a busy bus")
+    finally:
+        _const.SHARED_LOCK_TIMEOUT = original
+        release.set()
+        t.join(timeout=5)
 
 
 def test_a_busy_bus_fails_the_batch_before_any_write_lands():
