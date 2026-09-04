@@ -1942,6 +1942,55 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         """
         return self.get_device_info(DEVICE_TYPE_INVERTER)
 
+    def _via_parent_inverter(self, entry_id: str) -> dict:
+        """How a child device points at the parent inverter, across HA versions.
+
+        `DeviceInfo["via_device"]` took an identifier tuple. It is deprecated because
+        identifiers are only unique *per config entry* and so no longer name one device;
+        the replacement is `via_device_id`, an already-resolved device id, looked up with
+        `async_get_device_id_by_identifier()` - a helper added alongside the deprecation in
+        HA 2026.8. The old form warns now and raises from HA 2027.8.
+
+        **We declare no minimum Home Assistant version**, in neither `hacs.json` nor
+        `manifest.json`, so HACS offers our releases to any HA. Calling that helper
+        unconditionally would raise `AttributeError` on anything older and leave every
+        child device unbuilt - solar, grid, load and battery all gone. That is far worse
+        than a deprecation line in the log, so the old form stays as the fallback until
+        the floor moves (#416, reported by @Vict20).
+
+        The parent is pre-created in `__init__.py` before the platforms are forwarded (the
+        #224 race fix), which is exactly the precondition an id lookup needs.
+
+        Returns the fragment to splat into a DeviceInfo dict.
+        """
+        identifier = (DOMAIN, f"{entry_id}_inverter")
+
+        from homeassistant.helpers import device_registry as dr
+
+        resolve = getattr(dr, "async_get_device_id_by_identifier", None)
+        if resolve is None:
+            return {"via_device": identifier}
+
+        try:
+            device_id = resolve(self.hass, identifier, config_entry_id=entry_id)
+        except Exception as err:  # noqa: BLE001 - signature differences across versions
+            _LOGGER.debug(
+                "via_device_id lookup unavailable (%s); using the deprecated identifier "
+                "form. Harmless until HA 2027.8.", err,
+            )
+            return {"via_device": identifier}
+
+        if device_id is None:
+            # Should not happen - the parent is pre-created before platforms load. Losing
+            # the parent link keeps the device; raising here would lose the device.
+            _LOGGER.debug(
+                "Parent inverter device is not in the registry yet for %s; child device "
+                "will be created without a parent link", entry_id,
+            )
+            return {}
+
+        return {"via_device_id": device_id}
+
     def get_device_info(self, device_type: str) -> dict:
         """Get device info for a specific device type.
 
@@ -1982,7 +2031,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             return device_info
 
         # All other devices reference the inverter as parent
-        via_device = (DOMAIN, f"{entry_id}_inverter")
+        via_device = self._via_parent_inverter(entry_id)
 
         if device_type == DEVICE_TYPE_SOLAR:
             return {
@@ -1990,7 +2039,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 "name": f"{base_name} Solar",
                 "manufacturer": "Growatt",
                 "model": "Solar Production",
-                "via_device": via_device,
+                **via_device,
             }
 
         elif device_type == DEVICE_TYPE_GRID:
@@ -1999,7 +2048,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 "name": f"{base_name} Grid",
                 "manufacturer": "Growatt",
                 "model": "Grid Connection",
-                "via_device": via_device,
+                **via_device,
             }
 
         elif device_type == DEVICE_TYPE_LOAD:
@@ -2008,7 +2057,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 "name": f"{base_name} Load",
                 "manufacturer": "Growatt",
                 "model": "Load Management",
-                "via_device": via_device,
+                **via_device,
             }
 
         elif device_type == DEVICE_TYPE_BATTERY:
@@ -2017,7 +2066,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 "name": f"{base_name} Battery",
                 "manufacturer": "Growatt",
                 "model": "Battery Storage",
-                "via_device": via_device,
+                **via_device,
             }
 
         elif device_type == DEVICE_TYPE_BACKUPBOX:
@@ -2026,7 +2075,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 "name": f"{base_name} Backup Box",
                 "manufacturer": "Growatt",
                 "model": "ARK Backup Box",
-                "via_device": via_device,
+                **via_device,
             }
 
         # Default to inverter for unknown device types

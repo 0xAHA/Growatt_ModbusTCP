@@ -4,6 +4,22 @@
 
 ---
 
+## v1.9.8
+
+Issues: #416
+
+- **The deprecated `via_device` warning is gone on Home Assistant 2026.8 and later.** Each
+  sub-device (Solar, Grid, Load, Battery) points at the parent inverter, and the way that
+  link is expressed changed: identifiers are only unique per config entry, so Home
+  Assistant replaced the identifier form with a resolved device id. The old form still
+  works and warns; it stops working in HA 2027.8.
+
+  **Nothing changes for you** - the device tree is identical either way. The integration
+  now uses whichever form your Home Assistant supports, so **older versions keep working
+  exactly as before**. Reported by @Vict20. (#416)
+
+---
+
 ## v1.9.7
 
 Issues: #389 #405
