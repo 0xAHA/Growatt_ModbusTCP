@@ -338,6 +338,40 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             _LOGGER.debug("Profile re-check: DTC %s agrees with the profile in use", dtc)
             return
 
+        # Say nothing when the two profiles would behave identically.
+        #
+        # A DTC can cover several model families. 5400 is 'MOD 3-10KTL3-XH/BP; MID
+        # 11-30KTL3-XH; MID 8-15KTL3-XHL/JP', and the registry has to resolve it to one
+        # profile - so every MID owner in that group was told to move to the MOD profile.
+        #
+        # There is nothing to move to. mid_11000_30000tl3_xh_v201 and
+        # mod_6000_15000tl3_xh_v201 declare the same register_map and the same 102
+        # sensors; they differ only in name, description and max_power_kw. Following the
+        # advice would have changed nothing except leaving the owner on a profile named
+        # for hardware they do not have - which then misleads whoever reads their next
+        # diagnostic report.
+        #
+        # Comparing behaviour rather than identity is the honest test: the notice exists
+        # to say "your inverter supports registers this profile does not map", and that
+        # claim is simply false when the maps and sensor sets match (#405, reported by
+        # @as-wallpen).
+        from .device_profiles import INVERTER_PROFILES
+
+        _cfg = INVERTER_PROFILES.get(configured)
+        _sug = INVERTER_PROFILES.get(suggested)
+        if (
+            _cfg and _sug
+            and _cfg.get('register_map') == _sug.get('register_map')
+            and set(_cfg.get('sensors') or ()) == set(_sug.get('sensors') or ())
+        ):
+            _LOGGER.debug(
+                "Profile re-check: DTC %s indicates '%s', but it maps the same registers "
+                "and the same sensors as '%s' - nothing to gain, staying quiet",
+                dtc, suggested, configured,
+            )
+            self._profile_recheck_done = True
+            return
+
         entry = DTC_REGISTRY.get(dtc)
         _LOGGER.warning(
             "Profile mismatch: this inverter reports DTC %s (%s), which indicates profile "

@@ -4,6 +4,21 @@
 
 ---
 
+## v1.9.6
+
+Issues: #405
+
+- **The wrong-profile notice no longer fires when there is nothing to gain.** A device type
+  code can cover several model families - 5400 is *MOD 3-10KTL3-XH/BP; MID 11-30KTL3-XH;
+  MID 8-15KTL3-XHL/JP* - and the registry resolves it to one profile, so **MID owners in
+  that group were told to switch to the MOD profile**. Those two profiles map the same
+  registers and create the same 102 sensors; switching would change no reading and would
+  leave you on a profile named for hardware you do not have. The check now compares what
+  the profiles actually do, not their names, and stays silent when they match. If you
+  dismissed this notice, you were right to. Reported by @as-wallpen. (#405)
+
+---
+
 ## v1.9.5
 
 Issues: #411
