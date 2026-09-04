@@ -110,3 +110,55 @@ def test_dtc_5400_is_the_case_this_covers():
         "DTC 5400 no longer names a MID family - re-read whether this suppression is still "
         "the right behaviour"
     )
+
+
+def test_the_notice_states_the_difference_instead_of_asserting_a_direction():
+    """The notice used to say the profile in use "maps fewer registers than the one your
+    hardware reports". Nothing verified that. The equivalence guard only rules out the two
+    being identical - where they differ, the suggested profile may map fewer sensors, or a
+    different set, and the reader has no way to check a claim we never tested.
+
+    It now reports both counts, which the guard already has in hand."""
+    import json
+
+    for name in ("strings.json", "translations/en.json"):
+        text = json.loads((COMPONENT / name).read_text(encoding="utf-8"))
+        body = text["issues"]["profile_mismatch"]["description"]
+
+        assert "{configured_count}" in body and "{suggested_count}" in body, (
+            f"{name}: the notice does not state the sensor counts"
+        )
+        assert "maps fewer registers" not in body, (
+            f"{name}: the notice still asserts a direction nothing checks"
+        )
+
+
+def test_the_counts_are_actually_supplied():
+    """A placeholder with nothing behind it renders as literal braces in the repair UI."""
+    source = (COMPONENT / "coordinator.py").read_text(encoding="utf-8")
+
+    assert '"configured_count"' in source and '"suggested_count"' in source, (
+        "the notice asks for counts the coordinator never provides"
+    )
+    # Supplied in both places: built into _pending_profile_issue, then passed through to
+    # translation_placeholders. Missing either leaves the braces showing.
+    assert source.count('"configured_count"') >= 2, (
+        "configured_count is built but never passed to translation_placeholders, or vice "
+        "versa"
+    )
+
+
+def test_the_cause_is_no_longer_stated_as_a_certainty():
+    """as-wallpen's DTC read perfectly every time; the notice told him it usually follows a
+    failed read during setup. A confident wrong explanation sends people looking in the
+    wrong place."""
+    import json
+
+    body = json.loads(
+        (COMPONENT / "translations/en.json").read_text(encoding="utf-8")
+    )["issues"]["profile_mismatch"]["description"]
+
+    assert "covers several models" in body, (
+        "the notice does not admit that one device type code can cover several models, "
+        "which is the case that produced the false alarm"
+    )

@@ -379,11 +379,26 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             "your inverter supports. Nothing has been changed (#405).",
             dtc, entry.model if entry else "unknown", suggested, configured,
         )
+        # State the difference rather than asserting a direction.
+        #
+        # The notice used to say the profile in use "maps fewer registers than the one your
+        # hardware reports". Nothing checked that. The equivalence guard above only rules
+        # out the two profiles being identical - where they differ, the suggested one may
+        # map fewer sensors, or simply a different set, and the claim would be wrong in a
+        # way the reader has no way to check (#405).
+        #
+        # Both profiles are already looked up for that guard, so the real counts cost
+        # nothing and say something the owner can verify against their own device page.
+        _n_cfg = len(set(_cfg.get('sensors') or ())) if _cfg else 0
+        _n_sug = len(set(_sug.get('sensors') or ())) if _sug else 0
+
         self._pending_profile_issue = {
             "dtc": str(dtc),
             "model": entry.model if entry else "unknown",
             "suggested": suggested,
             "configured": configured or "unknown",
+            "configured_count": str(_n_cfg) if _n_cfg else "an unknown number of",
+            "suggested_count": str(_n_sug) if _n_sug else "an unknown number of",
         }
 
     def _refresh_inverter_clock(self) -> None:
@@ -1292,6 +1307,8 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                             "model": info["model"],
                             "suggested": info["suggested"],
                             "configured": info["configured"],
+                            "configured_count": info["configured_count"],
+                            "suggested_count": info["suggested_count"],
                         },
                         learn_more_url=(
                             "https://github.com/0xAHA/Growatt_ModbusTCP/blob/main/"

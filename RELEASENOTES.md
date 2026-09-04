@@ -4,6 +4,19 @@
 
 ---
 
+## Unreleased
+
+Staged for the next release. **Not yet published** - v1.9.6 is the current stable.
+
+- **The wrong-profile notice now tells you the actual difference.** It used to assert that
+  the profile in use "maps fewer registers than the one your hardware reports", which
+  nothing verified - where two profiles differ, the suggested one may map fewer sensors, or
+  simply a different set. It now states both counts, so you can check them against your own
+  device page and decide. It also no longer presents a failed setup read as the certain
+  cause, since a device type code covering several models produces the same notice. (#405)
+
+---
+
 ## v1.9.6
 
 Issues: #405
