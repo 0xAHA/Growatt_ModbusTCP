@@ -58,10 +58,23 @@ def test_version_badge_tracks_the_latest_release(path):
 
 
 def test_manifest_version_is_readable():
-    """The badge is only as good as the field it points at."""
+    """Parseable semver, optionally with a beta suffix.
+
+    This used to require plain `X.Y.Z`, on the grounds that "the badge renders it
+    verbatim". That reason no longer holds: the badge is `shields.io/github/v/release/`,
+    which reads the latest GitHub *release* and never looks at the manifest.
+
+    What does still depend on this field is HACS, which compares it to decide whether an
+    update is available. `1.10.0-b1` is valid semver - a pre-release sorts below the
+    release it precedes, so a beta tester is correctly offered `1.10.0` when it lands.
+
+    Betas carry `-b1`, `-b2` and so on; stable releases drop the suffix. Before that,
+    every beta consumed a patch number, so the version climbed several times a week and
+    said nothing about whether a release had been tested.
+    """
     version = json.loads(MANIFEST.read_text(encoding="utf-8"))["version"]
-    assert re.fullmatch(r"\d+\.\d+\.\d+", version), (
-        f"manifest version {version!r} is not plain semver; the badge renders it verbatim"
+    assert re.fullmatch(r"\d+\.\d+\.\d+(-b\d+)?", version), (
+        f"manifest version {version!r} is neither X.Y.Z nor X.Y.Z-bN"
     )
 
 
