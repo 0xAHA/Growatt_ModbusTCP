@@ -2691,28 +2691,12 @@ class GrowattModbus:
             # 31100/31101 is the inverter's own 3-phase output while 31112/31113 is metered
             # grid exchange. v0.8.6 remapped it for that reason; re-read mid.py before
             # changing it.
-            for _flow_attr, _flow_name in (
-                ('power_to_grid', 'power_to_grid_low'),
-                ('power_to_user', 'power_to_user_low'),
+            for _flow_attr, _flow_name, _phase_names in (
+                ('power_to_grid', 'power_to_grid_low', ()),
+                ('power_to_user', 'power_to_user_low',
+                 ('power_to_user_r_low', 'power_to_user_s_low', 'power_to_user_t_low')),
             ):
-                _addresses = self._find_all_registers_by_name(_flow_name)
-                _value = None
-                for _addr in _addresses:
-                    _candidate = self._get_register_value(_addr)
-                    if _candidate is None:
-                        continue
-                    if _value is None:
-                        _value = _candidate  # Remember the first real read as the floor.
-                    if _candidate != 0.0:
-                        _value = _candidate
-                        if _addr != _addresses[0]:
-                            logger.debug(
-                                "%s: %s read 0, using reg %d instead: %sW",
-                                _flow_name, _addresses[0], _addr, _candidate,
-                            )
-                        break
-                if _addresses:
-                    setattr(data, _flow_attr, _value if _value is not None else 0.0)
+                self._resolve_phase_total(data, _flow_attr, _flow_name, _phase_names)
             if power_to_load_addr:
                 self._set_from_register(data, 'power_to_load', power_to_load_addr)
             
@@ -3575,6 +3559,85 @@ class GrowattModbus:
             if reg_info.get('maps_to') == name:
                 return addr
         return None
+
+    def _resolve_phase_total(self, data, attr: str, total_name: str,
+                             phase_names: tuple = ()) -> None:
+        """Whole-service value for a quantity the inverter also reports per phase.
+
+        V1.39 lays the storage power-flow range out as R / S / T / Total. Grid import was
+        read from `PactouserR` - **one phase** - because on the single-phase hardware it was
+        first mapped against, R and Total are the same measurement and the choice was
+        invisible. On a three-phase SPH it reports a third of the truth, and on a US
+        split-phase HU, half (#419).
+
+        The total is now the primary source. It is not blindly trusted, because we have
+        never confirmed 1021 populates on every firmware while we know 1015 does on at
+        least one device - so a swap alone could take working users to zero:
+
+            total > 0            -> total          the firmware fills it; authoritative
+            sum(phases) > 0      -> sum(phases)    the firmware fills only per-phase
+            otherwise            -> 0              genuinely nothing flowing
+
+        **A zero total is never accepted while the phases carry real values.** A zero there
+        is a register the firmware does not populate, not a measurement, and publishing it
+        would repeat #228 - a plausible number that means nothing.
+
+        Summing rather than preferring R costs nothing and needs no knowledge of the phase
+        count: on single-phase, S and T read zero and the sum *is* R.
+
+        Three states, not two. A phase that failed to read is not a phase reading zero, so
+        a partial sum is withheld rather than published as a confidently wrong number.
+        Quantities with no phase registers mapped degrade to total-only, which is what
+        export and load do today.
+        """
+        addresses = self._find_all_registers_by_name(total_name)
+        if not addresses:
+            return
+
+        total = None
+        for addr in addresses:
+            candidate = self._get_register_value(addr)
+            if candidate is None:
+                continue
+            if total is None:
+                total = candidate
+            if candidate != 0.0:
+                total = candidate
+                break
+
+        if total:
+            setattr(data, attr, total)
+            return
+
+        phase_sum = 0.0
+        any_phase_mapped = False
+        for phase_name in phase_names:
+            phase_addr = self._find_register_by_name(phase_name)
+            if phase_addr is None:
+                continue
+            any_phase_mapped = True
+            value = self._get_register_value(phase_addr)
+            if value is None:
+                # Unread, not zero. Summing what did arrive would understate the total.
+                data.unread_fields.add(attr)
+                logger.debug(
+                    "%s: %s did not read this poll and the total is %s - reporting nothing "
+                    "rather than a partial sum", attr, phase_name,
+                    "zero" if total is not None else "unavailable",
+                )
+                return
+            phase_sum += value
+
+        if any_phase_mapped and phase_sum:
+            logger.debug(
+                "%s: total register read %s but the phases sum to %.1f W - the firmware "
+                "does not populate the total on this device, using the sum",
+                attr, "0" if total is not None else "nothing", phase_sum,
+            )
+            setattr(data, attr, phase_sum)
+            return
+
+        setattr(data, attr, total if total is not None else 0.0)
 
     def _find_all_registers_by_name(self, name: str) -> list[int]:
         """Find ALL register addresses matching a name, alias, or maps_to attribute.

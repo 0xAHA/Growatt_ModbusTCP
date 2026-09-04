@@ -154,10 +154,14 @@ SPH_TL3_3000_10000 = {
         # 1021: PactouserTotal  = AC power to user total (grid import, positive = importing)
         # 1029: Pactogrid total = AC power to grid total (grid export, positive = exporting)
         # 1037: PLocalLoad total = INV power to local load total
-        1015: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 1016, 'desc': 'Power imported from grid HIGH (legacy register)'},
-        1016: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 1015, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        1021: {'name': 'power_to_user_total_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'AC power to user total H (PactouserTotal = grid import)', 'maps_to': 'power_to_user'},
-        1022: {'name': 'power_to_user_total_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1015: {'name': 'power_to_user_r_high', 'scale': 1, 'unit': '', 'pair': 1016, 'desc': 'Power imported from grid HIGH (legacy register)'},
+        1016: {'name': 'power_to_user_r_low', 'scale': 1, 'unit': '', 'pair': 1015, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1017: {'name': 'power_to_user_s_high', 'scale': 1, 'unit': '', 'pair': 1018, 'desc': 'Grid import S phase HIGH (PactouserS)'},
+        1018: {'name': 'power_to_user_s_low', 'scale': 1, 'unit': '', 'pair': 1017, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1019: {'name': 'power_to_user_t_high', 'scale': 1, 'unit': '', 'pair': 1020, 'desc': 'Grid import T phase HIGH (PactouserT)'},
+        1020: {'name': 'power_to_user_t_low', 'scale': 1, 'unit': '', 'pair': 1019, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1021: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'AC power to user total H (PactouserTotal = grid import)'},
+        1022: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
         1029: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 1030, 'desc': 'AC power to grid total H (Pactogrid total)'},
         1030: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 1029, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         1037: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1038, 'desc': 'INV power to local load total H (PLocalLoad total)'},

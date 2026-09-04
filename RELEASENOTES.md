@@ -4,6 +4,33 @@
 
 ---
 
+## v1.10.0-b1
+
+Issues: #419
+
+> **New version numbering.** Betas are now `x.y.z-b1`, `-b2` and so on, and the stable
+> release drops the suffix. Previously every beta consumed a patch number, so the version
+> climbed several times a week and told you nothing about whether a release was tested.
+> Nothing changes about how you install: betas still require "Show beta versions" in HACS.
+
+- **SPH grid import was reading one phase, not the whole service.** Every SPH profile took
+  grid import from register 1015, which Protocol V1.39 names `PactouserR` - the R phase. The
+  whole-service total at 1021 was mapped but under a name the integration could not resolve.
+  Grid export and house load already used their totals; import alone did not.
+
+  **If you have a single-phase SPH, nothing changes** - R and the total are the same
+  measurement on your hardware, which is why this went unnoticed for so long.
+
+  **If you have a three-phase SPH-TL3, your grid import has been reading roughly a third of
+  actual**, and on a US split-phase SPH-HU, about half. Both now read the whole service.
+
+  The total is not trusted blindly: if your inverter does not populate it, the per-phase
+  registers are summed instead, and a zero total is never accepted while the phases show
+  real power. If a phase read fails, the sensor reports unknown for that poll rather than a
+  partial sum. Surfaced by @risco21-dot on a US split-phase unit. (#419)
+
+---
+
 ## v1.9.8
 
 Issues: #416

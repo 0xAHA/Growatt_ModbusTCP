@@ -31,17 +31,35 @@ SOURCE = (COMPONENT / "growatt_modbus.py").read_text(encoding="utf-8")
 
 
 def _read_all_data_body() -> str:
-    """The executable lines of the grid-flow block.
+    """Executable lines of everything that decides where a grid flow is read from.
 
-    Comments are stripped deliberately: the block explains at length what it no longer
+    That is the dispatch block in read_all_data *plus* `_resolve_phase_total`, which the
+    dispatch delegates to since #419 moved address selection into it. Both are included,
+    because the property below must not be satisfiable by inspecting only half of it.
+
+    Comments and the docstring are stripped: both explain at length what the code no longer
     does, and naming the old helper in prose must not read as calling it.
     """
     start = SOURCE.index("            # Grid flow: take the first address carrying a reading")
     end = SOURCE.index("            if power_to_load_addr:", start)
-    return "\n".join(
+    dispatch = [
         line for line in SOURCE[start:end].splitlines()
         if not line.strip().startswith("#")
+    ]
+
+    fn = next(
+        n for n in ast.walk(ast.parse(SOURCE))
+        if isinstance(n, ast.FunctionDef) and n.name == "_resolve_phase_total"
     )
+    statements = fn.body
+    if (
+        statements and isinstance(statements[0], ast.Expr)
+        and isinstance(statements[0].value, ast.Constant)
+        and isinstance(statements[0].value.value, str)
+    ):
+        statements = statements[1:]
+
+    return "\n".join(dispatch + [ast.unparse(node) for node in statements])
 
 
 def test_grid_flow_does_not_consult_battery_range_detection():
