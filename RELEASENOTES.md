@@ -4,10 +4,20 @@
 
 ---
 
-## Unreleased
+## v1.9.7
 
-Staged for the next release. **Not yet published** - v1.9.6 is the current stable.
+Issues: #389 #405
 
+- **The Universal Register Scanner is no longer advertised as usable before you add a
+  device.** Home Assistant does not load an integration until it has at least one
+  configured device, and the scanner is provided by the integration - so the action simply
+  does not appear until then. Both the action's own description and the documentation said
+  the opposite, which sent the one group the feature exists for - people with an
+  unsupported inverter, trying to produce a scan so it can be supported - looking for
+  something that was never there. The docs now say what the constraint is and give the way
+  through: add the inverter with any profile chosen by hand, then scan it, since the scan
+  sweeps every range regardless of the profile configured. Found by @gamer123, who
+  diagnosed it correctly from the outside. (#389)
 - **The wrong-profile notice now tells you the actual difference.** It used to assert that
   the profile in use "maps fewer registers than the one your hardware reports", which
   nothing verified - where two profiles differ, the suggested one may map fewer sensors, or

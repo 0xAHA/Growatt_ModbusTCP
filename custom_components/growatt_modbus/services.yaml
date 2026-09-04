@@ -43,7 +43,11 @@ export_register_dump:
     Scan ALL register ranges, auto-detect your inverter model, and export a complete register dump
     to CSV. Select a configured device below to automatically use its connection settings and include
     current entity values in the scan. Alternatively leave the device blank and enter connection
-    parameters manually (useful for scanning a new inverter before adding it to the integration).
+    parameters manually, to scan a second inverter or a different address on the same network.
+    NOTE: this action only exists once at least one Growatt device has been added - Home
+    Assistant does not load the integration before that. To scan an inverter that is not yet
+    supported, add it first with any profile chosen manually; the scan sweeps every range
+    regardless of which profile is configured.
     File saved to /config/growatt_register_scan_[timestamp].csv
   fields:
     config_entry:

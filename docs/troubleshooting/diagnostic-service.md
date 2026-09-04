@@ -1,6 +1,11 @@
 # 🔧 Built-In Diagnostic Service
 
-**Having connection issues?** Use our built-in diagnostic service to test your connection **before** installing the integration!
+**Having connection issues?** Use the built-in Universal Register Scanner to see exactly what your inverter answers, register by register, without a terminal.
+
+!!! warning "The action only appears once a device has been added"
+    Home Assistant does not load an integration until it has at least one configured device, and the scanner is provided *by* the integration. Installing the files is not enough - **Developer Tools -> Actions will not list it until you have added an inverter.**
+
+    This page previously said the opposite. If you are here because you cannot find the action, that is why, and the way through is [below](#scanning-an-inverter-that-is-not-supported-yet).
 
 ---
 
@@ -22,15 +27,15 @@ The **Universal Register Scanner** diagnostic service:
 
 ## 🚀 How to Use
 
-### Step 1: Install the Integration Files
+### Step 1: Install and add a device
 
-You don't need to *configure* the integration, just have the files installed:
+1. **Install** through HACS, or extract a release to `/config/custom_components/growatt_modbus/`
+2. **Restart** Home Assistant
+3. **Add your inverter** under Settings -> Devices & Services -> Add Integration
 
-1. **Download** the latest release
-2. **Extract** to `/config/custom_components/growatt_modbus/`
-3. **Restart** Home Assistant
+Step 3 is not optional. Until a device exists, Home Assistant never loads the integration, so the scanner action is not registered and will not appear in Developer Tools.
 
-The diagnostic service will be available immediately!
+If your inverter is not supported yet, see [Scanning an inverter that is not supported yet](#scanning-an-inverter-that-is-not-supported-yet) - you can still get a scan.
 
 ### Step 2: Run the Diagnostic
 
@@ -58,6 +63,25 @@ The scanner will:
 * Go to **Settings** → **System** → **Logs**
 * Search for `growatt_modbus`
 * View detailed test results
+
+---
+
+## Scanning an inverter that is not supported yet
+
+This is the case the scanner is most useful for, and the one that used to be impossible to reach.
+
+**Add the inverter anyway, with a profile chosen by hand.** The scan sweeps every register range the integration knows about, regardless of which profile is configured - so the profile you pick does not have to be right, or even close. It only has to let the config flow finish.
+
+1. Settings -> Devices & Services -> **Add Integration** -> Growatt Modbus
+2. Enter your connection details as normal
+3. When detection fails or picks something implausible, **choose any profile manually**
+4. Finish the flow. Entities will be wrong or missing - that is expected and temporary
+5. Run the Universal Register Scanner against that device
+6. Attach the CSV to your GitHub issue
+
+Once the correct profile exists, switch to it under **Configure** - your entity IDs are preserved.
+
+If the config flow will not complete at all, say so on your issue with the error it shows. That is worth knowing about separately.
 
 ---
 
