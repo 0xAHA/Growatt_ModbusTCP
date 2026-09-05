@@ -4,10 +4,9 @@
 
 ---
 
-## Unreleased
+## v1.10.0-b3
 
-Staged for the next release. **Not yet published** - v1.9.8 is the current stable and
-v1.10.0-b2 the current beta.
+Issues: #389 #420
 
 - **You can now finish setup even if the inverter does not answer.** A failed connection
   test used to be a dead end - the address was cleared and there was no way past it. After a
