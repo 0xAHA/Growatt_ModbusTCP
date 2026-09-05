@@ -9,6 +9,17 @@
 Staged for the next release. **Not yet published** - v1.9.8 is the current stable and
 v1.10.0-b2 the current beta.
 
+- **You can now finish setup even if the inverter does not answer.** A failed connection
+  test used to be a dead end - the address was cleared and there was no way past it. After a
+  failure you now get an **Add anyway** option, which takes you straight to choosing the
+  model yourself, and the address you typed is kept between attempts.
+
+  The setup screen tells you plainly what to expect: **every entity stays unavailable until
+  the inverter answers.** This is for an inverter that is offline for now, or one we do not
+  support yet - in that case adding it is the only way to reach the register scanner, since
+  Home Assistant does not load the integration until a device exists. The option only
+  appears **after** a failure, so a typo or a wrong port still stops you as it should.
+  Raised by @gamer123. (#389)
 - **SPH-HU: Battery Current is withheld rather than showing a charge limit.** On SPH
   8000-10000 TL-HU, register 1088 does not carry live battery current - it carries the BMS
   charge-current limit, which sits near 140 A and tapers to 40 A as the battery fills. The

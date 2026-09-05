@@ -46,6 +46,9 @@ CONF_BAUDRATE = "baudrate"
 CONF_REGISTER_MAP = "register_map"
 CONF_INVERTER_SERIES = "inverter_series"
 CONF_INVERT_GRID_POWER = "invert_grid_power"  # For reversed CT clamps (AC side)
+# Setup-time only: offered after a failed connection test so an unreachable or
+# not-yet-supported inverter can still be added (#389). Never stored on the entry.
+CONF_ADD_ANYWAY = "add_anyway"
 CONF_INVERT_BATTERY_POWER = "invert_battery_power"  # For inverters with opposite battery power sign
 CONF_DEVICE_STRUCTURE_VERSION = "device_structure_version"
 

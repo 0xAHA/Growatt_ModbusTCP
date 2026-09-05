@@ -21,12 +21,14 @@
         "data": {
           "host": "IP Address",
           "port": "Port",
-          "slave_id": "Modbus Slave ID"
+          "slave_id": "Modbus Slave ID",
+          "add_anyway": "Add anyway, without a connection test"
         },
         "data_description": {
           "host": "IP address of your RS485-to-TCP converter",
           "port": "Modbus TCP port (usually 502)",
-          "slave_id": "Inverter Modbus address (usually 1)"
+          "slave_id": "Inverter Modbus address (usually 1)",
+          "add_anyway": "Adds the inverter even though it did not answer. Use this if it is offline for now, or if it is not supported yet and you need the register scanner to produce a scan."
         }
       },
       "serial": {
@@ -51,6 +53,13 @@
         },
         "data_description": {
           "has_offgrid": "Enable this ONLY if you have an SPF series off-grid inverter. Off-Grid inverters use a different protocol and will reset if VPP registers are accessed."
+        }
+      },
+      "manual": {
+        "title": "Select your inverter model",
+        "description": "Could not reach the inverter, so nothing has been detected. **Choose the profile yourself below.** Every entity will stay unavailable until the inverter answers - if it never does, nothing here will work, and the likeliest causes are a wrong address or port, an adapter that is not powered, or a device that does not speak Modbus TCP at all.",
+        "data": {
+          "inverter_series": "Inverter model"
         }
       }
     },

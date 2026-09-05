@@ -21,6 +21,7 @@ from .const import (
     CONF_DEVICE_PATH,
     CONF_BAUDRATE,
     CONF_INVERT_BATTERY_POWER,
+    CONF_ADD_ANYWAY,
     PROTOCOL_VARIANT_AUTO,
     PROTOCOL_VARIANT_LEGACY,
     PROTOCOL_VARIANT_V201,
@@ -187,6 +188,9 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
     def __init__(self):
         """Initialize the config flow."""
         self._discovered_data = {}
+        # Set when the user chose "add anyway" past a failed connection test, so the
+        # profile step can say plainly what to expect (#389).
+        self._unreachable_at_setup = False
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -232,6 +236,33 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
         errors = {}
 
         if user_input is not None:
+            # "Add anyway" - skip the reachability test entirely.
+            #
+            # Until this existed, a failed connection test was a dead end: the form
+            # re-rendered with the address cleared and there was no route past it. That
+            # blocked two things at once. Someone whose inverter is simply offline could not
+            # finish setup at all; and because Home Assistant does not load a
+            # config-entry-only integration until an entry exists, the register scanner was
+            # unreachable too - so an owner of an unsupported model could not produce the
+            # scan that would get their model supported (#389).
+            #
+            # Straight to manual profile selection. That is also the safest route: it reads
+            # nothing, so it cannot trip the SPF power-reset behaviour that async_step_
+            # offgrid_check exists to avoid.
+            if user_input.get(CONF_ADD_ANYWAY):
+                _LOGGER.warning(
+                    "Adding %s:%s without a successful connection test, at the user's "
+                    "request. Entities will be unavailable until the inverter answers.",
+                    user_input.get(CONF_HOST), user_input.get(CONF_PORT),
+                )
+                self._discovered_data.update({
+                    CONF_HOST: user_input[CONF_HOST],
+                    CONF_PORT: user_input[CONF_PORT],
+                    CONF_SLAVE_ID: user_input[CONF_SLAVE_ID],
+                })
+                self._unreachable_at_setup = True
+                return await self.async_step_manual()
+
             try:
                 # Test basic connection first
                 _LOGGER.info(f"Testing TCP connection to {user_input[CONF_HOST]}:{user_input[CONF_PORT]}")
@@ -270,16 +301,24 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                 _LOGGER.exception("Unexpected error during TCP setup")
                 errors["base"] = "unknown"
 
-        # Build the TCP form schema
-        schema = vol.Schema({
-            vol.Required(CONF_HOST): str,
-            vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
-            vol.Required(CONF_SLAVE_ID, default=DEFAULT_SLAVE_ID): int,
-        })
+        # Keep what they typed. Clearing the address on failure meant re-entering it for
+        # every attempt, which is how a wrong port turns into an evening (#389).
+        prior = user_input or {}
+        fields = {
+            vol.Required(CONF_HOST, default=prior.get(CONF_HOST, vol.UNDEFINED)): str,
+            vol.Required(CONF_PORT, default=prior.get(CONF_PORT, DEFAULT_PORT)): int,
+            vol.Required(CONF_SLAVE_ID, default=prior.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID)): int,
+        }
+
+        # Only offered once a connection has actually failed. Showing it up front would
+        # invite skipping a check that catches real mistakes - a typo, the wrong port, an
+        # adapter that is not powered.
+        if errors:
+            fields[vol.Optional(CONF_ADD_ANYWAY, default=False)] = bool
 
         return self.async_show_form(
             step_id="tcp",
-            data_schema=schema,
+            data_schema=vol.Schema(fields),
             errors=errors,
             description_placeholders={
                 "info": "Enter TCP connection details for your RS485-to-TCP adapter (EW11, USR-W630, etc.)"
