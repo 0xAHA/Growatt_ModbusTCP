@@ -9,6 +9,16 @@
 Staged for the next release. **Not yet published** - v1.9.8 is the current stable and
 v1.10.0-b3 the current beta.
 
+- **A counter stepping backwards no longer registers as a meter reset.** Occasionally an
+  inverter recomputes a total and rounds it down by a single count - one reporter caught
+  `load_energy_today` going 9.3 to 9.2 kWh and `load_energy_total` doing the same in the
+  same poll, confirmed at the register itself rather than anywhere on our side. Home
+  Assistant reads any decrease on this kind of sensor as a meter reset, which distorts your
+  energy dashboard permanently. Such a step is now held at the previous value until the
+  counter moves forward again. A genuine reset, which goes to zero or drops a long way, is
+  still passed through. Reported by @Vict20. (#417)
+- **SPH-HU: per-leg CT sensors.** On a US split-phase service, Grid Import and Grid Export
+  are now also available for each leg separately. Contributed by @risco21-dot. (#418)
 - **MOD-XH: Grid Power no longer reports the inverter's own AC output as grid export.** A
   regression introduced in v1.9.3. On MOD 6-15kW TL3-XH and TL3-HU inverters, register 31101
   is the inverter's AC output, but it was offered to the integration as a source of grid

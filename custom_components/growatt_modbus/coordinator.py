@@ -49,6 +49,12 @@ _LOGGER = logging.getLogger(__name__)
 # The effective value scales with the configured interval; see _check_for_cloud_overrides.
 _WRITE_CHECK_EXPIRY_S = 240
 
+# How far a daily or lifetime counter may step backwards before we stop absorbing it.
+# The observed case is a single count - 0.1 kWh - from the inverter rounding its own
+# total down. This allows a few of those while leaving a genuine reset, which goes to
+# zero or drops far, to be handled as the real event it is (#417).
+_BACKWARD_STEP_TOLERANCE_KWH = 0.5
+
 def test_connection(config: dict) -> dict:
     """Test the connection to the Growatt inverter (TCP or Serial)."""
     try:
@@ -216,6 +222,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # counter the inverter is slow to clear — and a guard working as designed should
         # not file an error-log line a minute for hours (#412, same reasoning as #384).
         self._spike_warned: set[str] = set()
+
+        # Attributes already warned about for a backwards step. The inverter can do
+        # this on any poll, and one line per counter per session is enough (#417).
+        self._backward_step_warned: set[str] = set()
 
         # Cloud override detection: tracks recently written register values
         # Format: {register_address: (expected_value, write_timestamp, control_name, mismatch_count)}
@@ -777,6 +787,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # A new day may hit the spike guard for new reasons, and one line per day is worth
         # having. Without this the first session-warning is the only one ever logged (#412).
         self._spike_warned = set()
+        self._backward_step_warned = set()
 
         # Open a grace window so _protect_energy_totals() can suppress the stale
         # pre-reset values the inverter reports before it clears its own daily counters
@@ -1024,7 +1035,38 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         if _unread is not None:
                             _unread.add(attr)
                 else:
-                    if self._retained_daily_totals.get(attr) != value:
+                    # A counter that steps backwards by a hair is the inverter's own
+                    # arithmetic, and Home Assistant reads any decrease on a
+                    # total_increasing sensor as a meter reset.
+                    #
+                    # Confirmed at the register: load_energy_today read raw 92 against a
+                    # retained 9.3 kWh - one count down, 0.1 kWh - with load_energy_total
+                    # stepping identically in the same poll. Nothing wrong on the wire; the
+                    # inverter recomputed a total and rounded down (#417).
+                    #
+                    # Held at the previous value rather than published. The counter is
+                    # monotonic again within a poll or two, and the alternative is a
+                    # phantom reset that distorts the energy dashboard - which is a
+                    # permanent record, where a tenth of a kWh briefly held is not.
+                    #
+                    # Only a hair. A genuine reset drops to zero and is handled above; a
+                    # large drop is left alone, because that is a real event we should not
+                    # be inventing continuity across.
+                    if (
+                        retained is not None
+                        and value < retained
+                        and (retained - value) <= _BACKWARD_STEP_TOLERANCE_KWH
+                    ):
+                        if attr not in self._backward_step_warned:
+                            self._backward_step_warned.add(attr)
+                            _LOGGER.debug(
+                                "[ENERGY_GUARD] %s stepped back %.3f kWh (%.3f -> %.3f); "
+                                "holding the previous value so Home Assistant does not "
+                                "record a meter reset. Further occurrences not logged.",
+                                attr, retained - value, retained, value,
+                            )
+                        setattr(data, attr, retained)
+                    elif self._retained_daily_totals.get(attr) != value:
                         _LOGGER.debug(
                             "[ENERGY_GUARD] Accepted %s: %.3f kWh (was retained=%.3f kWh, delta=%.3f kWh)",
                             attr, value,
