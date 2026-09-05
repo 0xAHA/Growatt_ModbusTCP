@@ -162,7 +162,7 @@ SPH_3000_6000 = {
         #
         # battery_current had no register at all on these profiles before this, so the
         # entity published its default of 0.00 A permanently - the same shape as #395.
-        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (confirmed vs clamp meter, #397)'},
+        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (confirmed vs clamp meter on this model, #397)'},
         1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge energy today HIGH (Edischarge1_today)'},
         1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge energy total HIGH (Edischarge1_total)'},
@@ -485,7 +485,7 @@ SPH_7000_10000 = {
         #
         # battery_current had no register at all on these profiles before this, so the
         # entity published its default of 0.00 A permanently - the same shape as #395.
-        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (confirmed vs clamp meter, #397)'},
+        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (10 mA per ESS 0x0017; clamp-meter confirmation #397 was on a 3-6kW unit sharing this block)'},
         1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge energy today HIGH (Edischarge1_today)'},
         1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge energy total HIGH (Edischarge1_total)'},
@@ -791,7 +791,27 @@ SPH_8000_10000_HU = {
         #     #397 already corrects that at read time on any firmware that does so.
         # Neither has a device report behind it and no HU owner has measured either.
         1087: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery voltage from BMS (shadowed by 1013; scale unverified)'},
-        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'desc': 'Battery current from BMS (ESS Protocol 0x0017, 10 mA)', 'signed': True},
+        # NOT battery current on this family, whatever V1.39 says for the block generally.
+        #
+        # Measured on an SPH-10000-US, firmware UL2.21 (#420). A direct scan gave 1088=1400
+        # while the battery was doing 355 W at 53.0 V - 6.70 A - which no scale reconciles:
+        # 0.1 gives 140 A, 0.01 gives 14 A. In the same scan 1090 (the documented
+        # BMS_MaxCurr) read 0, and 1089 read 334 = 33.4 C, so the block is not shifted -
+        # 1088 is the documented address carrying something else on this firmware.
+        #
+        # A month of history settles what: over 53 samples it holds 140.0 exactly 22 times
+        # and 40.0 exactly 8 times, is flat near 140 below 94% SOC, tapers through the
+        # mid-90s and floors at 40 above 98%, and is **never negative** across a month in
+        # which the battery certainly discharged. A measurement does not repeat to a tenth
+        # of an amp thirty times in fifty-three samples; a setpoint does. At ~53 V that is
+        # a 7.4 kW envelope falling to 2.1 kW - a charge limit entering constant-voltage.
+        #
+        # Scoped to this profile. SPH_3000_6000 and SPH_TL3 have 1088 confirmed as real
+        # current against instruments (#397, #403), so the block is not wrong generally.
+        #
+        # No sensor is created for it yet - the name records what the register is so that
+        # battery_current cannot quietly return here.
+        1088: {'name': 'bms_charge_current_limit', 'scale': 0.1, 'unit': 'A', 'desc': 'BMS charge current limit, tapers with SOC (#420 - NOT live battery current on HU)'},
         1089: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Battery temperature from BMS (whole degrees per ESS; corrected at read time)', 'signed': True},
         1090: {'name': 'bms_max_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Max charge/discharge current from BMS'},
         1091: {'name': 'bms_gauge_rm', 'scale': 1, 'unit': '', 'desc': 'Gauge RM from BMS'},
@@ -908,7 +928,7 @@ SPH_3000_6000_V201 = {
         #
         # battery_current had no register at all on these profiles before this, so the
         # entity published its default of 0.00 A permanently - the same shape as #395.
-        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (confirmed vs clamp meter, #397)'},
+        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (confirmed vs clamp meter on this model, #397)'},
         1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge today (Edischarge1_today)'},
         1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge total (Edischarge1_total)'},
@@ -1081,7 +1101,7 @@ SPH_7000_10000_V201 = {
         #
         # battery_current had no register at all on these profiles before this, so the
         # entity published its default of 0.00 A permanently - the same shape as #395.
-        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (confirmed vs clamp meter, #397)'},
+        1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (10 mA per ESS 0x0017; clamp-meter confirmation #397 was on a 3-6kW unit sharing this block)'},
         1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge today (Edischarge1_today)'},
         1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge total (Edischarge1_total)'},

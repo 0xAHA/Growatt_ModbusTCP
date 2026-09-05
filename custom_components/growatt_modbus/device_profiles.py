@@ -639,7 +639,12 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 10.0,
-        "sensors": HYBRID_1P_SENSORS | PV3_SENSORS | BMS_SENSORS,
+        # battery_current is withheld: register 1088 carries a BMS charge-current limit on
+        # this family, not live current (#420). Removing the register mapping alone would
+        # not be enough - battery_current is a GrowattData field, so the sensor would be
+        # created anyway and publish its 0.0 default as a measurement (CLAUDE.md rule 6).
+        # The sensor set is the only hard filter.
+        "sensors": (HYBRID_1P_SENSORS | PV3_SENSORS | BMS_SENSORS) - {"battery_current"},
     },
 
     # SPH V2.01 VPP Protocol

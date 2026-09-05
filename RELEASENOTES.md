@@ -4,6 +4,26 @@
 
 ---
 
+## Unreleased
+
+Staged for the next release. **Not yet published** - v1.9.8 is the current stable and
+v1.10.0-b2 the current beta.
+
+- **SPH-HU: Battery Current is withheld rather than showing a charge limit.** On SPH
+  8000-10000 TL-HU, register 1088 does not carry live battery current - it carries the BMS
+  charge-current limit, which sits near 140 A and tapers to 40 A as the battery fills. The
+  Battery Current sensor on that profile was reporting it as a measurement.
+
+  **If you have an SPH-HU, that sensor will disappear.** It was never showing your battery's
+  current. Other SPH models are unaffected: 1088 is confirmed as real current on the 3-6 kW
+  and TL3 families, measured against a clamp meter and a known discharge.
+
+  Established by @risco21-dot on an SPH-10000-US: a direct scan reading 1400 while the
+  battery did 355 W at 53.0 V, and a month of history in which the value repeats 140.0
+  exactly 22 times, 40.0 exactly 8 times, and is never once negative. (#420)
+
+---
+
 ## v1.10.0-b2
 
 Issues: #419

@@ -119,16 +119,23 @@ def test_battery_current_uses_the_measured_scale(profile_name):
     )
 
 
-def test_every_sph_map_agrees_on_the_battery_current_scale():
+def test_the_maps_that_read_battery_current_agree_on_its_scale():
     """The ESS Protocol, which V1.39 names as the reference for the BMS block, documents
-    register 0x0017 in units of 10 mA - so 0.01 A. SPH_8000_10000_HU carried 0.1, which was
-    neither documented nor measured and most likely came by analogy from register 3170
-    (Ibat), which really is 0.1 A on a different range.
+    register 0x0017 in units of 10 mA - so 0.01 A. A single map drifting to 0.1 would give
+    one family readings ten times out, which is plausible enough not to be noticed (#397).
 
-    All five maps now agree. A single map drifting back would give one family readings ten
-    times out, which is plausible enough not to be noticed (#397)."""
-    for profile_name in BATTERY_CURRENT_PROFILES + ["SPH_8000_10000_HU"]:
+    **SPH_8000_10000_HU is deliberately excluded.** It used to be checked here, on the
+    reasoning that the documented scale must apply everywhere the block appears. Measurement
+    disproved that: on an SPH-10000-US the register is a BMS charge-current limit tapering
+    with state of charge, not current at any scale (#420). It is asserted separately in
+    tests/test_hu_battery_current_withheld.py.
+
+    Worth recording that @risco21-dot proposed exactly this narrowing in PR #418 before the
+    evidence was in, and was asked for measurements first. The measurements agreed with him.
+    """
+    for profile_name in BATTERY_CURRENT_PROFILES:
         registers = getattr(_sph, profile_name)["input_registers"]
+        assert registers[1088]["name"] == "battery_current"
         assert registers[1088]["scale"] == 0.01, (
             f"{profile_name} declares {registers[1088]['scale']} for battery current; "
             f"the ESS Protocol documents 10 mA"
