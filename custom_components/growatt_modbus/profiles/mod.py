@@ -358,16 +358,29 @@ MOD_6000_15000TL3_XH = {
         # Per VPP 2.01 protocol spec (same layout as MID — confirmed on MID via #245 scan):
 
         # Active power (INT32 signed, 0.1W) — spec item 45
-        # Positive = export to grid, Negative = import from grid.
-        # Register 3043/3044 (power_to_grid_high/low) returns 0 on some firmware when the VPP
-        # range is active; 31100/31101 carries the authoritative signed active power value.
-        # maps_to power_to_grid_low so coordinator sees grid export (positive=export).
+        #
+        # This is the inverter's own AC output. It is NOT net grid exchange, and it must not
+        # be mapped to power_to_grid_low.
+        #
+        # It used to be, on the reasoning that "hybrid firmware subtracts battery and load,
+        # so Active Power IS the correct source for grid export". Two devices disproved that:
+        #
+        #   MOD 10KTL3-HU  PV 2557.2, charging 1796, load 780.2 -> grid ~0
+        #                  31101 read 702.7 and was published as 702.7 W of export
+        #   MOD TL3-XH     PV 1635.9, discharging 2004, load 3647.8 -> grid ~0
+        #                  31101 read 3574 and was published as 3574 W of export
+        #
+        # In both cases 31101 tracks PV minus battery minus losses - the AC output - while
+        # the house was self-consuming and nothing was flowing to the grid (#415).
+        #
+        # The MID grid-tied map corrected the same mistake in v0.8.6 and documented why;
+        # this map kept the old mapping. Grid flow on this family comes from 3041-3044, and
+        # from 31112/31113 where a meter feeds them.
         31100: {'name': 'ac_active_power_high', 'scale': 1, 'unit': '', 'pair': 31101,
-                'desc': 'Active power HIGH (INT32 signed, positive=export)'},
+                'desc': 'Active power HIGH (INT32 signed) — inverter AC output, not grid'},
         31101: {'name': 'ac_active_power_low', 'scale': 1, 'unit': '', 'pair': 31100,
                 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True,
-                'maps_to': 'power_to_grid_low',
-                'desc': 'Active power LOW — maps_to power_to_grid (positive=export per VPP 2.01 item 45)'},
+                'desc': 'Active power LOW (VPP 2.03 item 45) — inverter AC output, NOT grid export (#415)'},
 
         # Meter power (INT32 signed, 0.1W) — spec item 55
         # NOTE: sign convention OPPOSITE to active power — positive = IMPORT from grid.

@@ -4,6 +4,24 @@
 
 ---
 
+## Unreleased
+
+Staged for the next release. **Not yet published** - v1.9.8 is the current stable and
+v1.10.0-b3 the current beta.
+
+- **MOD-XH: Grid Power no longer reports the inverter's own AC output as grid export.** A
+  regression introduced in v1.9.3. On MOD 6-15kW TL3-XH and TL3-HU inverters, register 31101
+  is the inverter's AC output, but it was offered to the integration as a source of grid
+  export - so whenever your real grid registers read zero, which is what "nothing flowing to
+  the grid" looks like, the AC output was published as export instead.
+
+  **If you upgraded from v1.8.14 and your Grid Power started showing export while you were
+  self-consuming, this was why.** One reporter's diagnostics show 0.0 W on v1.8.14 and
+  702.7 W on v1.9.4 from the same inverter, while it was charging a battery and running the
+  house on solar. Reported by @pduarte-aldape and @ciccio1337. (#415)
+
+---
+
 ## v1.10.0-b3
 
 Issues: #389 #420
