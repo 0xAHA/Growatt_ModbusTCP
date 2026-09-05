@@ -4,10 +4,9 @@
 
 ---
 
-## Unreleased
+## v1.10.0-b4
 
-Staged for the next release. **Not yet published** - v1.9.8 is the current stable and
-v1.10.0-b3 the current beta.
+Issues: #389 #415 #417 #418 #420
 
 - **A counter stepping backwards no longer registers as a meter reset.** Occasionally an
   inverter recomputes a total and rounds it down by a single count - one reporter caught
