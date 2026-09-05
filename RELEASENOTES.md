@@ -4,6 +4,19 @@
 
 ---
 
+## v1.10.0-b2
+
+Issues: #419
+
+- **SPH-10000-US inverters are now detected automatically.** Device type code **21100** was
+  not in the registry, so these reported as Unknown and needed the profile picking by hand.
+  It maps to the same `sph_8000_10000_hu` profile as its already-known sibling 21303.
+  Confirmed from a register scan on an SPH-10000-US running firmware UL2.21, contributed by
+  @risco21-dot on #418. Existing installs are unaffected - this only helps new setups and
+  anyone re-running detection.
+
+---
+
 ## v1.10.0-b1
 
 Issues: #419

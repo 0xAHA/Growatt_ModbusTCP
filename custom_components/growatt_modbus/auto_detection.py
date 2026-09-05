@@ -489,6 +489,10 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
         'SPH-TL3 4-10kW', 'sph_tl3_3000_10000_v201',
         CONFIRMED, 'SPH 10000TL3 BH-UP, issue #210 — sensors confirmed working',
     ),
+    21100: DtcEntry(
+        'SPH/SPM 8000-10000TL-HU (US)', 'sph_8000_10000_hu',
+        CONFIRMED, 'SPH-10000-US UL2.21 register scan, PR #418 - reported as Unknown before this',
+    ),
     21303: DtcEntry(
         'SPH/SPM 8000-10000TL-HU', 'sph_8000_10000_hu',
         CONFIRMED, 'register scan #303, firmware UL2.21',
