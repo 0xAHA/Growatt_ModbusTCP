@@ -675,11 +675,17 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 await coordinator.async_request_refresh()
             else:
                 _LOGGER.warning("Write to register %d was rate-limited", register)
-                raise ValueError(f"Write to register {register} was rate-limited (WIT cooldown)")
+                # HomeAssistantError, not ValueError: a caller that retries after
+                # the cooldown needs to read this message, and only a
+                # HomeAssistantError survives HA's service boundary (a plain
+                # exception becomes a 500 with a generic body over the REST API).
+                raise HomeAssistantError(
+                    f"Write to register {register} was rate-limited (WIT cooldown)"
+                )
 
         except ModbusWriteError as e:
             _LOGGER.error("Modbus write error: %s", e.error_message)
-            raise ValueError(f"Modbus write failed: {e.error_message}")
+            raise HomeAssistantError(f"Modbus write failed: {e.error_message}") from e
 
     async def write_registers(call: ServiceCall) -> None:
         """Write multiple consecutive Modbus holding registers (function 0x10)."""
@@ -743,7 +749,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         except ModbusWriteError as e:
             _LOGGER.error("Modbus write error: %s", e.error_message)
-            raise ValueError(f"Modbus write failed: {e.error_message}")
+            raise HomeAssistantError(f"Modbus write failed: {e.error_message}") from e
 
     async def sync_inverter_time(call: ServiceCall) -> dict:
         """Set the inverter's clock from Home Assistant's local time (#393).
@@ -1314,7 +1320,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                         [period_start, period_end, 1]
                     )
                     if not success:
-                        raise ValueError(
+                        raise HomeAssistantError(
                             f"Failed to write TOU period {index + 1} for HOLD mode"
                         )
 
@@ -1322,7 +1328,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     client.write_register, VPP_TOU_NUM_PERIODS, len(periods)
                 )
                 if not success:
-                    raise ValueError("Failed to enable TOU period")
+                    raise HomeAssistantError("Failed to enable TOU period")
 
             elif mode == "charge":
                 await hass.async_add_executor_job(client.write_register, VPP_TOU_NUM_PERIODS, 0)
@@ -1333,30 +1339,34 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
                 success = await hass.async_add_executor_job(client.write_register, VPP_REMOTE_POWER_ENABLE, 1)
                 if not success:
-                    raise ValueError("Failed to enable remote power control")
+                    raise HomeAssistantError("Failed to enable remote power control")
 
                 success = await hass.async_add_executor_job(client.write_register, VPP_REMOTE_POWER_PERCENT, power_percent)
                 if not success:
-                    raise ValueError("Failed to set charge power percentage")
+                    raise HomeAssistantError("Failed to set charge power percentage")
 
             elif mode == "discharge":
                 await hass.async_add_executor_job(client.write_register, VPP_TOU_NUM_PERIODS, 0)
 
                 success = await hass.async_add_executor_job(client.write_register, VPP_REMOTE_POWER_ENABLE, 1)
                 if not success:
-                    raise ValueError("Failed to enable remote power control")
+                    raise HomeAssistantError("Failed to enable remote power control")
 
                 power_value = 65536 - power_percent  # -100 becomes 65436
                 success = await hass.async_add_executor_job(client.write_register, VPP_REMOTE_POWER_PERCENT, power_value)
                 if not success:
-                    raise ValueError("Failed to set discharge power percentage")
+                    raise HomeAssistantError("Failed to set discharge power percentage")
 
             _LOGGER.info("Successfully set battery mode to %s at %d%%", mode.upper(), power_percent)
             await coordinator.async_request_refresh()
 
+        except HomeAssistantError:
+            # Already carries the reason the write failed; re-wrapping would
+            # bury it inside a second message.
+            raise
         except Exception as e:
             _LOGGER.error("Failed to set battery mode: %s", e)
-            raise ValueError(f"Failed to set battery mode: {e}")
+            raise HomeAssistantError(f"Failed to set battery mode: {e}") from e
 
     async def get_register_data(call: ServiceCall):
         """Read specific Modbus registers and return values programmatically."""
@@ -1505,19 +1515,21 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     client.write_registers, base_addr, [start, end, power_unsigned]
                 )
                 if not success:
-                    raise ValueError(f"Failed to write TOU period {i + 1}")
+                    raise HomeAssistantError(f"Failed to write TOU period {i + 1}")
 
             # Step 4: Set number of active periods (activates the schedule)
             success = await hass.async_add_executor_job(client.write_register, VPP_TOU_NUM_PERIODS, len(periods))
             if not success:
-                raise ValueError("Failed to set number of TOU periods")
+                raise HomeAssistantError("Failed to set number of TOU periods")
 
             _LOGGER.info("Successfully synced %d TOU periods to inverter", len(periods))
             await coordinator.async_request_refresh()
 
+        except HomeAssistantError:
+            raise
         except Exception as e:
             _LOGGER.error("Failed to sync TOU schedule: %s", e)
-            raise ValueError(f"Failed to sync TOU schedule: {e}")
+            raise HomeAssistantError(f"Failed to sync TOU schedule: {e}") from e
 
     # Register services
     hass.services.async_register(
