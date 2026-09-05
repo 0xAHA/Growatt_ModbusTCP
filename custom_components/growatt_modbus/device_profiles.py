@@ -38,6 +38,12 @@ POWER_FLOW_SENSORS: Set[str] = {
     "power_to_grid", "power_to_load", "power_to_user",
 }
 
+SPH_HU_CT_SENSORS: Set[str] = {
+    "ct_grid_import_l1", "ct_grid_import_l2",
+    "ct_grid_export_l1", "ct_grid_export_l2",
+    "inverter_to_load_l1", "inverter_to_load_l2",
+}
+
 CONSUMPTION_SENSORS: Set[str] = {
     "self_consumption", "self_consumption_percentage", "house_consumption",
 }
@@ -644,7 +650,7 @@ INVERTER_PROFILES = {
         # not be enough - battery_current is a GrowattData field, so the sensor would be
         # created anyway and publish its 0.0 default as a measurement (CLAUDE.md rule 6).
         # The sensor set is the only hard filter.
-        "sensors": (HYBRID_1P_SENSORS | PV3_SENSORS | BMS_SENSORS) - {"battery_current"},
+        "sensors": (HYBRID_1P_SENSORS | PV3_SENSORS | BMS_SENSORS | SPH_HU_CT_SENSORS) - {"battery_current"},
     },
 
     # SPH V2.01 VPP Protocol

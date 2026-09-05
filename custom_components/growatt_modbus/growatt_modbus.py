@@ -199,6 +199,13 @@ class GrowattData:
     power_to_user: float = 0.0        # W
     power_to_grid: float = 0.0        # W (export)
     power_to_load: float = 0.0        # W
+    # SPH-HU US split-phase CT / local-load legs (#418). R maps to L1, S maps to L2.
+    ct_grid_import_l1: float = 0.0    # W
+    ct_grid_import_l2: float = 0.0    # W
+    ct_grid_export_l1: float = 0.0    # W
+    ct_grid_export_l2: float = 0.0    # W
+    inverter_to_load_l1: float = 0.0  # W
+    inverter_to_load_l2: float = 0.0  # W
     system_output_power: float = 0.0  # W (total system output per inverter)
     
     # Energy & Status
@@ -2699,6 +2706,17 @@ class GrowattModbus:
                 self._resolve_phase_total(data, _flow_attr, _flow_name, _phase_names)
             if power_to_load_addr:
                 self._set_from_register(data, 'power_to_load', power_to_load_addr)
+
+            # SPH-HU split-phase CT/local-load legs. These names exist only on the HU
+            # profile, so this loop is a no-op for every other inverter family.
+            for _leg_attr in (
+                'ct_grid_import_l1', 'ct_grid_import_l2',
+                'ct_grid_export_l1', 'ct_grid_export_l2',
+                'inverter_to_load_l1', 'inverter_to_load_l2',
+            ):
+                _leg_addr = self._find_register_by_name(f'{_leg_attr}_low')
+                if _leg_addr is not None:
+                    self._set_from_register(data, _leg_attr, _leg_addr)
             
             # Energy Today
             # For hybrid inverters (WIT/SPH-TL3 etc.), the AC energy_today register (e.g. reg 53/54)

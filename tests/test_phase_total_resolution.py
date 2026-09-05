@@ -118,8 +118,14 @@ def test_the_r_phase_is_still_mapped_but_named_as_a_phase(profile):
     register that is known to populate."""
     registers = PROFILES[profile]["input_registers"]
 
-    assert registers[1015]["name"] == "power_to_user_r_high"
-    assert registers[1016]["name"] == "power_to_user_r_low"
+    if profile == "SPH_8000_10000_HU":
+        assert registers[1015]["name"] == "ct_grid_import_l1_high"
+        assert registers[1015]["alias"] == "power_to_user_r_high"
+        assert registers[1016]["name"] == "ct_grid_import_l1_low"
+        assert registers[1016]["alias"] == "power_to_user_r_low"
+    else:
+        assert registers[1015]["name"] == "power_to_user_r_high"
+        assert registers[1016]["name"] == "power_to_user_r_low"
 
 
 @pytest.mark.parametrize("profile", SPH_PROFILES)
@@ -128,11 +134,20 @@ def test_all_three_phases_are_mapped(profile):
     the per-phase registers would fall back to R alone - the original bug."""
     registers = PROFILES[profile]["input_registers"]
 
-    for addr, name in (
+    expected = [
         (1017, "power_to_user_s_high"), (1018, "power_to_user_s_low"),
         (1019, "power_to_user_t_high"), (1020, "power_to_user_t_low"),
-    ):
+    ]
+    if profile == "SPH_8000_10000_HU":
+        expected[0] = (1017, "ct_grid_import_l2_high")
+        expected[1] = (1018, "ct_grid_import_l2_low")
+
+    for addr, name in expected:
         assert registers[addr]["name"] == name, f"{profile} is missing {name}"
+
+    if profile == "SPH_8000_10000_HU":
+        assert registers[1017]["alias"] == "power_to_user_s_high"
+        assert registers[1018]["alias"] == "power_to_user_s_low"
 
 
 # --------------------------------------------------------------------------- behaviour
