@@ -125,6 +125,9 @@ SENSOR_TYPES = {
         'pv1_power', 'pv2_power', 'pv3_power', 'pv_total_power',
         'ac_power', 'grid_power', 'grid_export_power', 'grid_import_power',
         'power_to_grid', 'power_to_load', 'power_to_user',
+        'ct_grid_import_l1', 'ct_grid_import_l2',
+        'ct_grid_export_l1', 'ct_grid_export_l2',
+        'inverter_to_load_l1', 'inverter_to_load_l2',
         'self_consumption', 'house_consumption',
         # Battery power sensors
         'battery_power', 'battery_charge_power', 'battery_discharge_power',
@@ -983,6 +986,9 @@ SENSOR_DEVICE_MAP = {
         'grid_import_energy_today', 'grid_import_energy_total',
         'energy_to_grid_today', 'energy_to_grid_total',
         'power_to_grid',
+        # SPH-HU split-phase CT legs
+        'ct_grid_import_l1', 'ct_grid_import_l2',
+        'ct_grid_export_l1', 'ct_grid_export_l2',
         # SPF Off-Grid: AC input from grid/generator
         'grid_voltage', 'grid_frequency', 'ac_input_power',
         # SPF Off-Grid: Generator sensors
@@ -1000,6 +1006,7 @@ SENSOR_DEVICE_MAP = {
     # Load device - consumption
     DEVICE_TYPE_LOAD: {
         'house_consumption', 'power_to_load', 'power_to_user',
+        'inverter_to_load_l1', 'inverter_to_load_l2',
         'load_energy_today', 'load_energy_total',
         'energy_to_user_today', 'energy_to_user_total',
         'self_consumption',

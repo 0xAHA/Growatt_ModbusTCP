@@ -671,6 +671,24 @@
       },
       "inverter_clock": {
         "name": "Inverter Clock"
+      },
+      "ct_grid_import_l1": {
+        "name": "CT Grid Import L1"
+      },
+      "ct_grid_import_l2": {
+        "name": "CT Grid Import L2"
+      },
+      "ct_grid_export_l1": {
+        "name": "CT Grid Export L1"
+      },
+      "ct_grid_export_l2": {
+        "name": "CT Grid Export L2"
+      },
+      "inverter_to_load_l1": {
+        "name": "Inverter to Load L1"
+      },
+      "inverter_to_load_l2": {
+        "name": "Inverter to Load L2"
       }
     },
     "button": {

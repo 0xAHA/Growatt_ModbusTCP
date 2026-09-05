@@ -728,17 +728,32 @@ SPH_8000_10000_HU = {
         1012: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 1011, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         # Power Flow - Critical for grid import/export tracking
-        1015: {'name': 'power_to_user_r_high', 'scale': 1, 'unit': '', 'pair': 1016, 'desc': 'Power to user (grid import when positive)'},
-        1016: {'name': 'power_to_user_r_low', 'scale': 1, 'unit': '', 'pair': 1015, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        1017: {'name': 'power_to_user_s_high', 'scale': 1, 'unit': '', 'pair': 1018, 'desc': 'Grid import S phase HIGH (PactouserS)'},
-        1018: {'name': 'power_to_user_s_low', 'scale': 1, 'unit': '', 'pair': 1017, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        1019: {'name': 'power_to_user_t_high', 'scale': 1, 'unit': '', 'pair': 1020, 'desc': 'Grid import T phase HIGH (PactouserT)'},
+        #
+        # HU-US split-phase exposes useful per-leg readings in the R/S slots. Keep aliases
+        # to the generic V1.39 R/S names so the whole-service fallback added in #419 still
+        # resolves these registers while Home Assistant can expose stable L1/L2 entity IDs.
+        # Field capture on SPH-10000-US UL2.21: 1031/1032 = 116 W and 1033/1034 = 45 W,
+        # exactly matching the 161 W total at 1037/1038. Import R/S were also live in the
+        # same scan. Export leg addresses follow the same V1.39 R/S/T/Total layout.
+        1015: {'name': 'ct_grid_import_l1_high', 'alias': 'power_to_user_r_high', 'scale': 1, 'unit': '', 'pair': 1016, 'desc': 'L1 grid import HIGH (PactouserR)'},
+        1016: {'name': 'ct_grid_import_l1_low', 'alias': 'power_to_user_r_low', 'scale': 1, 'unit': '', 'pair': 1015, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1017: {'name': 'ct_grid_import_l2_high', 'alias': 'power_to_user_s_high', 'scale': 1, 'unit': '', 'pair': 1018, 'desc': 'L2 grid import HIGH (PactouserS)'},
+        1018: {'name': 'ct_grid_import_l2_low', 'alias': 'power_to_user_s_low', 'scale': 1, 'unit': '', 'pair': 1017, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1019: {'name': 'power_to_user_t_high', 'scale': 1, 'unit': '', 'pair': 1020, 'desc': 'Grid import T phase HIGH (PactouserT; unused on split phase)'},
         1020: {'name': 'power_to_user_t_low', 'scale': 1, 'unit': '', 'pair': 1019, 'combined_scale': 0.1, 'combined_unit': 'W'},
         # Same correction as the two profiles above — see #369 and the note there.
         1021: {'name': 'power_to_user_high', 'scale': 1, 'unit': '', 'pair': 1022, 'desc': 'AC power to user total H (PactouserTotal) — grid import'},
         1022: {'name': 'power_to_user_low', 'scale': 1, 'unit': '', 'pair': 1021, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1023: {'name': 'ct_grid_export_l1_high', 'alias': 'power_to_grid_r_high', 'scale': 1, 'unit': '', 'pair': 1024, 'desc': 'L1 grid export HIGH (PactogridR)'},
+        1024: {'name': 'ct_grid_export_l1_low', 'alias': 'power_to_grid_r_low', 'scale': 1, 'unit': '', 'pair': 1023, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1025: {'name': 'ct_grid_export_l2_high', 'alias': 'power_to_grid_s_high', 'scale': 1, 'unit': '', 'pair': 1026, 'desc': 'L2 grid export HIGH (PactogridS)'},
+        1026: {'name': 'ct_grid_export_l2_low', 'alias': 'power_to_grid_s_low', 'scale': 1, 'unit': '', 'pair': 1025, 'combined_scale': 0.1, 'combined_unit': 'W'},
         1029: {'name': 'power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 1030, 'desc': 'AC power to grid total H (Pactogrid total, positive=export)'},
         1030: {'name': 'power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 1029, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
+        1031: {'name': 'inverter_to_load_l1_high', 'alias': 'power_to_load_r_high', 'scale': 1, 'unit': '', 'pair': 1032, 'desc': 'L1 inverter-to-load HIGH (PLocalLoadR)'},
+        1032: {'name': 'inverter_to_load_l1_low', 'alias': 'power_to_load_r_low', 'scale': 1, 'unit': '', 'pair': 1031, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        1033: {'name': 'inverter_to_load_l2_high', 'alias': 'power_to_load_s_high', 'scale': 1, 'unit': '', 'pair': 1034, 'desc': 'L2 inverter-to-load HIGH (PLocalLoadS)'},
+        1034: {'name': 'inverter_to_load_l2_low', 'alias': 'power_to_load_s_low', 'scale': 1, 'unit': '', 'pair': 1033, 'combined_scale': 0.1, 'combined_unit': 'W'},
         1037: {'name': 'power_to_load_high', 'scale': 1, 'unit': '', 'pair': 1038, 'desc': 'INV power to local load total H (PLocalLoad total) — house load'},
         1038: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1037, 'combined_scale': 0.1, 'combined_unit': 'W'},
         1039: {'name': 'self_consumption_percentage', 'scale': 1, 'unit': '%'},
