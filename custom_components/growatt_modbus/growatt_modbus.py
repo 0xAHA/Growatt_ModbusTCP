@@ -60,6 +60,35 @@ except ImportError:
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# --- Optional-register backoff --------------------------------------------------------
+# The optional VPP holding blocks (30100, 30200-30201, 30407-30410) are skipped for a
+# while after they fail, so firmware that genuinely does not implement them is not asked
+# every poll. #370 made that skip time-limited; these two constants make it also require
+# more than one failure, because a single Modbus timeout on a healthy inverter is a
+# routine transient event and not evidence about the register.
+#
+# The window is spelled out rather than derived from _OPTIONAL_RANGE_RETRY_SECONDS
+# because tests/test_vpp_holding_retry.py asserts the two numbers are literally the same.
+_VPP_HOLDING_RETRY_S = 300
+_VPP_HOLDING_FAIL_THRESHOLD = 3
+
+# Why an optional read came back empty. The two cases need opposite treatment when the
+# connection is re-established:
+#
+#   ERROR_KIND_LINK        the transport raised (broken pipe, connection reset, no client
+#                          at all). Says nothing about the register, and a fresh socket
+#                          makes it worth retrying at once.
+#   ERROR_KIND_NO_RESPONSE the request went out on a working socket and came back as an
+#                          error response, a short frame or nothing. That is evidence
+#                          about the register itself, and re-arming it on every reconnect
+#                          costs a full timeout per poll, so it must survive one.
+#
+# This is the limitation #370 recorded honestly and left open: "a transport error and a
+# genuine illegal data address are still conflated here, because read_holding_registers
+# returns None for both".
+ERROR_KIND_LINK = "link"
+ERROR_KIND_NO_RESPONSE = "no-response"
+
 
 # =============================================================================
 # Custom Exceptions for better error reporting
@@ -327,6 +356,7 @@ class GrowattData:
     vpp_export_limit_power_rate: int = 0      # -100 to +100% (positive=export, 0=zero export)
     vpp_export_limit_available: bool = False  # True if inverter actually responded to registers 30200-30201
     vpp_control_authority_available: bool = False  # True if inverter actually responded to register 30100
+    vpp_remote_power_available: bool = False  # True if inverter actually responded to registers 30407-30410
 
     # MOD TL3-XH TOU periods (FC04 holding registers 3038-3045, raw packed values)
     # Start reg: bit15=enable, bit13-14=priority(0=Load,1=Batt,2=Grid), bit8-12=hour, bit0-7=min
@@ -483,6 +513,13 @@ class SharedModbusConnection:
         self._lock = threading.RLock()
         self._refcount = 0
         self._connected = False
+        # Incremented every time a *new* socket is established. Consumers use it to drop
+        # state derived from the previous session — see
+        # GrowattModbus._sync_optional_blacklists_with_connection().
+        self.connection_generation = 0
+        # Why the most recent read on this hub failed: ERROR_KIND_LINK /
+        # ERROR_KIND_NO_RESPONSE, or None after a successful read.
+        self.last_error_kind: Optional[str] = None
         # Per-poll budget for transport-error recoveries (Issue #364). A block-level
         # reset+retry (see read_input_registers/read_holding_registers) is cheap for the
         # one-off silent connection loss it's meant to catch, but on a gateway that is
@@ -594,6 +631,7 @@ class SharedModbusConnection:
         result = self._client.connect()
         if result:
             self._connected = True
+            self.connection_generation += 1
             self._flush_receive_buffer()
         elif self.is_serial:
             # pyserial logs "[Errno 11] Could not exclusively lock port ..." and pymodbus
@@ -742,6 +780,8 @@ class SharedModbusConnection:
 
     def read_input_registers(self, start: int, count: int, slave_id: int) -> Optional[list]:
         if self._client is None:
+            # No socket at all is a link problem, not evidence about the register.
+            self.last_error_kind = ERROR_KIND_LINK
             return None
         # Issue #364: a block read can fail two structurally different ways.
         #
@@ -765,6 +805,7 @@ class SharedModbusConnection:
                         except TypeError:
                             resp = self._client.read_input_registers(start, count)
             except Exception as exc:
+                self.last_error_kind = ERROR_KIND_LINK
                 if attempt == 0 and self._begin_recovery():
                     logger.debug(
                         "[SharedConn %s] read_input_registers(%d, %d) transport error "
@@ -778,11 +819,17 @@ class SharedModbusConnection:
                              self.connection_id, start, count, slave_id, exc)
                 return None
 
-            return self._validate_registers(resp, start, count)
+            registers = self._validate_registers(resp, start, count)
+            # The request went out on a working socket, so an error response or a short
+            # frame is evidence about the register itself and must survive a reconnect.
+            self.last_error_kind = None if registers is not None else ERROR_KIND_NO_RESPONSE
+            return registers
         return None
 
     def read_holding_registers(self, start: int, count: int, slave_id: int) -> Optional[list]:
         if self._client is None:
+            # No socket at all is a link problem, not evidence about the register.
+            self.last_error_kind = ERROR_KIND_LINK
             return None
         # Same transport-vs-protocol distinction as read_input_registers() above.
         for attempt in (0, 1):
@@ -795,6 +842,7 @@ class SharedModbusConnection:
                     except TypeError:
                         resp = self._client.read_holding_registers(address=start, count=count)
             except Exception as exc:
+                self.last_error_kind = ERROR_KIND_LINK
                 if attempt == 0 and self._begin_recovery():
                     logger.debug(
                         "[SharedConn %s] read_holding_registers(%d, %d) transport error "
@@ -808,7 +856,11 @@ class SharedModbusConnection:
                              self.connection_id, start, count, slave_id, exc)
                 return None
 
-            return self._validate_registers(resp, start, count)
+            registers = self._validate_registers(resp, start, count)
+            # The request went out on a working socket, so an error response or a short
+            # frame is evidence about the register itself and must survive a reconnect.
+            self.last_error_kind = None if registers is not None else ERROR_KIND_NO_RESPONSE
+            return registers
         return None
 
     # Writes reset and retry once on a transport error, exactly as the reads above do
@@ -1009,11 +1061,28 @@ class GrowattModbus:
         # Entries expire after _OPTIONAL_RANGE_RETRY_SECONDS and are retried.
         self._failed_optional_ranges: dict = {}
 
-        # Anchor address -> timestamp of its last failure, for the optional VPP holding
-        # blocks (30100, 30200, 30407). Skipped while inside the retry window, then tried
-        # again — see the read path for why this is a dict rather than the set it was
-        # until #370, and what a permanent skip cost the user who found it.
+        # Anchor address -> (last_fail_time, consecutive_fail_count) for the optional VPP
+        # holding blocks (30100, 30200, 30407). Skipped only after
+        # _VPP_HOLDING_FAIL_THRESHOLD consecutive failures, and even then only until the
+        # retry window expires — see the read path for what a permanent skip cost the user
+        # who found it in #370, and why one failure is not enough to act on.
         self._failed_optional_holding_addrs: dict = {}
+
+        # Generation of the shared connection the two records above were built against.
+        # A reconnect invalidates the failures that were caused by the connection itself.
+        self._optional_blacklist_conn_generation: int = (
+            getattr(shared_conn, 'connection_generation', 0) if shared_conn is not None else 0
+        )
+
+        # Why each backed-off optional read last failed, so a reconnect can re-arm the ones
+        # that were only ever a symptom of a dead socket while leaving the ones the inverter
+        # genuinely does not answer backed off. Keys are ('range', range_key) and
+        # ('holding', anchor); values are ERROR_KIND_LINK / ERROR_KIND_NO_RESPONSE.
+        self._optional_failure_kinds: dict = {}
+
+        # Classification of the most recent read, set by the read methods below and
+        # consumed by _note_optional_failure_kind().
+        self._last_read_error_kind: Optional[str] = None
 
         # Last successfully read battery SOC — used to hold value if VPP range is
         # temporarily unavailable rather than reporting a misleading 0%.
@@ -1232,6 +1301,106 @@ class GrowattModbus:
                     logger.error(f"[{self.register_map['name']}@{self.connection_id}] CRITICAL: File descriptor leak detected!")
                     raise
     
+    # ------------------------------------------------------------------
+    # Optional-register backoff bookkeeping
+    # ------------------------------------------------------------------
+
+    def _optional_holding_blocked(self, anchor: int) -> bool:
+        """Whether an optional holding block should be skipped on this poll."""
+        entry = self._failed_optional_holding_addrs.get(anchor)
+        if not entry:
+            return False
+        last_fail, fail_count = entry
+        if fail_count < _VPP_HOLDING_FAIL_THRESHOLD:
+            # Not enough consecutive failures yet. A transient error must not take a
+            # control block out of service, which is what a threshold of one did.
+            return False
+        if time.time() - last_fail >= _VPP_HOLDING_RETRY_S:
+            # Retry window expired. The entry is deliberately kept so the count keeps
+            # growing (and the log line stays suppressed) if the re-read fails again; a
+            # successful read clears it.
+            return False
+        return True
+
+    def _record_optional_holding_failure(self, anchor: int, label: str) -> None:
+        """Count a failed optional holding-block read and log the transition once."""
+        previous = self._failed_optional_holding_addrs.get(anchor)
+        fail_count = (previous[1] + 1) if previous else 1
+        self._failed_optional_holding_addrs[anchor] = (time.time(), fail_count)
+        self._note_optional_failure_kind(('holding', anchor))
+        if fail_count == _VPP_HOLDING_FAIL_THRESHOLD:
+            logger.debug(
+                "[VPP] %s failed %d consecutive polls — skipping for %ds, then retrying. "
+                "If this repeats indefinitely the firmware likely does not implement it.",
+                label, fail_count, _VPP_HOLDING_RETRY_S,
+            )
+        else:
+            logger.debug("[VPP] %s read failed (attempt %d)", label, fail_count)
+
+    def _note_optional_failure_kind(self, key) -> None:
+        """Remember why an optional read last failed (see clear_optional_blacklists)."""
+        kind = self._last_read_error_kind
+        if kind is None and self._shared_conn is not None:
+            kind = getattr(self._shared_conn, 'last_error_kind', None)
+        self._optional_failure_kinds[key] = kind or ERROR_KIND_LINK
+
+    def clear_optional_blacklists(self, reason: str = "", link_failures_only: bool = True) -> None:
+        """Re-arm optional reads that were only backed off because the link was down.
+
+        A read that failed because the transport raised (ERROR_KIND_LINK) says nothing
+        about the register, so a fresh socket must retry it. A read that failed with
+        ERROR_KIND_NO_RESPONSE went out on a working socket and was not answered;
+        re-arming that on every reconnect is how a poll ends up paying a full timeout per
+        unanswered register again and again, so those entries survive and keep counting
+        down their retry window.
+
+        ``link_failures_only=False`` clears everything.
+        """
+        def _keep(key) -> bool:
+            if not link_failures_only:
+                return False
+            # An unknown kind is treated as a link failure: that is the conservative
+            # direction, since a transient error must never take a control block out of
+            # service for the life of the process.
+            return self._optional_failure_kinds.get(key) == ERROR_KIND_NO_RESPONSE
+
+        dropped_ranges = [k for k in self._failed_optional_ranges if not _keep(('range', k))]
+        dropped_holdings = [
+            a for a in self._failed_optional_holding_addrs if not _keep(('holding', a))
+        ]
+        if not dropped_ranges and not dropped_holdings:
+            return
+        logger.info(
+            "[%s@%s] Clearing optional-register backoff (%d range(s), %d holding block(s))%s",
+            self.register_map['name'], self.connection_id,
+            len(dropped_ranges), len(dropped_holdings),
+            f": {reason}" if reason else "",
+        )
+        for key in dropped_ranges:
+            self._failed_optional_ranges.pop(key, None)
+            self._optional_failure_kinds.pop(('range', key), None)
+        for anchor in dropped_holdings:
+            self._failed_optional_holding_addrs.pop(anchor, None)
+            self._optional_failure_kinds.pop(('holding', anchor), None)
+
+    def _sync_optional_blacklists_with_connection(self) -> None:
+        """Drop backoff state built against a connection that has since been replaced.
+
+        The shared hub owns the socket and can reconnect underneath us (#354, #364). Its
+        connection_generation changes on every fresh connect, which is the signal that the
+        previous session's failures no longer say anything.
+
+        Only the shared path is handled here. The non-shared path reconnects on *every*
+        poll by design, so clearing there would disable the backoff entirely; that path
+        relies on the failure threshold and the retry window instead.
+        """
+        if self._shared_conn is None:
+            return
+        generation = getattr(self._shared_conn, 'connection_generation', 0)
+        if generation != self._optional_blacklist_conn_generation:
+            self._optional_blacklist_conn_generation = generation
+            self.clear_optional_blacklists("connection re-established")
+
     def _track_read_success(self):
         """Track successful read and restore fast polling if we had backed off"""
         if self._consecutive_read_failures > 0:
@@ -1286,9 +1455,14 @@ class GrowattModbus:
             log_errors: If False, downgrade Modbus errors to DEBUG (for optional ranges expected to fail on some models)
         """
         self._enforce_read_interval()
+        self._last_read_error_kind = None
 
         if self._shared_conn is not None:
             registers = self._shared_conn.read_input_registers(start_address, count, self.slave_id)
+            # The hub classifies *why* the read came back empty; the optional-register
+            # backoff needs that to tell a dead socket from a register the inverter does
+            # not answer (see _note_optional_failure_kind).
+            self._last_read_error_kind = self._shared_conn.last_error_kind
             # This used to return directly, bypassing the failure counters below — so
             # _consecutive_read_failures never moved for any TCP entry and the adaptive
             # backoff could not engage for them at all (#367).
@@ -1335,12 +1509,14 @@ class GrowattModbus:
                 if response.isError():
                     _log = logger.warning if log_errors else logger.debug
                     _log(f"Modbus error reading input registers {start_address}-{start_address+count-1}: {response}")
+                    self._last_read_error_kind = ERROR_KIND_NO_RESPONSE
                     self._track_read_failure()
                     return None
             elif hasattr(response, 'is_error') and callable(response.is_error):
                 if response.is_error():
                     _log = logger.warning if log_errors else logger.debug
                     _log(f"Modbus error reading input registers {start_address}-{start_address+count-1}: {response}")
+                    self._last_read_error_kind = ERROR_KIND_NO_RESPONSE
                     self._track_read_failure()
                     return None
 
@@ -1352,6 +1528,7 @@ class GrowattModbus:
                         "(adapter online but inverter not responding — likely night-time sleep)",
                         start_address, start_address + count - 1
                     )
+                    self._last_read_error_kind = ERROR_KIND_NO_RESPONSE
                     self._track_read_failure()
                     return None
                 if len(registers) < count:
@@ -1359,6 +1536,7 @@ class GrowattModbus:
                         "Inverter returned only %d of %d requested registers at %d — treating as failure",
                         len(registers), count, start_address
                     )
+                    self._last_read_error_kind = ERROR_KIND_NO_RESPONSE
                     self._track_read_failure()
                     return None
                 logger.debug("Successfully read %d registers from %d", len(registers), start_address)
@@ -1366,11 +1544,13 @@ class GrowattModbus:
                 return registers
 
             logger.warning(f"Unknown response type: {type(response)}, response: {response}")
+            self._last_read_error_kind = ERROR_KIND_NO_RESPONSE
             self._track_read_failure()
             return None
 
         except Exception as e:
             logger.debug(f"Exception reading input registers: {e}")
+            self._last_read_error_kind = ERROR_KIND_LINK
             self._track_read_failure()
             return None
     
@@ -1382,9 +1562,11 @@ class GrowattModbus:
     def _read_holding_registers_locked(self, start_address: int, count: int) -> Optional[list]:
         """Read holding registers with error handling and slave_id compatibility fallback."""
         self._enforce_read_interval()
+        self._last_read_error_kind = None
 
         if self._shared_conn is not None:
             registers = self._shared_conn.read_holding_registers(start_address, count, self.slave_id)
+            self._last_read_error_kind = self._shared_conn.last_error_kind
             # Same bypass as read_input_registers above (#367).
             if registers is None:
                 self._track_read_failure()
@@ -1402,16 +1584,19 @@ class GrowattModbus:
                     response = self.client.read_holding_registers(address=start_address, count=count)
             if hasattr(response, "isError") and callable(response.isError) and response.isError():
                 logger.debug("Modbus error reading holding registers %d-%d: %r", start_address, start_address + count - 1, response)
+                self._last_read_error_kind = ERROR_KIND_NO_RESPONSE
                 self._track_read_failure()
                 return None
             if hasattr(response, "registers"):
                 self._track_read_success()
                 return response.registers
             logger.debug("Unexpected response type from read_holding_registers(%d, %d): %r", start_address, count, response)
+            self._last_read_error_kind = ERROR_KIND_NO_RESPONSE
             self._track_read_failure()
             return None
         except Exception as e:
             logger.debug("Exception reading holding registers %d-%d: %s", start_address, start_address + count - 1, e)
+            self._last_read_error_kind = ERROR_KIND_LINK
             self._track_read_failure()
             return None
 
@@ -1942,6 +2127,10 @@ class GrowattModbus:
 
     def read_all_data(self) -> Optional[GrowattData]:
         """Read all relevant data from inverter"""
+        # A reconnect invalidates the optional-register backoff built up on the previous
+        # socket (see _sync_optional_blacklists_with_connection).
+        self._sync_optional_blacklists_with_connection()
+
         data = GrowattData()
         
         # Determine register range based on map
@@ -2221,6 +2410,7 @@ class GrowattModbus:
                     _prev = self._failed_optional_ranges.get(_3000_key)
                     _count = (_prev[1] + 1) if _prev else 1
                     self._failed_optional_ranges[_3000_key] = (time.time(), _count)
+                    self._note_optional_failure_kind(('range', _3000_key))
                     if _count == 1:
                         logger.warning(
                             f"Failed to read 3000 register block (extended data may be unavailable). "
@@ -2230,6 +2420,7 @@ class GrowattModbus:
                         logger.debug(f"3000 register block still failing (attempt {_count})")
                 elif _3000_any_ok:
                     self._failed_optional_ranges.pop(_3000_key, None)
+                    self._optional_failure_kinds.pop(('range', _3000_key), None)
 
         # Read 8000 range if needed - WIT/WIS battery/storage data
         if has_8000_range:
@@ -2330,6 +2521,7 @@ class GrowattModbus:
                         _prev = self._failed_optional_ranges.get(range_key)
                         _fail_count = (_prev[1] + 1) if _prev else 1
                         self._failed_optional_ranges[range_key] = (time.time(), _fail_count)
+                        self._note_optional_failure_kind(('range', range_key))
                         if _fail_count == 1:
                             logger.warning(
                                 f"Optional VPP range ({min_addr_block}-{max_addr_block}) failed — "
@@ -2346,6 +2538,7 @@ class GrowattModbus:
                     # Range succeeded — clear any previous failure record so the
                     # next failure is treated as fresh (warn again on first failure).
                     self._failed_optional_ranges.pop(range_key, None)
+                    self._optional_failure_kinds.pop(('range', range_key), None)
                     # Populate cache
                     for i, value in enumerate(registers):
                         self._register_cache[min_addr_block + i] = value
@@ -4951,32 +5144,31 @@ class GrowattModbus:
         # with exactly this retry. This set never received the same treatment — the two
         # mechanisms sit a few hundred lines apart and only one of them was corrected.
         #
-        # Worth stating the limitation honestly: a transport error and a genuine
-        # "illegal data address" are still conflated here, because read_holding_registers
-        # returns None for both. Retrying every 5 minutes makes an unsupported register
-        # cost one wasted read per 5 minutes, which is cheap; the previous behaviour made
-        # a supported register cost everything.
-        _VPP_HOLDING_RETRY_S = 300
+        # #370 left one limitation stated openly: "a transport error and a genuine
+        # illegal data address are still conflated here, because read_holding_registers
+        # returns None for both". That is what the helpers below close, and it matters
+        # because the retry window alone still lets ONE dropped frame blank a control
+        # block for five minutes, over and over, on an inverter that answers perfectly.
+        # Three things sit on top of the flat window now:
+        #
+        #   * a block is skipped only after _VPP_HOLDING_FAIL_THRESHOLD *consecutive*
+        #     failures, so a single transient error suppresses nothing at all;
+        #   * the failure is classified (ERROR_KIND_LINK / ERROR_KIND_NO_RESPONSE), so a
+        #     reconnect re-arms the blocks that only failed because the socket was dead
+        #     while leaving genuinely unimplemented registers backed off;
+        #   * each block sets an *_available flag on success, and the control entities
+        #     report unavailable rather than publishing the GrowattData default, which is
+        #     indistinguishable from a real "Disabled"/0 reading.
+        #
+        # The two names below are #370's and are kept: this is one mechanism, not two.
 
         def _vpp_block_skipped(anchor: int) -> bool:
             """True while this anchor is inside its retry window."""
-            prev = self._failed_optional_holding_addrs.get(anchor)
-            if prev is None:
-                return False
-            if time.time() - prev >= _VPP_HOLDING_RETRY_S:
-                logger.debug("[VPP] Retrying previously failed holding block at %d", anchor)
-                return False
-            return True
+            return self._optional_holding_blocked(anchor)
 
         def _vpp_block_failed(anchor: int, what: str) -> None:
-            first = anchor not in self._failed_optional_holding_addrs
-            self._failed_optional_holding_addrs[anchor] = time.time()
-            if first:
-                logger.debug(
-                    "[VPP] %s did not respond — skipping for %ds, then retrying. "
-                    "If this repeats indefinitely the firmware likely does not "
-                    "implement it.", what, _VPP_HOLDING_RETRY_S,
-                )
+            """Record a failed optional block read."""
+            self._record_optional_holding_failure(anchor, what)
 
         # Control Authority (30100)
         if 30100 in holding_map and not _vpp_block_skipped(30100):
@@ -4985,11 +5177,18 @@ class GrowattModbus:
                 if vpp_ctrl_regs is not None and len(vpp_ctrl_regs) >= 1:
                     data.control_authority = int(vpp_ctrl_regs[0])
                     data.vpp_control_authority_available = True
+                    # A good read re-arms the block at once: the failure record and the
+                    # remembered error kind go together, or clear_optional_blacklists()
+                    # would keep reasoning about a failure that no longer exists.
                     self._failed_optional_holding_addrs.pop(30100, None)
+                    self._optional_failure_kinds.pop(('holding', 30100), None)
                     logger.debug("[VPP] control_authority=%s", data.control_authority)
                 else:
                     _vpp_block_failed(30100, "Register 30100 (control authority)")
             except Exception as e:
+                # An exception is a failure like any other. Not counting it here is how a
+                # block could fail every poll forever without the backoff ever engaging.
+                _vpp_block_failed(30100, "Register 30100 (control authority)")
                 logger.debug(f"Could not read VPP control_authority register 30100: {e}")
 
         # VPP Export Limitation (30200-30201)
@@ -5007,11 +5206,13 @@ class GrowattModbus:
                         data.vpp_export_limit_power_rate = int(raw_val)
                     data.vpp_export_limit_available = True
                     self._failed_optional_holding_addrs.pop(30200, None)
+                    self._optional_failure_kinds.pop(('holding', 30200), None)
                     logger.debug("[VPP] vpp_export_limit_enable=%s, vpp_export_limit_power_rate=%s%%",
                                data.vpp_export_limit_enable, data.vpp_export_limit_power_rate)
                 else:
                     _vpp_block_failed(30200, "Registers 30200-30201 (export limit)")
             except Exception as e:
+                _vpp_block_failed(30200, "Registers 30200-30201 (export limit)")
                 logger.debug(f"Could not read VPP export limitation registers 30200-30201: {e}")
 
         # Remote Power Control (30407-30410)
@@ -5034,10 +5235,17 @@ class GrowattModbus:
                     logger.debug("[VPP] remote_power_control_enable=%s, charging_time=%s min, charge_discharge_power=%s%%, ac_charge_enable=%s",
                                data.remote_power_control_enable, data.remote_power_control_charging_time,
                                data.remote_charge_and_discharge_power, data.vpp_ac_charge_enable)
+                    # The block responded. Without this flag the controls behind
+                    # 30407-30410 cannot tell "the inverter says Disabled" from "the block
+                    # was not read this poll", and publish the dataclass default as if it
+                    # had been measured.
+                    data.vpp_remote_power_available = True
                     self._failed_optional_holding_addrs.pop(30407, None)
+                    self._optional_failure_kinds.pop(('holding', 30407), None)
                 else:
                     _vpp_block_failed(30407, "Registers 30407-30410 (remote power control)")
             except Exception as e:
+                _vpp_block_failed(30407, "Registers 30407-30410 (remote power control)")
                 logger.debug(f"Could not read VPP remote power control registers 30407-30410: {e}")
 
     def get_status_text(self, status_code: int) -> str:

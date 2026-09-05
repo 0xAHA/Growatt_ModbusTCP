@@ -18,6 +18,7 @@ from .const import (
     is_read_only_register,
     DEVICE_TYPE_BATTERY,
     MOD_TOU_PERIODS,
+    VPP_CONTROL_AVAILABILITY_FLAG,
 )
 from .coordinator import GrowattModbusCoordinator
 from .entity import GrowattEntity
@@ -271,10 +272,36 @@ class GrowattGenericSelect(GrowattEntity, SelectEntity):
         return icon_map.get(control_name, 'mdi:tune')
 
     @property
+    def available(self) -> bool:
+        """Unavailable while the backing VPP block was not read this poll.
+
+        Registers 30100 / 30200-30201 / 30407-30410 are optional best-effort reads. When
+        a block is missed, GrowattData carries its dataclass default (0), which would
+        otherwise be published as a real "Disabled"/0 setting. Reporting unavailable is
+        the same choice the sensor platform makes for a reading that was not taken.
+        Controls not backed by such a block have no entry in the map and are unaffected.
+        """
+        if not super().available:
+            return False
+        flag = VPP_CONTROL_AVAILABILITY_FLAG.get(self._control_name)
+        if flag is None:
+            return True
+        data = self.coordinator.data
+        return bool(data is not None and getattr(data, flag, False))
+
+    @property
     def current_option(self) -> str | None:
         """Return the current selected option."""
         data = self.coordinator.data
         if data is None:
+            return None
+
+        # A block that was not read this poll carries dataclass defaults - report unknown
+        # rather than a fabricated value (see available()). Kept in addition to the
+        # availability gate because Home Assistant keeps the last state of an unavailable
+        # entity, and a 0 written there once would linger as a plausible-looking value.
+        flag = VPP_CONTROL_AVAILABILITY_FLAG.get(self._control_name)
+        if flag is not None and not getattr(data, flag, False):
             return None
 
         # Read raw value from coordinator data

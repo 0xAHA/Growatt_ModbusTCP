@@ -912,6 +912,25 @@ DAILY_TOTAL_ATTRS = [
 ]
 
 
+# Optional VPP holding blocks (30100, 30200-30201, 30407-30410) are read best-effort: a
+# Modbus error, or the backoff window that follows repeated errors, makes a whole block
+# miss a poll. GrowattData is rebuilt per poll, so a missed block leaves the dataclass
+# defaults, which look exactly like a real "Disabled"/0 reading. Control entities backed
+# by one of these blocks must therefore report unavailable when its flag is False rather
+# than publishing the default - the control-side counterpart of withholding a sensor
+# reading that was not read.
+#
+# control name -> GrowattData flag that is set only when the block actually responded
+VPP_CONTROL_AVAILABILITY_FLAG = {
+    'control_authority': 'vpp_control_authority_available',               # 30100
+    'vpp_export_limit_enable': 'vpp_export_limit_available',              # 30200
+    'vpp_export_limit_power_rate': 'vpp_export_limit_available',          # 30201
+    'remote_power_control_enable': 'vpp_remote_power_available',          # 30407
+    'remote_power_control_charging_time': 'vpp_remote_power_available',   # 30408
+    'remote_charge_and_discharge_power': 'vpp_remote_power_available',    # 30409
+}
+
+
 # ============================================================================
 # DEVICE STRUCTURE - Multi-Device Organization
 # ============================================================================

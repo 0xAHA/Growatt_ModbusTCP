@@ -17,6 +17,7 @@ from .const import (
     control_is_blocked,
     get_device_type_for_control,
     is_read_only_register,
+    VPP_CONTROL_AVAILABILITY_FLAG,
 )
 from .coordinator import GrowattModbusCoordinator
 from .entity import GrowattEntity
@@ -247,10 +248,27 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         Declarative as `('field', value)` rather than a callable: a lambda here would be
         hard to test and easy to make decorative, which is a mistake this project has
         already shipped once.
+
+        The second reason is a block that was not read at all this poll. Registers
+        30100 / 30200-30201 / 30407-30410 are optional best-effort reads; when one is
+        missed, GrowattData still carries its dataclass default (0), which would be
+        published as a real "Disabled"/0 setting. VPP_CONTROL_AVAILABILITY_FLAG maps the
+        control to the flag that proves its block responded; controls not backed by such
+        a block have no entry and are unaffected.
+
+        The two conditions are ANDed rather than substituted for one another: they answer
+        different questions ("will the write be accepted?" vs "do we know the current
+        value?").
         """
         if not super().available:
             return False
-        return not control_is_blocked(self._control_config, self.coordinator.data)
+        if control_is_blocked(self._control_config, self.coordinator.data):
+            return False
+        flag = VPP_CONTROL_AVAILABILITY_FLAG.get(self._control_name)
+        if flag is None:
+            return True
+        data = self.coordinator.data
+        return bool(data is not None and getattr(data, flag, False))
 
     def _get_icon(self, control_name: str) -> str:
         """Get icon based on control name."""
@@ -318,6 +336,14 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         """Return the current value."""
         data = self.coordinator.data
         if data is None:
+            return None
+
+        # A block that was not read this poll carries dataclass defaults - report unknown
+        # rather than a fabricated value (see available()). Kept in addition to the
+        # availability gate because Home Assistant keeps the last state of an unavailable
+        # entity, and a 0 written there once would linger as a plausible-looking value.
+        flag = VPP_CONTROL_AVAILABILITY_FLAG.get(self._control_name)
+        if flag is not None and not getattr(data, flag, False):
             return None
 
         raw_value = getattr(data, self._control_name, None)
