@@ -281,3 +281,41 @@ def test_the_backward_step_is_logged_once_per_counter():
 
     hits = [m for m in logger.debugs if "stepped back" in m]
     assert len(hits) == 1, f"expected one line, got {len(hits)}"
+
+
+def test_a_lifetime_counter_stepping_back_is_held_too():
+    """The half of #417 that v1.10.0-b4 missed.
+
+    `load_energy_today` is a daily attribute and `load_energy_total` a lifetime one, and
+    the guard went into the daily loop alone. The reporter's original evidence had both
+    stepping together from one event three milliseconds apart, so the fix held one and let
+    the other go on tripping total_increasing by itself - which he caught on the very next
+    capture.
+
+    A lifetime counter has no legitimate reason to decrease at all, so this is if anything
+    the less ambiguous half.
+    """
+    logger = _Logger()
+    guard = _load_guard(logger)
+    coordinator = _Coordinator()
+    coordinator._retained_lifetime_totals = {"load_energy_total": 20312.5}
+    data = _Data(load_energy_total=20312.4)
+
+    guard(coordinator, data)
+
+    assert data.load_energy_total == 20312.5, (
+        "the lifetime counter's backwards step was published; Home Assistant records a "
+        "meter reset on the lifetime total while the daily one is correctly held"
+    )
+
+
+def test_a_lifetime_counter_still_accepts_normal_growth():
+    logger = _Logger()
+    guard = _load_guard(logger)
+    coordinator = _Coordinator()
+    coordinator._retained_lifetime_totals = {"load_energy_total": 20312.5}
+    data = _Data(load_energy_total=20313.9)
+
+    guard(coordinator, data)
+
+    assert data.load_energy_total == 20313.9

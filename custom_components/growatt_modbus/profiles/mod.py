@@ -717,10 +717,23 @@ MOD_6000_15000TL3_XH = {
                 'signed': True, 'valid_range': (-100, 100),
                 'desc': 'Commanded power, -100 to +100%. A TARGET, not a limit: it will import from '
                         'the grid to reach it even with allow_grid_charge off (#373)'},
-        # The inverter writes this one itself. Observed going 1 -> 0 with no FC6 frame from
-        # the reporter's controller, watchdog or strategy module, while the Growatt scheduler
-        # was active - so a cached "last written" value will disagree with the device, and
-        # the disagreement will look like our bug rather than the scheduler's (#373).
+        # Something other than this integration appears to write this register, so do not
+        # trust a cached "last written" value against it.
+        #
+        # Stated at the strength the evidence actually supports. The reporter first placed
+        # the 1 -> 0 transition one second before his own control loop started, and then
+        # withdrew that: his register sweep samples every ~300 s, so the timestamp was a
+        # detection time inside a 316 s window that his loop start also falls within. The
+        # timing never excluded his own stack.
+        #
+        # What survives is the absence of a write path: two grep hits across his control
+        # loop, watchdog and strategy module - a read list and a register-class table - the
+        # register on his writer's deny list, and a write counter booking at the FC6 frame
+        # that has recorded no write to 30410 on any day. That is weaker than a timed
+        # observation and it is what there is (#373).
+        #
+        # 30100 went 1 -> 0 in the same sweep frame, so it may do this too. Unexplained,
+        # and deliberately not guessed at here.
         30410: {'name': 'vpp_ac_charge_enable', 'scale': 1, 'unit': '',
                 'values': {0: 'Disabled', 1: 'Enabled'},
                 'desc': 'VPP AC charge enable. The inverter changes this on its own - do not '

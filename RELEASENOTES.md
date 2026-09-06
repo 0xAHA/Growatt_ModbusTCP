@@ -4,6 +4,23 @@
 
 ---
 
+## v1.10.0-b6
+
+Issues: #373 #417
+
+- **A lifetime energy counter stepping backwards is now held too.** b4 added this guard for
+  daily counters and missed the lifetime ones, so `Load Energy Today` was correctly held
+  while `Load Energy Total` went on tripping Home Assistant's counter-reset detection by
+  itself - from the same event, three milliseconds apart. Caught by @Vict20 on the first
+  capture after b4. (#417)
+- Register note corrected: **30410** is still believed to be written by something other
+  than this integration, but on the absence of any write path rather than on timing. The
+  original observation placed the change one second before the reporter's own controller
+  started; his register sweep samples every ~300 seconds, so that precision did not exist.
+  @KevlarD-67 withdrew it himself. (#373)
+
+---
+
 ## v1.10.0-b5
 
 Issues: #373

@@ -904,8 +904,31 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             retained = self._retained_lifetime_totals.get(attr)
 
             if value > 0:
+                # A lifetime counter stepping backwards by a hair, exactly as the daily
+                # ones do below. This guard was added to the daily loop alone in
+                # v1.10.0-b4, which fixed half the reported case: load_energy_today is a
+                # daily attribute and was held, while load_energy_total is a lifetime one
+                # and went on tripping total_increasing on its own - from the same
+                # underlying event, three milliseconds apart (#417).
+                #
+                # A lifetime counter has no legitimate reason to decrease at all, so this
+                # is if anything less ambiguous here than on the daily side.
+                if (
+                    retained is not None
+                    and value < retained
+                    and (retained - value) <= _BACKWARD_STEP_TOLERANCE_KWH
+                ):
+                    if attr not in self._backward_step_warned:
+                        self._backward_step_warned.add(attr)
+                        _LOGGER.debug(
+                            "[ENERGY_GUARD] %s stepped back %.3f kWh (%.3f -> %.3f); "
+                            "holding the previous value so Home Assistant does not record "
+                            "a meter reset. Further occurrences not logged.",
+                            attr, retained - value, retained, value,
+                        )
+                    setattr(data, attr, retained)
                 # Real value — update retention if changed
-                if self._retained_lifetime_totals.get(attr) != value:
+                elif self._retained_lifetime_totals.get(attr) != value:
                     self._retained_lifetime_totals[attr] = value
                     _updated = True
             elif retained is not None and retained > 0:
