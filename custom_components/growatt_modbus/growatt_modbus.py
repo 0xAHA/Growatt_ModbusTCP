@@ -119,6 +119,34 @@ def _format_modbus_error(result) -> str:
 # Write verification constants (cloud override detection)
 # =============================================================================
 
+# How long to leave a gateway alone after a reset before re-opening a socket.
+#
+# Enforced by REFUSING to connect during the window, never by sleeping. The hub
+# lock is held for a whole poll, so sleeping inside it would block every other
+# user of the same gateway -- a second config entry's poll, and any user-initiated
+# write -- for the length of the wait. Refusing instead lets the poll fail fast and
+# release the bus; the coordinator retries on its next cycle, which is exactly the
+# spacing this is trying to achieve.
+#
+# The first window is deliberately SHORT. Most transport errors are one-offs, and
+# making every one of them cost tens of seconds would turn a blip into a missed
+# poll. Two seconds is enough to stop a tight reconnect loop, which is all the
+# first retry needs to do.
+#
+# Repeated resets are a different situation, and the reason this escalates. On the
+# gateway that prompted this change, a second client is stalled for about 30
+# seconds (measured: a 300 ms read took 30,338 ms while another client held a
+# connection). A fixed 2 s wait cannot outlast that, so a run of failures would
+# keep re-opening sockets into a peer that is still busy — which is exactly the
+# behaviour that never recovers. Doubling per consecutive reset takes the wait
+# past the stall within a few attempts, and the ceiling keeps it bounded.
+#
+# The counter is cleared by a successful READ, not a successful connect: during
+# the failure this addresses, connects succeed and reads time out, so keying it to
+# connects would reset the escalation on every attempt and never escalate at all.
+RECONNECT_QUIET_BASE_SECONDS = 2.0
+RECONNECT_QUIET_MAX_SECONDS = 32.0
+
 WRITE_VERIFY_DELAY = 0.5           # seconds — delay before read-back after write
 WRITE_VERIFY_MAX_RETRIES = 3       # read-back checks after the single write (#402)
 WRITE_VERIFY_MAX_DELAY = 2.0       # seconds - ceiling for the backoff between checks
@@ -498,6 +526,22 @@ class SharedModbusConnection:
         self._recoveries_this_poll = 0
         self._max_recoveries_per_poll = 2
 
+        # Set by release_ref(). A hub that has been released must never build a new
+        # client: an in-flight poll survives unload (it runs in an executor thread that
+        # nothing cancels), and without this flag its next reset() would call
+        # ensure_connected(), find _client None, and open a socket owned by a hub that
+        # is already out of the registry. That orphan then races the socket the NEW hub
+        # opens on reload -- two clients against a gateway that serialises the second one
+        # for ~30 s, which is longer than the read timeout. The timeouts read as
+        # transport errors, whose handler resets and reconnects, and the cascade never
+        # ends. Measured on a WIT gateway, 2026-09-06.
+        self._released = False
+        # When the last reset() happened, and how many resets have run without a
+        # successful read in between, so a reconnect can leave the peer a moment of
+        # quiet instead of immediately re-opening a socket it is still busy stalling.
+        self._reset_at = 0.0
+        self._consecutive_resets = 0
+
         # Lifetime tallies of frames this gateway answered correctly vs. answered with
         # something that was not a reply to the question asked. Read by the coordinator to
         # decide whether to raise a repair issue — a gateway can sit at a double-digit
@@ -541,11 +585,68 @@ class SharedModbusConnection:
         Reopening a serial port costs about 2 ms, which is nothing next to a poll that reads
         98 registers. The lock still serializes entries that do share a hub.
         """
+        if self._released:
+            # The hub was released while this poll was running (a reload, or Home
+            # Assistant shutting down). The poll owns the socket until it ends, so this
+            # is the first safe moment to close it -- and closing it here is what stops
+            # an orphaned connection outliving its hub.
+            with self._lock:
+                self.disconnect()
+                self._client = None
+            return
+
         if not self.is_serial:
             return
         with self._lock:
             self.disconnect()
             self._client = None
+
+    def _note_transaction_succeeded(self) -> None:
+        """The gateway answered a question correctly, so start the escalation over.
+
+        Any completed transaction counts, read or write: what the counter tracks is
+        "how many times in a row has this connection failed with nothing working in
+        between". Counting only reads made a poll of writes look like an unbroken run
+        of failures and blocked the next write's legitimate #364 retry.
+        """
+        self._consecutive_resets = 0
+
+    def _quiet_period(self) -> float:
+        """Seconds to leave the peer alone before reconnecting, after N resets.
+
+        ZERO for the first reset, deliberately. That one is the reset-and-retry-once
+        recovery from #364, which exists for a silently-dropped socket that pymodbus
+        has not noticed: it is cheap, it usually works, and delaying it would turn a
+        recoverable blip into a lost poll. The window starts at the SECOND consecutive
+        reset, where a one-off has already been ruled out.
+        """
+        if self._consecutive_resets <= 1:
+            return 0.0
+        exponent = max(0, self._consecutive_resets - 2)
+        return min(RECONNECT_QUIET_BASE_SECONDS * (2 ** exponent),
+                   RECONNECT_QUIET_MAX_SECONDS)
+
+    def connect_refusal_reason(self) -> str:
+        """Why the last ensure_connected() said no — for a caller's error message.
+
+        A write refused during the quiet window is not the same failure as a gateway
+        that cannot be reached, and telling them apart is the difference between
+        "try again shortly" and "go and look at the wiring".
+        """
+        remaining = self._quiet_remaining()
+        if remaining > 0:
+            return (f"Gateway is in a post-failure quiet period after "
+                    f"{self._consecutive_resets} reset(s); retry in "
+                    f"{remaining:.0f}s")
+        if self._released:
+            return "This shared connection has been released"
+        return "Could not connect to shared Modbus gateway"
+
+    def _quiet_remaining(self) -> float:
+        """Seconds still to run on the post-failure window; 0 when clear."""
+        if not self._reset_at:
+            return 0.0
+        return max(0.0, self._quiet_period() - (time.monotonic() - self._reset_at))
 
     def _begin_recovery(self) -> bool:
         """True if a reset+retry is still within this poll's recovery budget."""
@@ -554,11 +655,38 @@ class SharedModbusConnection:
         self._recoveries_this_poll += 1
         return True
 
-    def release_ref(self) -> None:
+    def release_ref(self, lock_timeout: float = 5.0) -> None:
+        """Drop a reference; close the transport once nobody needs it.
+
+        The flag is set FIRST and without the lock, because it is what makes the
+        teardown safe: a poll running in an executor thread cannot be cancelled, and
+        marking the hub released stops that poll from re-creating a client no matter
+        when it next looks.
+
+        Then the lock is taken, so the socket is closed BETWEEN reads rather than
+        underneath one. Taking it is best-effort: a poll can legitimately hold the bus
+        for tens of seconds, and blocking unload on that would be worse than leaving the
+        socket to end_poll(), which now closes it for a released hub.
+        """
         self._refcount -= 1
-        if self._refcount <= 0:
-            self.disconnect()
-            self._client = None
+        if self._refcount > 0:
+            return
+
+        self._released = True
+
+        if self._lock.acquire(timeout=lock_timeout):
+            try:
+                self.disconnect()
+                self._client = None
+            finally:
+                self._lock.release()
+            return
+
+        logger.debug(
+            "[SharedConn %s] release: a poll still holds the bus after %.0fs; the "
+            "hub is marked released and end_poll() will close it",
+            self.connection_id, lock_timeout,
+        )
 
     # ------------------------------------------------------------------
     # Connection lifecycle (call only while lock is held)
@@ -566,6 +694,15 @@ class SharedModbusConnection:
 
     def ensure_connected(self) -> bool:
         """Connect if not already open; flush stale bytes on a new connection."""
+        if self._released:
+            # See _released in __init__. An orphaned poll must die quietly rather than
+            # open a socket nobody will ever close.
+            logger.debug(
+                "[SharedConn %s] refusing to connect: this hub has been released",
+                self.connection_id,
+            )
+            return False
+
         if self._client is None:
             if self.is_serial:
                 if not SERIAL_AVAILABLE:
@@ -598,9 +735,27 @@ class SharedModbusConnection:
         except Exception:
             pass
 
+        # A reset means the peer just failed to answer. Re-opening a socket
+        # immediately is the worst thing to do to a gateway that serialises clients:
+        # the new connection queues behind whatever is still stalling it, times out in
+        # turn, and produces another reset.
+        #
+        # So the reconnect is REFUSED until the window has passed, rather than waited
+        # out: this runs with the hub lock held, and sleeping here would stall every
+        # other user of the gateway. The caller fails fast and the next poll picks it up.
+        remaining = self._quiet_remaining()
+        if remaining > 0:
+            logger.debug(
+                "[SharedConn %s] not reconnecting yet: %.1fs of the post-failure "
+                "quiet window remain (%d consecutive reset(s))",
+                self.connection_id, remaining, self._consecutive_resets,
+            )
+            return False
+
         result = self._client.connect()
         if result:
             self._connected = True
+            self._reset_at = 0.0
             self._flush_receive_buffer()
         elif self.is_serial:
             # pyserial logs "[Errno 11] Could not exclusively lock port ..." and pymodbus
@@ -644,6 +799,8 @@ class SharedModbusConnection:
             "[SharedConn %s] Resetting connection%s",
             self.connection_id, f": {reason}" if reason else "",
         )
+        self._reset_at = time.monotonic()
+        self._consecutive_resets += 1
         self.disconnect()
 
     def _flush_receive_buffer(self) -> None:
@@ -745,6 +902,9 @@ class SharedModbusConnection:
             return None
 
         self.good_reads += 1
+        # Whatever went wrong before is over — see _note_transaction_succeeded().
+        # Deliberately not on a successful CONNECT: see RECONNECT_QUIET_BASE_SECONDS.
+        self._note_transaction_succeeded()
         return registers
 
     def read_input_registers(self, start: int, count: int, slave_id: int) -> Optional[list]:
@@ -876,6 +1036,7 @@ class SharedModbusConnection:
                     self.connection_id, register, value, result,
                 )
                 return False
+            self._note_transaction_succeeded()
             return True
         return False
 
@@ -917,6 +1078,7 @@ class SharedModbusConnection:
                     self.connection_id, register, len(values), result,
                 )
                 return False
+            self._note_transaction_succeeded()
             return True
         return False
 
@@ -3023,7 +3185,9 @@ class GrowattModbus:
                     raise ModbusWriteError(register, [value], "Shared connection busy (lock timeout on write)")
                 try:
                     if not self._shared_conn.ensure_connected():
-                        raise ModbusWriteError(register, [value], "Could not connect to shared Modbus gateway")
+                        raise ModbusWriteError(
+                            register, [value],
+                            self._shared_conn.connect_refusal_reason())
                     success = self._shared_conn.write_register(register, value, self.slave_id)
                 finally:
                     self._shared_conn._lock.release()
@@ -3247,7 +3411,9 @@ class GrowattModbus:
                     raise ModbusWriteError(register, values, "Shared connection busy (lock timeout on write_registers)")
                 try:
                     if not self._shared_conn.ensure_connected():
-                        raise ModbusWriteError(register, values, "Could not connect to shared Modbus gateway")
+                        raise ModbusWriteError(
+                            register, values,
+                            self._shared_conn.connect_refusal_reason())
                     success = self._shared_conn.write_registers(register, values, self.slave_id)
                 finally:
                     self._shared_conn._lock.release()

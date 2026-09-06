@@ -544,7 +544,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: GrowattConfigEntry) -> 
         if hub is not None:
             # Release the hub reference; hub disconnects when refcount reaches 0
             connections = hass.data[DOMAIN].get("_connections", {})
-            hub.release_ref()
+            # In an executor: release_ref() may wait briefly for a poll to give the
+            # bus back, and the event loop must not block on that.
+            await hass.async_add_executor_job(hub.release_ref)
             if hub._refcount <= 0:
                 # Remove from registry — hub already disconnected in release_ref()
                 hub_key = f"{hub.host}:{hub.port}"
