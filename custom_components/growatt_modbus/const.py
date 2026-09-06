@@ -253,6 +253,10 @@ WRITABLE_REGISTERS = {
         'desc': 'Export limit in watts (0 = zero export)'
     },
     'control_authority': {
+        # Off by default: a standing control_authority silently removes the TOU
+        # schedule from circuit, and the loss shows up as cheap-rate charging that
+        # never happened rather than as any error (#373).
+        'disabled_by_default': True,
         'register': 30100,
         'scale': 1,
         'valid_range': (0, 1),
@@ -282,6 +286,10 @@ WRITABLE_REGISTERS = {
         'desc': 'Export limit power rate (0–100%; 0=zero export, 100=full export). Negative values trigger WIT warning 401 fault state.'
     },
     'remote_power_control_enable': {
+        # Off by default: a standing control_authority silently removes the TOU
+        # schedule from circuit, and the loss shows up as cheap-rate charging that
+        # never happened rather than as any error (#373).
+        'disabled_by_default': True,
         'register': 30407,
         'scale': 1,
         'valid_range': (0, 1),
@@ -292,6 +300,10 @@ WRITABLE_REGISTERS = {
         'desc': 'Enable timed charge/discharge power override'
     },
     'remote_power_control_charging_time': {
+        # Off by default: a standing control_authority silently removes the TOU
+        # schedule from circuit, and the loss shows up as cheap-rate charging that
+        # never happened rather than as any error (#373).
+        'disabled_by_default': True,
         'register': 30408,
         'scale': 1,
         'valid_range': (0, 1440),
@@ -299,6 +311,10 @@ WRITABLE_REGISTERS = {
         'desc': 'Duration for remote power control (0-1440 minutes)'
     },
     'remote_charge_and_discharge_power': {
+        # Off by default: a standing control_authority silently removes the TOU
+        # schedule from circuit, and the loss shows up as cheap-rate charging that
+        # never happened rather than as any error (#373).
+        'disabled_by_default': True,
         'register': 30409,
         'scale': 1,
         'valid_range': (-100, 100),
@@ -307,6 +323,10 @@ WRITABLE_REGISTERS = {
         'signed': True
     },
     'vpp_ac_charge_enable': {
+        # Off by default: a standing control_authority silently removes the TOU
+        # schedule from circuit, and the loss shows up as cheap-rate charging that
+        # never happened rather than as any error (#373).
+        'disabled_by_default': True,
         'register': 30410,
         'label': 'VPP AC Charge Enable',
         'scale': 1,

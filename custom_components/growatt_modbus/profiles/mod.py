@@ -687,19 +687,44 @@ MOD_6000_15000TL3_XH = {
         # No new read code is needed: growatt_modbus.py already probes anchors 30100 and
         # 30407 behind `if <addr> in holding_map`, so adding them here activates the
         # existing path, including the 300 s failure retry from #370.
-        30100: {'name': 'control_authority', 'scale': 1, 'unit': '', 'access': 'RO',
-                'desc': 'VPP master enable. Read-only here — remote power control does nothing '
-                        'without it, and commanding power is not yet guarded (#373)'},
-        30407: {'name': 'remote_power_control_enable', 'scale': 1, 'unit': '', 'access': 'RO',
+        # Writable on DTC 5400, and every one of them disabled by default.
+        #
+        # These were RO because commanding VPP power was unguarded. The measurement that
+        # changed it is on #373: a *standing* 30100 = 1 does not merely compete with the
+        # RTU scheduler, it removes it from circuit. Per V2.03 section 3.3.3, with authority
+        # held and an empty scheduler block the inverter enters the VPP model and 3047,
+        # 3049 and the Battery First slot all stop applying together.
+        #
+        #     30100 = 1   84 min   bought 0.04 kWh   against a plan of 3.53 kWh
+        #     30100 = 0   51 min   bought 4.33 kWh   SoC 37 -> 65 %
+        #
+        # Silently: no error, no entity going unavailable, nothing in a log. The reporter
+        # took 84 minutes to notice while watching at 1 Hz. Anyone not watching loses a
+        # night of cheap-rate charging with no way to find out why - which is why these
+        # arrive disabled, and why 30100 carries the warning in its own name.
+        30100: {'name': 'control_authority', 'scale': 1, 'unit': '',
+                'values': {0: 'Disabled', 1: 'Enabled'},
+                'desc': 'VPP master enable. WARNING: enabling this takes the TOU schedule out '
+                        'of circuit - 3047, 3049 and the Battery First slots all stop applying '
+                        'while it is set (#373)'},
+        30407: {'name': 'remote_power_control_enable', 'scale': 1, 'unit': '',
+                'values': {0: 'Disabled', 1: 'Enabled'},
                 'desc': 'Remote power control enable. Does nothing unless 30100 is also set (#373)'},
-        30408: {'name': 'remote_power_control_charging_time', 'scale': 1, 'unit': 'min', 'access': 'RO',
+        30408: {'name': 'remote_power_control_charging_time', 'scale': 1, 'unit': 'min',
+                'valid_range': (0, 1440),
                 'desc': 'Remote control duration. Expires without clearing 30407/30409/30100 (#373)'},
-        30409: {'name': 'remote_charge_and_discharge_power', 'scale': 1, 'unit': '%', 'access': 'RO',
-                'signed': True,
+        30409: {'name': 'remote_charge_and_discharge_power', 'scale': 1, 'unit': '%',
+                'signed': True, 'valid_range': (-100, 100),
                 'desc': 'Commanded power, -100 to +100%. A TARGET, not a limit: it will import from '
                         'the grid to reach it even with allow_grid_charge off (#373)'},
-        30410: {'name': 'vpp_ac_charge_enable', 'scale': 1, 'unit': '', 'access': 'RO',
-                'desc': 'VPP AC charge enable'},
+        # The inverter writes this one itself. Observed going 1 -> 0 with no FC6 frame from
+        # the reporter's controller, watchdog or strategy module, while the Growatt scheduler
+        # was active - so a cached "last written" value will disagree with the device, and
+        # the disagreement will look like our bug rather than the scheduler's (#373).
+        30410: {'name': 'vpp_ac_charge_enable', 'scale': 1, 'unit': '',
+                'values': {0: 'Disabled', 1: 'Enabled'},
+                'desc': 'VPP AC charge enable. The inverter changes this on its own - do not '
+                        'trust a cached value (#373)'},
 
         # Mirrors the last commanded setpoint. Retains it after remote control is disabled —
         # confirmed ten hours on, still reading -33 (raw 65503) with 30100/30407/30409 all
@@ -712,6 +737,16 @@ MOD_6000_15000TL3_XH = {
         30474: {'name': 'vpp_last_setpoint', 'scale': 1, 'unit': '%', 'access': 'RO',
                 'signed': True,
                 'desc': 'Mirror of the last commanded VPP power setpoint. Write-ignored (#373)'},
+
+        # Listed as `Reserve` in the V2.01 register table (row 87, RW, count 20), but the
+        # V2.03 section 3.3.3 flow gives it a job: in the self-consumption branch it is what
+        # "Default mode is Load first, can change by 30476" refers to. Reads 0 on a MOD-XH.
+        # Mapped read-only so the value is visible without offering a control for behaviour
+        # nobody here has measured - a register documented as nothing in one version and as
+        # the default-mode selector in another is worth seeing (#373).
+        30476: {'name': 'vpp_default_mode', 'scale': 1, 'unit': '', 'access': 'RO',
+                'desc': 'Default operating mode in the VPP self-consumption branch. `Reserve` in '
+                        'the V2.01 table, load-bearing in the V2.03 3.3.3 diagram (#373)'},
 
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},

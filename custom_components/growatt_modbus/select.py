@@ -240,6 +240,13 @@ class GrowattGenericSelect(GrowattEntity, SelectEntity):
         self._control_name = control_name
         self._control_config = control_config
 
+        # Same mechanism number.py has carried since #384, absent here until #373 needed it.
+        # Three of the five VPP controls are selects, so without this the pair would have
+        # shipped half disabled - and control_authority, the one that matters most, is one
+        # of them.
+        if control_config.get('disabled_by_default'):
+            self._attr_entity_registry_enabled_default = False
+
         # Generate friendly name (e.g., "output_config" -> "Output Config"), unless the
         # control carries an explicit label.
         #

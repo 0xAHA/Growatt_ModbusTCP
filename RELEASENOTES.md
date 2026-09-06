@@ -4,6 +4,38 @@
 
 ---
 
+## v1.10.0-b5
+
+Issues: #373
+
+- **MOD-XH: the VPP remote power controls are now available.** Control Authority, Remote
+  Power Control Enable, Charging Time, Charge/Discharge Power and VPP AC Charge Enable were
+  read-only on this family. They work, and they are now offered - **all five disabled by
+  default**, so nothing appears or changes unless you go and enable it.
+
+  !!! warning "Read this before enabling Control Authority"
+      **Enabling it takes your TOU schedule out of circuit.** While Control Authority is
+      set, the inverter switches to the VPP model and `Charge Power Rate`, `Allow Grid
+      Charge` and your Battery First slots all stop applying together.
+
+      It fails silently - no error, no entity going unavailable, nothing in the log. In the
+      measurement behind this change, 84 minutes with authority held bought **0.04 kWh**
+      against a plan of 3.53 kWh; released, 51 minutes bought **4.33 kWh**. The owner was
+      watching at 1 Hz and it still took him 84 minutes to spot.
+
+      If you use a scheduler such as Predbat, or the built-in time periods, leave this
+      control alone unless you specifically intend to hand the inverter over to VPP.
+
+  Two registers stay read-only for good reasons: **30474** only mirrors the last commanded
+  setpoint and ignores writes, and **30476** is listed as `Reserve` in one protocol version
+  and as the default-mode selector in another, with nobody having measured what writing it
+  does. **30410** is also now known to change on its own - the inverter's own scheduler
+  writes it - so do not trust a cached value there.
+
+  All of it measured and reported by @KevlarD-67. (#373)
+
+---
+
 ## v1.10.0-b4
 
 Issues: #389 #415 #417 #418 #420

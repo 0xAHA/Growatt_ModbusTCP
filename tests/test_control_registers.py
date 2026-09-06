@@ -125,16 +125,95 @@ def test_only_3312_is_writable_in_the_peak_shaving_cluster():
     assert writable == [3312], f"expected only 3312 writable, got {writable}"
 
 
-@pytest.mark.parametrize("addr", [30100, 30407, 30408, 30409, 30410, 30474])
-def test_mod_vpp_registers_are_marked_read_only(addr):
-    """The declaration. On its own this proves nothing about what the user sees — see the
-    test below, which is the one that matters."""
-    reg = _holding("MOD_6000_15000TL3_XH").get(addr)
-    assert reg is not None, f"holding {addr} is not mapped on MOD-XH"
-    assert _const.is_read_only_register(reg), (
-        f"holding {addr} is writable on MOD-XH. Commanding VPP power on this family needs "
-        f"a guard against importing from the grid to reach the setpoint (#373)."
+# The five that are now writable, and the two that must never be.
+VPP_WRITABLE = [30100, 30407, 30408, 30409, 30410]
+VPP_READ_ONLY = [30474, 30476]
+
+
+@pytest.mark.parametrize("addr", VPP_WRITABLE + VPP_READ_ONLY)
+def test_the_vpp_registers_are_mapped_at_all(addr):
+    """Rule 4. Every assertion below is about what a mapping says; none of them mean
+    anything if the register has quietly stopped being mapped."""
+    assert _holding("MOD_6000_15000TL3_XH").get(addr) is not None, (
+        f"holding {addr} is not mapped on MOD-XH"
     )
+
+
+@pytest.mark.parametrize("addr", VPP_READ_ONLY)
+def test_the_mirror_and_the_reserve_stay_read_only(addr):
+    """30474 mirrors the last commanded setpoint - 102 register changes in the
+    30410-30477 range on one day, every one of them on 30474, each mirroring 30409. A
+    write is accepted and ignored: the echo returns the written value while the read-back
+    keeps the old one. Offered as a control it could only lie about what it is doing.
+
+    30476 is `Reserve` in the V2.01 table and the default-mode selector in the V2.03
+    3.3.3 diagram. Visible as a sensor, not offered as a control, because nobody has
+    measured what writing it does (#373).
+    """
+    reg = _holding("MOD_6000_15000TL3_XH")[addr]
+    assert _const.is_read_only_register(reg), (
+        f"holding {addr} is writable on MOD-XH; it is a mirror or an unmeasured reserve"
+    )
+
+
+@pytest.mark.parametrize("addr", VPP_WRITABLE)
+def test_the_vpp_controls_are_writable(addr):
+    """These were read-only while commanding VPP power was unguarded (#374). A field
+    measurement on #373 established what the controls actually do, and they are now
+    offered - disabled by default, which is the test below."""
+    reg = _holding("MOD_6000_15000TL3_XH")[addr]
+    assert not _const.is_read_only_register(reg), (
+        f"holding {addr} is read-only again on MOD-XH"
+    )
+
+
+@pytest.mark.parametrize("addr", VPP_WRITABLE)
+def test_every_exposed_vpp_control_is_disabled_by_default(addr):
+    """THE safety property, and the reason these could be exposed at all.
+
+    A standing control_authority does not compete with the RTU scheduler - it removes it
+    from circuit. Per V2.03 3.3.3, with authority held and an empty scheduler block the
+    inverter enters the VPP model and 3047, 3049 and the Battery First slot all stop
+    applying together. Measured: 84 minutes at 30100=1 bought 0.04 kWh against a plan of
+    3.53; released, 51 minutes bought 4.33 kWh and took SoC 37 -> 65 %.
+
+    It fails silently. No error, no entity going unavailable, nothing in a log - the
+    reporter took 84 minutes to notice while watching at 1 Hz. A control whose failure
+    mode is a night of cheap-rate charging that never happened must not arrive switched
+    on by somebody merely updating.
+    """
+    names = {n for n, cfg in WRITABLE_REGISTERS.items() if cfg.get("register") == addr}
+    assert names, f"no control is defined for register {addr}"
+    for name in names:
+        assert WRITABLE_REGISTERS[name].get("disabled_by_default") is True, (
+            f"{name} (register {addr}) would be created enabled. It can silently stop grid "
+            f"charging; it has to be opt-in."
+        )
+
+
+def test_control_authority_says_what_enabling_it_does():
+    """Nine words that would have saved 84 minutes. If the description is ever trimmed,
+    the control becomes a toggle whose consequence is invisible until the bill arrives."""
+    desc = _holding("MOD_6000_15000TL3_XH")[30100].get("desc", "").lower()
+    assert "tou schedule out of circuit" in desc, (
+        "control_authority no longer warns that enabling it takes the TOU schedule out of "
+        "circuit"
+    )
+
+
+def test_both_platforms_honour_disabled_by_default():
+    """Three of the five are selects and two are numbers. number.py has had this since
+    #384; select.py had not, so without it the pair would have shipped half disabled -
+    and control_authority, the one that matters most, is a select.
+    """
+    from pathlib import Path
+    component = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+    for platform in ("number.py", "select.py"):
+        source = (component / platform).read_text(encoding="utf-8")
+        assert "disabled_by_default" in source, (
+            f"{platform} ignores disabled_by_default, so controls marked opt-in arrive "
+            f"switched on"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -221,7 +300,7 @@ def test_no_control_is_created_for_a_read_only_register(map_key):
     assert not offending, f"{map_key} would create controls for read-only registers: {offending}"
 
 
-@pytest.mark.parametrize("addr", [30100, 30407, 30408, 30409, 30410])
+@pytest.mark.parametrize("addr", VPP_READ_ONLY)
 def test_mod_creates_no_vpp_control(addr):
     """The specific case, stated as the user-visible outcome rather than a flag.
 
@@ -234,8 +313,8 @@ def test_mod_creates_no_vpp_control(addr):
     }
     leaked = sorted(named & created)
     assert not leaked, (
-        f"MOD-XH would create {leaked} for register {addr}. #373 defers writable VPP "
-        f"controls on this family until commanding power is bounded against available PV."
+        f"MOD-XH would create {leaked} for register {addr}, which is a mirror or an "
+        f"unmeasured reserve rather than a control."
     )
 
 
