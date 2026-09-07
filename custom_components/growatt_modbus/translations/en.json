@@ -375,6 +375,12 @@
       "bms_soh": {
         "name": "Battery State of Health"
       },
+      "bms_gauge_rm": {
+        "name": "Battery Remaining Capacity"
+      },
+      "bms_gauge_fcc": {
+        "name": "Battery Full Charge Capacity"
+      },
       "bms_status": {
         "name": "BMS Status"
       },
