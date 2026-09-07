@@ -1624,7 +1624,16 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             return None
 
         finally:
-            hub._lock.release()
+            # end_poll() is what closes a hub released mid-poll: release_ref() only
+            # marks it and takes the lock best-effort, so if a poll was holding the bus
+            # this is the moment the socket actually goes away. The lock is an RLock and
+            # we still hold it, so calling it here closes under the lock rather than
+            # racing whatever starts next. (For serial it also gives the port back
+            # between polls, which is its original purpose.)
+            try:
+                hub.end_poll()
+            finally:
+                hub._lock.release()
 
     def _fetch_data(self) -> GrowattData | None:
         """Fetch data from the inverter (runs in executor)."""
