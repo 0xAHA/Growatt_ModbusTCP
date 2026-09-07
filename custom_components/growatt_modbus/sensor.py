@@ -831,6 +831,31 @@ SENSOR_DEFINITIONS = {
         "condition": lambda data: hasattr(data, 'bms_soh'),
         "description": "Battery state of health as reported by the Battery Management System (BMS) directly. 100% = new battery, lower values indicate capacity degradation over time. Sourced from BMS communication registers.",
     },
+    # Gauge capacity pair. These are genuinely dynamic attributes - set by the BMS block
+    # via setattr rather than declared on GrowattData - so the hasattr condition here is
+    # one of the few that actually filters (CLAUDE.md rule 6).
+    #
+    # Reported in Ah, not kWh. The BMS gauges charge, and converting to energy would mean
+    # multiplying by a pack voltage that itself moves with state of charge - a derived
+    # number that looks authoritative and is not measured anywhere (#403).
+    "bms_gauge_rm": {
+        "name": "Battery Remaining Capacity",
+        "icon": "mdi:battery-50",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": "Ah",
+        "attr": "bms_gauge_rm",
+        "condition": lambda data: hasattr(data, 'bms_gauge_rm'),
+        "description": "Charge remaining in the battery as measured by the BMS fuel gauge, in amp-hours. Divided by Battery Full Charge Capacity this gives the true state of charge, which can differ from the reported SOC percentage.",
+    },
+    "bms_gauge_fcc": {
+        "name": "Battery Full Charge Capacity",
+        "icon": "mdi:battery-high",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": "Ah",
+        "attr": "bms_gauge_fcc",
+        "condition": lambda data: hasattr(data, 'bms_gauge_fcc'),
+        "description": "Usable capacity of the battery at full charge, as measured by the BMS fuel gauge, in amp-hours. This falls below the nameplate capacity as the pack ages, so comparing it against the original figure shows real degradation.",
+    },
     "bms_constant_volt": {
         "name": "BMS Constant Voltage",
         "icon": "mdi:flash",

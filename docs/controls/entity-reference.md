@@ -136,6 +136,35 @@ lists both meanings side by side, selected by device class.
 > v1.7.6 it was never populated by a register, and any value it showed was a stale artefact.
 > It is removed automatically on upgrade. Use **Battery Discharge Total** instead.
 
+### Battery capacity from the BMS fuel gauge
+
+Two sensors report what the battery's own gauge measures, rather than what the inverter
+infers. Available on **SPH-TL3** and **SPH 8000-10000 HU**, where the BMS block is mapped.
+
+| Sensor | Register | Measures |
+|---|---|---|
+| Battery Remaining Capacity | input 1091 | Charge left in the pack, in Ah |
+| Battery Full Charge Capacity | input 1092 | Usable capacity at full charge, in Ah |
+
+Two things they are good for. **Remaining ÷ Full is the gauge's own state of charge**, which
+can differ from the reported SOC percentage — the inverter's figure is sometimes smoothed or
+clamped, and the gauge's is not. And **Full Charge Capacity falls as the pack ages**, so
+comparing it against the nameplate figure shows real degradation rather than the SOH
+estimate.
+
+!!! note "Amp-hours, not kWh"
+    The gauge measures charge, so these are reported in Ah. Converting to kWh would mean
+    multiplying by a pack voltage that itself moves with state of charge, producing a number
+    that looks authoritative without being measured anywhere.
+
+    The scale comes from the ESS Protocol, which documents these registers in units of 10 mAh.
+    It has not been confirmed against a battery nameplate yet — if yours reads a Full Charge
+    Capacity that does not match your pack, please say so on
+    [#403](https://github.com/0xAHA/Growatt_ModbusTCP/issues/403).
+
+**Note that these are input registers.** Holding 1091 and 1092 at the same addresses are AC
+Charge Stop SOC and AC Charge Enable — an overlap that runs through this whole protocol.
+
 **Notes:**
 - All SPH variants share the same 1000+ register range — controls apply across 3–6kW, 7–10kW, and HU variants automatically.
 - Time periods use HHMM format: `530` = 05:30, `2300` = 23:00.

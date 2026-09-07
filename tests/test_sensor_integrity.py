@@ -23,11 +23,12 @@ KNOWN_MAP_WITHOUT_DEF: frozenset = frozenset({
     # MOD profile diagnostic status — no sensor definition added yet
     "battery_derating_mode",
     # SPH HU detailed BMS registers — processed by coordinator but not yet
-    # exposed in sensor.py or included in any sensor group
+    # exposed in sensor.py or included in any sensor group.
+    #
+    # bms_gauge_rm and bms_gauge_fcc came off this list in #403: they are now
+    # Battery Remaining Capacity and Battery Full Charge Capacity, in Ah.
     "bms_delta_volt",
     "bms_fw_version",
-    "bms_gauge_fcc",
-    "bms_gauge_rm",
     # Grid import energy from hardware bidirectional meter (SPH/MIN/MID/MOD
     # profiles).  Actively populated by coordinator and used as source data
     # for computed grid_import_energy_* sensors.  No standalone sensor

@@ -829,8 +829,15 @@ SPH_8000_10000_HU = {
         1088: {'name': 'bms_charge_current_limit', 'scale': 0.1, 'unit': 'A', 'desc': 'BMS charge current limit, tapers with SOC (#420 - NOT live battery current on HU)'},
         1089: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'desc': 'Battery temperature from BMS (whole degrees per ESS; corrected at read time)', 'signed': True},
         1090: {'name': 'bms_max_current', 'scale': 0.1, 'unit': 'A', 'desc': 'Max charge/discharge current from BMS'},
-        1091: {'name': 'bms_gauge_rm', 'scale': 1, 'unit': '', 'desc': 'Gauge RM from BMS'},
-        1092: {'name': 'bms_gauge_fcc', 'scale': 1, 'unit': '', 'desc': 'Gauge FCC from BMS'},
+        # 10 mAh units per the ESS Protocol (0x001A/0x001B), so 0.01 Ah. Documented rather
+        # than measured on this profile - the field reading behind the scale came from an
+        # SPH-TL3. Worth remembering that 1088 on THIS profile turned out not to be what
+        # the same document implied (#420), so treat these as unconfirmed here until an
+        # HU owner checks them against a nameplate (#403).
+        1091: {'name': 'bms_gauge_rm', 'scale': 0.01, 'unit': 'Ah',
+               'desc': 'BMS_GaugeRM - remaining capacity (ESS 0x001A, 10 mAh units)'},
+        1092: {'name': 'bms_gauge_fcc', 'scale': 0.01, 'unit': 'Ah',
+               'desc': 'BMS_GaugeFCC - full charge capacity (ESS 0x001B, 10 mAh units)'},
         1093: {'name': 'bms_fw_version', 'scale': 1, 'unit': '', 'desc': 'BMS firmware version'},
         1094: {'name': 'bms_delta_volt', 'scale': 0.001, 'unit': 'V', 'desc': 'Delta V from BMS'},
         1095: {'name': 'bms_cycle_count', 'scale': 1, 'unit': '', 'desc': 'Cycle Count from BMS'},

@@ -146,6 +146,21 @@ SPH_TL3_3000_10000 = {
         # _find_register_by_name() resolution order-dependent.
         1083: {'name': 'bms_status', 'scale': 1, 'unit': '', 'desc': 'Status from BMS'},
         1085: {'name': 'bms_error', 'scale': 1, 'unit': '', 'desc': 'Error information from BMS'},
+
+        # Gauge remaining / full-charge capacity. INPUT 1091-1092 - holding 1091/1092 in
+        # this same file are AC Charge Stop SOC and AC Charge Enable, which is the overlap
+        # this protocol is full of.
+        #
+        # Scale is from the ESS Protocol, which documents 0x001A/0x001B in units of 10 mAh,
+        # so 0.01 Ah. NOT measured: the reporter's raw 4996/5250 become 49.96 Ah of
+        # 52.50 Ah, which suits a ~220 V pack, but the same raws read as watt-hours would
+        # give 5.25 kWh, which is also a plausible battery. The documented unit is what is
+        # mapped; the arithmetic that separates the two needs his nameplate (#403).
+        1091: {'name': 'bms_gauge_rm', 'scale': 0.01, 'unit': 'Ah',
+               'desc': 'BMS_GaugeRM - remaining capacity (ESS 0x001A, 10 mAh units)'},
+        1092: {'name': 'bms_gauge_fcc', 'scale': 0.01, 'unit': 'Ah',
+               'desc': 'BMS_GaugeFCC - full charge capacity (ESS 0x001B, 10 mAh units)'},
+
         1095: {'name': 'bms_cycle_count', 'scale': 1, 'unit': '', 'desc': 'Cycle count from BMS'},
         1096: {'name': 'bms_soh', 'scale': 1, 'unit': '%', 'desc': 'SOH (State of Health) from BMS'},
         

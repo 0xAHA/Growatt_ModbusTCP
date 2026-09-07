@@ -71,6 +71,8 @@ ENERGY_BREAKDOWN_SENSORS: Set[str] = {
 
 BATTERY_SENSORS: Set[str] = {
     "battery_voltage", "battery_current", "battery_soc",
+    # BMS fuel gauge, in Ah (#403)
+    "bms_gauge_rm", "bms_gauge_fcc",
     "battery_temp", "battery_power",
     "battery_charge_power", "battery_discharge_power",
     "battery_charge_today", "battery_discharge_today",
