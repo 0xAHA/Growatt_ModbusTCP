@@ -93,6 +93,7 @@
           "baudrate": "Baud Rate",
           "host": "Host / IP Address",
           "port": "TCP Port",
+          "slave_id": "Unit / Slave ID",
           "max_block_size": "Max Register Block Size",
           "protocol_variant": "Protocol Variant"
         },
@@ -110,7 +111,8 @@
           "manual_path": "Overrides the selection above. Use this if the adapter is not listed, or to paste a /dev/serial/by-id/ path.",
           "host": "IP address or hostname of the RS485-to-TCP gateway.",
           "max_block_size": "Registers requested per Modbus read. Auto lets the profile decide. Lower this if entities are unavailable or stuck at zero and the log shows short reads or \"Unable to decode request\" - some RS485 gateways truncate large responses.",
-          "protocol_variant": "Ten inverter families exist as two register maps - a V1.39 legacy one and a VPP V2.01 one. Auto uses whatever auto-detection concluded at setup and is right for almost everyone. Change it only if sensors that should work are reporting nothing: an inverter without VPP support on the V2.01 map cannot read the 30000/31000 range, and the reverse leaves the VPP sensors empty."
+          "protocol_variant": "Ten inverter families exist as two register maps - a V1.39 legacy one and a VPP V2.01 one. Auto uses whatever auto-detection concluded at setup and is right for almost everyone. Change it only if sensors that should work are reporting nothing: an inverter without VPP support on the V2.01 map cannot read the 30000/31000 range, and the reverse leaves the VPP sensors empty.",
+          "slave_id": "Modbus unit ID the inverter answers on. Usually 1. If every reading is unavailable and the log shows transport errors, this is worth checking with a standalone Modbus client - some inverters ignore the address configured in ShineTools and only answer on 1."
         }
       }
     },

@@ -1022,6 +1022,25 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             # rather than a rejected form.
             connection_type = self.config_entry.data.get(CONF_CONNECTION_TYPE, "tcp")
 
+            # Unit / slave ID, for both connection types (#414).
+            #
+            # A WIT whose EMS COM address was set to 2 in ShineTools kept answering only on
+            # the native default of 1, so every block read timed out and surfaced as
+            # "transport error during block read" - which reads exactly like a connection
+            # that will not recover. The reporter spent two days on it, and the only fix
+            # available was deleting the entry and re-adding it, because this field could
+            # not be edited afterwards.
+            #
+            # Same reasoning as the host/path fields above: the unique_id is left alone,
+            # so entity IDs, automations and statistics survive the correction.
+            if CONF_SLAVE_ID in user_input and user_input[CONF_SLAVE_ID] != new_data.get(CONF_SLAVE_ID):
+                _LOGGER.info(
+                    "Unit/slave ID changed: %s -> %s",
+                    new_data.get(CONF_SLAVE_ID), user_input[CONF_SLAVE_ID],
+                )
+                new_data[CONF_SLAVE_ID] = user_input[CONF_SLAVE_ID]
+                changed = True
+
             if connection_type == "serial":
                 selected_path = user_input.get(CONF_DEVICE_PATH)
                 manual_path = (user_input.get("manual_path") or "").strip()
@@ -1226,6 +1245,15 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
         # Shown per connection type: a serial entry has no use for a host field, and offering
         # both invites someone to fill in the wrong one.
         current_connection_type = self.config_entry.data.get(CONF_CONNECTION_TYPE, "tcp")
+
+        # Offered for both connection types - a wrong unit ID fails identically over TCP
+        # and serial, and is invisible from the symptoms (#414).
+        options_schema = options_schema.extend({
+            vol.Required(
+                CONF_SLAVE_ID,
+                default=self.config_entry.data.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID),
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=247)),
+        })
 
         if current_connection_type == "serial":
             current_device_path = self.config_entry.data.get(CONF_DEVICE_PATH, "")

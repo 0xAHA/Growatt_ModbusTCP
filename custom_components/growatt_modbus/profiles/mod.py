@@ -707,9 +707,21 @@ MOD_6000_15000TL3_XH = {
                 'desc': 'VPP master enable. WARNING: enabling this takes the TOU schedule out '
                         'of circuit - 3047, 3049 and the Battery First slots all stop applying '
                         'while it is set (#373)'},
+        # NOT a master on/off for the block, despite the name. It selects which branch
+        # drives the inverter: the direct setpoint (30409) or the roster/TOU schedule
+        # (30412-30471).
+        #
+        # Measured by counter deltas over 13:00-15:00 on 04-09, with Growatt's own scheduler
+        # driving and 30407 standing at 0 the whole afternoon: battery charge +12.30 kWh,
+        # grid import +13.37 kWh, discharge 0.00. Twelve kilowatt-hours went into the battery
+        # through the roster branch while this register read "Disabled" (#349).
+        #
+        # So do not test 30407 to answer "is external power control active". 30100 is the
+        # authority bit; this one only picks the branch.
         30407: {'name': 'remote_power_control_enable', 'scale': 1, 'unit': '',
-                'values': {0: 'Disabled', 1: 'Enabled'},
-                'desc': 'Remote power control enable. Does nothing unless 30100 is also set (#373)'},
+                'values': {0: 'Direct setpoint (30409)', 1: 'Roster/TOU schedule'},
+                'desc': 'Selects the direct-setpoint branch vs the roster branch - not a master '
+                        'enable. The roster branch drives the inverter with this at 0 (#349)'},
         30408: {'name': 'remote_power_control_charging_time', 'scale': 1, 'unit': 'min',
                 'valid_range': (0, 1440),
                 'desc': 'Remote control duration. Expires without clearing 30407/30409/30100 (#373)'},
@@ -739,7 +751,13 @@ MOD_6000_15000TL3_XH = {
                 'desc': 'VPP AC charge enable. The inverter changes this on its own - do not '
                         'trust a cached value (#373)'},
 
-        # Mirrors the last commanded setpoint. Retains it after remote control is disabled —
+        # Mirrors the ACTIVE control value, not the commanded setpoint. The reporter first
+        # described it as mirroring 30409 and then corrected himself with a five-day count:
+        # 30474 moved 9-15 times a day across 30-08 to 03-09 while 30409 never moved once,
+        # his own layers disarmed throughout. A register that changes while its supposed
+        # source is static is not mirroring that source (#400).
+        #
+        # Retains the value after remote control is disabled —
         # confirmed ten hours on, still reading -33 (raw 65503) with 30100/30407/30409 all
         # zero, which also confirms the two's complement decode. A direct write is accepted
         # and ignored: the echo returns the written value, the read-back keeps the old one.

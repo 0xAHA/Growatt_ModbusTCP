@@ -467,6 +467,18 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
     - This firmware quirk creates actual idle state (battery neither charges nor discharges)
     - WARNING: +1% = HOLD, but -1% = FULL DISCHARGE (asymmetric behavior!)
 
+    The asymmetry above is a WIT observation and should not be assumed to generalise.
+    On a MOD 6000-15000TL3-XH (DTC 5400) it did NOT reproduce on the DIRECT branch:
+    over ~950 W of house load with no PV, +1% and -1% both collapsed discharge to
+    ~190 W and handed the load to the grid, differing by 26 W across n=48 and n=52
+    samples - inside the noise of a varying house load, with SoC flat in both. So on
+    that firmware the sign made no difference and -1% did not produce a full discharge.
+
+    That null is on the direct branch (30409 + 30408 + 30407 + 30100). The HOLD path
+    below uses the ROSTER branch (30412-30414 + 30411), which is a different route
+    through the same block - and 30407 selects between them (#349). Whether the TOU
+    workaround holds on MOD is being measured separately and is NOT yet answered (#400).
+
     NOTE: Legacy registers 201/202 do NOT work on WIT inverters!
     """
 

@@ -203,3 +203,96 @@ def test_port_enumeration_never_runs_on_the_event_loop():
         f"_serial_port_options is called directly at config_flow.py line(s) "
         f"{direct} - it must go through hass.async_add_executor_job"
     )
+
+
+# --------------------------------------------------------------------------------- #414
+
+
+def test_the_unit_id_can_be_changed_after_setup():
+    """A wrong Modbus unit ID is indistinguishable from a dead connection.
+
+    A WIT whose EMS COM address was set to 2 in ShineTools kept answering only on the native
+    default of 1, so every block read timed out and surfaced as `transport error during block
+    read` - which reads as a connection that will not recover, and was reported as one. It
+    took a standalone Modbus client to find: unit 2 gave 7 timeouts out of 7, unit 1 answered
+    immediately.
+
+    The only fix available was deleting the entry and re-adding it, because this was the one
+    connection field the options page did not expose - the same delete-and-re-add cost that
+    #383 removed for host, port and device path.
+    """
+    assert "new_data[CONF_SLAVE_ID] = user_input[CONF_SLAVE_ID]" in SOURCE, (
+        "the unit ID is not written back to entry data, so changing it would save silently "
+        "and poll the old address"
+    )
+
+
+def test_the_unit_id_is_offered_for_both_connection_types():
+    """A wrong unit ID fails identically over TCP and serial. Putting the field inside the
+    serial branch - the shape the surrounding code already has - would leave the reporter's
+    own case, a TCP gateway, unfixable.
+
+    Asserted positionally rather than by substring: the field has to be added to the schema
+    *before* the connection-type split, or it reaches only one kind of entry.
+    """
+    import ast
+
+    tree = ast.parse(SOURCE)
+    split = next(
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.If)
+        and isinstance(node.test, ast.Compare)
+        and "current_connection_type" in ast.dump(node.test)
+    )
+    extends = [
+        node.lineno for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "extend"
+        and "CONF_SLAVE_ID" in ast.dump(node)
+    ]
+    assert extends, "CONF_SLAVE_ID is never added to the options schema"
+    assert any(line < split.lineno for line in extends), (
+        "the unit ID field is only added inside the connection-type branch, so one of TCP "
+        "and serial cannot reach it"
+    )
+
+
+def test_the_unit_id_is_range_checked():
+    """Modbus addresses are 1-247. A free int would let someone save 0 or 300 and get the
+    same silent timeout this change exists to make findable."""
+    import ast
+
+    tree = ast.parse(SOURCE)
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "extend"
+                and "CONF_SLAVE_ID" in ast.dump(node)):
+            rendered = ast.unparse(node)
+            assert "Range" in rendered, "the unit ID field accepts any integer"
+            assert "min=1" in rendered and "max=247" in rendered, (
+                f"the unit ID range is not the Modbus address range: {rendered}"
+            )
+            return
+    pytest.fail("no options-schema extension carries CONF_SLAVE_ID")
+
+
+@pytest.mark.parametrize("path", ["strings.json", "translations/en.json"])
+def test_the_unit_id_field_is_labelled_and_explained(path):
+    """An unlabelled field renders as the raw key. This one also needs its description: the
+    whole point is that a user seeing everything unavailable would not otherwise think to
+    look at it, and that some inverters ignore the address set in ShineTools."""
+    import json
+    from pathlib import Path
+
+    component = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+    init = json.loads((component / path).read_text(encoding="utf-8"))["options"]["step"]["init"]
+
+    assert "slave_id" in init["data"], f"{path}: the unit ID field has no label"
+    description = init.get("data_description", {}).get("slave_id", "").lower()
+    assert description, f"{path}: the unit ID field has no description"
+    assert "shinetools" in description, (
+        f"{path}: the description does not mention that the inverter may ignore the address "
+        f"configured in ShineTools, which is the trap that produced the report"
+    )

@@ -4,6 +4,29 @@
 
 ---
 
+## v1.10.0-b7
+
+Issues: #349 #400 #414
+
+- **The Modbus unit / slave ID can now be changed from the options page.** Previously the
+  only way to correct it was to delete the config entry and add it again, which loses entity
+  IDs and with them automations, dashboards and statistics history. A wrong unit ID looks
+  exactly like a connection that will not recover, so this was two days of hunting for
+  @Svetlonos76 on a WIT that answered only on unit 1 despite ShineTools being set to 2.
+  Offered for both TCP and serial.
+- Register note corrected: **30407 is not a master enable.** It selects between the direct
+  setpoint (30409) and the roster/TOU schedule. Growatt's own scheduler moved 12.3 kWh into a
+  battery through the roster branch with 30407 reading "Disabled". If you are checking whether
+  external power control is active, 30100 is the register to read. Thanks @KevlarD-67. (#349)
+- Register note corrected: **30474 mirrors the active control value, not the commanded
+  setpoint** - it moved 9-15 times a day across five days while 30409 never moved at all. It
+  stays read-only; the reason is different. (#400)
+- Documented that the **+1 % / -1 % asymmetry behind the WIT HOLD workaround did not
+  reproduce on a MOD DTC 5400** direct branch, where both signs held. Whether the workaround
+  holds on MOD's roster branch is still being measured and is not yet answered. (#400)
+
+---
+
 ## v1.10.0-b6
 
 Issues: #373 #417
