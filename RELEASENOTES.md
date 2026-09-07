@@ -4,6 +4,75 @@
 
 ---
 
+## v1.10.0
+
+Promotes the v1.10.0-b1 to -b10 beta line to stable. Per-release detail is in the sections
+below; this is what it means if you are coming from v1.9.8.
+
+### Energy dashboard
+
+- **SPH grid import now reads the whole service, not one phase.** Import was taken from
+  `PactouserR` (register 1015), which is phase R alone. It now uses the total at 1021, falling
+  back to the sum of R+S+T where a firmware does not populate the total. **Three-phase and US
+  split-phase SPH owners were under-reading grid import** - a third and a half respectively.
+  Single-phase systems are unaffected, because R and the total are the same measurement there
+  (#419).
+- Energy counters that step backwards by a small amount are held rather than published, on
+  both daily and lifetime totals, so Home Assistant no longer records a phantom meter reset
+  (#417).
+- Impossible energy spikes are withheld instead of being published and entering long-term
+  statistics (#410, #412).
+
+### Battery
+
+- **New: Battery Remaining Capacity and Battery Full Charge Capacity** in Ah, on SPH-TL3 and
+  SPH 8000-10000 HU, from the battery's own fuel gauge. Confirmed against an ARK nameplate
+  (#403).
+- Battery Current now reads on SPH-TL3 and the legacy SPH profiles, where it previously
+  published a permanent 0.00 A (#397, #403).
+- On SPH 8000-10000 HU, register 1088 is a BMS charge-current limit rather than a current, and
+  is withheld rather than published as one (#420).
+
+### Safety diagnostics
+
+- **Insulation Resistance, DC Injection and Leakage Current now read from the correct
+  registers** on MIN TL-X, MIN TL-XH and MOD-XH. They were reading serial-number text. These
+  sensors are disabled by default (#404).
+- Insulation Resistance is reported as unknown when the inverter signals it is not measuring,
+  rather than as a healthy-looking 65 MOhm (#404).
+
+### Setup and reliability
+
+- **The Modbus unit / slave ID can be changed from the options page.** Previously this needed
+  deleting and re-adding the entry, losing entity IDs, automations and statistics (#414).
+- A repair notice suggests checking the unit ID when an entry has never had a single
+  successful read since setup (#424).
+- Setup can be completed when the inverter does not answer, so a register scan can be produced
+  for an unsupported model (#389).
+- Shared connections no longer leave an orphaned socket behind on reload, and reconnects after
+  repeated failures are spaced out without holding up other inverters on the same gateway
+  (PR #422).
+- Failed writes report why they failed, so a caller can tell a transient refusal from a hard
+  fault (PR #421).
+
+### MOD / MID / WIT
+
+- MOD-XH no longer reports its own AC output as grid export (#415).
+- VPP remote power controls are available on MOD TL3-XH, disabled by default (#373).
+- WIT VPP Hold no longer expires at midnight when set late in the evening (#423).
+
+### Worth knowing
+
+**#419 is the change to watch.** It alters grid import for every SPH profile and is the one
+change here that a single-phase system cannot distinguish - the old and new behaviour are
+identical on single-phase hardware. It is reasoned from the V1.39 register table and from how
+export and load already resolve, and it is covered by tests, but **no three-phase SPH owner has
+confirmed it on hardware**. If your grid import looks wrong after upgrading, please say so on
+[#419](https://github.com/0xAHA/Growatt_ModbusTCP/issues/419) and it will be treated as a
+priority.
+
+---
+
 ## v1.10.0-b10
 
 Issues: #404
