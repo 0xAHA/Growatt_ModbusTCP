@@ -370,6 +370,38 @@ class GrowattGenericSelect(GrowattEntity, SelectEntity):
             await self.coordinator.async_request_refresh()
 
 
+def hold_tou_periods(current_minutes: int, duration_minutes: int = 120) -> list[tuple[int, int]]:
+    """TOU periods covering a HOLD window that may cross midnight.
+
+    Period words are minutes since midnight and DO NOT WRAP: 1440 is out of range, not
+    00:00 tomorrow. Clamping the end to 1439 - which is what this used to do inline -
+    silently shortened any Hold selected after 21:59. At 23:50 the user got nine minutes
+    instead of two hours; the period expired at midnight, the battery resumed discharging,
+    and the entity went on reporting Hold because `current_option` returns the last
+    commanded mode rather than device state.
+
+    Overnight is when a hold is most likely to be wanted, so the window where the clamp bit
+    hardest was the window it would be used in (#423).
+
+    A window crossing midnight is returned as two periods. The roster holds 20 periods at 3
+    registers each (30412-30471), so a second one is well inside it.
+
+    Returns a list of (start_minute, end_minute) pairs, in write order.
+    """
+    start_min = max(0, current_minutes - 5)
+    raw_end = current_minutes + duration_minutes
+
+    if raw_end <= 1439:
+        return [(start_min, raw_end)]
+
+    periods = [(start_min, 1439)]
+    wrap_end = raw_end - 1440
+    # Exactly 1440 means the window ends at midnight, so there is no second period to
+    # write - a 0-0 period would be degenerate.
+    if wrap_end > 0:
+        periods.append((0, wrap_end))
+    return periods
+
 class GrowattWitWorkModeSelect(GrowattEntity, SelectEntity):
     """WIT VPP: Work mode / remote command (holding register 202)."""
 
@@ -578,23 +610,54 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
                 now = datetime.now()
                 current_minutes = now.hour * 60 + now.minute
 
-                # Create TOU period: (now - 5min) to (now + 2 hours) at +1% charge
-                start_min = max(0, current_minutes - 5)
-                end_min = min(1439, current_minutes + 120)
+                # Create TOU period: (now - 5min) to (now + 2 hours) at +1% charge.
+                #
+                # Period words are minutes since midnight and DO NOT WRAP - 1440 is not
+                # 00:00 tomorrow, it is out of range. This used to clamp the end to 1439,
+                # which silently shortened any Hold selected after 21:59: at 23:50 the user
+                # got nine minutes instead of two hours, the period expired at midnight, the
+                # battery resumed discharging, and the entity went on reporting Hold because
+                # current_option returns the last commanded mode rather than device state.
+                #
+                # Overnight is when a hold is most likely to be wanted, so the window where
+                # the clamp bit hardest was the window it would be used in (#423).
+                #
+                # A window crossing midnight is therefore written as TWO periods - one to
+                # 23:59 and one from 00:00 - and 30411 is set to the count. The roster holds
+                # 20 periods at 3 registers each (30412-30471), so period 2 at 30415 is well
+                # inside it.
+                periods = hold_tou_periods(current_minutes)
+                if len(periods) > 1:
+                    _LOGGER.debug(
+                        "[WIT-VPP] HOLD window crosses midnight - writing %d periods",
+                        len(periods),
+                    )
 
-                # Write TOU period using function 0x10 (write multiple registers)
-                _LOGGER.debug("[WIT-VPP] Writing TOU period %02d:%02d-%02d:%02d @ +1%%",
-                             start_min // 60, start_min % 60, end_min // 60, end_min % 60)
-                success = client.write_registers(
-                    self.VPP_TOU_PERIOD1_BASE,
-                    [start_min, end_min, 1],  # +1% = HOLD (NOT -1% which = full discharge!)
-                )
-                if not success:
-                    _LOGGER.error("[WIT-VPP] Failed to write TOU period for HOLD mode")
-                    return False
+                # Write TOU periods using function 0x10 (write multiple registers)
+                for index, (period_start, period_end) in enumerate(periods):
+                    base = self.VPP_TOU_PERIOD1_BASE + (index * 3)
+                    _LOGGER.debug(
+                        "[WIT-VPP] Writing TOU period %d at %d: %02d:%02d-%02d:%02d @ +1%%",
+                        index + 1, base,
+                        period_start // 60, period_start % 60,
+                        period_end // 60, period_end % 60,
+                    )
+                    success = client.write_registers(
+                        base,
+                        # +1% = HOLD (NOT -1% which = full discharge on WIT!)
+                        [period_start, period_end, 1],
+                    )
+                    if not success:
+                        _LOGGER.error(
+                            "[WIT-VPP] Failed to write TOU period %d for HOLD mode",
+                            index + 1,
+                        )
+                        return False
 
-                # Enable 1 TOU period
-                success = client.write_register(self.VPP_TOU_NUM_PERIODS, 1)
+                # Enable exactly the periods just written. Setting the count is what brings
+                # them into force, so a stale period 2 left over from an earlier midnight
+                # crossing is ignored once this reads 1 again.
+                success = client.write_register(self.VPP_TOU_NUM_PERIODS, len(periods))
                 if not success:
                     _LOGGER.error("[WIT-VPP] Failed to enable TOU period for HOLD mode")
                     return False

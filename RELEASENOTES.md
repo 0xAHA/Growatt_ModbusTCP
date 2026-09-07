@@ -4,6 +4,23 @@
 
 ---
 
+## v1.10.0-b8
+
+Issues: #423 #424
+
+- **A repair notice now suggests the Modbus unit ID when an entry has never once
+  responded.** A wrong unit ID looks exactly like a dead connection - every read times out
+  and the log says `transport error during block read` - so nothing points at the address as
+  the thing to check. The notice fires only when there has been no successful read since
+  setup, never when a working entry goes offline, and clears itself on the first success.
+- **WIT VPP HOLD no longer expires at midnight.** TOU period words are minutes since
+  midnight and do not wrap, and the end was being clamped to 23:59 - so a Hold selected at
+  23:50 lasted nine minutes rather than two hours, then lapsed while the entity went on
+  reporting `Hold`. A window crossing midnight is now written as two periods. Affects WIT
+  profiles, where the Mode (VPP) select is offered.
+
+---
+
 ## v1.10.0-b7
 
 Issues: #349 #400 #414

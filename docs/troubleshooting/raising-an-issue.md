@@ -37,7 +37,7 @@ Please paste log lines as text in a code block rather than a screenshot. Screens
     Screenshots remain the right choice for genuinely visual things: a settings page, the shape of a graph, a dialog that is behaving oddly, or a page from a manufacturer document. It is specifically **text inside an image** that costs time.
 
 !!! tip "Is there anything under Settings → Repairs?"
-    The integration raises repair notices for problems it can detect itself, such as an inverter reverting your settings or a gateway returning malformed responses. If one is showing, say so — it usually names the cause outright.
+    The integration raises repair notices for problems it can detect itself, such as an inverter reverting your settings, a gateway returning malformed responses, or an entry that has never had a single successful read since setup. If one is showing, say so — it usually names the cause outright.
 
     One of them answers the most common question here before you ask it. **"This inverter may be on the wrong profile"** appears when your inverter's device type code points at a different profile from the one in use — which is what usually lies behind *my model should have sensor X and does not*. Detection runs once at setup, and one timed-out read at that moment can leave you on a profile that maps fewer registers than your hardware supports. Nothing is changed automatically; the notice names the profile to switch to. If you have set the **Protocol variant** option by hand, the check stays silent and does not second-guess you.
 
@@ -71,6 +71,17 @@ Run the [Universal Register Scanner](diagnostic-service.md) and attach the CSV.
 Nearly always the RS485 adapter rather than the inverter or the integration. Read [RS485 Gateways](rs485-gateways.md) first — it lists which adapters are known to work, the settings that matter, and how to tell a gateway fault from an inverter one.
 
 Worth including: your adapter model, and whether the problem survives a restart of Home Assistant.
+
+!!! warning "If it has *never* worked, check the Modbus unit ID before anything else"
+    A connection that worked and then stopped, and one that has never once responded, look identical in the log — both give `transport error during block read`. But they rarely have the same cause, and a wrong **unit ID (slave ID)** produces exactly the second pattern with nothing to hint at it: every read is addressed to a device that is not listening, so every read times out.
+
+    This was reported as a connection that could not recover, and cost two days before a standalone Modbus client found it — unit ID 2 gave seven timeouts out of seven, unit ID 1 answered immediately.
+
+    **Check it with a standalone client** (QModMaster, modpoll) pointed at the same host and port, trying unit IDs 1 to 8. Most Growatt inverters answer on **1**.
+
+    **Do not trust the address configured in ShineTools.** On a WIT running firmware 5050 the EMS COM address was set to 2 and the port went on answering only on 1.
+
+    From v1.10.0-b7 the integration raises a repair notice when an entry has never had a successful read since setup, and the **Unit / Slave ID** can be corrected under **Configure** without deleting the entry — so your entity IDs, automations and statistics history survive the fix.
 
 ### A control won't stick, or reverts after a few seconds
 

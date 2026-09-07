@@ -181,6 +181,14 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # Adaptive polling for offline inverters
         self._consecutive_failures = 0
         self._failure_threshold = 5  # After 5 failures, slow down polling
+
+        # An entry that has NEVER had a successful read is a different condition from one
+        # that was working and stopped, and only the first points at configuration (#424).
+        # A wrong unit ID looks exactly like a dead link - every block read times out and
+        # the log says "transport error during block read" - so nothing in the symptoms
+        # suggests the address as the thing to check. It cost one reporter two days.
+        self._ever_polled_successfully = False
+        self._unit_id_issue_raised = False
         scan_interval = entry.options.get("scan_interval", 60)  # Default 60 seconds
         self._normal_update_interval = timedelta(seconds=scan_interval)
         self._offline_update_interval = timedelta(seconds=entry.options.get("offline_scan_interval", 300))  # 5 min default
@@ -575,6 +583,67 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
     # during a reboot is normal, and 2 failures out of 3 reads says nothing.
     _GATEWAY_MIN_SAMPLE = 200
     _GATEWAY_BAD_FRACTION = 0.05
+
+    @callback
+    def _check_never_responded(self) -> None:
+        """Suggest the Modbus unit ID when an entry has never once answered (#424).
+
+        Deliberately narrow. This fires only when there has been no successful read since
+        setup - not when a working entry goes offline, which is an inverter that is asleep,
+        powered down or briefly unreachable, and where naming the unit ID would be actively
+        misleading. Raised at most once per entry, and withdrawn on the first success.
+
+        A wrong unit ID is indistinguishable from a broken link from the symptoms alone: on
+        #414 a WIT configured for unit 2 answered only on unit 1, and every block read timed
+        out and surfaced as a transport error. The EMS COM address had been set to 2 in
+        ShineTools and the firmware ignored it. Two days to find, with a standalone Modbus
+        client, and the fix was one field.
+
+        Note this cannot distinguish a wrong unit ID from an unreachable host - both produce
+        silence. It is worded as something to check rather than as a diagnosis.
+        """
+        if self._ever_polled_successfully or self._unit_id_issue_raised:
+            return
+        if self._consecutive_failures < self._failure_threshold:
+            return
+
+        self._unit_id_issue_raised = True
+        slave_id = self.config_entry.data.get(CONF_SLAVE_ID, 1)
+
+        if self.config_entry.data.get(CONF_CONNECTION_TYPE) == "serial":
+            target = self.config_entry.data.get(CONF_DEVICE_PATH, "the serial port")
+        else:
+            target = (
+                f"{self.config_entry.data.get(CONF_HOST, '?')}:"
+                f"{self.config_entry.data.get(CONF_PORT, '?')}"
+            )
+
+        _LOGGER.warning(
+            "No successful read since setup after %d attempts on %s at unit ID %s. If the "
+            "address is wrong every read times out and looks like a dead link - check which "
+            "unit ID the inverter actually answers on before assuming a connection fault.",
+            self._consecutive_failures, target, slave_id,
+        )
+        try:
+            ir.async_create_issue(
+                self.hass,
+                DOMAIN,
+                f"unit_id_never_responded_{self.config_entry.entry_id}",
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="unit_id_never_responded",
+                translation_placeholders={
+                    "target": str(target),
+                    "slave_id": str(slave_id),
+                    "attempts": str(self._consecutive_failures),
+                },
+                learn_more_url=(
+                    "https://github.com/0xAHA/Growatt_ModbusTCP/blob/main/"
+                    "docs/troubleshooting/raising-an-issue.md"
+                ),
+            )
+        except Exception as err:
+            _LOGGER.debug("Could not create unit ID repair issue: %s", err)
 
     @callback
     def _check_gateway_health(self) -> None:
@@ -1171,6 +1240,8 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                             self._consecutive_failures
                         )
 
+                self._check_never_responded()
+
                 if self.data is None:
                     # First startup with inverter offline — create empty placeholder so the
                     # integration loads successfully. Regular polling will connect when the
@@ -1224,6 +1295,22 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 )
                 self.update_interval = self._normal_update_interval
             self._consecutive_failures = 0
+
+            # First success clears the never-responded state for good. Whatever the entry
+            # is configured with demonstrably works, so the unit-ID suggestion would be
+            # wrong from here on.
+            if not self._ever_polled_successfully:
+                self._ever_polled_successfully = True
+                if self._unit_id_issue_raised:
+                    self._unit_id_issue_raised = False
+                    try:
+                        ir.async_delete_issue(
+                            self.hass,
+                            DOMAIN,
+                            f"unit_id_never_responded_{self.config_entry.entry_id}",
+                        )
+                    except Exception as err:
+                        _LOGGER.debug("Could not clear unit ID repair issue: %s", err)
 
             # Update successful - record timestamp (timezone-aware)
             from datetime import timezone as tz
