@@ -151,11 +151,19 @@ SPH_TL3_3000_10000 = {
         # this same file are AC Charge Stop SOC and AC Charge Enable, which is the overlap
         # this protocol is full of.
         #
-        # Scale is from the ESS Protocol, which documents 0x001A/0x001B in units of 10 mAh,
-        # so 0.01 Ah. NOT measured: the reporter's raw 4996/5250 become 49.96 Ah of
-        # 52.50 Ah, which suits a ~220 V pack, but the same raws read as watt-hours would
-        # give 5.25 kWh, which is also a plausible battery. The documented unit is what is
-        # mapped; the arithmetic that separates the two needs his nameplate (#403).
+        # 10 mAh per the ESS Protocol (0x001A/0x001B), so 0.01 Ah - and CONFIRMED against
+        # hardware, not just documented.
+        #
+        # The reporter runs 4x Growatt ARK 2.5H-A2 in series: 2.56 kWh at 51.2 V is 50.0 Ah
+        # per module, and series adds volts rather than amp-hours, so the pack is 50.0 Ah at
+        # 204.8 V = 10.24 kWh, matching his stated nameplate exactly.
+        #
+        # His raw 5250 at 0.01 Ah is 52.50 Ah, or 105% of the 50.0 Ah nameplate - what a
+        # gauge reports for a healthy pack against a conservatively rated module. The
+        # watt-hour reading this was checked against would have been 5.25 kWh, 51% of his
+        # pack, which is impossible at the 95% SOC the pair implies. Corroborated by his
+        # discharge measurement: 5170 W at 219.9 V is 23.5 A against a register reading of
+        # -25.10 A, and the module is rated 48 A (#403).
         1091: {'name': 'bms_gauge_rm', 'scale': 0.01, 'unit': 'Ah',
                'desc': 'BMS_GaugeRM - remaining capacity (ESS 0x001A, 10 mAh units)'},
         1092: {'name': 'bms_gauge_fcc', 'scale': 0.01, 'unit': 'Ah',

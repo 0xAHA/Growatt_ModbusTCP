@@ -157,10 +157,14 @@ estimate.
     multiplying by a pack voltage that itself moves with state of charge, producing a number
     that looks authoritative without being measured anywhere.
 
-    The scale comes from the ESS Protocol, which documents these registers in units of 10 mAh.
-    It has not been confirmed against a battery nameplate yet — if yours reads a Full Charge
-    Capacity that does not match your pack, please say so on
-    [#403](https://github.com/0xAHA/Growatt_ModbusTCP/issues/403).
+    The scale comes from the ESS Protocol, which documents these registers in units of
+    10 mAh, and is **confirmed on hardware**: an SPH-TL3 with 4x Growatt ARK 2.5H-A2 in
+    series — 50.0 Ah at 204.8 V, 10.24 kWh nameplate — reports a Full Charge Capacity of
+    52.50 Ah, or 105% of nameplate ([#403](https://github.com/0xAHA/Growatt_ModbusTCP/issues/403)).
+
+    A gauge reading slightly **above** the nameplate is normal: modules are rated
+    conservatively. Reading well below it is the signal that matters, and it is what
+    degradation looks like.
 
 **Note that these are input registers.** Holding 1091 and 1092 at the same addresses are AC
 Charge Stop SOC and AC Charge Enable — an overlap that runs through this whole protocol.

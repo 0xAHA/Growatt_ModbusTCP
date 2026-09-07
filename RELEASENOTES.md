@@ -31,9 +31,9 @@ Issues: #403 #414 #423  PRs: #421 #422
 - **New sensors: Battery Remaining Capacity and Battery Full Charge Capacity**, in Ah, on
   SPH-TL3 and SPH 8000-10000 HU. They come from the battery's own fuel gauge, so Remaining
   divided by Full is the gauge's state of charge, and Full Charge Capacity falling below the
-  nameplate figure shows real degradation. The scale is taken from the ESS Protocol and has
-  not yet been confirmed against a battery nameplate - if yours looks wrong, please say so on
-  #403. Thanks @Doprintityourself.
+  nameplate figure shows real degradation. The scale is **confirmed on hardware**: an SPH-TL3
+  with 4x ARK 2.5H-A2 in series (50.0 Ah, 10.24 kWh) reports 52.50 Ah, 105% of nameplate.
+  Thanks @Doprintityourself, whose readings and battery specification this rests on.
 - **A shared connection no longer leaves a second socket behind when an entry is reloaded.**
   An in-flight poll could outlive its hub and open a socket nobody would close, which on a
   gateway that serialises clients turns one transport error into a cascade that does not

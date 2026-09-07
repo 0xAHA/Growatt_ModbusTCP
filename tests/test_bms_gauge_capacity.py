@@ -116,19 +116,46 @@ def test_every_profile_that_maps_them_also_creates_them(profile):
         )
 
 
-def test_the_reporters_raw_values_land_somewhere_believable():
-    """Rule 4 applied to the evidence. If 4996/5250 do not produce a sane pair under this
-    scale, the mapping is wrong and this file should be revisited rather than protecting it.
+def test_the_scale_is_confirmed_against_a_real_nameplate():
+    """Rule 4 applied to the evidence rather than the code, and the check that settled it.
 
-    Remaining must not exceed full, and the ratio is his state of charge - which is the
-    cross-check he can run without a nameplate.
+    The scale was documented (ESS Protocol, 10 mAh) but ambiguous in practice: raw 5250
+    could be 52.50 Ah or 5.25 kWh, and both are plausible batteries. The reporter's pack
+    decides it.
+
+    4x Growatt ARK 2.5H-A2, in series. 2.56 kWh at 51.2 V is 50.0 Ah per module, and series
+    adds volts rather than amp-hours - so the pack is 50.0 Ah at 204.8 V, which is the
+    10.24 kWh he states.
+
+    If this arithmetic stops holding, the mapping is wrong and this file should be revisited
+    rather than quietly protecting it.
     """
-    remaining = 4996 * 0.01
-    full = 5250 * 0.01
+    module_ah = 2.56 * 1000 / 51.2
+    assert module_ah == pytest.approx(50.0)
 
-    assert remaining == pytest.approx(49.96)
-    assert full == pytest.approx(52.50)
-    assert remaining <= full, "remaining capacity exceeds full charge capacity"
-    assert 0.90 < remaining / full < 1.0, (
-        "the implied state of charge is not in a plausible range for the reading"
+    pack_ah = module_ah                      # four in SERIES: volts add, amp-hours do not
+    pack_volts = 51.2 * 4
+    assert pack_ah * pack_volts / 1000 == pytest.approx(10.24), (
+        "the pack arithmetic no longer reproduces the stated nameplate"
     )
+
+    full_ah = 5250 * 0.01
+    assert full_ah == pytest.approx(52.50)
+    assert 1.0 <= full_ah / pack_ah <= 1.15, (
+        f"full charge capacity is {100 * full_ah / pack_ah:.0f}% of nameplate, which is not "
+        f"what a healthy gauge reports"
+    )
+
+    # The reading this was checked against, kept so the refutation does not get lost.
+    full_as_watt_hours_kwh = 5250 / 1000
+    assert full_as_watt_hours_kwh / 10.24 < 0.6, (
+        "the watt-hour reading is no longer clearly refuted by the nameplate"
+    )
+
+
+def test_remaining_over_full_is_a_plausible_state_of_charge():
+    """The cross-check that works whatever the unit: the ratio is the gauge's own SOC."""
+    remaining, full = 4996 * 0.01, 5250 * 0.01
+
+    assert remaining <= full, "remaining capacity exceeds full charge capacity"
+    assert 100 * remaining / full == pytest.approx(95.2, abs=0.1)
