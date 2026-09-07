@@ -369,6 +369,36 @@ If you drive slots from an automation or a price optimiser, disable the conflict
 before writing the new one — write `[23:59, 23:59, 0]` to the opposing slot as one atomic
 triple, allow it to settle, then write the period you want.
 
+#### The disable-then-enable pattern, confirmed under load
+
+This sequence has been run against a genuinely busy night — 28 register writes driven by
+Predbat in expert mode, revising its own plan repeatedly as prices updated — with **zero
+rejections** ([#417](https://github.com/0xAHA/Growatt_ModbusTCP/issues/417), @Vict20):
+
+1. Before writing an enabled period, read the **opposing** mode's enable state from its
+   `select` entity.
+2. If it is active, write `[23:59, 23:59, 0]` to that opposing slot — one atomic triple via
+   `write_registers`, never a bare single-register write.
+3. Wait about **2 seconds** for it to settle.
+4. Write the real `[start, end, enable]` triple for the slot you actually want.
+
+Two details that made the difference:
+
+- **Every write is a three-register triple.** Writing `start`, `end` and `enable`
+  individually can leave the inverter briefly holding a period that overlaps the running one,
+  which is both a rejection risk and how partially-written periods appear.
+- **Only the final state of a revised plan is written.** An optimiser that rewrites the same
+  window two or three times before settling should collapse those into one write, rather than
+  firing on every intermediate change.
+
+Cross-checking the integration's debug log against the optimiser's own record of intended
+writes showed every decision reaching the inverter, **8–17 seconds later** (the automation's
+settle delay), with no missing writes and no register changes that could not be accounted
+for.
+
+This is firmware behaviour rather than anything SPH-specific, so the same pattern should
+apply on other families that refuse overlapping enabled periods.
+
 !!! note "The inverter's SoC reserve is a separate protection"
     A discharge window does not run the battery flat. Discharge throttles to near zero as
     SoC approaches your configured reserve floor, whatever the schedule says — observed
