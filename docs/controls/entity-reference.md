@@ -227,6 +227,25 @@ AGM, Flooded and Lithium. The integration reads your existing values and never w
 default - a value changes only when you move the control
 ([#384](https://github.com/0xAHA/Growatt_ModbusTCP/issues/384)).
 
+**Bulk cannot be set below Float, and the two controls now enforce that on each other.** Bulk
+is the constant-voltage charging stage and Float the maintenance stage, so a bulk voltage
+below float is meaningless and the firmware rejects it.
+
+It rejects it *silently*: the write is acknowledged, the register reverts, and the
+integration's read-back check then reports **"settings are being reverted"** - which reads as
+a fault in the integration or interference from the Growatt cloud, rather than as a request
+the inverter was right to refuse. One reporter spent time chasing exactly that on a system
+with no datalogger attached
+([#387](https://github.com/0xAHA/Growatt_ModbusTCP/issues/387)).
+
+So the Bulk slider will not go below the current Float value, and the Float slider will not go
+above the current Bulk value. Setting them through `number.set_value` from a script or
+automation - which bypasses the slider limits - fails with a message saying what the limit is
+and why, instead of appearing to succeed.
+
+Equal values are allowed. To move both, change them in the order that keeps the pair valid:
+raising both means raising Bulk first, lowering both means lowering Float first.
+
 **Max Charge Current is unavailable when Battery Type is Lithium.** The inverter does not
 allow it to be set in that mode — the BMS takes over charge current control — so the entity
 is withheld rather than offered and ignored. Range and behaviour are confirmed on an

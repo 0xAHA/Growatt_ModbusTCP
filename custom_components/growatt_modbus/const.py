@@ -427,10 +427,18 @@ WRITABLE_REGISTERS = {
     # available_when: both programs read "If self-defined is selected in program 5, this
     # program can be set up". Program 5 is battery type (register 39), where 2 = User
     # Defined and 4 = User Defined 2.
+    # Bulk and Float constrain each other: the firmware refuses a bulk voltage below the
+    # float voltage, and the refusal is silent - the write is acknowledged and the value
+    # reverts, which surfaced as a "settings are being reverted" repair notice about the
+    # integration rather than as an invalid request (#387).
+    #
+    # Declared per control rather than inferred. This is the only pair known to interact,
+    # and nothing suggests the other SPF controls do.
     'bulk_charge_voltage': {
         'register': 35,
         'scale': 0.1,
         'valid_range': (480, 584),
+        'not_below': 'float_charge_voltage',
         'unit': 'V',
         'available_when': ('battery_type', (2, 4)),
         'disabled_by_default': True,
@@ -441,6 +449,7 @@ WRITABLE_REGISTERS = {
         'register': 36,
         'scale': 0.1,
         'valid_range': (480, 584),
+        'not_above': 'bulk_charge_voltage',
         'unit': 'V',
         'available_when': ('battery_type', (2, 4)),
         'disabled_by_default': True,

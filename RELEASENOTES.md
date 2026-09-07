@@ -4,6 +4,19 @@
 
 ---
 
+## Unreleased
+
+Issues: #387
+
+- **SPF Bulk and Float Charge Voltage now constrain each other.** Bulk cannot be set below
+  Float, or Float above Bulk - the inverter rejects that combination, and it rejected it in a
+  way that surfaced as a "settings are being reverted" repair notice rather than as an invalid
+  request. The sliders no longer offer the invalid range, and a script setting them through
+  `number.set_value` gets a message saying what the limit is. Equal values are allowed.
+  Reported by @dinkalin-ux.
+
+---
+
 ## v1.10.0
 
 Promotes the v1.10.0-b1 to -b10 beta line to stable. Per-release detail is in the sections

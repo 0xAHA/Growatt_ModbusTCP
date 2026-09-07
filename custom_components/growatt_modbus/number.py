@@ -6,6 +6,7 @@ from typing import Any
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import EntityCategory
@@ -328,6 +329,100 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         scale = self._control_config.get('scale', 1)
         return round(float(raw_value) * scale, 2)
 
+    # ------------------------------------------------------------------
+    # Paired-register bounds (#387)
+    #
+    # Some registers constrain each other. On SPF, Bulk (Program 19, register 35) is the
+    # constant-voltage stage and Float (Program 20, register 36) the maintenance stage, and
+    # the firmware refuses a bulk voltage below float. Both sliders spanned the same
+    # 48.0-58.4 V independently, so nothing stopped a user asking for the combination the
+    # hardware will always reject.
+    #
+    # What that looked like from the outside was not "invalid setting". The write was
+    # acknowledged, the inverter discarded it, the read-back check noticed, and the user got
+    # "settings are being reverted" - a repair notice about the integration, for a request
+    # the inverter was right to refuse.
+    #
+    # Only this pair is known to interact. Constraints are declared per control rather than
+    # inferred, because inventing relationships between registers on the strength of one
+    # documented case would be worse than leaving them independent.
+    # ------------------------------------------------------------------
+
+    def _paired_bound(self, other_control: str) -> float | None:
+        """Live display value of another control, if it is usable as a bound.
+
+        Returns None when the value is missing or outside this control's own static range -
+        which is what an unread register looks like, since it keeps its 0.0 default. Without
+        that guard a Float slider would take its maximum from a Bulk register that had not
+        been read yet and collapse to 0.
+        """
+        data = self.coordinator.data
+        if data is None:
+            return None
+
+        raw_value = getattr(data, other_control, None)
+        if raw_value is None or other_control in getattr(data, 'unread_fields', ()):
+            return None
+
+        from .const import WRITABLE_REGISTERS
+        other = WRITABLE_REGISTERS.get(other_control)
+        if not other:
+            return None
+
+        value = round(float(raw_value) * other.get('scale', 1), 2)
+        if not (self._attr_native_min_value <= value <= self._attr_native_max_value):
+            return None
+        return value
+
+    def _check_paired_constraint(self, value: float) -> None:
+        """Raise if `value` would cross a paired control. No-op where none is declared."""
+        floor_from = self._control_config.get('not_below')
+        if floor_from:
+            paired = self._paired_bound(floor_from)
+            if paired is not None and value < paired:
+                raise HomeAssistantError(
+                    f"{self._attr_name or self._control_name} cannot be set below "
+                    f"{paired} V, the current {self._friendly(floor_from)}. The inverter "
+                    f"refuses this combination, and the write would appear to succeed and "
+                    f"then revert."
+                )
+
+        ceiling_from = self._control_config.get('not_above')
+        if ceiling_from:
+            paired = self._paired_bound(ceiling_from)
+            if paired is not None and value > paired:
+                raise HomeAssistantError(
+                    f"{self._attr_name or self._control_name} cannot be set above "
+                    f"{paired} V, the current {self._friendly(ceiling_from)}. The inverter "
+                    f"refuses this combination, and the write would appear to succeed and "
+                    f"then revert."
+                )
+
+    @staticmethod
+    def _friendly(control_name: str) -> str:
+        """Readable name for the paired control, for an error a user has to act on."""
+        return control_name.replace('_', ' ').title()
+
+    @property
+    def native_min_value(self) -> float:
+        """Static minimum, raised to the paired control's value where one is declared."""
+        floor_from = self._control_config.get('not_below')
+        if floor_from:
+            paired = self._paired_bound(floor_from)
+            if paired is not None:
+                return max(self._attr_native_min_value, paired)
+        return self._attr_native_min_value
+
+    @property
+    def native_max_value(self) -> float:
+        """Static maximum, lowered to the paired control's value where one is declared."""
+        ceiling_from = self._control_config.get('not_above')
+        if ceiling_from:
+            paired = self._paired_bound(ceiling_from)
+            if paired is not None:
+                return min(self._attr_native_max_value, paired)
+        return self._attr_native_max_value
+
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
         scale = self._control_config.get('scale', 1)
@@ -338,6 +433,15 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         # Validate range
         valid_range = self._control_config.get('valid_range', (0, 100))
         raw_value = max(valid_range[0], min(raw_value, valid_range[1]))
+
+        # Paired-register constraint (#387). The dynamic bounds above stop this being
+        # reachable from the UI slider, but number.set_value from a script or the REST API
+        # bypasses them entirely - and that is the path an automation would take.
+        #
+        # Refused with a reason rather than clamped silently: someone asking for 52.0 V when
+        # float sits at 54.0 V has a mistaken idea of what the inverter will do, and quietly
+        # writing 54.0 V instead would hide that.
+        self._check_paired_constraint(value)
 
         # Write to Modbus register with read-back verification
         register = self._control_config['register']
