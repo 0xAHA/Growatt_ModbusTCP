@@ -1426,29 +1426,44 @@
 | 3084 | Epv_today L | PV energy today (low) | 0.1kWh | |
 | 3085 | Reserved | Reserved | — | |
 | 3086 | DeratingMode | Inverter derating mode | — | See appendix table 1 |
-| 3087 | ISO | PV ISO value | 1kOhm | **Not honoured on any device scanned — see note below** |
-| 3088 | DCI_R | R-phase DCI current | 0.1mA | **Not honoured — see note below** |
-| 3089 | DCI_S | S-phase DCI current | 0.1mA | **Not honoured — see note below** |
-| 3090 | DCI_T | T-phase DCI current | 0.1mA | **Not honoured — see note below** |
-| 3091 | GFCI | GFCI current | 1mA | **Not honoured — see note below** |
+| 3087 | ISO | PV ISO value | 1kOhm | **Firmware-dependent — see note below** |
+| 3088 | DCI_R | R-phase DCI current | 0.1mA | **Firmware-dependent — see note below** |
+| 3089 | DCI_S | S-phase DCI current | 0.1mA | **Firmware-dependent — see note below** |
+| 3090 | DCI_T | T-phase DCI current | 0.1mA | **Firmware-dependent — see note below** |
+| 3091 | GFCI | GFCI current | 1mA | **Firmware-dependent — see note below** |
 | 3092 | Bus Voltage | Total bus voltage | 0.1V | |
 
-!!! warning "3087-3091 do not return these values in practice — use input 200-205"
-    Every scan collected for this project shows input 3087-3091 returning **serial-number
-    text**, not measurements. `22616` is `0x5858` — ASCII `"XX"` — and on one device three
-    different quantities all read the same value. The holding table documents 3087-3092 as
-    Serial Number 1-6, and the input space appears to echo it.
+!!! warning "Some firmware echoes the serial number here — prefer input 200-205"
+    These addresses behave differently across firmware, so the integration reads the
+    safety measurements from **input 200-205** instead. Both blocks are documented, and
+    200-205 works on every device seen so far.
 
-    The working addresses are **input 200-205** (`PVISO`, `R_DCI`, `S_DCI`, `T_DCI`,
-    `PID_Bus`, `GFCI`), which move between scans the way measurements do. That mapping is
-    confirmed from outside this project: Growatt's own app displays `Gfci(mA)` and
-    `Iso(KΩ)` beside the values read from 205 and 200.
+    **What some devices return here.** Four scans show input 3087-3091 returning
+    **serial-number text** rather than measurements: `22616` is `0x5858` — ASCII `"XX"` —
+    with three different quantities reading the same value, and the same values coming back
+    from the holding space, where 3087-3092 is documented as Serial Number 1-6. The
+    surrounding input registers (3085, 3086, 3092) read 0 on those devices, so it is only
+    this block that echoes.
+
+    **What others return here.** A MOD 10KTL3-XH on DTC 5400, firmware `DN1.0`, protocol
+    V2.02 returns live measurements from 3087-3091 — the same values as 200-205, with the
+    three DCI figures drifting together across paired reads seconds apart. On that firmware
+    the block works exactly as documented above.
+
+    So this is a firmware split rather than a documentation error, and an earlier version of
+    this note was wrong to say no device honoured it.
+
+    **The two blocks are not the same six registers offset by a constant.** GFCI is the
+    *fifth* word in the old block (3091) and the *sixth* in the new (205), with 204
+    (`PID_Bus`) reading a constant 0 in between — the same five quantities in two different
+    arrangements.
+
+    200-205 is also confirmed from outside this project: Growatt's own app displays
+    `Gfci(mA)` and `Iso(KΩ)` beside the values read from 205 and 200.
 
     Note that **holding** 201/202/203 at those addresses are PID working mode, PID on/off
-    and PID output voltage — writable controls for a different subsystem.
-
-    This is a case where the document and the hardware disagree and the hardware wins.
-    Confirmed on MIN TL-XH, MOD-XH and MID ([#404](https://github.com/0xAHA/Growatt_ModbusTCP/issues/404)).
+    and PID output voltage — writable controls for a different subsystem
+    ([#404](https://github.com/0xAHA/Growatt_ModbusTCP/issues/404)).
 | 3093 | Temp1 | Inverter temperature | 0.1C | |
 | 3094 | Temp2 | IPM temperature | 0.1C | |
 | 3095 | Temp3 | Boost temperature | 0.1C | |

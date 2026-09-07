@@ -6,7 +6,18 @@
 
 ## Unreleased
 
-Issues: #387
+Issues: #373 #387 #404
+
+- **MOD: the Mode selector for VPP branch control had its two options the wrong way round.**
+  Selecting "Roster/TOU schedule" wrote the value that selects the direct setpoint branch, and
+  vice versa. Affects v1.10.0 and the b7-b10 pre-releases. Found by @KevlarD-67.
+- **MOD: VPP AC Charge Enable now decodes all three of its values.** The control offers
+  Disabled / PV priority / AC priority; the profile decoded only two, so a live "AC priority"
+  read as unknown. Found by @KevlarD-67.
+- Register note corrected: **input 3087-3091 works on some firmware.** A previous note said no
+  device honoured it. A MOD 10KTL3-XH on DN1.0 returns live measurements there, while four
+  other devices echo serial-number text. The integration reads 200-205 either way, which works
+  on both. (#404)
 
 - **SPF Bulk and Float Charge Voltage now constrain each other.** Bulk cannot be set below
   Float, or Float above Bulk - the inverter rejects that combination, and it rejected it in a

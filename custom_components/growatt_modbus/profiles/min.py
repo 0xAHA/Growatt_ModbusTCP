@@ -253,17 +253,23 @@ MIN_7000_10000TL_X = {
         # subsystem.
         #
         # These were read from input 3087-3091 until #404, and that mapping was NOT a
-        # guess: V1.39 documents input 3087-3091 as ISO/DCI_R/DCI_S/DCI_T/GFCI, with the
-        # same scales. The devices simply do not honour it.
+        # guess: V1.39 documents input 3087-3091 as ISO/DCI_R/DCI_S/DCI_T/GFCI with the
+        # same scales. Whether a device honours it depends on the firmware.
         #
-        # Four scans show that block returning text: 22616 is 0x5858, ASCII "XX", and
-        # three different quantities came back with the same value on one device. V1.39
-        # also documents HOLDING 3087-3092 as Serial Number 1-6, which is what the input
-        # space appears to echo - so an insulation resistance of 2261.6 kOhm was being
-        # published from serial-number characters.
+        # Four scans show that block echoing SERIAL-NUMBER text instead: 22616 is 0x5858,
+        # ASCII "XX", three different quantities reading the same value, and the same values
+        # coming back from the holding space, where V1.39 documents 3087-3092 as Serial
+        # Number 1-6. So an insulation resistance of 2261.6 kOhm was being published from
+        # serial-number characters.
         #
-        # Documented and observed disagree here, and the observation wins. Do not map
-        # 3087-3091 back on the strength of the register table alone (#404).
+        # But a MOD 10KTL3-XH on DTC 5400 / DN1.0 / V2.02 returns LIVE measurements from
+        # 3087-3091 - the same values as 200-205, DCI drifting together across paired reads.
+        # An earlier version of this note claimed no device honoured the block; that was four
+        # devices, not the family, and it was wrong.
+        #
+        # 200-205 is mapped because it works on both kinds of firmware. Note the two blocks
+        # are NOT one offset by a constant: GFCI is the fifth word of the old block (3091)
+        # and the sixth of the new (205), with 204 constant at 0 in between (#404).
         #
         # 200-205 move between scans the way a measurement does, and the mapping is
         # confirmed from outside this project: Growatt's own app shows `Gfci(mA)` and

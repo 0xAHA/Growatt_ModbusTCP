@@ -129,7 +129,7 @@ UNIVERSAL_SCAN_RANGES = [
     # address we could point at (#360). Harmless on non-SPA models — the range simply
     # does not respond.
     {"name": "SPA Extended 2000-2124",   "start": 2000,  "count": 125, "group": "storage"},
-    # MIN/MOD extended data ranges (input registers FC03)
+    # MIN/MOD extended data ranges (input registers, FC04)
     {"name": "MIN/MOD Range 3000-3124",         "start": 3000, "count": 125, "group": "mod_extended"},
     {"name": "MOD Extended 3125-3249",          "start": 3125, "count": 125, "group": "mod_extended"},
     {"name": "MOD/TL-XH Extended Input 3250-3374",    "start": 3250, "count": 125, "group": "mod_extended"},
@@ -137,7 +137,7 @@ UNIVERSAL_SCAN_RANGES = [
     # (TOU schedule, charge/discharge control, AC charge enable, priority mode, etc.)
     {"name": "Legacy Holding 0-124",    "start": 0,    "count": 125, "group": "legacy",  "register_type": "holding"},
     {"name": "Legacy Holding 1000-1124","start": 1000, "count": 125, "group": "storage", "register_type": "holding"},
-    # MOD TL3-XH holding registers (FC04) — includes TOU schedule (3038-3045) and other settings
+    # MOD TL3-XH holding registers (FC03) — includes TOU schedule (3038-3045) and other settings
     {"name": "MOD Holding 3000-3124",           "start": 3000, "count": 125, "group": "mod_extended", "register_type": "holding"},
     {"name": "MOD Holding 3125-3249",           "start": 3125, "count": 125, "group": "mod_extended", "register_type": "holding"},
     {"name": "MOD/TL-XH Extended Holding 3250-3374",  "start": 3250, "count": 125, "group": "mod_extended", "register_type": "holding"},

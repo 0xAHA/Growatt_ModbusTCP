@@ -164,17 +164,23 @@ MOD_6000_15000TL3_XH = {
         # subsystem.
         #
         # These were read from input 3087-3091 until #404, and that mapping was NOT a
-        # guess: V1.39 documents input 3087-3091 as ISO/DCI_R/DCI_S/DCI_T/GFCI, with the
-        # same scales. The devices simply do not honour it.
+        # guess: V1.39 documents input 3087-3091 as ISO/DCI_R/DCI_S/DCI_T/GFCI with the
+        # same scales. Whether a device honours it depends on the firmware.
         #
-        # Four scans show that block returning text: 22616 is 0x5858, ASCII "XX", and
-        # three different quantities came back with the same value on one device. V1.39
-        # also documents HOLDING 3087-3092 as Serial Number 1-6, which is what the input
-        # space appears to echo - so an insulation resistance of 2261.6 kOhm was being
-        # published from serial-number characters.
+        # Four scans show that block echoing SERIAL-NUMBER text instead: 22616 is 0x5858,
+        # ASCII "XX", three different quantities reading the same value, and the same values
+        # coming back from the holding space, where V1.39 documents 3087-3092 as Serial
+        # Number 1-6. So an insulation resistance of 2261.6 kOhm was being published from
+        # serial-number characters.
         #
-        # Documented and observed disagree here, and the observation wins. Do not map
-        # 3087-3091 back on the strength of the register table alone (#404).
+        # But a MOD 10KTL3-XH on DTC 5400 / DN1.0 / V2.02 returns LIVE measurements from
+        # 3087-3091 - the same values as 200-205, DCI drifting together across paired reads.
+        # An earlier version of this note claimed no device honoured the block; that was four
+        # devices, not the family, and it was wrong.
+        #
+        # 200-205 is mapped because it works on both kinds of firmware. Note the two blocks
+        # are NOT one offset by a constant: GFCI is the fifth word of the old block (3091)
+        # and the sixth of the new (205), with 204 constant at 0 in between (#404).
         #
         # 200-205 move between scans the way a measurement does, and the mapping is
         # confirmed from outside this project: Growatt's own app shows `Gfci(mA)` and
@@ -673,7 +679,7 @@ MOD_6000_15000TL3_XH = {
                        'cloud read-back (#372); not in any public protocol document'},
 
         # ====================================================================
-        # VPP remote power control (30100, 30407-30410, 30474) — READ ONLY
+        # VPP remote power control (30100, 30407-30410, 30474)
         # ====================================================================
         #
         # Mapped read-only on purpose. @KevlarD-67 demonstrated on hardware (#373) that
@@ -739,8 +745,17 @@ MOD_6000_15000TL3_XH = {
         #
         # So do not test 30407 to answer "is external power control active". 30100 is the
         # authority bit; this one only picks the branch.
+        #
+        # The value labels below were the wrong way round in v1.10.0-b7 through v1.10.0:
+        # they read 0 as the direct branch, while the measurement three paragraphs up has
+        # the ROSTER driving with 30407 at 0. Corrected to match the evidence rather than
+        # the register's name. Selecting "Roster/TOU schedule" previously wrote the value
+        # that selects the direct branch.
+        #
+        # 1 as the direct branch is corroborated by the WIT control path, which sets 30407=1
+        # and then drives 30409 - the direct setpoint - and is reported working.
         30407: {'name': 'remote_power_control_enable', 'scale': 1, 'unit': '',
-                'values': {0: 'Direct setpoint (30409)', 1: 'Roster/TOU schedule'},
+                'values': {0: 'Roster/TOU schedule', 1: 'Direct setpoint (30409)'},
                 'desc': 'Selects the direct-setpoint branch vs the roster branch - not a master '
                         'enable. The roster branch drives the inverter with this at 0 (#349)'},
         30408: {'name': 'remote_power_control_charging_time', 'scale': 1, 'unit': 'min',
@@ -767,10 +782,16 @@ MOD_6000_15000TL3_XH = {
         #
         # 30100 went 1 -> 0 in the same sweep frame, so it may do this too. Unexplained,
         # and deliberately not guessed at here.
+        # Three values, not two. VPP 2.03 (protocol-vpp.md row 30410) gives 0 = not enabled,
+        # 1 = AC charge with PV priority, 2 = AC charge with AC priority - which is what
+        # WRITABLE_REGISTERS offers and what wit.py already decoded. This profile listed only
+        # Disabled/Enabled, so the control could write a 2 that the sensor rendered as
+        # unknown (#373).
         30410: {'name': 'vpp_ac_charge_enable', 'scale': 1, 'unit': '',
-                'values': {0: 'Disabled', 1: 'Enabled'},
-                'desc': 'VPP AC charge enable. The inverter changes this on its own - do not '
-                        'trust a cached value (#373)'},
+                'values': {0: 'Disabled', 1: 'PV priority', 2: 'AC priority'},
+                'desc': 'VPP AC charge enable (0=off, 1=PV charging first, 2=AC charging '
+                        'first). The inverter changes this on its own - do not trust a '
+                        'cached value (#373)'},
 
         # Mirrors the ACTIVE control value, not the commanded setpoint. The reporter first
         # described it as mirroring 30409 and then corrected himself with a five-day count:
