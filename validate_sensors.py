@@ -62,6 +62,56 @@ def extract_sensors_from_sensor_definitions() -> Set[str]:
 
     return sensor_keys
 
+TRANSLATION_FILES = ("strings.json", "translations/en.json")
+
+
+def extract_sensor_display_names() -> Dict[str, str]:
+    """Sensor key -> the 'name' declared in sensor.py SENSOR_DEFINITIONS."""
+    sensor_file = Path(__file__).parent / "custom_components" / "growatt_modbus" / "sensor.py"
+    content = sensor_file.read_text(encoding="utf-8")
+
+    match = re.search(r'SENSOR_DEFINITIONS\s*=\s*\{(.*?)\n\}', content, re.DOTALL)
+    if not match:
+        return {}
+
+    names = {}
+    for key, body in re.findall(r'\n    "([a-z0-9_]+)":\s*\{(.*?)\n    \},',
+                                match.group(1), re.DOTALL):
+        name = re.search(r'"name":\s*"([^"]+)"', body)
+        if name:
+            names[key] = name.group(1)
+    return names
+
+
+def extract_entity_translations() -> Dict[str, Dict[str, str]]:
+    """File -> {sensor key: translated name}, read from entity.sensor in each file.
+
+    Sensor names are served from these files, NOT from SENSOR_DEFINITIONS['name'].
+    A sensor with no entry here is still created, still polls and still records history —
+    it simply displays with no name of its own, showing only the device name. Home
+    Assistant does not fall back to the Python definition.
+
+    Two sensors shipped that way in #403 because nothing outside tests_ha/ looked, and
+    tests_ha/ needs Home Assistant installed so it only ever runs in CI.
+    """
+    import json
+
+    base = Path(__file__).parent / "custom_components" / "growatt_modbus"
+    result = {}
+    for relative in TRANSLATION_FILES:
+        try:
+            data = json.loads((base / relative).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            result[relative] = {}
+            continue
+        section = data.get("entity", {}).get("sensor", {})
+        result[relative] = {
+            key: value.get("name") for key, value in section.items()
+            if isinstance(value, dict)
+        }
+    return result
+
+
 def extract_sensors_from_device_map() -> Set[str]:
     """Extract all sensor keys from const.py SENSOR_DEVICE_MAP."""
     const_file = Path(__file__).parent / "custom_components" / "growatt_modbus" / "const.py"
@@ -141,6 +191,25 @@ def validate_sensor(sensor_name: str) -> List[str]:
     elif found_in_groups:
         issues.append(f"✓ Found in sensor groups: {', '.join(found_in_groups)}")
 
+    # Check the entity is named, in both files, with text matching sensor.py.
+    # Omitting this breaks nothing any local check could see — the entity simply has no
+    # label. Two sensors shipped that way in #403.
+    if sensor_name in sensor_definitions:
+        declared = extract_sensor_display_names().get(sensor_name)
+        for relative, names in extract_entity_translations().items():
+            if sensor_name not in names:
+                issues.append(
+                    f"❌ NOT named in {relative} — the entity will show only the device "
+                    f"name (add entity.sensor.{sensor_name}.name)"
+                )
+            elif declared and names[sensor_name] != declared:
+                issues.append(
+                    f"❌ Name in {relative} is {names[sensor_name]!r} but sensor.py says "
+                    f"{declared!r} — tests_ha asserts these match"
+                )
+            else:
+                issues.append(f"✓ Named in {relative}")
+
     return issues
 
 def validate_all() -> Tuple[List[str], List[str]]:
@@ -148,6 +217,8 @@ def validate_all() -> Tuple[List[str], List[str]]:
     profile_sensors = extract_sensors_from_profile_files()
     sensor_definitions = extract_sensors_from_sensor_definitions()
     device_map_sensors = extract_sensors_from_device_map()
+    declared_names = extract_sensor_display_names()
+    translations = extract_entity_translations()
     sensor_groups = extract_sensor_groups()
 
     # Get all sensor names from groups (flattened)
@@ -183,6 +254,14 @@ def validate_all() -> Tuple[List[str], List[str]]:
         # Check if in any sensor group
         if sensor not in all_group_sensors:
             problems.append("missing from device_profiles.py sensor groups")
+
+        # Check the entity is named in both translation files
+        if sensor in sensor_definitions:
+            for relative, names in translations.items():
+                if sensor not in names:
+                    problems.append(f"unnamed in {relative}")
+                elif declared_names.get(sensor) and names[sensor] != declared_names[sensor]:
+                    problems.append(f"name mismatch in {relative}")
 
         if problems:
             issues.append(f"❌ {sensor}: {', '.join(problems)}")

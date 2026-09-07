@@ -188,15 +188,22 @@ issue number or scan. Anything else is ASSUMED and says so in the log and the sc
 
 **BEFORE making ANY changes to sensors or registers:**
 
-### 1. **Required Checklist** (Complete ALL 6 steps)
+### 1. **Required Checklist** (Complete ALL 7 steps)
 ```
 □ Step 1: Update profile file (profiles/*.py) - Add register definition
 □ Step 2: Add to GrowattData dataclass (growatt_modbus.py) - Add field
 □ Step 3: Add sensor definition (sensor.py) - SENSOR_DEFINITIONS
 □ Step 4: Assign device type (const.py) - SENSOR_DEVICE_MAP
 □ Step 5: Add to sensor group (device_profiles.py) - BATTERY_SENSORS/GRID_SENSORS/etc
-□ Step 6: Run validation script: python3 validate_sensors.py --sensor <name>
+□ Step 6: Name it (strings.json AND translations/en.json) - entity.sensor.<key>.name
+□ Step 7: Run validation script: python3 validate_sensors.py --sensor <name>
 ```
+
+**Step 6 was missing from this list until #403 shipped two unnamed sensors.** Home Assistant
+does not fall back to `SENSOR_DEFINITIONS['name']` — an entity with no `entity.sensor` entry
+exists, reads correctly, and displays with no name of its own, showing only the device name.
+Nothing local caught it: the check lives in `tests_ha/`, which needs Home Assistant and only
+runs in CI.
 
 **Removing a sensor is not the reverse of this list.** Deleting the register is not enough:
 the sensor platform creates whatever the profile's **sensor set** lists, and a
@@ -420,7 +427,36 @@ GRID_SENSORS: Set[str] = {
 
 **Why this matters:** Profiles in `INVERTER_PROFILES` compose these sensor groups (e.g., `sensors: BASIC_PV_SENSORS | BATTERY_SENSORS`). If the sensor isn't in the right group, it won't be included in any profile.
 
-#### Step 6: Validate Across Project
+#### Step 6: Name the Sensor (`strings.json` **and** `translations/en.json`)
+
+**Location:** `custom_components/growatt_modbus/strings.json` and
+`custom_components/growatt_modbus/translations/en.json` — both files, same content.
+
+Sensor names are served from the translation files, not from the Python definition:
+
+```json
+"entity": {
+  "sensor": {
+    "battery_remaining_capacity": { "name": "Battery Remaining Capacity" }
+  }
+}
+```
+
+The `name` must match `SENSOR_DEFINITIONS[key]["name"]` exactly — `tests_ha/` asserts they
+agree, so that the English text and the 22 shipped translations cannot drift apart.
+
+**Why this is easy to miss:** skipping it breaks nothing that any local check can see. The
+entity is created, polls, records history and works. It simply has no label — Home Assistant
+shows the device name alone, with no fallback to the Python `name`. `validate_sensors.py` now
+covers this; it did not when two sensors shipped unnamed in #403.
+
+To check every sensor at once without Home Assistant installed:
+
+```bash
+python3 validate_sensors.py            # includes the translation check
+```
+
+#### Step 7: Validate Across Project
 
 **Run the validation script (REQUIRED):**
 ```bash
@@ -432,6 +468,7 @@ This will automatically check:
 - ✅ Added to sensor.py SENSOR_DEFINITIONS
 - ✅ Added to const.py SENSOR_DEVICE_MAP
 - ✅ Added to profile 'sensors' set
+- ✅ Named in strings.json and translations/en.json, with matching text
 
 **Additional manual checks:**
 
@@ -971,6 +1008,7 @@ The shell is PowerShell 5.1. Bash idioms fail in ways that waste turns:
 | `profiles/*.py` | Register definitions | Adding/updating registers |
 | `growatt_modbus.py` | Data container (GrowattData) | **REQUIRED: Adding new sensor fields** |
 | `sensor.py` | Sensor entity definitions | Adding new sensors |
+| `strings.json` + `translations/en.json` | **Entity display names** | **REQUIRED: Adding new sensors** — an unnamed entity shows only the device name |
 | `const.py` | Device assignments, categories | Assigning sensors to devices |
 | `device_profiles.py` | Profile registry, sensor groups | Adding new profiles or sensors |
 | `auto_detection.py` | Auto-detection logic | New DTC codes, refinement logic |
