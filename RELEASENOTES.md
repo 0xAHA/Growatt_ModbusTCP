@@ -4,6 +4,26 @@
 
 ---
 
+## v1.10.0-b10
+
+Issues: #404
+
+- **Insulation Resistance, DC Injection and Leakage Current now read from the right
+  registers.** On MIN TL-X, MIN TL-XH and MOD-XH these were read from input 3087-3091, which
+  returns serial-number text on every device scanned - so Insulation Resistance was
+  publishing decoded serial-number characters as a reading of 2261.6 kOhm. They now come from
+  input 200-205, confirmed against Growatt's own app. These sensors are diagnostic and
+  disabled by default, so most people will not have seen the wrong values.
+- **Insulation Resistance is withheld when the inverter reports it is not measuring it.**
+  Two devices report exactly 65530, which is a not-measured code rather than a 65 MOhm array
+  - Growatt's own app shows the same raw number. It is now reported as unknown, because a
+  falling insulation resistance is how a failing connector gets found and a healthy-looking
+  constant would hide that.
+
+Thanks @TyngRikku for the app screenshot that confirmed the mapping from outside the project.
+
+---
+
 ## v1.10.0-b9
 
 Issues: #403 #414 #423  PRs: #421 #422

@@ -1426,12 +1426,29 @@
 | 3084 | Epv_today L | PV energy today (low) | 0.1kWh | |
 | 3085 | Reserved | Reserved | — | |
 | 3086 | DeratingMode | Inverter derating mode | — | See appendix table 1 |
-| 3087 | ISO | PV ISO value | 1kOhm | |
-| 3088 | DCI_R | R-phase DCI current | 0.1mA | |
-| 3089 | DCI_S | S-phase DCI current | 0.1mA | |
-| 3090 | DCI_T | T-phase DCI current | 0.1mA | |
-| 3091 | GFCI | GFCI current | 1mA | |
+| 3087 | ISO | PV ISO value | 1kOhm | **Not honoured on any device scanned — see note below** |
+| 3088 | DCI_R | R-phase DCI current | 0.1mA | **Not honoured — see note below** |
+| 3089 | DCI_S | S-phase DCI current | 0.1mA | **Not honoured — see note below** |
+| 3090 | DCI_T | T-phase DCI current | 0.1mA | **Not honoured — see note below** |
+| 3091 | GFCI | GFCI current | 1mA | **Not honoured — see note below** |
 | 3092 | Bus Voltage | Total bus voltage | 0.1V | |
+
+!!! warning "3087-3091 do not return these values in practice — use input 200-205"
+    Every scan collected for this project shows input 3087-3091 returning **serial-number
+    text**, not measurements. `22616` is `0x5858` — ASCII `"XX"` — and on one device three
+    different quantities all read the same value. The holding table documents 3087-3092 as
+    Serial Number 1-6, and the input space appears to echo it.
+
+    The working addresses are **input 200-205** (`PVISO`, `R_DCI`, `S_DCI`, `T_DCI`,
+    `PID_Bus`, `GFCI`), which move between scans the way measurements do. That mapping is
+    confirmed from outside this project: Growatt's own app displays `Gfci(mA)` and
+    `Iso(KΩ)` beside the values read from 205 and 200.
+
+    Note that **holding** 201/202/203 at those addresses are PID working mode, PID on/off
+    and PID output voltage — writable controls for a different subsystem.
+
+    This is a case where the document and the hardware disagree and the hardware wins.
+    Confirmed on MIN TL-XH, MOD-XH and MID ([#404](https://github.com/0xAHA/Growatt_ModbusTCP/issues/404)).
 | 3093 | Temp1 | Inverter temperature | 0.1C | |
 | 3094 | Temp2 | IPM temperature | 0.1C | |
 | 3095 | Temp3 | Boost temperature | 0.1C | |

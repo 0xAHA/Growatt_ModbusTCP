@@ -247,9 +247,30 @@ MIN_7000_10000TL_X = {
         
         # Diagnostics
         3086: {'name': 'derating_mode', 'scale': 1, 'unit': '', 'desc': 'Derating status'},
-        3087: {'name': 'pv_iso', 'scale': 1, 'unit': 'kΩ', 'desc': 'PV isolation resistance'},
-        3088: {'name': 'dci_r', 'scale': 0.1, 'unit': 'mA', 'desc': 'DC injection R phase'},
-        3091: {'name': 'gfci', 'scale': 1, 'unit': 'mA', 'desc': 'Ground fault current'},
+        # Safety measurements: PV insulation resistance, DC injection and leakage current.
+        # INPUT 200-205 (FC04). Holding 201/202/203 at the same addresses are PID working
+        # mode, PID on/off and PID voltage - WRITE registers for a completely different
+        # subsystem.
+        #
+        # These were read from input 3087-3091 until #404, and that mapping was NOT a
+        # guess: V1.39 documents input 3087-3091 as ISO/DCI_R/DCI_S/DCI_T/GFCI, with the
+        # same scales. The devices simply do not honour it.
+        #
+        # Four scans show that block returning text: 22616 is 0x5858, ASCII "XX", and
+        # three different quantities came back with the same value on one device. V1.39
+        # also documents HOLDING 3087-3092 as Serial Number 1-6, which is what the input
+        # space appears to echo - so an insulation resistance of 2261.6 kOhm was being
+        # published from serial-number characters.
+        #
+        # Documented and observed disagree here, and the observation wins. Do not map
+        # 3087-3091 back on the strength of the register table alone (#404).
+        #
+        # 200-205 move between scans the way a measurement does, and the mapping is
+        # confirmed from outside this project: Growatt's own app shows `Gfci(mA)` and
+        # `Iso(KOhm)` beside the values our scan reads from 205 and 200 (#404).
+        200: {'name': 'pv_iso', 'scale': 1, 'unit': 'kΩ', 'desc': 'PVISO - PV insulation resistance'},
+        201: {'name': 'dci_r', 'scale': 0.1, 'unit': 'mA', 'desc': 'R_DCI - DC injection, R phase'},
+        205: {'name': 'gfci', 'scale': 1, 'unit': 'mA', 'desc': 'GFCI - residual/leakage current'},
         3092: {'name': 'bus_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'DC bus voltage'},
         
         # Temperatures

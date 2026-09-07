@@ -325,11 +325,12 @@ class GrowattData:
     derating_mode: int = 0
     fault_code: int = 0
     warning_code: int = 0
-    pv_iso: float = 0.0          # kΩ — PV insulation resistance (reg 3087)
-    dci_r: float = 0.0           # mA — DC injection R-phase (reg 3088)
-    dci_s: float = 0.0           # mA — DC injection S-phase (reg 3089, 3-phase only)
-    dci_t: float = 0.0           # mA — DC injection T-phase (reg 3090, 3-phase only)
-    gfci: float = 0.0            # mA — residual/leakage current (reg 3091)
+    # Input 200-205, NOT 3087-3091 — that block returns serial-number text (#404).
+    pv_iso: float = 0.0          # kΩ — PV insulation resistance (input 200)
+    dci_r: float = 0.0           # mA — DC injection R-phase (input 201)
+    dci_s: float = 0.0           # mA — DC injection S-phase (input 202, 3-phase only)
+    dci_t: float = 0.0           # mA — DC injection T-phase (input 203, 3-phase only)
+    gfci: float = 0.0            # mA — residual/leakage current (input 205)
     # Safety/compliance diagnostic registers 235-238 (read-only, Issue #282)
     ntognd_detect: int = 0           # reg 235 — NToGND grounding protection detection
     nonstd_vac_enable: int = 0       # reg 236 — non-standard VAC enable
@@ -1132,6 +1133,9 @@ class GrowattModbus:
 
         # Impossible-PV-zero suppressions this session. Warned once, then debug (#384).
         self._impossible_pv_zero_count: int = 0
+        # Warn-once: the PVISO sentinel is reported on every poll for the whole life of
+        # an affected device, so one line a session is enough (#404).
+        self._pv_iso_sentinel_logged: bool = False
 
         # Whether the battery current candidates agreed on the last poll, and whether we
         # have already said so. Gates the battery power scale detection (#406).
@@ -1873,6 +1877,23 @@ class GrowattModbus:
             )
             return
         setattr(data, field_name, value)
+
+    # Raw values at or above this from PVISO (input 200) are a not-measured sentinel, not
+    # an insulation resistance.
+    #
+    # Two unrelated inverters both report exactly 65530 - 0xFFFA, or -6 signed. Growatt's
+    # own app displays the same 65530 rather than a resistance, so it is what the inverter
+    # sends and not a decode error at either end. 65 MOhm is not a measurement.
+    #
+    # The threshold covers 0xFFFA-0xFFFF, the usual all-ones family of "no value" codes.
+    # The highest reading anyone has seen that behaves like a real measurement is 41077
+    # kOhm, well clear of it, and readings between scans move the way a measurement does
+    # (15489 -> 41077 on the same device).
+    #
+    # Withheld rather than published: a falling insulation resistance is how you find water
+    # in a connector, so a fixed 65530 that looks like a healthy array is worse than no
+    # sensor at all (#404).
+    PV_ISO_NOT_MEASURED_MIN = 65530.0
 
     # Deficit, in watts, that AC output must exceed before a PV reading of zero is treated
     # as impossible. Matches the margin the SPF sign correction uses for the same kind of
@@ -2991,10 +3012,26 @@ class GrowattModbus:
                 ('gfci',   'gfci'),
             ):
                 _a = self._find_register_by_name(_reg)
-                if _a is not None:
-                    _v = self._get_register_value(_a)
-                    if _v is not None:
-                        setattr(data, _attr, float(_v))
+                if _a is None:
+                    continue
+                _v = self._get_register_value(_a)
+                if _v is None:
+                    data.unread_fields.add(_attr)
+                    continue
+                if _attr == 'pv_iso' and _v >= self.PV_ISO_NOT_MEASURED_MIN:
+                    # See PV_ISO_NOT_MEASURED_MIN. Reported as unknown rather than as a
+                    # 65 MOhm array in perfect health.
+                    data.unread_fields.add(_attr)
+                    if not self._pv_iso_sentinel_logged:
+                        self._pv_iso_sentinel_logged = True
+                        logger.info(
+                            "[%s] PV insulation resistance reads %.0f, which this inverter "
+                            "uses to mean 'not measured' - reporting unknown rather than a "
+                            "healthy-looking value. Not logged again this session (#404).",
+                            self.register_map.get('name', '?'), _v,
+                        )
+                    continue
+                setattr(data, _attr, float(_v))
 
             # Dry Contact State (input reg 3119 — SPH/MIN TL-X/TL-XH)
             dry_contact_state_addr = self._find_register_by_name('dry_contact_state')
