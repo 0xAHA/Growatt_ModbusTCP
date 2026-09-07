@@ -4,6 +4,31 @@
 
 ---
 
+## v1.10.0-b9
+
+Issues: #403 #414 #423  PRs: #421 #422
+
+- **New sensors: Battery Remaining Capacity and Battery Full Charge Capacity**, in Ah, on
+  SPH-TL3 and SPH 8000-10000 HU. They come from the battery's own fuel gauge, so Remaining
+  divided by Full is the gauge's state of charge, and Full Charge Capacity falling below the
+  nameplate figure shows real degradation. The scale is taken from the ESS Protocol and has
+  not yet been confirmed against a battery nameplate - if yours looks wrong, please say so on
+  #403. Thanks @Doprintityourself.
+- **A shared connection no longer leaves a second socket behind when an entry is reloaded.**
+  An in-flight poll could outlive its hub and open a socket nobody would close, which on a
+  gateway that serialises clients turns one transport error into a cascade that does not
+  recover. Reconnects after a *run* of failures are now spaced out, without holding up other
+  inverters on the same gateway. Thanks @minajevs (#422).
+- **A failed write now tells the caller why.** Over the REST API a rate-limit refusal and a
+  hard Modbus failure were both a generic error; they are now distinguishable, so an
+  automation can retry the first and report the second. Thanks @minajevs (#421).
+- **The `set_battery_mode` service no longer expires a Hold at midnight.** b8 fixed this for
+  the Mode (VPP) select and missed the service, so a Hold set from a script or the REST API
+  still lasted minutes rather than hours (#423).
+- Fixed: the two new capacity sensors would have appeared with no name until CI caught it.
+
+---
+
 ## v1.10.0-b8
 
 Issues: #423 #424
