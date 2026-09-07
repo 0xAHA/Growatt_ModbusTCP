@@ -25,8 +25,12 @@ from pathlib import Path
 
 import pytest
 
-SOURCE = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
-          / "select.py").read_text(encoding="utf-8")
+_COMPONENT = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+# The helper lives in const.py because BOTH callers need it - see the two-call-site test
+# at the bottom of this file.
+SOURCE = (_COMPONENT / "const.py").read_text(encoding="utf-8")
+SELECT_SOURCE = (_COMPONENT / "select.py").read_text(encoding="utf-8")
+DIAGNOSTIC_SOURCE = (_COMPONENT / "diagnostic.py").read_text(encoding="utf-8")
 
 
 def _load_helper():
@@ -122,16 +126,47 @@ def test_every_start_time_gets_the_full_duration(minute):
     )
 
 
-def test_the_write_loop_uses_the_helper_and_sets_the_count_to_match():
+def test_the_select_writes_every_period_and_sets_the_count():
     """The arithmetic being right is not enough - the sequence has to write every period it
     returns and tell the inverter how many there are. Writing two periods while 30411 still
     said 1 would leave the second one inert."""
-    assert "periods = hold_tou_periods(current_minutes)" in SOURCE, (
+    assert "periods = hold_tou_periods(current_minutes)" in SELECT_SOURCE, (
         "the HOLD path no longer uses the helper these tests exercise"
     )
-    assert "self.VPP_TOU_PERIOD1_BASE + (index * 3)" in SOURCE, (
+    assert "self.VPP_TOU_PERIOD1_BASE + (index * 3)" in SELECT_SOURCE, (
         "the write loop does not stride by 3 registers per period"
     )
-    assert "client.write_register(self.VPP_TOU_NUM_PERIODS, len(periods))" in SOURCE, (
+    assert "client.write_register(self.VPP_TOU_NUM_PERIODS, len(periods))" in SELECT_SOURCE, (
         "the period count is not set from the number of periods actually written"
     )
+
+
+def test_the_set_battery_mode_service_uses_the_same_helper():
+    """THE second call site, and the reason this helper is in const.py.
+
+    `diagnostic.py` carries its own copy of the HOLD sequence for the
+    `growatt_modbus.set_battery_mode` service. The first fix for #423 changed the select
+    and left the service clamping at 1439 - the same one-of-two-call-sites shape as #417,
+    committed while the release notes for #417 were describing exactly that mistake.
+
+    Anyone driving HOLD from an automation or the REST API goes through this path, not the
+    select.
+    """
+    assert "hold_tou_periods(current_minutes)" in DIAGNOSTIC_SOURCE, (
+        "the set_battery_mode service still computes its own TOU window, so a Hold called "
+        "from a script or the REST API expires at midnight"
+    )
+    assert "min(1439, current_minutes + 120)" not in DIAGNOSTIC_SOURCE, (
+        "the clamped arithmetic is still present in the service"
+    )
+    assert "VPP_TOU_NUM_PERIODS, len(periods)" in DIAGNOSTIC_SOURCE, (
+        "the service does not set the period count from the periods it wrote"
+    )
+
+
+def test_no_caller_keeps_a_private_copy_of_the_arithmetic():
+    """A third copy would fail the same way and nothing would notice."""
+    for name, source in (("select.py", SELECT_SOURCE), ("diagnostic.py", DIAGNOSTIC_SOURCE)):
+        assert "min(1439," not in source, (
+            f"{name} clamps a TOU end word itself instead of using hold_tou_periods()"
+        )

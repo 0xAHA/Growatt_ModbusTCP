@@ -15,6 +15,7 @@ from .const import (
     WRITABLE_REGISTERS,
     CONF_REGISTER_MAP,
     get_device_type_for_control,
+    hold_tou_periods,
     is_read_only_register,
     DEVICE_TYPE_BATTERY,
     MOD_TOU_PERIODS,
@@ -370,37 +371,6 @@ class GrowattGenericSelect(GrowattEntity, SelectEntity):
             await self.coordinator.async_request_refresh()
 
 
-def hold_tou_periods(current_minutes: int, duration_minutes: int = 120) -> list[tuple[int, int]]:
-    """TOU periods covering a HOLD window that may cross midnight.
-
-    Period words are minutes since midnight and DO NOT WRAP: 1440 is out of range, not
-    00:00 tomorrow. Clamping the end to 1439 - which is what this used to do inline -
-    silently shortened any Hold selected after 21:59. At 23:50 the user got nine minutes
-    instead of two hours; the period expired at midnight, the battery resumed discharging,
-    and the entity went on reporting Hold because `current_option` returns the last
-    commanded mode rather than device state.
-
-    Overnight is when a hold is most likely to be wanted, so the window where the clamp bit
-    hardest was the window it would be used in (#423).
-
-    A window crossing midnight is returned as two periods. The roster holds 20 periods at 3
-    registers each (30412-30471), so a second one is well inside it.
-
-    Returns a list of (start_minute, end_minute) pairs, in write order.
-    """
-    start_min = max(0, current_minutes - 5)
-    raw_end = current_minutes + duration_minutes
-
-    if raw_end <= 1439:
-        return [(start_min, raw_end)]
-
-    periods = [(start_min, 1439)]
-    wrap_end = raw_end - 1440
-    # Exactly 1440 means the window ends at midnight, so there is no second period to
-    # write - a 0-0 period would be degenerate.
-    if wrap_end > 0:
-        periods.append((0, wrap_end))
-    return periods
 
 class GrowattWitWorkModeSelect(GrowattEntity, SelectEntity):
     """WIT VPP: Work mode / remote command (holding register 202)."""

@@ -14,7 +14,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 
-from .const import DOMAIN, CONF_INVERTER_SERIES, resolve_block_size
+from .const import DOMAIN, CONF_INVERTER_SERIES, resolve_block_size, hold_tou_periods
 from .device_profiles import fill_register_map, get_display_name_for_profile, get_profile
 from .auto_detection import ASSUMED, CONFIRMED, DTC_REGISTRY, convert_to_legacy_profile
 
@@ -1299,17 +1299,28 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 from datetime import datetime as dt
                 now = dt.now()
                 current_minutes = now.hour * 60 + now.minute
-                start_min = max(0, current_minutes - 5)
-                end_min = min(1439, current_minutes + 120)
+
+                # Shared with the Mode (VPP) select. TOU period words are minutes since
+                # midnight and do not wrap, so a window crossing midnight is two periods -
+                # clamping the end to 1439 instead turned a Hold set at 23:50 into nine
+                # minutes that lapsed silently (#423).
+                periods = hold_tou_periods(current_minutes)
+
+                for index, (period_start, period_end) in enumerate(periods):
+                    base = VPP_TOU_PERIOD1_BASE + (index * 3)
+                    success = await hass.async_add_executor_job(
+                        client.write_registers, base,
+                        # +1% = HOLD (NOT -1% which = full discharge!)
+                        [period_start, period_end, 1]
+                    )
+                    if not success:
+                        raise ValueError(
+                            f"Failed to write TOU period {index + 1} for HOLD mode"
+                        )
 
                 success = await hass.async_add_executor_job(
-                    client.write_registers, VPP_TOU_PERIOD1_BASE,
-                    [start_min, end_min, 1]  # +1% = HOLD (NOT -1% which = full discharge!)
+                    client.write_register, VPP_TOU_NUM_PERIODS, len(periods)
                 )
-                if not success:
-                    raise ValueError("Failed to write TOU period for HOLD mode")
-
-                success = await hass.async_add_executor_job(client.write_register, VPP_TOU_NUM_PERIODS, 1)
                 if not success:
                     raise ValueError("Failed to enable TOU period")
 
