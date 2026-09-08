@@ -912,7 +912,15 @@ SENSOR_DEFINITIONS = {
         "condition": lambda data: hasattr(data, 'bms_min_soc'),
     },
     "battery_soh": {
-        "name": "Battery State of Health",
+        # "(VPP)" because bms_soh carries the same quantity from the documented BMS block at
+        # register 1096, and two sensors with one display name produce a second entity with
+        # a _2 suffix wherever both are created - which is any profile combining
+        # BATTERY_SENSORS with BMS_SENSORS (#403).
+        #
+        # 1096 is the authoritative one: 31218 was the original guess for SOH and was
+        # corrected to 1096, but the wrong register was never unmapped. This one is kept
+        # because MOD and MID have no 1096 and it is their only SOH source.
+        "name": "Battery State of Health (VPP)",
         "icon": "mdi:battery-heart",
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": PERCENTAGE,

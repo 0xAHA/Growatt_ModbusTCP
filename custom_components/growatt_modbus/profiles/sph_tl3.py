@@ -169,6 +169,16 @@ SPH_TL3_3000_10000 = {
         1092: {'name': 'bms_gauge_fcc', 'scale': 0.01, 'unit': 'Ah',
                'desc': 'BMS_GaugeFCC - full charge capacity (ESS 0x001B, 10 mAh units)'},
 
+        # Cell voltage extremes. Growatt exposes no per-cell array - V1.39 gives the
+        # highest and lowest single cell (1108/1109), which cell each is (1112/1113), and
+        # the delta (1094). Max minus min is the cell-imbalance figure worth watching.
+        #
+        # INPUT 1108/1109. Holding 1108 in this same file is time_period_3_enable.
+        # Documented, and already mapped this way on SPH_8000_10000_HU; not yet confirmed
+        # on a TL3 (#403).
+        1108: {'name': 'bms_max_cell_volt', 'scale': 0.001, 'unit': 'V', 'desc': 'Highest single cell voltage'},
+        1109: {'name': 'bms_min_cell_volt', 'scale': 0.001, 'unit': 'V', 'desc': 'Lowest single cell voltage'},
+
         1095: {'name': 'bms_cycle_count', 'scale': 1, 'unit': '', 'desc': 'Cycle count from BMS'},
         1096: {'name': 'bms_soh', 'scale': 1, 'unit': '%', 'desc': 'SOH (State of Health) from BMS'},
         

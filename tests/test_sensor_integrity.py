@@ -167,3 +167,38 @@ def test_device_map_has_no_unknown_undefined_sensors() -> None:
         f"KNOWN_MAP_WITHOUT_DEF has stale entries that are now defined "
         f"({len(stale)}): {sorted(stale)}.  Remove them from the allowlist."
     )
+
+
+# --------------------------------------------------------------------------------- #403
+
+def test_no_two_sensors_share_a_display_name():
+    """Two sensor definitions with one name produce a duplicate entity, silently.
+
+    `bms_soh` (register 1096, the documented BMS block) and `battery_soh` (register 31218,
+    the VPP range) were both called "Battery State of Health". Any profile combining
+    BATTERY_SENSORS with BMS_SENSORS therefore created two identical-looking entities, the
+    second suffixed `_2` by Home Assistant. A reporter found it on an SPH-TL3 V201 (#403).
+
+    31218 was the original guess for SOH and was corrected to 1096; the wrong register was
+    never unmapped, and nothing compared the two names. It stays mapped because MOD and MID
+    have no 1096 and it is their only SOH source — so the fix is that the names differ.
+    """
+    import re
+
+    source = (COMPONENT_DIR / "sensor.py").read_text(encoding="utf-8")
+    match = re.search(r'SENSOR_DEFINITIONS\s*=\s*\{(.*?)\n\}', source, re.DOTALL)
+    assert match, "SENSOR_DEFINITIONS not found"
+
+    names: dict[str, list[str]] = {}
+    for key, body in re.findall(r'\n    "([a-z0-9_]+)":\s*\{(.*?)\n    \},',
+                                match.group(1), re.DOTALL):
+        name = re.search(r'"name":\s*"([^"]+)"', body)
+        if name:
+            names.setdefault(name.group(1), []).append(key)
+
+    collisions = {n: keys for n, keys in names.items() if len(keys) > 1}
+    assert not collisions, (
+        "sensor definitions share a display name, so Home Assistant will create a second "
+        "entity with a _2 suffix wherever both are enabled:\n  "
+        + "\n  ".join(f"{n!r}: {keys}" for n, keys in collisions.items())
+    )

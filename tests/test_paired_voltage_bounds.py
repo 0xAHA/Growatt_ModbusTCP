@@ -45,7 +45,10 @@ def _load_methods():
     """Bind the paired-bound methods to a stub, with no Home Assistant import."""
     tree = ast.parse(SOURCE)
     wanted = {"_paired_bound", "_check_paired_constraint", "_friendly",
-              "native_min_value", "native_max_value"}
+              "native_min_value", "native_max_value",
+              # The bound properties consult these too, since #428 made unit and range
+              # follow battery_type at runtime.
+              "_battery_dependent_bounds", "_is_battery_dependent"}
     found = {}
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name in wanted:
@@ -58,6 +61,7 @@ def _load_methods():
 
     body = [found[name] for name in
             ("_paired_bound", "_check_paired_constraint", "_friendly",
+             "_battery_dependent_bounds", "_is_battery_dependent",
              "native_min_value", "native_max_value")]
     # Decorators are re-applied explicitly on the stub below.
     for node in body:
@@ -90,9 +94,13 @@ class _Entity:
         self._attr_native_max_value = STATIC_MAX
         self.coordinator = types.SimpleNamespace(data=data)
 
+    _LITHIUM_BATTERY_TYPE = 3
+
     _paired_bound = M._paired_bound
     _check_paired_constraint = M._check_paired_constraint
     _friendly = staticmethod(M._friendly)
+    _battery_dependent_bounds = M._battery_dependent_bounds
+    _is_battery_dependent = property(M._is_battery_dependent)
     min_value = property(M.native_min_value)
     max_value = property(M.native_max_value)
 

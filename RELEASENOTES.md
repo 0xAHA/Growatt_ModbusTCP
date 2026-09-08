@@ -6,7 +6,21 @@
 
 ## Unreleased
 
-Issues: #373 #387 #404
+Issues: #373 #387 #403 #404 #428
+
+- **SPF with a lithium battery: the switchover thresholds are no longer capped at 64.** On
+  lithium these two registers are a percentage of state of charge, not a voltage, but the
+  entities were created with the lead-acid range and unit and never updated - so a threshold
+  of 75 % was rejected as "must be less than or equal to 64" and nothing above 64 % could be
+  set from Home Assistant. They now follow the battery type, including when you change it.
+  Reported by @eugeniodb. (#428)
+- **Fixed a duplicate "Battery State of Health" entity.** Two sensors carried the same name,
+  so any profile with both created a second entity with a `_2` suffix. The one from the VPP
+  range is now "Battery State of Health (VPP)"; the plain one is the documented BMS register.
+  Reported by @Doprintityourself. (#403)
+- **New on SPH-TL3: highest and lowest cell voltage.** Growatt exposes no per-cell readings,
+  but it does report the two extremes - the gap between them is the cell-imbalance figure.
+  (#403)
 
 - **MOD: the Mode selector for VPP branch control had its two options the wrong way round.**
   Selecting "Roster/TOU schedule" wrote the value that selects the direct setpoint branch, and

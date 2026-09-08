@@ -279,22 +279,14 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
 
         # Check if battery-dependent
         if self._control_config.get('battery_dependent', False):
-            # Read battery type from coordinator data
-            battery_type = getattr(self.coordinator.data, 'battery_type', None) if self.coordinator.data else None
-            is_lithium = (battery_type == 3)  # 3 = Lithium
-
-            if is_lithium:
-                # Lithium: 0-1000 raw = 0% - 100%
-                self._attr_native_min_value = 0.0
-                self._attr_native_max_value = 100.0
-                self._attr_native_step = 1.0
-                self._attr_native_unit_of_measurement = "%"
-            else:
-                # Non-Lithium: 200-640 raw = 20.0V - 64.0V
-                self._attr_native_min_value = 20.0
-                self._attr_native_max_value = 64.0
-                self._attr_native_step = 0.1
-                self._attr_native_unit_of_measurement = "V"
+            # Seed the attributes so the entity is valid before the first read. The real
+            # values come from the properties below, which follow battery_type at runtime —
+            # these are only the starting point. See _battery_dependent_bounds() (#428).
+            bounds = self._battery_dependent_bounds()
+            self._attr_native_min_value = bounds[0]
+            self._attr_native_max_value = bounds[1]
+            self._attr_native_step = bounds[2]
+            self._attr_native_unit_of_measurement = bounds[3]
         else:
             # Normal number control
             self._attr_native_min_value = float(valid_range[0]) * scale
@@ -347,6 +339,51 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
     # inferred, because inventing relationships between registers on the strength of one
     # documented case would be worse than leaving them independent.
     # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    # Battery-type-dependent bounds (#428)
+    #
+    # On SPF, registers 37 and 95 are a voltage threshold on lead-acid and self-defined
+    # battery types, and a percentage of state of charge on lithium. Two different units and
+    # two different ranges behind one register.
+    #
+    # These used to be resolved once in __init__ and frozen as _attr_ values. That fails in
+    # two ways. A reporter with 3x AXE 5.0 lithium had 75 (%) validated against the lead-acid
+    # ceiling of 64 V and could not set any target above 64 % from Home Assistant at all. And
+    # battery_type is itself a writable control here, so changing it left both entities on the
+    # old unit and range until Home Assistant was restarted.
+    #
+    # Resolved live instead, so they follow the register they depend on.
+    # ------------------------------------------------------------------
+
+    _LITHIUM_BATTERY_TYPE = 3
+
+    def _battery_dependent_bounds(self) -> tuple[float, float, float, str]:
+        """(min, max, step, unit) for a control whose meaning follows the battery type."""
+        data = self.coordinator.data
+        battery_type = getattr(data, 'battery_type', None) if data is not None else None
+
+        if battery_type == self._LITHIUM_BATTERY_TYPE:
+            # Percentage of state of charge: raw 0-1000 at scale 0.1 is 0-100 %.
+            return (0.0, 100.0, 1.0, "%")
+        # Battery voltage: raw 200-640 at scale 0.1 is 20.0-64.0 V.
+        return (20.0, 64.0, 0.1, "V")
+
+    @property
+    def _is_battery_dependent(self) -> bool:
+        return bool(self._control_config.get('battery_dependent', False))
+
+    @property
+    def native_step(self) -> float:
+        if self._is_battery_dependent:
+            return self._battery_dependent_bounds()[2]
+        return self._attr_native_step
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        if self._is_battery_dependent:
+            return self._battery_dependent_bounds()[3]
+        return self._attr_native_unit_of_measurement
 
     def _paired_bound(self, other_control: str) -> float | None:
         """Live display value of another control, if it is usable as a bound.
@@ -406,6 +443,8 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
     @property
     def native_min_value(self) -> float:
         """Static minimum, raised to the paired control's value where one is declared."""
+        if self._is_battery_dependent:
+            return self._battery_dependent_bounds()[0]
         floor_from = self._control_config.get('not_below')
         if floor_from:
             paired = self._paired_bound(floor_from)
@@ -416,6 +455,8 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
     @property
     def native_max_value(self) -> float:
         """Static maximum, lowered to the paired control's value where one is declared."""
+        if self._is_battery_dependent:
+            return self._battery_dependent_bounds()[1]
         ceiling_from = self._control_config.get('not_above')
         if ceiling_from:
             paired = self._paired_bound(ceiling_from)
