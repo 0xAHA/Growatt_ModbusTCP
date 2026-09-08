@@ -227,12 +227,6 @@ AGM, Flooded and Lithium. The integration reads your existing values and never w
 default - a value changes only when you move the control
 ([#384](https://github.com/0xAHA/Growatt_ModbusTCP/issues/384)).
 
-!!! info "Not in v1.10.0 - lands in the next release"
-    The mutual constraint described below is on `main` and has not shipped yet. On v1.10.0
-    both sliders still span the full range independently, so the invalid combination can
-    still be requested - it will be accepted, reverted by the inverter, and reported as
-    "settings are being reverted".
-
 **Bulk cannot be set below Float, and the two controls enforce that on each other.** Bulk
 is the constant-voltage charging stage and Float the maintenance stage, so a bulk voltage
 below float is meaningless and the firmware rejects it.

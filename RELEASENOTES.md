@@ -4,9 +4,16 @@
 
 ---
 
-## Unreleased
+## v2.0.0
 
 Issues: #373 #387 #403 #404 #428
+
+**Nothing breaks, and there is nothing to do on upgrade.** The jump from 1.10.0 to 2.0.0 is a
+version-numbering change, not a rewrite: `1.10` sorts *before* `1.9` in any alphabetical list,
+which made the release history read out of order. Starting at 2.x fixes that for good. Upgrade
+normally.
+
+This release is otherwise a set of fixes, four of them for defects in v1.10.0.
 
 - **SPF with a lithium battery: the switchover thresholds are no longer capped at 64.** On
   lithium these two registers are a percentage of state of charge, not a voltage, but the
