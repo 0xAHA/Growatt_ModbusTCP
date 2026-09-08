@@ -216,3 +216,13 @@ scans/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Scratch files used to compose GitHub comments and release notes (see #403, #428)
+.r*.md
+.n*.md
+.c*.md
+.q*.md
+.i*.md
+.rel*.md
+.upd.json
+.fix.json
