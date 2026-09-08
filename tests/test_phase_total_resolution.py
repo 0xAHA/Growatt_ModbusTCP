@@ -200,3 +200,31 @@ def test_a_quantity_with_no_phases_mapped_uses_its_total():
     resolve(_Client({"power_to_user_low": 1500.0}), data, "power_to_user",
             "power_to_user_low", ())
     assert data.power_to_user == 1500.0
+
+
+def test_a_total_that_did_not_read_is_not_a_zero():
+    """The meter is mapped, no address answered this poll, and there are no phase
+    registers to fall back on. Publishing 0.0 here is #384 where it costs most: on a
+    metered profile a zero is a balanced site, so the grid derivation would believe it
+    (see test_grid_power_derivation.py)."""
+    data = _run({"power_to_user_low": None})
+
+    assert "power_to_user" in data.unread_fields
+
+
+def test_a_zero_total_with_no_phases_is_still_a_measurement():
+    """The other half of the same distinction: the register answered, and it said zero."""
+    data = _run({"power_to_user_low": 0.0})
+
+    assert data.power_to_user == 0.0
+    assert not data.unread_fields
+
+
+def test_a_quantity_the_profile_never_maps_is_left_alone():
+    """Unmapped is not unread. A profile that has no such register has not failed to read
+    it, and the derivation's own degenerate-balance guard is what answers for those."""
+    data = _Data()
+    resolve(_Client({}), data, "power_to_user", "power_to_user_low", ())
+
+    assert data.power_to_user == 0.0
+    assert not data.unread_fields

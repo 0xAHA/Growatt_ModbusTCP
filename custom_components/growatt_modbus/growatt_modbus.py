@@ -177,6 +177,12 @@ class GrowattData:
     # than recording a zero that reads as a real measurement.
     unread_fields: set = field(default_factory=set)
 
+    # True when this profile's directional meter registers are the only usable source of
+    # grid direction, so the energy-balance estimate must not stand in for them. Carried on
+    # the data rather than read from the map in sensor.py, which never sees the profile.
+    # Set from the register map on every poll; see _signed_grid_power() in sensor.py.
+    grid_flow_from_meter_only: bool = False
+
     # Solar Input
     pv1_voltage: float = 0.0          # V
     pv1_current: float = 0.0          # A
@@ -2881,6 +2887,8 @@ class GrowattModbus:
             # 31100/31101 is the inverter's own 3-phase output while 31112/31113 is metered
             # grid exchange. v0.8.6 remapped it for that reason; re-read mid.py before
             # changing it.
+            data.grid_flow_from_meter_only = bool(
+                self.register_map.get('grid_flow_from_meter_only', False))
             for _flow_attr, _flow_name, _phase_names in (
                 ('power_to_grid', 'power_to_grid_low', ()),
                 ('power_to_user', 'power_to_user_low',
@@ -3858,7 +3866,19 @@ class GrowattModbus:
             setattr(data, attr, phase_sum)
             return
 
-        setattr(data, attr, total if total is not None else 0.0)
+        if total is None:
+            # Mapped, but no address answered this poll and there are no phase registers to
+            # fall back on. This is #384 in the place it costs most: on a metered profile a
+            # zero is a balanced site, so a failed read published as 0.0 is indistinguishable
+            # from a measurement, and _signed_grid_power() would believe it.
+            data.unread_fields.add(attr)
+            logger.debug(
+                "%s: %s did not read this poll and no phase registers are mapped - "
+                "reporting unknown rather than 0", attr, total_name,
+            )
+            return
+
+        setattr(data, attr, total)
 
     def _find_all_registers_by_name(self, name: str) -> list[int]:
         """Find ALL register addresses matching a name, alias, or maps_to attribute.

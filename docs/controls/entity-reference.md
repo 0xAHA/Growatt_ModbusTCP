@@ -546,6 +546,8 @@ The integration pre-configures all energy sensors with the correct `state_class`
 
 > **Invert Grid Power** flips the signed `Grid Power` and net grid energy sensors only — it never affects `Grid Export Power` / `Grid Import Power`, which derive straight from the register values. Growatt reports positive = export; most Home Assistant dashboards want positive = import, so having this option **on is normal**. See [Invert Grid Power](../hardware/models.md#invert-grid-power). If `Grid Export Power` and `Grid Import Power` themselves look swapped, this toggle is not the cause — please open an issue.
 
+> **Grid Power reading zero is a measurement on WIT models**, not a missing one: their meter registers are the only source of grid direction, so a balanced site — typically the battery covering the house on its own — reports 0 W rather than an estimate. See [Where Grid Power comes from](../hardware/models.md#where-grid-power-comes-from).
+
 ---
 
 ## Contributing
