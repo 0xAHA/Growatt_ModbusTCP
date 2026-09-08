@@ -226,7 +226,7 @@ dtc_map = {
 }
 ```
 
-Get the DTC code by reading register 30000 from your inverter using the diagnostic service. If the DTC code returns 0 or errors, your model either doesn't support VPP or uses a different detection method.
+Get the DTC code by reading register 30000 from your inverter using the diagnostic actions. If the DTC code returns 0 or errors, your model either doesn't support VPP or uses a different detection method.
 
 ### Model name matching (fallback)
 

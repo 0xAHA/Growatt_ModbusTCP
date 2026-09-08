@@ -52,9 +52,9 @@ Inverter startup detection:
 
 ## Universal Register Scanner
 
-The **Universal Register Scanner** action (Developer Tools → Actions →
+The **Universal Register Scanner** action (Settings → Tools → Actions →
 `growatt_modbus.export_register_dump`) scans every range listed above and reports
 which registers your inverter actually responds to. This is the quickest way to
 verify protocol support and collect data for a new model.
 
-See [Diagnostic Service](../troubleshooting/diagnostic-service.md) for usage instructions.
+See [Diagnostic Actions](../troubleshooting/diagnostic-service.md) for usage instructions.

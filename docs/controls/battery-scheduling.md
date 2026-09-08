@@ -71,9 +71,9 @@ In Home Assistant:
 > If this entity is not visible, confirm you are on the MOD TL3-XH profile. Grid-tied
 > (TL3-X) models do not have this register.
 
-To verify via raw register (optional — requires the diagnostic service):
+To verify via raw register (optional — requires the diagnostic actions):
 ```yaml
-service: growatt_modbus.read_register
+action: growatt_modbus.read_register
 data:
   device_id: YOUR_DEVICE_ID
   register_type: holding
@@ -130,7 +130,7 @@ Only enabled slots are executed by the inverter.
 
 After configuring all slots:
 1. Wait **60 seconds** (one full poll cycle minimum)
-2. Re-read the start register of slot 1 using the diagnostic service or by checking
+2. Re-read the start register of slot 1 using the diagnostic actions or by checking
    the time entity's current value
 3. If the value matches what you wrote, TOU is working correctly
 4. If it reverted, go back to Step 1 and confirm register 3049 reads **1**
@@ -154,12 +154,12 @@ automation:
       - platform: time
         at: "17:55:00"
     action:
-      - service: select.select_option
+      - action: select.select_option
         target:
           entity_id: select.growatt_tou_period_1_priority
         data:
           option: "Battery Priority"
-      - service: select.select_option
+      - action: select.select_option
         target:
           entity_id: select.growatt_tou_period_1_enable
         data:
@@ -328,12 +328,12 @@ automation:
       - platform: time
         at: "21:55:00"
     action:
-      - service: select.select_option
+      - action: select.select_option
         target:
           entity_id: select.growatt_ac_charge_enable
         data:
           option: "Enabled"
-      - service: select.select_option
+      - action: select.select_option
         target:
           entity_id: select.growatt_time_period_1_enable
         data:
@@ -430,7 +430,7 @@ Must be set to **Enabled** before any remote control registers will be accepted.
 This is a one-time setup step that persists across inverter restarts.
 
 ```yaml
-service: select.select_option
+action: select.select_option
 target:
   entity_id: select.growatt_control_authority
 data:
@@ -474,17 +474,17 @@ automation:
       - platform: time
         at: "23:00:00"
     action:
-      - service: number.set_value
+      - action: number.set_value
         target:
           entity_id: number.growatt_remote_charging_time
         data:
           value: 120
-      - service: number.set_value
+      - action: number.set_value
         target:
           entity_id: number.growatt_remote_charge_discharge_power
         data:
           value: 80        # 80% charge rate
-      - service: select.select_option
+      - action: select.select_option
         target:
           entity_id: select.growatt_remote_power_control_enable
         data:
@@ -500,17 +500,17 @@ automation:
       - platform: time
         at: "17:00:00"
     action:
-      - service: number.set_value
+      - action: number.set_value
         target:
           entity_id: number.growatt_remote_charging_time
         data:
           value: 180
-      - service: number.set_value
+      - action: number.set_value
         target:
           entity_id: number.growatt_remote_charge_discharge_power
         data:
           value: -80       # 80% discharge to grid
-      - service: select.select_option
+      - action: select.select_option
         target:
           entity_id: select.growatt_remote_power_control_enable
         data:
@@ -520,7 +520,7 @@ automation:
 #### Pattern 3 — Cancel Active Override Immediately
 
 ```yaml
-service: select.select_option
+action: select.select_option
 target:
   entity_id: select.growatt_remote_power_control_enable
 data:
@@ -594,7 +594,7 @@ SPF inverters prioritise power sources, not TOU schedules. The key controls are:
 ### Example: Solar-First with Grid Backup
 
 ```yaml
-service: select.select_option
+action: select.select_option
 target:
   entity_id: select.growatt_output_config
 data:
@@ -633,7 +633,7 @@ automation:
         entity_id: select.growatt_priority_mode
         state: "Grid First"
     action:
-      - service: select.select_option
+      - action: select.select_option
         target:
           entity_id: select.growatt_priority_mode
         data:
@@ -653,7 +653,7 @@ automation:
         entity_id: sensor.growatt_battery_battery_soc
         above: 30
     action:
-      - service: select.select_option
+      - action: select.select_option
         target:
           entity_id: select.growatt_priority_mode
         data:
@@ -665,7 +665,7 @@ automation:
         entity_id: sensor.growatt_battery_battery_soc
         below: 20
     action:
-      - service: select.select_option
+      - action: select.select_option
         target:
           entity_id: select.growatt_priority_mode
         data:
@@ -685,17 +685,17 @@ automation:
         entity_id: sensor.growatt_battery_battery_soc
         below: 80
     action:
-      - service: number.set_value
+      - action: number.set_value
         target:
           entity_id: number.growatt_remote_charging_time
         data:
           value: 240        # 4-hour window
-      - service: number.set_value
+      - action: number.set_value
         target:
           entity_id: number.growatt_remote_charge_discharge_power
         data:
           value: 60
-      - service: select.select_option
+      - action: select.select_option
         target:
           entity_id: select.growatt_remote_power_control_enable
         data:
@@ -731,13 +731,13 @@ write succeeded but value reverted (possible cloud override)
 
 1. Check you are writing to a **holding register** (FC06/FC16), not an input register (FC04)
 2. Verify slave ID — some adapters require slave ID 1, others use the inverter's configured address
-3. Try `growatt_modbus.write_register` directly from **Developer Tools → Actions** to isolate the issue from the entity
+3. Try `growatt_modbus.write_register` directly from **Settings → Tools → Actions** to isolate the issue from the entity
 
 ### MOD TOU slots 5–9 not appearing
 
 Slots 5–9 use registers 3050–3059. These must be present in the holding_registers of your profile. Verify:
 ```yaml
-service: growatt_modbus.read_register
+action: growatt_modbus.read_register
 data:
   device_id: YOUR_DEVICE_ID
   register_type: holding

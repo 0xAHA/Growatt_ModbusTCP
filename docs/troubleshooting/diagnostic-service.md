@@ -1,9 +1,9 @@
-# 🔧 Built-In Diagnostic Service
+# 🔧 Built-In Diagnostic Actions
 
 **Having connection issues?** Use the built-in Universal Register Scanner to see exactly what your inverter answers, register by register, without a terminal.
 
 !!! warning "The action only appears once a device has been added"
-    Home Assistant does not load an integration until it has at least one configured device, and the scanner is provided *by* the integration. Installing the files is not enough - **Developer Tools -> Actions will not list it until you have added an inverter.**
+    Home Assistant does not load an integration until it has at least one configured device, and the scanner is provided *by* the integration. Installing the files is not enough - **Settings -> Tools -> Actions will not list it until you have added an inverter.**
 
     This page previously said the opposite. If you are here because you cannot find the action, that is why, and the way through is [below](#scanning-an-inverter-that-is-not-supported-yet).
 
@@ -11,7 +11,7 @@
 
 ## ✨ What It Does
 
-The **Universal Register Scanner** diagnostic service:
+The **Universal Register Scanner** action:
 
 * ✅ Tests TCP connection to your adapter
 * ✅ Auto-detects your inverter model (VPP 2.01 inverters)
@@ -33,13 +33,13 @@ The **Universal Register Scanner** diagnostic service:
 2. **Restart** Home Assistant
 3. **Add your inverter** under Settings -> Devices & Services -> Add Integration
 
-Step 3 is not optional. Until a device exists, Home Assistant never loads the integration, so the scanner action is not registered and will not appear in Developer Tools.
+Step 3 is not optional. Until a device exists, Home Assistant never loads the integration, so the scanner action is not registered and will not appear in Settings -> Tools -> Actions.
 
 If your inverter is not supported yet, see [Scanning an inverter that is not supported yet](#scanning-an-inverter-that-is-not-supported-yet) - you can still get a scan.
 
 ### Step 2: Run the Diagnostic
 
-1. Go to **Developer Tools** → **Actions**
+1. Go to **Settings** → **Tools** → **Actions**
 2. Search for **"Growatt Modbus: Universal Register Scanner"**
 3. Select your inverter from the **Device** dropdown (recommended), or enter connection parameters manually
 4. Click **"Perform Action"**
@@ -339,7 +339,7 @@ automation:
         event: sunrise
         offset: "+00:30:00"  # 30 min after sunrise
     action:
-      - service: growatt_modbus.run_diagnostic
+      - action: growatt_modbus.run_diagnostic
         data:
           host: "192.168.1.100"
           port: 502

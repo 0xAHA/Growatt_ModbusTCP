@@ -534,7 +534,7 @@ If you're used to SPH/SPF inverters and moving to WIT, here are key changes:
 automation:
   - alias: "Set Battery First Mode"
     action:
-      - service: number.set_value
+      - action: number.set_value
         target:
           entity_id: select.growatt_priority_mode
         data:
@@ -548,21 +548,21 @@ automation:
   - alias: "Discharge Battery for 3 Hours"
     action:
       # Set duration
-      - service: number.set_value
+      - action: number.set_value
         target:
           entity_id: number.growatt_remote_charging_time
         data:
           value: 180  # 3 hours
 
       # Set discharge power
-      - service: number.set_value
+      - action: number.set_value
         target:
           entity_id: number.growatt_remote_charge_discharge_power
         data:
           value: -80  # 80% discharge
 
       # Enable remote control
-      - service: switch.turn_on
+      - action: switch.turn_on
         target:
           entity_id: switch.growatt_remote_power_control
 ```
@@ -573,7 +573,7 @@ automation:
 
 ### 1. Enable VPP Control Authority (One-time setup)
 ```yaml
-service: switch.turn_on
+action: switch.turn_on
 target:
   entity_id: switch.growatt_control_authority
 ```
@@ -607,14 +607,14 @@ automation:
         to: 'on'
     action:
       # Set duration from helper
-      - service: number.set_value
+      - action: number.set_value
         target:
           entity_id: number.growatt_remote_charging_time
         data:
           value: "{{ states('input_number.battery_override_duration') | int }}"
 
       # Set power from helper
-      - service: number.set_value
+      - action: number.set_value
         target:
           entity_id: number.growatt_remote_charge_discharge_power
         data:
@@ -625,7 +625,7 @@ automation:
           seconds: 2
 
       # Enable override
-      - service: switch.turn_on
+      - action: switch.turn_on
         target:
           entity_id: switch.growatt_remote_power_control
 ```

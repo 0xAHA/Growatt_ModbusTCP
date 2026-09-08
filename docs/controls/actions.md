@@ -1,10 +1,10 @@
 # Actions Reference
 
 The integration registers nine actions (Home Assistant used to call these "services"). They
-appear in **Developer Tools → Actions**, search for `growatt_modbus`, and every one of them
+appear in **Settings → Tools → Actions**, search for `growatt_modbus`, and every one of them
 can be used in an automation or script.
 
-Most take a `device_id`. The easiest way to get one is to build the call in Developer Tools
+Most take a `device_id`. The easiest way to get one is to build the call in Settings → Tools → Actions
 with the UI picker, then switch to YAML mode with the toggle at the top right — Home
 Assistant fills in the ID for you.
 
@@ -223,7 +223,7 @@ data:
 
 Writes a CSV covering every range the integration knows about, with the reason each read
 failed as well as the values that succeeded. This is what to attach when raising an issue —
-see [Diagnostic Service](../troubleshooting/diagnostic-service.md).
+see [Diagnostic Actions](../troubleshooting/diagnostic-service.md).
 
 ```yaml
 action: growatt_modbus.export_register_dump

@@ -504,31 +504,31 @@ All control entities follow standard Home Assistant naming. Examples:
 
 ```yaml
 # Force battery to charge at 80% power for 60 minutes (WIT)
-- service: number.set_value
+- action: number.set_value
   target:
     entity_id: number.growatt_remote_charge_and_discharge_power
   data:
     value: 80
-- service: number.set_value
+- action: number.set_value
   target:
     entity_id: number.growatt_remote_power_control_charging_time
   data:
     value: 60
-- service: select.select_option
+- action: select.select_option
   target:
     entity_id: select.growatt_remote_power_control
   data:
     option: "Enabled"
 
 # Set SPH to Battery First mode (SPH)
-- service: select.select_option
+- action: select.select_option
   target:
     entity_id: select.growatt_priority_mode
   data:
     option: "Battery First"
 
 # Enable AC charging on SPH
-- service: select.select_option
+- action: select.select_option
   target:
     entity_id: select.growatt_ac_charge_enable
   data:

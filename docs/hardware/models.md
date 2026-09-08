@@ -13,7 +13,7 @@ When you add the integration, it attempts to identify your inverter automaticall
 - VPP-capable inverters (DTC present) are identified with high confidence
 - Legacy inverters (no DTC) use model name probing — works for MIN, MIC, SPH families
 - If auto-detection picks the wrong profile, delete and re-add the integration with manual selection
-- The Universal Register Scanner (Developer Tools → Actions) shows the detection reasoning in its output
+- The Universal Register Scanner (Settings → Tools → Actions) shows the detection reasoning in its output
 
 ---
 

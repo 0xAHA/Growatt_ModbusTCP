@@ -55,7 +55,7 @@ nav:
     - WIT Inverter Guide: controls/wit-guide.md
   - Troubleshooting:
     - Raising an Issue: troubleshooting/raising-an-issue.md
-    - Diagnostic Service: troubleshooting/diagnostic-service.md
+    - Diagnostic Actions: troubleshooting/diagnostic-service.md
     - DTC Debugging: troubleshooting/dtc-debugging.md
     - RS485 Gateways: troubleshooting/rs485-gateways.md
   - Developer:

@@ -740,7 +740,7 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
             _LOGGER.warning(
                 "Matched DTC %s (%s) to profile '%s', but this mapping is UNCONFIRMED: %s. "
                 "Sensors may be missing or present-but-meaningless. A register scan "
-                "(Developer Tools -> Actions -> Growatt Modbus: Universal Register Scanner) "
+                "(Settings -> Tools -> Actions -> Growatt Modbus: Universal Register Scanner) "
                 "attached to a GitHub issue is what turns this into a confirmed mapping.",
                 dtc_code, entry.model, entry.profile, entry.evidence,
             )

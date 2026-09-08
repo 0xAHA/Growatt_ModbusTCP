@@ -1878,7 +1878,7 @@ Issues: #367
   Still not ideal, but it no longer corrupts Energy Dashboard history — which is
   permanent, and has to be repaired by hand.
 
-- **Note:** if you already have corrupted hourly statistics, Developer Tools → Statistics
+- **Note:** if you already have corrupted hourly statistics, Settings → Tools → Statistics
   can correct the affected means without touching the database.
 
 - **Known remaining:** five call sites in the WIT battery-power path use the same
