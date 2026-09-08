@@ -4,6 +4,21 @@
 
 ---
 
+## v2.0.1-b1
+
+Issues: #429
+
+- **AC output power is no longer withheld when it goes negative.** Registers 35/36 were
+  decoded as unsigned on the MIC, MID, MIN and MOD profiles, so a negative reading became an
+  impossible 429 MW and was discarded by the out-of-range guard - the reading went *missing*
+  rather than wrong, which is why it went unreported for so long. WIT already had this right.
+  Found by @rj6zs826fn-web from the UNDERFLOW warnings in his log. (#429)
+
+**Testers wanted.** If you saw `UNDERFLOW` warnings mentioning `output_power_low`, they should
+stop, and AC output power should read through periods where it was previously blank.
+
+---
+
 ## v2.0.0
 
 Issues: #373 #387 #403 #404 #428
