@@ -4,6 +4,33 @@
 
 ---
 
+## v2.0.1
+
+Issues: #403 #426 #429 #430
+
+Promotes the v2.0.1-b1 to -b4 beta line to stable. Four fixes, all for values that were wrong
+rather than missing.
+
+- **WIT: Battery Power was reading about a tenth of the real value.** Models that map several
+  battery-current addresses but implement only one had the automatic power-scale check blocked
+  permanently, leaving a scale that is wrong on that hardware. Affects WIT profiles from
+  v1.9.0. Thanks @Wojak129, whose paired register captures under load identified it. (#430)
+- **SPH-TL3: Battery Max/Min Cell Voltage are withdrawn.** Those registers do not carry cell
+  voltages on that hardware - one owner read 2.27 V and 1.89 V per cell on a LiFePO4 pack at
+  47 % state of charge. **The two entities disappear on upgrade.** Thanks
+  @Doprintityourself. (#403)
+- **AC output power is no longer discarded when it goes negative** on the MIC, MID, MIN and
+  MOD profiles. A negative reading was decoded as an impossible 429 MW and thrown away, so the
+  value went missing rather than wrong. If you saw `UNDERFLOW` warnings naming
+  `output_power_low`, they should stop. Thanks @rj6zs826fn-web. (#429)
+- **The connection test no longer leaks a socket when the read fails.** It ran on every
+  connection test in the config and options flows, so a gateway with a hard client limit could
+  run out of slots during a run of failed attempts. (#426)
+- Connection lifecycle tracing added at debug level, for a reload socket leak still under
+  investigation in #426. No behaviour change.
+
+---
+
 ## v2.0.1-b4
 
 Issues: #430
