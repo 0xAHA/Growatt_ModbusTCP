@@ -258,6 +258,15 @@ what your model allows will be rejected by the inverter and the entity will reve
 - `battery_type` (register 39) controls charging voltage thresholds. Changing this incorrectly can damage batteries. Verify your battery chemistry before writing.
 - `bat_low_to_uti` and `ac_to_bat_volt` operate in different units depending on battery type: percentage (0–100%) for Lithium, voltage (20.0–64.0V) for lead-acid types. This is why they are named **Switchover** rather than SOC or Voltage — the unit shown on the entity follows your battery type, so a name claiming either would be wrong for half of you. Read the unit on the entity itself.
 
+    !!! tip "If a dashboard card still shows the old unit, re-add the card"
+        The unit follows your battery type live, so changing the type switches these entities
+        between **%** and **V** without a restart. An existing dashboard card can keep
+        rendering the old unit, because the card caches it rather than reading it back.
+
+        Removing the card and adding it again fixes it. Nothing is wrong with the entity —
+        check its value on the device page to confirm. Reported by @eugeniodb on
+        [#428](https://github.com/0xAHA/Growatt_ModbusTCP/issues/428).
+
 ---
 
 ## WIT Commercial Hybrid Inverters

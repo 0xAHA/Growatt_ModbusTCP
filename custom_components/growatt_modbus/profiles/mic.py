@@ -189,7 +189,7 @@ MIC_2500_6000TL_X_MIN_RANGE = {
 
         # AC Output Power (32-bit)
         35: {'name': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36},
-        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
         # AC Grid
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},

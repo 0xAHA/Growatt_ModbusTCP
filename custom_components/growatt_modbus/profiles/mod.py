@@ -37,7 +37,7 @@ MOD_6000_15000TL3_XH = {
         # Aliased to ac_power so the generic ac_power sensor reflects the correct total.
         # Do NOT alias ac_power_r (reg 40/41) — that is Phase R only, not total.
         35: {'name': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36, 'alias': 'ac_power_high'},
-        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W', 'alias': 'ac_power_low'},
+        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'alias': 'ac_power_low'},
 
         # === AC OUTPUT - THREE PHASE ===
         # Grid Frequency (shared across all phases)
@@ -865,7 +865,7 @@ MOD_6000_15000TL3_X = {
         # Aliased to ac_power so the generic ac_power sensor reflects the correct total.
         # Do NOT alias ac_power_r (reg 40/41) — that is Phase R only, not total.
         35: {'name': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36, 'alias': 'ac_power_high'},
-        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W', 'alias': 'ac_power_low'},
+        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True, 'alias': 'ac_power_low'},
 
         # === AC OUTPUT - THREE PHASE ===
         # Grid Frequency (shared across all phases)

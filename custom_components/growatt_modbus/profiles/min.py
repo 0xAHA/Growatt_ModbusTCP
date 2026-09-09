@@ -368,7 +368,7 @@ MIN_SERIES_BASE_RANGE = {
         13: {'name': 'pv3_power_high', 'scale': 1, 'unit': '', 'pair': 14},
         14: {'name': 'pv3_power_low', 'scale': 1, 'unit': '', 'pair': 13, 'combined_scale': 0.1, 'combined_unit': 'W'},
         35: {'name': 'output_power_high', 'scale': 1, 'unit': '', 'pair': 36},
-        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        36: {'name': 'output_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         37: {'name': 'grid_frequency', 'scale': 0.01, 'unit': 'Hz'},
         38: {'name': 'grid_voltage', 'scale': 0.1, 'unit': 'V'},
         39: {'name': 'grid_current', 'scale': 0.1, 'unit': 'A'},
