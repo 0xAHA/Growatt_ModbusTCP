@@ -4,6 +4,23 @@
 
 ---
 
+## v2.0.1-b4
+
+Issues: #430
+
+- **WIT: battery power no longer reads a tenth of the actual value.** On models that map
+  several battery-current addresses but implement only one, the unimplemented ones sit at
+  zero permanently. Those were being treated as readings that contradicted the working
+  register, which permanently blocked the automatic power-scale check and left the documented
+  scale in place - wrong on this hardware. A register reading zero is now treated as not
+  reporting rather than as disagreement.
+
+  **Affects WIT profiles on v1.9.0 through v2.0.1-b3.** If your Battery Power has been
+  reading about a tenth of voltage x current, this is it. Thanks @Wojak129 for the paired
+  register captures that identified the cause.
+
+---
+
 ## v2.0.1-b3
 
 Issues: #403

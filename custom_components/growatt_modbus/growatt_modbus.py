@@ -154,6 +154,12 @@ WRITE_VERIFY_MAX_DELAY = 2.0       # seconds - ceiling for the backoff between c
 # Minimum battery power before the WIT scale detection will draw a conclusion (#406).
 # Below this the current registers disagree and the comparison is meaningless.
 _BATTERY_SCALE_MIN_POWER_W = 500.0
+
+# Below this a battery-current candidate is treated as NOT REPORTING rather than as a
+# reading that contradicts the others (#430). Some models map several current addresses and
+# implement only one; the rest sit at zero permanently, and counting that as dissent blocked
+# scale detection for the life of the connection.
+_BATTERY_CURRENT_SILENT_A = 0.2
 WRITE_VERIFY_RETRY_DELAY = 1.5     # seconds — delay between retry attempts
 
 
@@ -1782,13 +1788,37 @@ class GrowattModbus:
         A single candidate agrees with itself. Several agree when they point the same way
         and are the same size; disagreement means at least one of them is not the register
         we think it is, and none of them can be trusted to validate anything.
+
+        **A register sitting at zero is not disagreeing - it is not reporting.** That
+        distinction is the whole of #430. On a WIT 4-15kW under a 35 A discharge the three
+        candidates read:
+
+            reg 31215 (VPP)  -0.1 A     never carries current on this model
+            reg 3170  (3k)    0.0 A     never carries current on this model
+            reg 8035  (base) 34.1 A     the real reading, and the one selected
+
+        Counting the two dead registers as dissent made the candidates *permanently*
+        disagree while discharging, so the scale detector was blocked on every poll for the
+        life of the connection and the documented scale stood - which is wrong on that unit.
+        Battery power published a tenth of the truth, ~180 W against a measured ~1.8 kW.
+
+        Dropping them keeps #406 caught, which is the case this guard was built for. That
+        reporter's candidates were -0.1 A, 6.3 A and -4.3 A: discard the near-zero one and
+        6.3 against -4.3 still point opposite ways, so they still disagree and no scale is
+        inferred from them.
+
+        Genuine conflict is two registers each claiming a real current and contradicting
+        each other. Silence from a register that does not implement the address is not
+        evidence about the one that does.
         """
-        if len(values) <= 1:
+        live = [v for v in values if abs(v) > _BATTERY_CURRENT_SILENT_A]
+        if len(live) <= 1:
+            # Nothing left to contradict. Detection is still gated on real load by
+            # _BATTERY_SCALE_MIN_POWER_W, so an idle battery cannot latch a scale here.
             return True
-        signed = [v for v in values if abs(v) > 0.2]   # ignore near-zero noise for sign
-        if signed and not (all(v > 0 for v in signed) or all(v < 0 for v in signed)):
+        if not (all(v > 0 for v in live) or all(v < 0 for v in live)):
             return False
-        mags = [abs(v) for v in values]
+        mags = [abs(v) for v in live]
         lo, hi = min(mags), max(mags)
         if hi - lo <= 0.5:            # same size to within half an amp
             return True
