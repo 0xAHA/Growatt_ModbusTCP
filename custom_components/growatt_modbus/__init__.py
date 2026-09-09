@@ -276,6 +276,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.debug("Created shared Modbus connection hub for %s", hub_key)
         hub = connections[hub_key]
         hub.acquire_ref()
+        # #426. A reload is unload-then-setup, so this line and the one in async_unload_entry
+        # bracket the cycle: same hub id means it was reused, a different one means the old
+        # hub was replaced and its socket needed closing on the way out.
+        _LOGGER.debug(
+            "setup: entry %s using hub=0x%x for %s (refcount %d, registry has %d)",
+            entry.entry_id, id(hub), hub_key, hub._refcount, len(connections),
+        )
         if hub._refcount > 1:
             _LOGGER.info(
                 "Shared Modbus connection mode: entry %s joined hub for %s (refcount=%d) — "
@@ -546,6 +553,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: GrowattConfigEntry) -> 
             connections = hass.data[DOMAIN].get("_connections", {})
             # In an executor: release_ref() may wait briefly for a poll to give the
             # bus back, and the event loop must not block on that.
+            _LOGGER.debug(
+                "unload: entry %s releasing hub=0x%x (refcount %d before release)",
+                entry.entry_id, id(hub), hub._refcount,
+            )
             await hass.async_add_executor_job(hub.release_ref)
             if hub._refcount <= 0:
                 # Remove from registry — hub already disconnected in release_ref()

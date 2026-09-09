@@ -4,6 +4,27 @@
 
 ---
 
+## v2.0.1-b2
+
+Issues: #426 #429
+
+- **The connection test no longer leaks a socket when the read fails.** It is the only place
+  that opens a connection outside the shared hub, and the close sat outside the `try`, so a
+  read that raised left the socket established. It ran on every connection test in the config
+  and options flows - the retry loop you work through when a connection is not right yet,
+  which is exactly when the read is most likely to fail. On a gateway with a hard client limit
+  each attempt burned a slot until Home Assistant restarted.
+- **Connection lifecycle tracing added at debug level** for the reload socket leak under
+  investigation in #426. No behaviour change; it logs which hub opened which socket, and
+  whether anything closed it, across an unload/setup cycle.
+- Carries the register-36 signed fix from b1 (#429).
+
+**If you are helping with #426:** enable `custom_components.growatt_modbus` at debug, capture
+Home Assistant starting up and then one `homeassistant.reload_config_entry`, and attach the
+log. The lines to look for contain `hub=0x`.
+
+---
+
 ## v2.0.1-b1
 
 Issues: #429

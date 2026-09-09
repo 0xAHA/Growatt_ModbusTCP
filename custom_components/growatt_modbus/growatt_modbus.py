@@ -565,6 +565,14 @@ class SharedModbusConnection:
 
     def acquire_ref(self) -> None:
         self._refcount += 1
+        # Lifecycle tracing for #426. A reload should reuse one hub or build exactly one
+        # replacement; a reporter measured a socket added per reload that was never
+        # reaped. Identity is the thing to follow - counting sockets says something
+        # leaked, saying WHICH hub opened them says what failed to close.
+        logger.debug(
+            "[SharedConn %s] hub=0x%x acquire_ref -> refcount %d",
+            self.connection_id, id(self), self._refcount,
+        )
 
     def begin_poll(self) -> None:
         """Reset the per-poll recovery budget. Call once per poll, before any reads."""
@@ -670,6 +678,11 @@ class SharedModbusConnection:
         socket to end_poll(), which now closes it for a released hub.
         """
         self._refcount -= 1
+        logger.debug(
+            "[SharedConn %s] hub=0x%x release_ref -> refcount %d (client=%s)",
+            self.connection_id, id(self), self._refcount,
+            f"0x{id(self._client):x}" if self._client is not None else "None",
+        )
         if self._refcount > 0:
             return
 
@@ -757,6 +770,12 @@ class SharedModbusConnection:
         if result:
             self._connected = True
             self._reset_at = 0.0
+            # #426: pairs with the acquire/release/close lines so one reload cycle can be
+            # read end to end - which hub opened which socket, and whether anything closed it.
+            logger.debug(
+                "[SharedConn %s] hub=0x%x opened client=0x%x",
+                self.connection_id, id(self), id(self._client),
+            )
             self._flush_receive_buffer()
         elif self.is_serial:
             # pyserial logs "[Errno 11] Could not exclusively lock port ..." and pymodbus
@@ -781,10 +800,20 @@ class SharedModbusConnection:
 
     def disconnect(self) -> None:
         if self._client is not None:
+            logger.debug(
+                "[SharedConn %s] hub=0x%x closing client=0x%x",
+                self.connection_id, id(self), id(self._client),
+            )
             try:
                 self._client.close()
-            except Exception:
-                pass
+            except Exception as err:
+                # Swallowed deliberately - a close that fails must not stop teardown. Logged
+                # because a socket that would not close is exactly the shape being chased in
+                # #426, and it was previously invisible.
+                logger.debug(
+                    "[SharedConn %s] hub=0x%x close() raised: %s",
+                    self.connection_id, id(self), err,
+                )
             self._connected = False
 
     def reset(self, reason: str = "") -> None:

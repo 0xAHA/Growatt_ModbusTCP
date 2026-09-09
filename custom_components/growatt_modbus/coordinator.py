@@ -89,22 +89,34 @@ def test_connection(config: dict) -> dict:
             )
 
         # Test connection
-        if client.connect():
-            # Try to read some basic data
+        if not client.connect():
+            return {"success": False, "error": "Could not connect to inverter"}
+
+        # Closed in `finally`, not after the read.
+        #
+        # This client is built WITHOUT a shared hub, so it owns its own socket - the only
+        # place in the integration that opens one outside the hub. The close used to sit
+        # immediately after read_all_data(), so any exception in the read skipped it, the
+        # `except` below swallowed the error, and the socket was left established with
+        # nothing holding a reference to close it.
+        #
+        # A leaked socket is not free: a gateway has a hard client limit (an Elfin EW11
+        # accepts five), and this runs on every connection test in the config and options
+        # flows - the retry loop a user works through when a connection is not yet right,
+        # which is exactly when the read is most likely to throw (#426).
+        try:
             data = client.read_all_data()
+        finally:
             client.disconnect()
 
-            if data is not None:
-                return {
-                    "success": True,
-                    "serial_number": data.serial_number,
-                    "firmware_version": data.firmware_version,
-                    "register_map": register_map
-                }
-            else:
-                return {"success": False, "error": "Could not read data from inverter"}
-        else:
-            return {"success": False, "error": "Could not connect to inverter"}
+        if data is not None:
+            return {
+                "success": True,
+                "serial_number": data.serial_number,
+                "firmware_version": data.firmware_version,
+                "register_map": register_map
+            }
+        return {"success": False, "error": "Could not read data from inverter"}
 
     except Exception as err:
         _LOGGER.exception("Connection test failed")
