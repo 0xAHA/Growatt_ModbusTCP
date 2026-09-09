@@ -218,6 +218,12 @@ consequences:
   which then made the Energy Dashboard compute house consumption as zero.
 - **A meter that cannot be read makes the sensor unknown**, leaving a gap in history,
   rather than reporting a plausible number.
+- **A WIT with no grid-side measurement at all also reads unknown.** Grid measurement can
+  come from a Growatt meter or from external CTs, and the inverter reports whether either
+  is being received (`MeterLink`, holding register 180). Where it reports nothing is
+  connected — the manual's *Zero export to GRID* arrangement restricts output to the LOAD
+  port and needs no meter — `Grid Power` is unknown rather than zero, because on that site
+  a reading of zero is the absence of a source rather than a balanced house.
 
 Other families keep the estimate: on a hybrid with no meter fitted, the same all-zero
 reading means nothing is reporting, and the balance is the better answer there.

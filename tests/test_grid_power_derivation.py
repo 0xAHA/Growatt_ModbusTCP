@@ -235,6 +235,78 @@ def test_a_meter_only_profile_never_falls_back_to_the_estimate():
     assert signed_grid_power(state) is None
 
 
+# ---------------------------------------------------------------------------
+# ... and only while the inverter says something is measuring (MeterLink, holding 180)
+# ---------------------------------------------------------------------------
+
+def test_a_wit_that_is_not_receiving_its_meter_reports_unknown():
+    """V1.39 register 180 MeterLink reads 0 = Missed: nothing is being received from the
+    grid-side source. The same 0/0 then means the opposite of a balanced site, and the
+    estimate is no better here, so the honest answer is unknown.
+
+    This is the meterless case the manual describes - "Zero export to GRID", inverter
+    output restricted to the LOAD port, no meter required - answered by measurement
+    rather than by assuming how these sites are usually wired."""
+    state = _Data(power_to_grid=0.0, power_to_user=0.0, power_to_load=0.0,
+                  discharge_power=605.5, charge_power=0.0, pv_total_power=0.0,
+                  grid_flow_from_meter_only=True, meter_link=0)
+
+    assert signed_grid_power(state) is None
+
+
+def test_a_received_meter_link_believes_the_zero():
+    """1 = Received, which is what the reference WIT reads while its meter is live."""
+    state = _Data(power_to_grid=0.0, power_to_user=0.0, power_to_load=0.0,
+                  discharge_power=605.5, charge_power=0.0, pv_total_power=0.0,
+                  grid_flow_from_meter_only=True, meter_link=1)
+
+    assert signed_grid_power(state) == 0.0
+
+
+def test_a_meter_link_we_never_established_keeps_the_profile_rule():
+    """Not mapped, or one dropped holding read. A single failed read must not turn into
+    "this site has no meter", so the profile-level answer stands."""
+    absent = _Data(power_to_grid=0.0, power_to_user=0.0, power_to_load=0.0,
+                   discharge_power=605.5, charge_power=0.0, pv_total_power=0.0,
+                   grid_flow_from_meter_only=True)
+    unread = _Data(power_to_grid=0.0, power_to_user=0.0, power_to_load=0.0,
+                   discharge_power=605.5, charge_power=0.0, pv_total_power=0.0,
+                   grid_flow_from_meter_only=True, meter_link=None)
+
+    assert signed_grid_power(absent) == 0.0
+    assert signed_grid_power(unread) == 0.0
+
+
+def test_the_meter_link_gate_cannot_manufacture_a_reading():
+    """It only ever narrows. With a real directional reading present, MeterLink is not
+    consulted at all - a live register outranks a flag about registers."""
+    state = _Data(power_to_grid=793.0, power_to_user=0.0, power_to_load=0.0,
+                  discharge_power=0.0, charge_power=0.0, pv_total_power=3500.0,
+                  grid_flow_from_meter_only=True, meter_link=0)
+
+    assert signed_grid_power(state) == 793.0
+
+
+def test_the_wit_profiles_map_the_register_the_read_path_looks_up():
+    """The read path finds MeterLink by NAME in the holding map, so a rename or a lost
+    mapping would silently disable the gate and take every meterless WIT back to a
+    confident zero. The input mirror at 180 is deliberately not used: it read 0 on a unit
+    whose holding 180 read 1 in the same second."""
+    import importlib
+    import sys
+
+    sys.path.insert(0, "tests")
+    maps = importlib.import_module("growatt_under_test.profiles").REGISTER_MAPS
+
+    for name, profile in maps.items():
+        if not profile.get("grid_flow_from_meter_only"):
+            continue
+        holding = profile.get("holding_registers", {})
+        named = [addr for addr, info in holding.items()
+                 if info.get("name") == "meter_link_set"]
+        assert named == [180], f"{name}: expected MeterLink at holding 180, got {named}"
+
+
 def test_the_wit_profiles_declare_what_the_derivation_relies_on():
     """The flag and the behaviour must not drift apart: it is the only thing that makes a
     zero meter believable, and it is asserted where the profiles live rather than assumed

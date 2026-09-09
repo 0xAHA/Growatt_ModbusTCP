@@ -1694,6 +1694,14 @@ def _signed_grid_power(data) -> float | None:
     battery and no meter (#228). Only past it - where charge or discharge is non-zero, so
     a battery profile with mapped registers is talking to us - is a 0/0 meter believed,
     and only on a profile that declares the meter its single source of truth.
+
+    **And only while the inverter says something is measuring.** A WIT with no meter and no
+    external CT - the manual's "Zero export to GRID", where output is restricted to the LOAD
+    port and no meter is required - reads the same 0/0 and means the opposite by it. The
+    inverter answers that question itself: MeterLink (V1.39 holding 180) reports 0 = Missed
+    or 1 = Received for the grid-side source, whichever kind it is. So a zero is believed
+    only against a link that is Received; a Missed link makes the sensor unknown, and a link
+    we never established leaves the profile rule to answer.
     """
     unread = getattr(data, "unread_fields", None) or set()
     meter_only = bool(getattr(data, "grid_flow_from_meter_only", False))
@@ -1731,6 +1739,16 @@ def _signed_grid_power(data) -> float | None:
         # WITHOUT a meter the same 0/0 means the opposite - nothing is reporting - and there
         # the estimate is the better answer (#228).
         if export_known and import_known:
+            if getattr(data, "meter_link", None) == 0:
+                # The inverter says the grid-side measurement is not being received
+                # (MeterLink, V1.39 holding 180: 0 = Missed). Zero is then the absence of a
+                # source rather than a balanced site - the manual's "Zero export to GRID"
+                # arrangement needs no meter at all - and the estimate is no better here,
+                # because `power_to_load` reads 0 on this profile. Unknown is the only
+                # honest answer, and it is a measured one rather than a guess about how
+                # these sites are usually wired. A link we never established (None) keeps
+                # the profile rule below.
+                return None
             return 0.0
         # The meter is the only source here and it did not answer. Unknown, and in
         # particular not something the estimate may stand in for: `power_to_load` is mapped

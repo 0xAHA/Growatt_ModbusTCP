@@ -29,6 +29,13 @@ Issues: #429
     estimate - with no meter fitted the same all-zero reading means nothing is reporting,
     and the balance is the better answer.
 
+- **A WIT with no meter and no CT reads unknown rather than zero.** Grid-side measurement
+  on these models comes from either a Growatt meter or external CTs, and the inverter
+  reports whether it is receiving one (`MeterLink`, holding 180). Where nothing is
+  connected — the manual's *Zero export to GRID* arrangement needs no meter — a reading of
+  zero is the absence of a source rather than a balanced house, so `Grid Power` goes
+  unknown. Sites that are measuring are unaffected.
+
 - **A meter register that could not be read is no longer published as zero.** Where the
   total is mapped but no address answered and there are no phase registers to fall back
   on, the sensor goes unknown for that poll rather than reporting 0 W. On a metered
