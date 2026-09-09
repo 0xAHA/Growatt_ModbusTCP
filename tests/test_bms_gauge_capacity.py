@@ -159,3 +159,45 @@ def test_remaining_over_full_is_a_plausible_state_of_charge():
 
     assert remaining <= full, "remaining capacity exceeds full charge capacity"
     assert 100 * remaining / full == pytest.approx(95.2, abs=0.1)
+
+
+# --------------------------------------------------------------------------------- #403
+
+
+def test_the_tl3_does_not_map_cell_voltage_extremes():
+    """Input 1108/1109 are documented but do not carry cell voltages on this hardware.
+
+    They were mapped in v2.0.1-b2 on the strength of V1.39 alone - uwMaxCellVolt and
+    uwMinCellVolt at 0.001 V - and the first TL3 owner to get them read **raw 2272 and
+    1888** at 47% SOC, on 4x ARK 2.5H-A2. That is 2.272 V and 1.888 V per cell, against a
+    LiFePO4 cell that sits near 3.25 V at that state of charge, and against his own BMS app
+    showing cells within 0.003 V of each other. No scale turns 2272 into 3250.
+
+    The block is not misaligned: register 1088 on this same device was confirmed against a
+    clamp meter. These addresses simply do not carry what the document says here.
+
+    Removed rather than left mapped, because a cell voltage of 1.9 V does not look like a
+    bad mapping - it looks like a dying battery, and that is a worse failure than an absent
+    sensor.
+    """
+    for profile in ("SPH_TL3_3000_10000", "SPH_TL3_3000_10000_V201"):
+        registers = PROFILES[profile]["input_registers"]
+        for address in (1108, 1109, 1094):
+            assert address not in registers, (
+                f"{profile} maps input {address} again; the only field reading of it was "
+                f"physically impossible for the pack (#403)"
+            )
+
+
+def test_the_reported_cell_voltages_really_are_impossible():
+    """Rule 4 against the evidence rather than the code. If this arithmetic stops holding,
+    the removal above was wrong and should be revisited rather than protected."""
+    max_raw, min_raw = 2272, 1888
+    lifepo4_at_47_percent = 3.25
+
+    assert max_raw * 0.001 < lifepo4_at_47_percent - 0.9, (
+        "the reported maximum cell voltage is not far enough below a real one to rule it out"
+    )
+    # A scale that rescued the maximum would put the minimum somewhere equally impossible.
+    rescue = lifepo4_at_47_percent / max_raw
+    assert not (0.0009 < rescue < 0.0011), "0.001 V would in fact have been about right"

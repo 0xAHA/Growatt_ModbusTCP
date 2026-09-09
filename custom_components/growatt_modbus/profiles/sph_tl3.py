@@ -169,15 +169,29 @@ SPH_TL3_3000_10000 = {
         1092: {'name': 'bms_gauge_fcc', 'scale': 0.01, 'unit': 'Ah',
                'desc': 'BMS_GaugeFCC - full charge capacity (ESS 0x001B, 10 mAh units)'},
 
-        # Cell voltage extremes. Growatt exposes no per-cell array - V1.39 gives the
-        # highest and lowest single cell (1108/1109), which cell each is (1112/1113), and
-        # the delta (1094). Max minus min is the cell-imbalance figure worth watching.
+        # Cell voltage extremes are NOT mapped here, and that is a measured decision.
         #
-        # INPUT 1108/1109. Holding 1108 in this same file is time_period_3_enable.
-        # Documented, and already mapped this way on SPH_8000_10000_HU; not yet confirmed
-        # on a TL3 (#403).
-        1108: {'name': 'bms_max_cell_volt', 'scale': 0.001, 'unit': 'V', 'desc': 'Highest single cell voltage'},
-        1109: {'name': 'bms_min_cell_volt', 'scale': 0.001, 'unit': 'V', 'desc': 'Lowest single cell voltage'},
+        # V1.39 documents input 1108/1109 as uwMaxCellVolt / uwMinCellVolt at 0.001 V, and
+        # they were mapped on that basis in v2.0.1-b2. The reporter who asked for them read
+        # raw 2272 and 1888 on an SPH-TL3 with 4x ARK 2.5H-A2 at 47% SOC - 2.272 V and
+        # 1.888 V per cell. A LiFePO4 cell at 47% sits near 3.25 V, and his own BMS app
+        # showed cells within 0.003 V of each other, so those two numbers are not this
+        # pack's cell voltages under any scale: no factor turns 2272 into 3250.
+        #
+        # 1094 (delta) reads 18260 on the same device, equally impossible for a figure the
+        # ESS protocol puts in cell-voltage units.
+        #
+        # The BMS block IS aligned on this hardware - 1088 was confirmed against a clamp
+        # meter at 0.01 A - so this is not an offset. These addresses simply do not carry
+        # what the document says on this battery.
+        #
+        # Removed rather than left in place: a mapped register that returns an implausible
+        # value publishes a wrong number, and a cell voltage of 1.9 V reads as a dying pack
+        # (#403).
+        #
+        # Note 1114/1115 DO look right on the same device - 23.8 C and 22.0 C at 0.1 C -
+        # so the block is not wholly unimplemented. They are not mapped yet either, for
+        # want of a second device.
 
         1095: {'name': 'bms_cycle_count', 'scale': 1, 'unit': '', 'desc': 'Cycle count from BMS'},
         1096: {'name': 'bms_soh', 'scale': 1, 'unit': '%', 'desc': 'SOH (State of Health) from BMS'},
