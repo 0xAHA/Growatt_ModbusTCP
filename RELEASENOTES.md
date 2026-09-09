@@ -4,16 +4,27 @@
 
 ---
 
+## v2.0.1-b3
+
+Issues: #403
+
+- **Battery Max/Min Cell Voltage are withdrawn from SPH-TL3.** They were added in v2.0.0 from
+  the protocol document alone, without a device to check them against. The first owner to
+  receive them read **2.27 V and 1.89 V per cell at 47% state of charge** on a LiFePO4 pack,
+  where a real cell sits near 3.25 V - and no scale turns one into the other, so those
+  registers do not carry cell voltages on that hardware.
+
+  **If you are on v2.0.0 or v2.0.1-b1/b2 with an SPH-TL3, those two sensors are wrong.** A cell
+  voltage of 1.9 V reads as a pack about to fail rather than as a bad mapping, which is why
+  they are being removed rather than left in place. The entities disappear on upgrade.
+
+  Thanks @Doprintityourself, who was asked to check them and reported straight back.
+
+---
+
 ## v2.0.1-b2
 
-Issues: #403 #426 #429
-
-- **Battery Max/Min Cell Voltage have been withdrawn from SPH-TL3.** They were added earlier
-  in this beta line from the protocol document alone. The first owner to receive them read
-  2.27 V and 1.89 V per cell at 47% state of charge on a LiFePO4 pack, where a real cell sits
-  near 3.25 V - so those registers do not carry cell voltages on that hardware. A wrong cell
-  voltage reads as a dying battery, which is worse than no sensor. Thanks @Doprintityourself
-  for checking and reporting promptly. (#403)
+Issues: #426 #429
 
 - **The connection test no longer leaks a socket when the read fails.** It is the only place
   that opens a connection outside the shared hub, and the close sat outside the `try`, so a
