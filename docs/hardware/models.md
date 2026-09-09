@@ -199,6 +199,37 @@ All models support an **Invert Grid Power** option. It flips the sign of the sig
 
 ---
 
+## Where Grid Power comes from
+
+`Grid Power` (and with it `Grid Export Power` and `Grid Import Power`) prefers your
+inverter's directional meter registers. When those are not available, it falls back to an
+energy balance — `(solar + battery discharge) − (house load + battery charge)` — which is
+an estimate, and is used only where there is genuinely something to balance.
+
+**On WIT models the meter is the only source and the estimate never runs.** Their
+directional registers are real, while `power_to_load` on the same profile reads 0 W with
+the house drawing hundreds of watts, so a balance built on it would be fiction. Two
+consequences:
+
+- **A meter reading of zero is believed.** A battery covering the house exactly is a
+  balanced site, not a missing measurement — the commonest evening state of a
+  self-consuming installation. Before v2.0.1-b1 the estimate ran here and published the
+  battery discharge as grid flow: several hundred watts of export that never happened,
+  which then made the Energy Dashboard compute house consumption as zero.
+- **A meter that cannot be read makes the sensor unknown**, leaving a gap in history,
+  rather than reporting a plausible number.
+- **A WIT with no grid-side measurement at all also reads unknown.** Grid measurement can
+  come from a Growatt meter or from external CTs, and the inverter reports whether either
+  is being received (`MeterLink`, holding register 180). Where it reports nothing is
+  connected — the manual's *Zero export to GRID* arrangement restricts output to the LOAD
+  port and needs no meter — `Grid Power` is unknown rather than zero, because on that site
+  a reading of zero is the absence of a source rather than a balanced house.
+
+Other families keep the estimate: on a hybrid with no meter fitted, the same all-zero
+reading means nothing is reporting, and the balance is the better answer there.
+
+---
+
 ## Manual Model Selection Guide
 
 If auto-detection fails (or you want to override), choose based on:

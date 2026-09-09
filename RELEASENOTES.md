@@ -97,6 +97,34 @@ Issues: #429
   rather than wrong, which is why it went unreported for so long. WIT already had this right.
   Found by @rj6zs826fn-web from the UNDERFLOW warnings in his log. (#429)
 
+- **WIT: Grid Power no longer invents a flow while the meter reads zero.** With PV down and
+  the battery covering the house on its own, both directional meter registers read a
+  truthful 0 W - a balanced site. The derivation treated that as "no meter" and fell back
+  to an energy balance, which on these models is `(0 + battery discharge)` and published
+  the discharge as grid flow: 605 W of export on an evening with no export at all, with
+  the Energy Dashboard then computing house consumption as zero. The direction followed
+  the battery sign, so before the polarity option was corrected the same site fabricated
+  an import instead.
+
+    A zero from a meter that is fitted is now believed, gated on the profile: WIT maps
+    declare the meter their only usable source of grid direction, because `power_to_load`
+    reads 0 W there while the house draws hundreds of watts. Other families keep the
+    estimate - with no meter fitted the same all-zero reading means nothing is reporting,
+    and the balance is the better answer.
+
+- **A WIT with no meter and no CT reads unknown rather than zero.** Grid-side measurement
+  on these models comes from either a Growatt meter or external CTs, and the inverter
+  reports whether it is receiving one (`MeterLink`, holding 180). Where nothing is
+  connected — the manual's *Zero export to GRID* arrangement needs no meter — a reading of
+  zero is the absence of a source rather than a balanced house, so `Grid Power` goes
+  unknown. Sites that are measuring are unaffected.
+
+- **A meter register that could not be read is no longer published as zero.** Where the
+  total is mapped but no address answered and there are no phase registers to fall back
+  on, the sensor goes unknown for that poll rather than reporting 0 W. On a metered
+  profile a zero is a measurement, so a failed read published as one was indistinguishable
+  from a balanced site (#384's distinction, applied where it costs most).
+
 **Testers wanted.** If you saw `UNDERFLOW` warnings mentioning `output_power_low`, they should
 stop, and AC output power should read through periods where it was previously blank.
 

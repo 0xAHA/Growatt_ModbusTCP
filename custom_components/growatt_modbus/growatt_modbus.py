@@ -183,6 +183,19 @@ class GrowattData:
     # than recording a zero that reads as a real measurement.
     unread_fields: set = field(default_factory=set)
 
+    # True when this profile's directional meter registers are the only usable source of
+    # grid direction, so the energy-balance estimate must not stand in for them. Carried on
+    # the data rather than read from the map in sensor.py, which never sees the profile.
+    # Set from the register map on every poll; see _signed_grid_power() in sensor.py.
+    grid_flow_from_meter_only: bool = False
+
+    # Whether the grid-side measurement source is being received, from MeterLink (V1.39
+    # holding 180: 0 = Missed, 1 = Received). None means we never established it - the
+    # register is not mapped on this profile, or it did not answer this poll. Only read on
+    # profiles that declare `grid_flow_from_meter_only`, which are the only ones that act
+    # on it. See _signed_grid_power() in sensor.py.
+    meter_link: int | None = None
+
     # Solar Input
     pv1_voltage: float = 0.0          # V
     pv1_current: float = 0.0          # A
@@ -2940,6 +2953,8 @@ class GrowattModbus:
             # 31100/31101 is the inverter's own 3-phase output while 31112/31113 is metered
             # grid exchange. v0.8.6 remapped it for that reason; re-read mid.py before
             # changing it.
+            data.grid_flow_from_meter_only = bool(
+                self.register_map.get('grid_flow_from_meter_only', False))
             for _flow_attr, _flow_name, _phase_names in (
                 ('power_to_grid', 'power_to_grid_low', ()),
                 ('power_to_user', 'power_to_user_low',
@@ -3917,7 +3932,19 @@ class GrowattModbus:
             setattr(data, attr, phase_sum)
             return
 
-        setattr(data, attr, total if total is not None else 0.0)
+        if total is None:
+            # Mapped, but no address answered this poll and there are no phase registers to
+            # fall back on. This is #384 in the place it costs most: on a metered profile a
+            # zero is a balanced site, so a failed read published as 0.0 is indistinguishable
+            # from a measurement, and _signed_grid_power() would believe it.
+            data.unread_fields.add(attr)
+            logger.debug(
+                "%s: %s did not read this poll and no phase registers are mapped - "
+                "reporting unknown rather than 0", attr, total_name,
+            )
+            return
+
+        setattr(data, attr, total)
 
     def _find_all_registers_by_name(self, name: str) -> list[int]:
         """Find ALL register addresses matching a name, alias, or maps_to attribute.
@@ -4943,6 +4970,46 @@ class GrowattModbus:
                     logger.debug("[%s CTRL] priority_mode=%s", profile_name, data.priority_mode)
             except Exception as e:
                 logger.debug(f"Could not read priority_mode register {priority_addr}: {e}")
+
+        # --- Grid-side measurement link (MeterLink, holding 180) ---
+        #
+        # V1.39 documents 180 as MeterLink, "whether to elect the meter", R/W, 0 = Missed,
+        # 1 = Received. It reports whether the grid-side measurement source is being
+        # received. WHICH source that is - a Growatt meter or an external CT - is chosen by
+        # bCTMode (holding 1037: 0 = WiredCT, 1 = WirelessCT, 2 = METER), and all three
+        # report through the same 8081-8084 registers, so this one flag covers every
+        # grid-side arrangement the manual describes.
+        #
+        # _signed_grid_power() needs it before it can believe a meter reading of zero: on a
+        # profile declaring `grid_flow_from_meter_only`, 0/0 is a balanced site only if
+        # something is actually measuring. A site with neither meter nor CT - the manual's
+        # "Zero export to GRID" arrangement, where output is restricted to the LOAD port
+        # and no meter is required - reads the same 0/0 and means the opposite.
+        #
+        # The INPUT register at 180 is NOT usable for this. On a reference WIT whose meter
+        # was demonstrably live (8.6 kW of export through 8081-8084 earlier the same day),
+        # input 180 read 0 while holding 180 read 1 in the same second. Two registers
+        # claiming one quantity and disagreeing are separate sources (only divergence proves
+        # that), and the holding one is the one tracking reality.
+        #
+        # bCTMode is not read: V1.39 marks it write-only, and it read 0 on the same unit
+        # whose measurement is live, so a read of it proves nothing either way.
+        if self.register_map.get('grid_flow_from_meter_only'):
+            meter_link_addr = next(
+                (addr for addr, info in holding_map.items()
+                 if info.get('name') == 'meter_link_set'), None)
+            if meter_link_addr is not None:
+                try:
+                    meter_link_regs = self.read_holding_registers(meter_link_addr, 1)
+                    if meter_link_regs is not None and len(meter_link_regs) >= 1:
+                        data.meter_link = int(meter_link_regs[0])
+                        logger.debug("[METER] meter_link=%s (0=Missed, 1=Received)",
+                                     data.meter_link)
+                except Exception as e:
+                    # Left as None, which keeps the profile-level rule. One dropped read
+                    # must not turn into "this site has no meter".
+                    logger.debug("Could not read meter_link register %s: %s",
+                                 meter_link_addr, e)
 
         # Load First Battery Minimum SOC (register 608 — undocumented, SPH hybrid only)
         if 608 in holding_map:

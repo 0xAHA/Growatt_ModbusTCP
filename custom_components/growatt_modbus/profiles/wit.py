@@ -14,6 +14,13 @@ from .vpp_v201 import VPP_V201_PV3_AND_TOTAL, VPP_V201_BATTERY2, VPP_V201_BATTER
 # WIT 4000-15000TL3 (Three-phase hybrid with battery, 4-15kW residential)
 WIT_4000_15000TL3 = {
     'name': 'WIT 4-15kW Hybrid',
+    # The directional meter registers (8081-8084) are REAL on this family and are
+    # the only usable source of grid direction: 428 W of import was read from
+    # them on a reference unit at the same moment power_to_load (8079/8080) read
+    # 0.0 despite being mapped. So the energy-balance estimate cannot run here --
+    # its load term is always zero -- and a zero from the meter is a measurement
+    # of a balanced site, not a gap to fill in. See _signed_grid_power().
+    'grid_flow_from_meter_only': True,
     'description': 'Three-phase hybrid inverter with battery storage and UPS/EPS backup (4-15kW)',
     'notes': 'Uses 0-124, 125-249, 875-999, 8000-8124 and VPP (31000-31399) register ranges. Battery data mapped to 8000-8124 range; battery temperature seen at 31223 (VPP block). Features: UPS 10ms switching, time-of-use programming, VPP/demand management. CONTROL MODEL: VPP protocol with time-limited overrides - register 30476 is READ-ONLY. Use registers 30407-30409 for temporary control.',
     'use_mppt_energy_today': True,  # Reg 53/54 = system AC output incl. battery discharge; use per-MPPT DC sum instead
@@ -641,6 +648,13 @@ WIT_4000_15000TL3 = {
 # PV3@11-14). PV4 at 15-18 follows the same pattern — pending hardware register scan to confirm.
 WIT_29900_50000TL3_XHU = {
     'name': 'WIT 29.9-50K-XHU',
+    # The directional meter registers (8081-8084) are REAL on this family and are
+    # the only usable source of grid direction: 428 W of import was read from
+    # them on a reference unit at the same moment power_to_load (8079/8080) read
+    # 0.0 despite being mapped. So the energy-balance estimate cannot run here --
+    # its load term is always zero -- and a zero from the meter is a measurement
+    # of a balanced site, not a gap to fill in. See _signed_grid_power().
+    'grid_flow_from_meter_only': True,
     'description': 'Commercial three-phase hybrid inverter with battery, 4 MPPT, 3 battery channels (29.9-50kW)',
     'notes': 'DTC 5601. 5 variants: 29.9K/30K/36K/40K/50K-XHU. 4 MPPT × 2 strings max. 3 battery channels (55A×3). Off-grid capable. No Modbus register documentation available — PV4 addresses (15-18) are inferred from the universal sequential pattern and require confirmation via diagnostic register scan.',
     'use_mppt_energy_today': True,

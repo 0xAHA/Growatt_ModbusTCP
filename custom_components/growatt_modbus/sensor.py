@@ -1677,16 +1677,47 @@ def _signed_grid_power(data) -> float | None:
 
     Returning None makes the entity unknown, which is the honest answer: without a meter
     we do not know the grid flow.
+
+    **A meter that read zero has told us something** (third defect, found on a WIT). Where
+    a meter IS fitted, 0/0 is its reading for a balanced site - the commonest state of a
+    self-consuming installation, and exactly what a battery covering the house produces.
+    Both directional tests still failed, so the estimate ran anyway: with the battery
+    discharging 605 W and `power_to_load` reading 0.0 despite being mapped,
+    `(0 + 605) - (0 + 0)` published 605 W of export that did not exist - byte-identical to
+    the battery discharge, which is what gave it away. The direction follows the battery
+    sign, so the same site fabricated an *import* instead before its polarity option was
+    corrected. Either way it lands in the export check of a discharge experiment, where a
+    phantom sale is the one reading that must never be invented.
+
+    That case is separated from the meterless one by ORDER, not by a new test: the
+    degenerate-balance guard below runs first and still answers for a profile with no
+    battery and no meter (#228). Only past it - where charge or discharge is non-zero, so
+    a battery profile with mapped registers is talking to us - is a 0/0 meter believed,
+    and only on a profile that declares the meter its single source of truth.
+
+    **And only while the inverter says something is measuring.** A WIT with no meter and no
+    external CT - the manual's "Zero export to GRID", where output is restricted to the LOAD
+    port and no meter is required - reads the same 0/0 and means the opposite by it. The
+    inverter answers that question itself: MeterLink (V1.39 holding 180) reports 0 = Missed
+    or 1 = Received for the grid-side source, whichever kind it is. So a zero is believed
+    only against a link that is Received; a Missed link makes the sensor unknown, and a link
+    we never established leaves the profile rule to answer.
     """
+    unread = getattr(data, "unread_fields", None) or set()
+    meter_only = bool(getattr(data, "grid_flow_from_meter_only", False))
+
     export = getattr(data, "power_to_grid", 0) or 0
     import_power = getattr(data, "power_to_user", 0) or 0
+    # A field that could not be READ is not a reading of zero (#384).
+    export_known = "power_to_grid" not in unread
+    import_known = "power_to_user" not in unread
 
     # A directional register carrying a real reading always wins.
-    if export > 0:
+    if export_known and export > 0:
         return float(export)
-    if import_power > 0:
+    if import_known and import_power > 0:
         return float(-import_power)
-    if export < 0:
+    if export_known and export < 0:
         # Signed meter reading indicating import. See above.
         return float(export)
 
@@ -1700,6 +1731,37 @@ def _signed_grid_power(data) -> float | None:
         # idle and zero is a fair answer; with generation, the expression degenerates to
         # `solar` and would be published as grid flow.
         return 0.0 if solar == 0 else None
+
+    if meter_only:
+        # Both meter registers were read and both say zero, on a profile that declares them
+        # the only usable source. The site is balanced; that is a measurement, not a gap to
+        # fill in. Gated on the profile rather than applied everywhere, because on a hybrid
+        # WITHOUT a meter the same 0/0 means the opposite - nothing is reporting - and there
+        # the estimate is the better answer (#228).
+        if export_known and import_known:
+            if getattr(data, "meter_link", None) == 0:
+                # The inverter says the grid-side measurement is not being received
+                # (MeterLink, V1.39 holding 180: 0 = Missed). Zero is then the absence of a
+                # source rather than a balanced site - the manual's "Zero export to GRID"
+                # arrangement needs no meter at all - and the estimate is no better here,
+                # because `power_to_load` reads 0 on this profile. Unknown is the only
+                # honest answer, and it is a measured one rather than a guess about how
+                # these sites are usually wired. A link we never established (None) keeps
+                # the profile rule below.
+                return None
+            return 0.0
+        # The meter is the only source here and it did not answer. Unknown, and in
+        # particular not something the estimate may stand in for: `power_to_load` is mapped
+        # on these profiles and still reads 0.0 while the house draws hundreds of watts.
+        return None
+
+    # The estimate, and only with every term of it actually read. Fixing "unread became
+    # zero" at the meter and leaving it here would reproduce the same fabrication one line
+    # lower, where it looks just as authoritative. An input the profile never mapped is not
+    # unread - the degenerate-balance guard above is what answers for those.
+    if any(name in unread for name in
+           ("pv_total_power", "power_to_load", "charge_power", "discharge_power")):
+        return None
 
     return float((solar + discharge) - (load + charge))
 
