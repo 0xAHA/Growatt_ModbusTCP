@@ -4,6 +4,28 @@
 
 ---
 
+## v2.0.2-b1
+
+Issues: #431
+
+- **WIT: a balanced site no longer reports phantom grid export.** With PV down and the battery
+  carrying the house, the meter registers correctly read zero - and that zero was treated as
+  "nothing is reporting", so an energy-balance estimate ran instead and published the battery
+  discharge as grid export. On the reference unit that was 605 W of export that never happened,
+  and the Energy Dashboard then showed the house consuming nothing.
+
+  On profiles where the meter is the only usable source, a zero from a meter that is fitted is
+  now believed. Whether one is fitted is read from the inverter (MeterLink, holding 180) rather
+  than assumed.
+
+  **Testers wanted, particularly a WIT with no meter or CT fitted.** That case is the one piece
+  not yet confirmed on hardware - if MeterLink reads 0 there, Grid Power becomes unknown rather
+  than a fabricated figure. Please report on #431 either way.
+
+  Found, measured and fixed by @minajevs.
+
+---
+
 ## v2.0.1
 
 Issues: #403 #426 #429 #430
