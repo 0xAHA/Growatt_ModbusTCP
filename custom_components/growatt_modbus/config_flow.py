@@ -12,6 +12,11 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+)
 
 from .const import (
     CONF_INVERTER_SERIES,
@@ -61,6 +66,33 @@ SERIAL_BY_ID_DIR = "/dev/serial/by-id"
 SERIAL_BY_PATH_DIR = "/dev/serial/by-path"
 
 MANUAL_PATH_SENTINEL = "manual"
+
+
+def _unit_id_field():
+    """A typed number box for the Modbus unit ID, not a slider.
+
+    `vol.All(vol.Coerce(int), vol.Range(min=1, max=247))` is what Home Assistant renders as
+    a slider, and a slider is the wrong control for this: 247 positions to drag through for
+    a value people know exactly and usually type once. Setting it to 96 by hand is fiddly
+    on a mouse and worse on a phone.
+
+    The setup steps had the opposite problem - a bare `int`, which renders as a box but
+    validates nothing, so 0 or 300 were accepted at setup and then refused by the options
+    form. Both now use the same control and the same documented 1-247 Modbus range.
+
+    `vol.Coerce(int)` after the selector is not optional. NumberSelector returns a **float**,
+    and at setup this value is interpolated into the entry's unique_id
+    (`f"{host}:{port}_{slave_id}"`). A 1.0 would produce "192.168.1.50:502_1.0", which does
+    not match the "…_1" of an existing entry - so the entry would no longer be recognised as
+    already configured. It is also handed to pymodbus as the device id on every poll, and
+    persisted in the entry as `96.0`.
+    """
+    return vol.All(
+        NumberSelector(
+            NumberSelectorConfig(min=1, max=247, step=1, mode=NumberSelectorMode.BOX)
+        ),
+        vol.Coerce(int),
+    )
 
 
 def _serial_port_options(current_path: str | None = None) -> dict[str, str]:
@@ -315,7 +347,8 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
         fields = {
             vol.Required(CONF_HOST, default=prior.get(CONF_HOST, vol.UNDEFINED)): str,
             vol.Required(CONF_PORT, default=prior.get(CONF_PORT, DEFAULT_PORT)): int,
-            vol.Required(CONF_SLAVE_ID, default=prior.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID)): int,
+            vol.Required(CONF_SLAVE_ID,
+                         default=prior.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID)): _unit_id_field(),
             # What the inverter is reached through. It only seeds the polling timings
             # below - it does not change how anything is read, and every value it sets
             # stays editable in Configure afterwards (#433).
@@ -456,7 +489,7 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                 38400: "38400",
                 115200: "115200",
             }),
-            vol.Required(CONF_SLAVE_ID, default=DEFAULT_SLAVE_ID): int,
+            vol.Required(CONF_SLAVE_ID, default=DEFAULT_SLAVE_ID): _unit_id_field(),
         })
 
         return self.async_show_form(
@@ -1319,7 +1352,7 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             vol.Required(
                 CONF_SLAVE_ID,
                 default=self.config_entry.data.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID),
-            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=247)),
+            ): _unit_id_field(),
         })
 
         if current_connection_type == "serial":

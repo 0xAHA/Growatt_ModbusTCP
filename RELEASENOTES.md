@@ -4,6 +4,18 @@
 
 ---
 
+## v2.0.2-b6
+
+- **Unit / Slave ID is now a number box instead of a slider.** Dragging a slider through 247
+  positions to reach a value you already know was needless, and worse on a phone. It is a
+  typed field in both setup and Configure.
+
+- **Setup now checks the unit ID is a valid Modbus address.** The setup form accepted any
+  number, while Configure only accepted 1-247 - so an entry could be created with a unit ID
+  that the options form would then refuse to save. Both use the same range.
+
+---
+
 ## v2.0.2-b5
 
 Issues: #427, #433

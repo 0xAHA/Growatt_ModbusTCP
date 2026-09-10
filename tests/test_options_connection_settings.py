@@ -260,7 +260,16 @@ def test_the_unit_id_is_offered_for_both_connection_types():
 
 def test_the_unit_id_is_range_checked():
     """Modbus addresses are 1-247. A free int would let someone save 0 or 300 and get the
-    same silent timeout this change exists to make findable."""
+    same silent timeout this change exists to make findable.
+
+    The constraint moved: it used to be an inline `vol.Range` here, which is what Home
+    Assistant renders as a slider - 247 positions to drag through for a number people type
+    once. It now lives in the shared `_unit_id_field()` helper, along with the coercion back
+    to int that a number box needs. So this checks the guarantee end to end - the field
+    delegates, and the helper carries the range - rather than naming a voluptuous class it
+    does not actually care about. The control type has its own file,
+    `test_unit_id_field_is_a_box.py`.
+    """
     import ast
 
     tree = ast.parse(SOURCE)
@@ -270,12 +279,25 @@ def test_the_unit_id_is_range_checked():
                 and node.func.attr == "extend"
                 and "CONF_SLAVE_ID" in ast.dump(node)):
             rendered = ast.unparse(node)
-            assert "Range" in rendered, "the unit ID field accepts any integer"
-            assert "min=1" in rendered and "max=247" in rendered, (
-                f"the unit ID range is not the Modbus address range: {rendered}"
+            assert "_unit_id_field()" in rendered, (
+                f"the unit ID field no longer goes through the shared helper, so its range "
+                f"is whatever this declaration says: {rendered}"
             )
-            return
-    pytest.fail("no options-schema extension carries CONF_SLAVE_ID")
+            break
+    else:
+        pytest.fail("no options-schema extension carries CONF_SLAVE_ID")
+
+    helper = next(
+        (n for n in ast.walk(tree)
+         if isinstance(n, ast.FunctionDef) and n.name == "_unit_id_field"),
+        None,
+    )
+    assert helper is not None, "the shared unit ID field helper is gone"
+
+    rendered = ast.unparse(next(n for n in ast.walk(helper) if isinstance(n, ast.Return)))
+    assert "min=1" in rendered and "max=247" in rendered, (
+        f"the unit ID range is not the Modbus address range: {rendered}"
+    )
 
 
 @pytest.mark.parametrize("path", ["strings.json", "translations/en.json"])
