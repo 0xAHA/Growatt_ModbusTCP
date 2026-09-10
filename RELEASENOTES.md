@@ -4,15 +4,21 @@
 
 ---
 
-## v2.0.2-b2
+## v2.0.2-b3
 
-Issues: #426 #427
+Issues: #427
 
 - **AC Power no longer sits unknown on three-phase models whose firmware does not serve the
   aggregate register.** It now falls back to the sum of the three phase powers, which is the
   rule grid flow already uses. A working aggregate register is never overridden, and a phase
   that did not read leaves the total unknown rather than understating it. Reported by
   @as-wallpen on a MID 25KTL3-XH. (#427)
+
+---
+
+## v2.0.2-b2
+
+Issues: #426
 
 - **Socket-level tracing for the shared-connection leak** still under investigation in #426.
   Debug level, no behaviour change. Logs the local port of each connection so a log line can
