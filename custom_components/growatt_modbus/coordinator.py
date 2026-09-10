@@ -1826,6 +1826,32 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         except Exception as err:
             _LOGGER.debug("Failed to save energy totals: %s", err)
 
+    def _read_holding(self, address: int, count: int) -> list | None:
+        """Read holding registers through the client, never past it (#426).
+
+        These calls used to go to `self._client.client` - the raw pymodbus client inside the
+        wrapper - which skips the branch that routes everything through the shared connection
+        hub. pymodbus sync clients auto-connect on their first transaction, so each of those
+        calls opened a SECOND socket to the gateway: one the hub never saw, never closed, and
+        could not close, because the hub only owns its own client.
+
+        That is the leak in #426. A clean start ended with two connections because setup
+        opened one and the first device-identification read opened the other, and every reload
+        added one more, since unload closes only the hub's. On a gateway with a five-client
+        ceiling it exhausted the slots.
+
+        Returns the registers, or None when the read failed or was not attempted - the same
+        shape `GrowattModbus.read_holding_registers()` uses, rather than a pymodbus result
+        object.
+        """
+        if not self._client:
+            return None
+        try:
+            return self._client.read_holding_registers(address, count)
+        except Exception as err:
+            _LOGGER.debug("Holding read %d (+%d) failed: %s", address, count, err)
+            return None
+
     def _read_device_identification(self):
         """Read device identification info (serial, firmware, inverter type)."""
         try:
@@ -1844,31 +1870,31 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             try:
                 if is_tl_x_model:
                     # TL-X/TL-XH: registers 3000-3015 (30 characters)
-                    result = self._client.client.read_holding_registers(address=3000, count=15, device_id=self._slave_id)
+                    registers = self._read_holding(3000, 15)
                 else:
                     # Standard: registers 23-27 (10 characters)
-                    result = self._client.client.read_holding_registers(address=23, count=5, device_id=self._slave_id)
-                
-                if not result.isError():
-                    self._serial_number = self._registers_to_ascii(result.registers)
+                    registers = self._read_holding(23, 5)
+
+                if registers:
+                    self._serial_number = self._registers_to_ascii(registers)
                     _LOGGER.debug(f"Read serial number: {self._serial_number}")
             except Exception as e:
                 _LOGGER.debug(f"Could not read serial number: {e}")
             
             # Read firmware version (registers 9-11)
             try:
-                result = self._client.client.read_holding_registers(address=9, count=3, device_id=self._slave_id)
-                if not result.isError():
-                    self._firmware_version = self._registers_to_ascii(result.registers)
+                registers = self._read_holding(9, 3)
+                if registers:
+                    self._firmware_version = self._registers_to_ascii(registers)
                     _LOGGER.debug(f"Read firmware version: {self._firmware_version}")
             except Exception as e:
                 _LOGGER.debug(f"Could not read firmware version: {e}")
             
             # Read inverter type (registers 125-132)
             try:
-                result = self._client.client.read_holding_registers(address=125, count=8, device_id=self._slave_id)
-                if not result.isError():
-                    self._inverter_type = self._registers_to_ascii(result.registers)
+                registers = self._read_holding(125, 8)
+                if registers:
+                    self._inverter_type = self._registers_to_ascii(registers)
                     _LOGGER.debug(f"Read inverter type: {self._inverter_type}")
 
                     # Parse model name from inverter type
@@ -1882,9 +1908,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             # If readable, shows actual protocol version (e.g., 2.01, 2.02, etc.)
             if not profile.get("offgrid_protocol", False):
                 try:
-                    result = self._client.client.read_holding_registers(address=30099, count=1, device_id=self._slave_id)
-                    if not result.isError() and len(result.registers) > 0:
-                        version_value = result.registers[0]
+                    registers = self._read_holding(30099, 1)
+                    if registers:
+                        version_value = registers[0]
                         if version_value > 0:
                             # Format as version string (e.g., 201 -> "Protocol 2.01", 202 -> "Protocol 2.02")
                             major = version_value // 100
@@ -1904,9 +1930,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             else:
                 # OffGrid profile selected
                 try:
-                    result = self._client.client.read_holding_registers(address=73, count=1, device_id=self._slave_id)
-                    if not result.isError() and len(result.registers) > 0:
-                        version_value = result.registers[0]
+                    registers = self._read_holding(73, 1)
+                    if registers:
+                        version_value = registers[0]
                         if version_value > 0:
                             # Format as version string (e.g., 201 -> "Protocol 2.01", 202 -> "Protocol 2.02")
                             major = version_value // 100
@@ -1965,22 +1991,18 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
         try:
             if is_vpp:
-                result = self._client.client.read_holding_registers(
-                    address=30104, count=6, device_id=self._slave_id
-                )
+                registers = self._read_holding(30104, 6)
             else:
-                result = self._client.client.read_holding_registers(
-                    address=45, count=6, device_id=self._slave_id
-                )
+                registers = self._read_holding(45, 6)
 
-            if result.isError() or len(result.registers) < 6:
+            if not registers or len(registers) < 6:
                 _LOGGER.debug(
                     "Inverter clock registers not readable (protocol: %s)",
                     self._protocol_version,
                 )
                 return
 
-            raw = result.registers  # [Year, Month, Day, Hour, Minute, Second]
+            raw = registers  # [Year, Month, Day, Hour, Minute, Second]
             year = raw[0] + 2000 if raw[0] < 100 else raw[0]
             month, day, hour, minute, second = raw[1], raw[2], raw[3], raw[4], raw[5]
 

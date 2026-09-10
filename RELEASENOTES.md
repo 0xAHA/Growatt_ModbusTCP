@@ -4,6 +4,22 @@
 
 ---
 
+## v2.0.2-b4
+
+Issues: #426
+
+- **Shared connections no longer leak a socket per config-entry reload.** Reading the device
+  serial, firmware, protocol version and inverter clock went straight to the underlying Modbus
+  client instead of through the shared connection, and those reads opened a second connection
+  that nothing owned or closed. A clean start held two connections instead of one, and every
+  reload added another until Home Assistant restarted.
+
+  **Affects anyone running two or more inverters through one RS485 gateway**, or a gateway with
+  a low client limit - an Elfin EW11 accepts five. Diagnosed by @KevlarD-67, who paired the
+  local ports from the debug log against the operating system's own socket list.
+
+---
+
 ## v2.0.2-b3
 
 Issues: #427
