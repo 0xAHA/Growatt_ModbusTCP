@@ -4,6 +4,33 @@
 
 ---
 
+## v2.0.2-b7
+
+Issues: #432, #433
+
+- **A frame the gateway answers badly is now re-read instead of costing the whole block.**
+  A response whose length does not match the request has always been discarded, because the
+  words in it would land on registers they do not belong to - but the read was then lost for
+  that poll, so entities dropped to unavailable in ones and twos while the connection looked
+  fine. It is now re-read once on the same socket, after the receive buffer is drained.
+  Reported by @TobiGitHubi, whose ShineWiFi-X answered 17 of 200 requests this way. (#433)
+
+  **Most useful on Growatt WiFi dongles and PUSR-class bridges.** A healthy adapter never
+  reaches this path. Discarded frames are still discarded - no bad data is published.
+
+- **"Detect grid orientation" no longer reports an unread inverter as zero solar.** Running
+  it on an entry that has never had a successful read said "Insufficient Solar - current
+  production 0 W, try again when the sun is shining", to someone whose panels were making
+  over a kilowatt. It now says the inverter has not answered, and lists what to check.
+  Found by @JHPHendriks. (#432)
+
+- **The "no response since setup" repair notice now mentions a held serial port.** A USB
+  RS485 adapter can only be opened by one program at a time, so a second Growatt integration
+  using the same adapter stops this one reading anything - with a symptom identical to a
+  wrong unit ID. (#432)
+
+---
+
 ## v2.0.2-b6
 
 - **Unit / Slave ID is now a number box instead of a slider.** Dragging a slider through 247

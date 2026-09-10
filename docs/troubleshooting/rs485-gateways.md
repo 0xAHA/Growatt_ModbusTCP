@@ -146,6 +146,13 @@ The root cause is response latency exceeding the timeout, so the fix is upstream
 
 Quickest route: set **Connection hardware** to the Growatt dongle option in **Configure**, which applies all four in one step — see [Setup asks what your hardware is](#setup-asks-what-your-hardware-is).
 
+!!! warning "Smaller blocks do not always help this dongle"
+    On the ShineWiFi-X in [#433](https://github.com/0xAHA/Growatt_ModbusTCP/issues/433) the preset above was **not** enough. With 25-register blocks the log filled with frames of **125 and 20 registers** answering requests for four to eight — sizes nothing in the poll asks for, so they are not truncations of our reads. 17 of 200 requests (8%) came back as somebody else's answer.
+
+    That points at the dongle putting its own Modbus traffic on the same session, which no setting on this side controls. Since **v2.0.2-b7** a discarded frame is re-read once instead of costing the whole block, which recovers most of them — the data was never at risk, but the reads were being lost.
+
+    If it still drops out after that, the durable fix is a dedicated RS485 adapter rather than the dongle's local server.
+
 **Is latency per-request or per-register?** This decides whether a smaller block size helps or hurts. Read the same register range at several block sizes and compare total time:
 
 - If time scales with the number of registers, smaller blocks help.
@@ -198,6 +205,26 @@ The integration holds one socket per host:port across polls. It was suspected of
 | ShineWiFi-class | persistent | mismatch ~1 poll in 3 |
 | ShineWiFi-class | fresh per read | 21/21 clean |
 | Waveshare RS485 TO POE ETH (B) | persistent | clean |
+
+---
+
+## Two *integrations* on one adapter — only one of them will work
+
+A USB RS485 adapter can be opened by **one program at a time**. If another Growatt
+integration is installed and reading the same adapter, this one gets nothing: every read
+times out, no sensor ever populates, and the symptom is identical to a wrong unit ID or bad
+wiring.
+
+Reported in [#432](https://github.com/0xAHA/Growatt_ModbusTCP/issues/432), where the same
+adapter and unit ID were demonstrably working in another integration at the same time — which
+is exactly what made it look like our problem.
+
+**Disable or remove the other integration, then reload this entry.** Not just its entities —
+the integration itself, so it releases the port.
+
+The "no response since setup" repair notice lists this among the causes to check. It is not
+the same thing as the section below, which is about several inverters inside *this*
+integration sharing one bus.
 
 ---
 

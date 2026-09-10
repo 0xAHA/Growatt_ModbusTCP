@@ -175,6 +175,16 @@ def _detect_grid_orientation(client: GrowattModbus) -> tuple[bool, str]:
         if not data:
             return False, "⚠️ Could not read the inverter - leaving Invert Grid Power OFF for now. This is a default, not a measurement: check the Grid Power sign once you are exporting, and run `growatt_modbus.detect_grid_orientation` if it looks wrong."
 
+        # A poll where nothing answered still returns an object, with every field at its 0.0
+        # default and the fields it tried to read recorded as unread. Without this the next
+        # check reports "solar production too low (0W)" to somebody whose inverter never
+        # replied at all - which sends them looking at the weather (#432).
+        if getattr(data, "unread_fields", None) and not any(
+            getattr(data, field, 0) for field in
+            ("pv_total_power", "pv1_power", "pv2_power", "ac_power", "energy_today")
+        ):
+            return False, "⚠️ The inverter did not answer any reads - leaving Invert Grid Power OFF for now. This is a default, not a measurement, and it is not a reading of zero production. Check the connection settings and any repair notices, then run `growatt_modbus.detect_grid_orientation` once sensors are showing live values."
+
         pv_power = getattr(data, "pv_total_power", 0)
         consumption = getattr(data, "house_consumption", 0) or getattr(data, "power_to_load", 0)
 

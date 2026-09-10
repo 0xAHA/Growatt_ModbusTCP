@@ -885,6 +885,39 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             return
 
         data = coordinator.data
+
+        # "Nothing was read" is not "nothing is being produced" (#432).
+        #
+        # `coordinator.data` is an empty GrowattData placeholder until the first successful
+        # poll, and a dataclass instance is truthy - so the check above passes and every
+        # field reads 0.0. A reporter whose serial port was held by another integration ran
+        # this in full sun and was told his solar production was 0 W and to try again when
+        # the sun was shining. The inverter had never answered a single read.
+        if not coordinator.has_real_data:
+            message = (
+                "❌ **Grid Orientation Detection Failed**\n\n"
+                "The inverter has not answered a single read since setup, so there is "
+                "nothing to measure - this is **not** a reading of zero production.\n\n"
+                "**Common causes:**\n"
+                "• Another integration or program is holding the serial port. A USB "
+                "adapter can only be opened by one at a time, so a second Growatt "
+                "integration on the same adapter will stop this one reading anything.\n"
+                "• Wrong Modbus unit ID, wrong device path, or wrong baud rate\n"
+                "• The adapter is not wired to the inverter's RS485 terminals\n\n"
+                "Check any repair notices on the integration first, then run this again "
+                "once sensors are showing live values."
+            )
+            await hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "title": "Grid Orientation Detection",
+                    "message": message,
+                    "notification_id": "growatt_grid_detection",
+                },
+            )
+            return
+
         pv_power = getattr(data, "pv_total_power", 0)
         consumption = getattr(data, "house_consumption", 0) or getattr(data, "power_to_load", 0)
 

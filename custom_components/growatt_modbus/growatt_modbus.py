@@ -144,6 +144,14 @@ def _format_modbus_error(result) -> str:
 # The counter is cleared by a successful READ, not a successful connect: during
 # the failure this addresses, connects succeed and reads time out, so keying it to
 # connects would reset the escalation on every attempt and never escalate at all.
+# How many discarded frames a single poll may re-read before giving up on the rest.
+#
+# One extra request per stale frame, on a socket that is otherwise working. The ceiling is
+# a stop on a pathological gateway doubling every request indefinitely, not a rationing of
+# a scarce resource - a healthy adapter never reaches this path at all, and the worst real
+# one measured needs about 17 (#433).
+MAX_STALE_FRAME_RETRIES_PER_POLL = 30
+
 RECONNECT_QUIET_BASE_SECONDS = 2.0
 RECONNECT_QUIET_MAX_SECONDS = 32.0
 
@@ -571,6 +579,12 @@ class SharedModbusConnection:
         self._recoveries_this_poll = 0
         self._max_recoveries_per_poll = 2
 
+        # Separate, much larger budget for re-reading a discarded frame (#433). Set here as
+        # well as in begin_poll() because reads happen outside a poll: the setup connection
+        # test and the device-identification reads both run before begin_poll() is ever
+        # called, and an attribute that only exists once a poll has started would fail there.
+        self._stale_frame_retries_this_poll = 0
+
         # Set by release_ref(). A hub that has been released must never build a new
         # client: an in-flight poll survives unload (it runs in an executor thread that
         # nothing cancels), and without this flag its next reset() would call
@@ -619,8 +633,9 @@ class SharedModbusConnection:
         )
 
     def begin_poll(self) -> None:
-        """Reset the per-poll recovery budget. Call once per poll, before any reads."""
+        """Reset the per-poll recovery budgets. Call once per poll, before any reads."""
         self._recoveries_this_poll = 0
+        self._stale_frame_retries_this_poll = 0
 
     def end_poll(self) -> None:
         """Give an exclusive serial port back between polls.
@@ -706,6 +721,24 @@ class SharedModbusConnection:
         if self._recoveries_this_poll >= self._max_recoveries_per_poll:
             return False
         self._recoveries_this_poll += 1
+        return True
+
+    def _begin_stale_frame_retry(self) -> bool:
+        """True if a discarded frame may be re-read, within this poll's budget.
+
+        Deliberately NOT the recovery budget above. That one is two per poll because it
+        *resets the connection*, and reset storms are their own failure. Re-reading after a
+        stale frame costs one extra request on a socket that is working, so it is bounded
+        far more generously - and it has to be, because the gateways that need it are the
+        ones that do this many times per poll.
+
+        A ShineWiFi-X answered 17 of 200 requests with a frame belonging to some other
+        request (#433), and a PUSR bridge managed roughly one poll in three (#360, #367).
+        A budget of two would have left both of them losing almost everything they lose now.
+        """
+        if self._stale_frame_retries_this_poll >= MAX_STALE_FRAME_RETRIES_PER_POLL:
+            return False
+        self._stale_frame_retries_this_poll += 1
         return True
 
     def release_ref(self, lock_timeout: float = 5.0) -> None:
@@ -989,6 +1022,42 @@ class SharedModbusConnection:
         self._note_transaction_succeeded()
         return registers
 
+    def _retry_after_stale_frame(self, attempt: int, malformed_before: int,
+                                 start: int, count: int) -> bool:
+        """True when the frame just discarded should be re-read on the same socket.
+
+        A frame whose length does not match the request is not a refusal and not a broken
+        socket: it is somebody else's answer arriving on our stream. Until now that cost the
+        whole block for the poll - the guard discarded the frame, correctly, and returned
+        None with nothing to publish. On the gateways that do this often, the effect was
+        entities going unavailable in ones and twos with the connection working fine.
+
+        `_validate_registers` has already drained the receive buffer by this point, so the
+        re-read is asking into a clean stream rather than the misaligned one that produced
+        the bad frame. That is what makes a plain retry worth anything here.
+
+        Distinguished from a protocol refusal by the malformed counter having moved. An
+        `isError()` response also returns None, and re-reading that is pointless: several
+        profiles probe ranges their hardware rejects on every poll, and retrying each one
+        would double those requests for nothing (#360, #361).
+        """
+        if attempt != 0:
+            return False
+        if self.malformed_reads <= malformed_before:
+            return False        # a refusal, not a stale frame
+        if not self._begin_stale_frame_retry():
+            logger.debug(
+                "[SharedConn %s] %d stale frames re-read this poll already; leaving "
+                "%d (+%d) unread",
+                self.connection_id, self._stale_frame_retries_this_poll, start, count,
+            )
+            return False
+        logger.debug(
+            "[SharedConn %s] re-reading %d (+%d) after a discarded frame",
+            self.connection_id, start, count,
+        )
+        return True
+
     def read_input_registers(self, start: int, count: int, slave_id: int) -> Optional[list]:
         if self._client is None:
             return None
@@ -1027,7 +1096,11 @@ class SharedModbusConnection:
                              self.connection_id, start, count, slave_id, exc)
                 return None
 
-            return self._validate_registers(resp, start, count)
+            before = self.malformed_reads
+            registers = self._validate_registers(resp, start, count)
+            if registers is not None or not self._retry_after_stale_frame(
+                    attempt, before, start, count):
+                return registers
         return None
 
     def read_holding_registers(self, start: int, count: int, slave_id: int) -> Optional[list]:
@@ -1057,7 +1130,11 @@ class SharedModbusConnection:
                              self.connection_id, start, count, slave_id, exc)
                 return None
 
-            return self._validate_registers(resp, start, count)
+            before = self.malformed_reads
+            registers = self._validate_registers(resp, start, count)
+            if registers is not None or not self._retry_after_stale_frame(
+                    attempt, before, start, count):
+                return registers
         return None
 
     # Writes reset and retry once on a transport error, exactly as the reads above do

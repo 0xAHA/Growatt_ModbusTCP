@@ -126,7 +126,11 @@ def test_length_mismatch_flushes_the_buffer(reader, monkeypatch):
 
     getattr(hub, reader)(100, 4, 1)
 
-    assert len(flushes) == 1
+    # One flush per discarded frame, which is the invariant - not one flush per call.
+    # Since #433 a discarded frame is re-read once, and this fake answers every read with
+    # the same bad response, so a single call makes two attempts and discards both.
+    assert flushes, "a mismatched frame did not drain the buffer"
+    assert len(flushes) == hub.malformed_reads
 
 
 @pytest.mark.parametrize("reader", ["read_input_registers", "read_holding_registers"])
@@ -174,9 +178,12 @@ def test_good_read_increments_the_good_counter():
 
 
 def test_mismatched_read_increments_the_malformed_counter():
+    """Two, not one: the frame is discarded, re-read once (#433), and this fake returns the
+    same bad response to the retry. Both are counted, which is right - the repair notice
+    reports the share of requests a gateway answered badly, and it answered both badly."""
     hub = _hub(_Response([10, 20]))
     hub.read_input_registers(100, 4, 1)
-    assert (hub.good_reads, hub.malformed_reads) == (0, 1)
+    assert (hub.good_reads, hub.malformed_reads) == (0, 2)
 
 
 def test_protocol_refusal_counts_as_neither():
@@ -193,7 +200,7 @@ def test_counters_are_per_hub_not_global():
     b = _hub(_Response([10, 20, 30, 40]))
     a.read_input_registers(100, 4, 1)
     b.read_input_registers(100, 4, 1)
-    assert (a.good_reads, a.malformed_reads) == (0, 1)
+    assert (a.good_reads, a.malformed_reads) == (0, 2)   # discarded, re-read, discarded
     assert (b.good_reads, b.malformed_reads) == (1, 0)
 
 
