@@ -22,13 +22,15 @@
           "host": "IP Address",
           "port": "Port",
           "slave_id": "Modbus Slave ID",
-          "add_anyway": "Add anyway, without a connection test"
+          "add_anyway": "Add anyway, without a connection test",
+          "gateway_type": "Connection hardware"
         },
         "data_description": {
           "host": "IP address of your RS485-to-TCP converter",
           "port": "Modbus TCP port (usually 502)",
           "slave_id": "Inverter Modbus address (usually 1)",
-          "add_anyway": "Adds the inverter even though it did not answer. Use this if it is offline for now, or if it is not supported yet and you need the register scanner to produce a scan."
+          "add_anyway": "Adds the inverter even though it did not answer. Use this if it is offline for now, or if it is not supported yet and you need the register scanner to produce a scan.",
+          "gateway_type": "What the inverter is reached through. This only sets starting values for the polling settings below (scan interval, timeout, request delay, block size) - it does not change how anything is read, and you can adjust all of them afterwards. Pick the Growatt dongle option if you use a ShineWiFi-X, ShineLan or similar: those need slower, smaller reads to stay connected."
         }
       },
       "serial": {
@@ -95,12 +97,13 @@
           "port": "TCP Port",
           "slave_id": "Unit / Slave ID",
           "max_block_size": "Max Register Block Size",
-          "protocol_variant": "Protocol Variant"
+          "protocol_variant": "Protocol Variant",
+          "gateway_type": "Connection hardware"
         },
         "data_description": {
           "device_name": "Friendly name for the device (appears before all sensor names)",
           "inverter_series": "Select your inverter model/series (auto-selects protocol version)",
-          "scan_interval": "How often to poll the inverter for new data (5-300 seconds)",
+          "scan_interval": "How often to poll the inverter when online (5-300 seconds)",
           "timeout": "How long to wait for responses from the inverter (1-60 seconds)",
           "offline_scan_interval": "How often to poll when inverter is offline/at night (60-3600 seconds, default 300)",
           "invert_grid_power": "Enable if CT clamp installed backwards (swaps import/export on AC side)",
@@ -112,7 +115,8 @@
           "host": "IP address or hostname of the RS485-to-TCP gateway.",
           "max_block_size": "Registers requested per Modbus read. Auto lets the profile decide. Lower this if entities are unavailable or stuck at zero and the log shows short reads or \"Unable to decode request\" - some RS485 gateways truncate large responses.",
           "protocol_variant": "Ten inverter families exist as two register maps - a V1.39 legacy one and a VPP V2.01 one. Auto uses whatever auto-detection concluded at setup and is right for almost everyone. Change it only if sensors that should work are reporting nothing: an inverter without VPP support on the V2.01 map cannot read the 30000/31000 range, and the reverse leaves the VPP sensors empty.",
-          "slave_id": "Modbus unit ID the inverter answers on. Usually 1. If every reading is unavailable and the log shows transport errors, this is worth checking with a standalone Modbus client - some inverters ignore the address configured in ShineTools and only answer on 1."
+          "slave_id": "Modbus unit ID the inverter answers on. Usually 1. If every reading is unavailable and the log shows transport errors, this is worth checking with a standalone Modbus client - some inverters ignore the address configured in ShineTools and only answer on 1.",
+          "gateway_type": "What the inverter is reached through. Changing this re-applies that hardware's suggested scan interval, timeout, request delay and block size - except for any of those you edit in the same save, which are kept as you set them."
         }
       }
     },

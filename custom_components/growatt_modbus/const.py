@@ -1322,6 +1322,78 @@ BLOCK_SIZE_OPTIONS: dict[str, int] = {
 }
 
 
+# What sits between Home Assistant and the inverter, and the timings that suit it.
+#
+# Every setting here is already adjustable by hand. The problem this solves is that a new
+# user has no way to know which of them matters until something breaks: the defaults are
+# tuned for a dedicated RS485 gateway, and on a Growatt WiFi dongle they produce a specific
+# and confusing failure - transaction IDs that come back exactly one behind, cascading into
+# resets and unavailable entities a minute or two after setup (#433).
+#
+# That cascade is not corruption. pymodbus assigns a transaction ID before its retry loop
+# and reuses it on each resend, so a device slower than the timeout answers both the
+# original request and its retry. One answer satisfies the retry, the second waits in the
+# buffer, and every read after that receives the previous read's answer. Reads then keep
+# timing out, which causes more retries, which leaves more stale answers. Nothing recovers
+# it but restarting the dongle - and it recurs.
+#
+# So the fix is upstream of the mismatches: keep each read short enough to be answered in
+# time, and leave gaps between them. Asking one question at setup does that for the people
+# who would otherwise spend an evening on it.
+#
+# These are STARTING POINTS from field reports, not measured optima, and every value stays
+# editable afterwards. The evidence behind each is in docs/troubleshooting/rs485-gateways.md.
+CONF_GATEWAY_TYPE = "gateway_type"
+
+GATEWAY_TYPE_STANDARD = "Dedicated RS485 gateway or not sure (default timings)"
+GATEWAY_TYPE_GROWATT_DONGLE = "Growatt ShineWiFi-X / ShineLan or PUSR-class bridge (slower)"
+GATEWAY_TYPE_SHINEWILAN_X2 = "Growatt ShineWiLan-X2 dongle"
+
+GATEWAY_PROFILES: dict[str, dict[str, object]] = {
+    # Waveshare, EW11, USR-W630 and similar. The values the integration has always shipped;
+    # these are the adapters they were tuned against and the ones that report clean.
+    GATEWAY_TYPE_STANDARD: {
+        "scan_interval": 60,
+        "timeout": 10,
+        "modbus_delay": 250,
+        "max_block_size": "Auto (recommended)",
+    },
+    # The dongles and bridges that replay stale frames (#360, #367, #433). A 125-register
+    # read is the one least likely to be answered in time, so it is broken into fives of
+    # 25; the delay gives the device time to finish before the next question; the longer
+    # timeout stops a slow-but-alive answer being abandoned and then duplicated. These also
+    # serve Growatt's cloud through the same RS485 master, so the integration is never the
+    # only thing asking.
+    GATEWAY_TYPE_GROWATT_DONGLE: {
+        "scan_interval": 120,
+        "timeout": 15,
+        "modbus_delay": 500,
+        "max_block_size": "25 registers",
+    },
+    # Growatt's own -X2 serves local Modbus TCP alongside its cloud link, which is genuinely
+    # useful, but that server is built for light polling. A WIT owner saw repeated drops
+    # under ordinary polling (#308), and WIT is the most register-hungry profile here. Block
+    # size is left on Auto because nothing has shown it needs lowering - only the rate has.
+    GATEWAY_TYPE_SHINEWILAN_X2: {
+        "scan_interval": 120,
+        "timeout": 10,
+        "modbus_delay": 250,
+        "max_block_size": "Auto (recommended)",
+    },
+}
+
+
+def gateway_tuning(gateway_type: str | None) -> dict[str, object]:
+    """The tuning for a gateway choice, or the standard timings for anything unrecognised.
+
+    Unrecognised rather than empty is deliberate: a stored value from a future version, or
+    a hand-edited entry, should get working defaults rather than nothing at all.
+    """
+    if not gateway_type:
+        return dict(GATEWAY_PROFILES[GATEWAY_TYPE_STANDARD])
+    return dict(GATEWAY_PROFILES.get(gateway_type, GATEWAY_PROFILES[GATEWAY_TYPE_STANDARD]))
+
+
 def is_read_only_register(register_def) -> bool:
     """True when a profile marks this register read-only.
 

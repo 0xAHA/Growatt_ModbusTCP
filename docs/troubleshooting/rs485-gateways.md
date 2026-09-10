@@ -6,6 +6,27 @@ Most problems that look like integration bugs turn out to be the box between Hom
 
 ---
 
+## Setup asks what your hardware is
+
+From **v2.0.2**, the TCP setup form has a **Connection hardware** question, and the answer seeds four polling settings:
+
+| Answer | Scan interval | Timeout | Request delay | Block size |
+|---|---|---|---|---|
+| Dedicated RS485 gateway or not sure | 60 s | 10 s | 250 ms | Auto |
+| Growatt ShineWiFi-X / ShineLan or PUSR-class bridge | 120 s | 15 s | 500 ms | 25 registers |
+| Growatt ShineWiLan-X2 | 120 s | 10 s | 250 ms | Auto |
+
+Every setting it touches was already adjustable by hand. The question exists because there was no way to know *which* of them mattered before something broke — the defaults suit a dedicated gateway, and on a Growatt WiFi dongle they produce the transaction-ID cascade described below, a minute or two after setup ([#433](https://github.com/0xAHA/Growatt_ModbusTCP/issues/433)).
+
+These are **starting points from field reports, not measured optima.** The evidence behind each row is in the sections that follow, and every value stays editable in **Configure**.
+
+!!! note "Changing it later will not overwrite your own tuning"
+    The same question appears in **Configure**. Changing the answer re-applies that hardware's timings — but only to the fields still sitting at their stored value. Anything you edit in the same save is kept as you set it, so a block size you arrived at over an evening survives answering a question about your adapter.
+
+    Existing entries have no stored answer and show "Dedicated RS485 gateway or not sure". That is not a change, so saving does nothing to your settings.
+
+---
+
 ## The one setting that matters most
 
 Your gateway must do **Modbus TCP to RTU translation**, not transparent passthrough.

@@ -4,6 +4,32 @@
 
 ---
 
+## v2.0.2-b5
+
+Issues: #427, #433
+
+- **Setup now asks what your inverter is connected through, and sets the polling timings to
+  match.** A new **Connection hardware** question on the TCP setup form, with three answers:
+  a dedicated RS485 gateway (today's defaults), a Growatt ShineWiFi-X / ShineLan or PUSR-class
+  bridge, or a Growatt ShineWiLan-X2. Picking a Growatt dongle starts you on a slower scan
+  interval, a longer timeout, more delay between requests and 25-register reads, which is what
+  those devices need to stay connected. Reported by @TobiGitHubi. (#433)
+
+  The same question is in **Configure**. Changing it re-applies that hardware's timings, except
+  for anything you edit in the same save - your own tuning is kept. **Existing setups are not
+  affected**: they show the default answer, which counts as no change.
+
+- **AC Power now appears on MOD and MID three-phase profiles.** The entity was never created on
+  those profiles, so two earlier fixes aimed at its value could not reach it. It reads the
+  inverter's total output register, or the sum of the three phases where firmware does not serve
+  that register. Found by @as-wallpen on a MID 25KTL3-XH. (#427)
+
+  **New entity on** MOD 6000-15000TL3-X, MOD 6000-15000TL3-XH and MID 11-30KTL3-XH. Deliberately
+  not added to SPH-TL3, where the same register name refers to phase R rather than the total, or
+  to MID 15000-25000TL3-X, which maps neither a total nor per-phase powers.
+
+---
+
 ## v2.0.2-b4
 
 Issues: #426

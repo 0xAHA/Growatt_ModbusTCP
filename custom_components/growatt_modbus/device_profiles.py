@@ -174,6 +174,32 @@ SYSTEM_OUTPUT_SENSORS: Set[str] = {
     "system_output_power",
 }
 
+# Aggregate AC output power on a three-phase profile.
+#
+# Deliberately NOT part of THREE_PHASE_SENSORS, and it cannot be: whether an aggregate is
+# safe on a three-phase inverter depends on the register map, not on the phase count.
+# `ac_power` resolves through `_find_register_by_name('ac_power_low')`, and across the nine
+# three-phase maps that lands in three different places:
+#
+#   MOD_6000_15000TL3_X / _XH    reg 36, "output power total" - a distinct total. Safe.
+#   WIT_*, TL3_S_*               a distinct total. Safe, and already exposed.
+#   SPH_TL3_*                    aliases reg 41, which is ac_power_r_low - PHASE R.
+#   MID_15000_25000TL3_X(_V201)  no total and no phase power registers at all.
+#
+# On an SPH-TL3 the sensor would publish one phase as the whole output: a wrong-but-plausible
+# number, which is worse than no sensor. On the MID TL3-X maps there is nothing to read and
+# nothing to sum. So this is applied per profile against its map, never by phase count.
+#
+# The MOD/MID-XH profiles were the gap. Their map has a perfectly good total at 35/36 and,
+# where firmware does not serve it, the phase sum fills in (#427) - but `ac_power` was in
+# BASIC_AC_SENSORS only, which THREE_PHASE_SENSORS replaces rather than extends, so the
+# entity was never created on a three-phase profile. A reporter on a MID 25KTL3-XH had the
+# entity from an older version, saw it sit unknown through two fixes aimed at the decode,
+# and was right that neither had reached it.
+AC_POWER_TOTAL_SENSOR: Set[str] = {
+    "ac_power",
+}
+
 SPF_OFFGRID_SENSORS: Set[str] = {
     # Load monitoring
     "load_percentage",
@@ -862,6 +888,7 @@ INVERTER_PROFILES = {
             BASIC_PV_SENSORS |
             PV3_SENSORS |
             THREE_PHASE_SENSORS |
+            AC_POWER_TOTAL_SENSOR |
             ENERGY_SENSORS |
             # PV_DC_ENERGY_SENSORS intentionally excluded: MOD X grid-tied profile has no
             # pv_energy_total registers (91-92 absent), so the sensor would always read 0.
@@ -880,7 +907,8 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 15.0,
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
-                     | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS)
+                     | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
+                     | AC_POWER_TOTAL_SENSOR)
                     - NO_BATTERY_TEMP),
     },
 
@@ -894,7 +922,8 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 15.0,
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
-                     | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS)
+                     | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
+                     | AC_POWER_TOTAL_SENSOR)
                     - NO_BATTERY_TEMP),
     },
 
@@ -914,7 +943,8 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 30.0,
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
-                     | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS)
+                     | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
+                     | AC_POWER_TOTAL_SENSOR)
                     - NO_BATTERY_TEMP),
     },
 

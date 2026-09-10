@@ -27,6 +27,10 @@ from .const import (
     PROTOCOL_VARIANT_V201,
     BLOCK_SIZE_OPTIONS,
     resolve_block_size,
+    CONF_GATEWAY_TYPE,
+    GATEWAY_PROFILES,
+    GATEWAY_TYPE_STANDARD,
+    gateway_tuning,
     DEFAULT_PORT,
     DEFAULT_SLAVE_ID,
     DEFAULT_BAUDRATE,
@@ -259,6 +263,8 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                     CONF_HOST: user_input[CONF_HOST],
                     CONF_PORT: user_input[CONF_PORT],
                     CONF_SLAVE_ID: user_input[CONF_SLAVE_ID],
+                    CONF_GATEWAY_TYPE: user_input.get(CONF_GATEWAY_TYPE,
+                                                      GATEWAY_TYPE_STANDARD),
                 })
                 self._unreachable_at_setup = True
                 return await self.async_step_manual()
@@ -291,6 +297,8 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                         CONF_HOST: user_input[CONF_HOST],
                         CONF_PORT: user_input[CONF_PORT],
                         CONF_SLAVE_ID: user_input[CONF_SLAVE_ID],
+                        CONF_GATEWAY_TYPE: user_input.get(CONF_GATEWAY_TYPE,
+                                                          GATEWAY_TYPE_STANDARD),
                     })
 
                     # CRITICAL: Check if user has OffGrid inverter BEFORE autodetection
@@ -308,6 +316,13 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
             vol.Required(CONF_HOST, default=prior.get(CONF_HOST, vol.UNDEFINED)): str,
             vol.Required(CONF_PORT, default=prior.get(CONF_PORT, DEFAULT_PORT)): int,
             vol.Required(CONF_SLAVE_ID, default=prior.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID)): int,
+            # What the inverter is reached through. It only seeds the polling timings
+            # below - it does not change how anything is read, and every value it sets
+            # stays editable in Configure afterwards (#433).
+            vol.Required(
+                CONF_GATEWAY_TYPE,
+                default=prior.get(CONF_GATEWAY_TYPE, GATEWAY_TYPE_STANDARD),
+            ): vol.In(list(GATEWAY_PROFILES)),
         }
 
         # Only offered once a connection has actually failed. Showing it up front would
@@ -641,13 +656,18 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                 except Exception as e:
                     _LOGGER.debug(f"Grid orientation detection error: {e}")
 
-                # Set default options
+                # Set default options.
+                #
+                # scan_interval, timeout, modbus_delay and max_block_size come from the
+                # gateway answered for at setup, so a Growatt WiFi dongle starts on timings
+                # that suit it rather than on ones tuned for a dedicated RS485 gateway
+                # (#433). All four remain editable in Configure.
                 default_options = {
-                    "scan_interval": 60,  # 60 seconds default polling
                     "offline_scan_interval": 300,  # 5 minutes when offline
-                    "timeout": 10,  # 10 seconds connection timeout
                     "invert_grid_power": invert_grid_power,  # Auto-detected or default
-                    "modbus_delay": 250,  # 250ms inter-request delay
+                    CONF_GATEWAY_TYPE: self._discovered_data.get(
+                        CONF_GATEWAY_TYPE, GATEWAY_TYPE_STANDARD),
+                    **gateway_tuning(self._discovered_data.get(CONF_GATEWAY_TYPE)),
                 }
 
                 # Create notification about grid orientation detection
@@ -824,12 +844,18 @@ class GrowattModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN): # type:
                     except Exception as e:
                         _LOGGER.debug(f"Grid orientation detection error: {e}")
 
-                    # Set default options
+                    # Set default options.
+                    #
+                    # Same gateway-derived timings as the auto-detected path above. This one
+                    # also had no modbus_delay at all, so a manually selected profile fell
+                    # back to whatever the read path defaulted to rather than to the 250 ms
+                    # its sibling wrote (#433).
                     default_options = {
-                        "scan_interval": 60,  # 60 seconds default polling
                         "offline_scan_interval": 300,  # 5 minutes when offline
-                        "timeout": 10,  # 10 seconds connection timeout
                         "invert_grid_power": invert_grid_power,  # Auto-detected or default
+                        CONF_GATEWAY_TYPE: self._discovered_data.get(
+                            CONF_GATEWAY_TYPE, GATEWAY_TYPE_STANDARD),
+                        **gateway_tuning(self._discovered_data.get(CONF_GATEWAY_TYPE)),
                     }
 
                     # Create notification about grid orientation detection
@@ -953,7 +979,37 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             # read from options by the shared-connection path but has no UI field, so it
             # reverted to its default every time any option was saved (#367).
             new_options = {**self.config_entry.options, **user_input}
-            
+
+            # Changing the gateway answer re-seeds the timings it governs (#433).
+            #
+            # Only the fields still sitting at their stored value are re-seeded. Anything
+            # the user edited in the same submission is theirs and is left alone - which is
+            # the difference between "here are timings for that hardware" and "your tuning
+            # has been overwritten". Someone who has spent an evening finding a block size
+            # that works must not lose it by answering a question about their adapter.
+            # An entry created before this field existed has nothing stored, and the form
+            # shows the standard choice for it. Treating that absence as "standard" is what
+            # makes the first save after upgrading a no-op: without it, every existing user
+            # with their own tuning would have it replaced by the defaults the moment they
+            # opened Configure and pressed Save, having changed nothing.
+            _previous_gateway = self.config_entry.options.get(
+                CONF_GATEWAY_TYPE, GATEWAY_TYPE_STANDARD)
+            _selected_gateway = user_input.get(CONF_GATEWAY_TYPE)
+            if _selected_gateway and _selected_gateway != _previous_gateway:
+                _kept = []
+                for _field, _value in gateway_tuning(_selected_gateway).items():
+                    _stored = self.config_entry.options.get(_field)
+                    _submitted = user_input.get(_field, _stored)
+                    if _submitted != _stored:
+                        _kept.append(f"{_field}={_submitted}")
+                        continue
+                    new_options[_field] = _value
+                _LOGGER.info(
+                    "Gateway type set to %r: applied its timings%s",
+                    _selected_gateway,
+                    f", keeping your own {', '.join(_kept)}" if _kept else "",
+                )
+
             # If profile changed, update config data too
             new_data = dict(self.config_entry.data)
             changed = False
@@ -1140,6 +1196,11 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             (label for label, size in BLOCK_SIZE_OPTIONS.items() if size == _resolved_block_size),
             "Auto (recommended)",
         )
+        # Entries created before this field existed have no stored value. Defaulting them
+        # to the standard gateway keeps their timings exactly as they are: the re-seed only
+        # runs when the answer CHANGES, and for them it starts out unchanged.
+        current_gateway_type = self.config_entry.options.get(
+            CONF_GATEWAY_TYPE, GATEWAY_TYPE_STANDARD)
 
         # Get user-friendly profiles
         available_profiles = get_available_profiles(legacy_only=False, friendly_names=True)
@@ -1192,6 +1253,12 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                 PROTOCOL_VARIANT_LEGACY: "Legacy V1.39",
                 PROTOCOL_VARIANT_V201: "VPP V2.01",
             }),
+            # Placed immediately above the four settings it seeds, so the relationship is
+            # visible on the form rather than only in the docs (#433).
+            vol.Required(
+                CONF_GATEWAY_TYPE,
+                default=current_gateway_type
+            ): vol.In(list(GATEWAY_PROFILES)),
             vol.Required(
                 "scan_interval",
                 default=current_scan_interval
