@@ -294,8 +294,9 @@ def test_the_unit_id_is_range_checked():
     )
     assert helper is not None, "the shared unit ID field helper is gone"
 
+    # It delegates to the shared number-box builder, so the range is its arguments.
     rendered = ast.unparse(next(n for n in ast.walk(helper) if isinstance(n, ast.Return)))
-    assert "min=1" in rendered and "max=247" in rendered, (
+    assert "_number_box(1, 247)" in rendered, (
         f"the unit ID range is not the Modbus address range: {rendered}"
     )
 

@@ -68,31 +68,43 @@ SERIAL_BY_PATH_DIR = "/dev/serial/by-path"
 MANUAL_PATH_SENTINEL = "manual"
 
 
-def _unit_id_field():
-    """A typed number box for the Modbus unit ID, not a slider.
+def _number_box(minimum: int, maximum: int, step: int = 1):
+    """A whole number the user types, with the range still enforced.
 
-    `vol.All(vol.Coerce(int), vol.Range(min=1, max=247))` is what Home Assistant renders as
-    a slider, and a slider is the wrong control for this: 247 positions to drag through for
-    a value people know exactly and usually type once. Setting it to 96 by hand is fiddly
-    on a mouse and worse on a phone.
+    Home Assistant renders `vol.All(vol.Coerce(int), vol.Range(min=..., max=...))` as a
+    **slider when the range is narrow**, and as a plain box when it is wide. That is why
+    only two fields here need this: the unit ID (1-247) and the connection timeout (1-60)
+    came out as sliders, while the scan intervals, the request delay and the TCP port were
+    already boxes and are deliberately left on their original declarations.
 
-    The setup steps had the opposite problem - a bare `int`, which renders as a box but
-    validates nothing, so 0 or 300 were accepted at setup and then refused by the options
-    form. Both now use the same control and the same documented 1-247 Modbus range.
+    A slider is the wrong control for either of them - both are values the owner knows and
+    types once, and dragging to 96 out of 247 is fiddly on a mouse and worse on a phone.
 
-    `vol.Coerce(int)` after the selector is not optional. NumberSelector returns a **float**,
-    and at setup this value is interpolated into the entry's unique_id
-    (`f"{host}:{port}_{slave_id}"`). A 1.0 would produce "192.168.1.50:502_1.0", which does
-    not match the "…_1" of an existing entry - so the entry would no longer be recognised as
-    already configured. It is also handed to pymodbus as the device id on every poll, and
-    persisted in the entry as `96.0`.
+    `vol.Coerce(int)` after the selector is not optional. NumberSelector hands back a
+    **float**, and the unit ID is interpolated into the entry's unique_id at setup
+    (`f"{host}:{port}_{slave_id}"`): a 1.0 produces "192.168.1.50:502_1.0" where an existing
+    entry reads "…_1", so the entry stops matching itself. It also reaches pymodbus as the
+    device id on every poll. A timeout stored as `10.0` where every previous version wrote
+    `10` is harmless but pointless, and the same helper handles both.
     """
     return vol.All(
         NumberSelector(
-            NumberSelectorConfig(min=1, max=247, step=1, mode=NumberSelectorMode.BOX)
+            NumberSelectorConfig(min=minimum, max=maximum, step=step,
+                                 mode=NumberSelectorMode.BOX)
         ),
         vol.Coerce(int),
     )
+
+
+def _unit_id_field():
+    """The Modbus unit ID: a typed box over the documented 1-247 address range.
+
+    The setup steps used to declare this as a bare `int`, which renders as a box but
+    validates nothing - so 0 or 300 were accepted at setup and then refused by the options
+    form, leaving an entry in a state it could not be edited out of. The options form had
+    the opposite problem and was a slider. All three now share this.
+    """
+    return _number_box(1, 247)
 
 
 def _serial_port_options(current_path: str | None = None) -> dict[str, str]:
@@ -1313,7 +1325,7 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
             vol.Required(
                 "timeout",
                 default=current_timeout
-            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+            ): _number_box(1, 60),
             vol.Required(
                 "invert_grid_power",
                 default=current_invert_grid

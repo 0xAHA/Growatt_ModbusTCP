@@ -4,6 +4,19 @@
 
 ---
 
+## Unreleased
+
+- **Connection Timeout is a number box instead of a slider**, matching the Unit / Slave ID
+  change in v2.0.2-b6. Home Assistant renders a narrow numeric range as a slider, which is
+  why these two fields were affected and the wider ones were not.
+
+- Entities pointing at `sensor.growatt_grid_ac_power` on a MOD or MID three-phase profile
+  should be repointed to `sensor.growatt_solar_ac_power`. The AC Power entity added in
+  v2.0.2-b5 is created on the solar device, so it takes a solar-prefixed id rather than
+  reviving the old one. Flagged by @as-wallpen. (#427)
+
+---
+
 ## v2.0.2-b7
 
 Issues: #432, #433
