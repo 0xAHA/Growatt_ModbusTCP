@@ -2986,6 +2986,30 @@ class GrowattModbus:
                 data.ac_power_s = power_s_reg
                 data.ac_power_t = power_t_reg
 
+            # Aggregate AC power from the phases when the total register does not answer.
+            #
+            # On a MID 25KTL3-XH the 35/36 pair is simply not served: AC Power sat unknown
+            # while the three phase sensors read normally. Those phase figures were already
+            # V x I - 236.2 V x 0.7 A = 165.3 W, to the tenth - so the phase registers are
+            # not answered either. The phases had a fallback and the aggregate did not, so
+            # one entity was permanently unknown on hardware where the information was
+            # entirely available (#427).
+            #
+            # Same rule the grid flow already uses in _resolve_phase_total(): believe the
+            # total where it is populated, otherwise sum the phases. Only reached when the
+            # total did not read, so a working aggregate register is never overridden.
+            if is_three_phase and 'ac_power' in data.unread_fields:
+                if not self._inherit_unread(data, 'ac_power',
+                                            'ac_power_r', 'ac_power_s', 'ac_power_t'):
+                    data.ac_power = round(
+                        data.ac_power_r + data.ac_power_s + data.ac_power_t, 1)
+                    data.unread_fields.discard('ac_power')
+                    logger.debug(
+                        "AC Power: total register did not read; using the phase sum "
+                        "%.1f + %.1f + %.1f = %.1f W",
+                        data.ac_power_r, data.ac_power_s, data.ac_power_t, data.ac_power,
+                    )
+
             # Line-to-Line Voltages
             ac_voltage_rs_addr = self._find_register_by_name('line_voltage_rs')
             ac_voltage_st_addr = self._find_register_by_name('line_voltage_st')
