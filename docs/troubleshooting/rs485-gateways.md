@@ -85,6 +85,8 @@ These can return **a complete, valid response to an earlier request** when answe
 
 Since v1.3.7 the integration detects this and discards the frame, so the data is safe — but you will see `Short/misaligned read at N: got X of Y registers` warnings. If you are on an older version, this is the failure mode that published a serial-number fragment as 85,893,614.8 W of AC power.
 
+A replayed frame of the *same* length is caught one layer lower instead, as a transaction ID mismatch — see [Are the transaction IDs exactly one behind?](#diagnosing-your-own-gateway) below. A ShineWiFi-X USB dongle produced that signature in [#433](https://github.com/0xAHA/Growatt_ModbusTCP/issues/433). Note these dongles also serve Growatt's cloud through the same RS485 master, so the integration is never the only thing asking questions.
+
 Two settings materially improved a PUSR unit on #360:
 
 | Setting | Change | Why |
@@ -101,6 +103,25 @@ Reported in [#367](https://github.com/0xAHA/Growatt_ModbusTCP/issues/367). Repea
 ## Diagnosing your own gateway
 
 **Is it replaying stale frames?** Look for `Short/misaligned read` warnings. Note whether the count returned is *larger* than requested — a reply longer than the request cannot be a truncation, and points at a replayed earlier response.
+
+**Are the transaction IDs exactly one behind?** A log full of
+
+```text
+ERROR: request ask for transaction_id=196 but got id=195, Skipping.
+ERROR: request ask for transaction_id=198 but got id=197, Skipping.
+```
+
+is a different fault from the replayed frames above, and the distinguishing feature is that the gap is **always one**, never two or random. That is not corruption — it is a slow gateway answering a request twice:
+
+1. A read goes out. The gateway takes longer to answer than the **Connection Timeout**.
+2. pymodbus stops waiting and re-sends the request. It reuses the *same* transaction ID on a retry — the ID is assigned before the retry loop, not inside it.
+3. The gateway, which was never dead, eventually answers **both** copies.
+4. One answer satisfies the retry; the second is left in the receive buffer.
+5. The next read asks for ID N+1, finds N waiting, and skips it.
+
+Every answer in the stream now belongs to the previous question, so reads keep timing out, which causes more retries, which leaves more stale answers. It is self-sustaining: communication is normal for the first half-minute after the gateway is restarted and then never recovers on its own. Reported on a ShineWiFi-X in [#433](https://github.com/0xAHA/Growatt_ModbusTCP/issues/433), where a fresh socket showed the same signature at `2 / 1` — the counter restarts at 1 and the second transaction is already behind.
+
+The root cause is response latency exceeding the timeout, so the fix is upstream of the mismatches: **take Max Register Block Size down** (a 125-register read is far less likely to be answered in time than five short ones), **raise Modbus Request Delay** to 500-1000 ms, and **raise Scan Interval**. Raising the Connection Timeout also stops the retry duplicating the request, but a genuinely wedged read then costs a minute before the poll gives up — try the other three first.
 
 **Is latency per-request or per-register?** This decides whether a smaller block size helps or hurts. Read the same register range at several block sizes and compare total time:
 
