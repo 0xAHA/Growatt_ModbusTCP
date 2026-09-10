@@ -4,6 +4,19 @@
 
 ---
 
+## v2.0.2-b2
+
+Issues: #426
+
+- **Socket-level tracing for the shared-connection leak** still under investigation in #426.
+  Debug level, no behaviour change. Logs the local port of each connection so a log line can
+  be matched to a row of `ss -tn` output, and reports what `close()` actually did to it.
+- Warns once if a client holds a connection of its own while the shared hub is in charge - a
+  socket nothing would close. Testing a hypothesis rather than reporting a finding; **if you
+  see that warning, please post it on #426.**
+
+---
+
 ## v2.0.2-b1
 
 Issues: #431

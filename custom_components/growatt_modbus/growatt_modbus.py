@@ -492,6 +492,31 @@ class GrowattData:
     firmware_version: str = ""
     serial_number: str = ""
 
+def _describe_socket(client) -> str:
+    """The OS-level identity of a pymodbus client's socket, for #426.
+
+    Counting sockets says something leaked; the local port says WHICH one, and it is the
+    field that maps a log line onto a row of `ss -tn` output. The hub's own bookkeeping was
+    shown correct by the b2 tracing - one hub, one client, released and closed cleanly -
+    while the OS still held two connections per client and freed one on close. That gap is
+    below the hub, so this looks at what pymodbus actually holds.
+    """
+    socket_obj = getattr(client, "socket", None)
+    if socket_obj is None:
+        return "socket=None"
+    try:
+        local = socket_obj.getsockname()
+        peer = socket_obj.getpeername()
+        return f"socket=fd{socket_obj.fileno()} {local[0]}:{local[1]}->{peer[0]}:{peer[1]}"
+    except Exception:
+        # A closed or half-open socket raises rather than answering, which is itself the
+        # useful signal here.
+        try:
+            return f"socket=fd{socket_obj.fileno()} (no address - closed or half-open)"
+        except Exception:
+            return "socket=<unusable>"
+
+
 class SharedModbusConnection:
     """One Modbus client shared across every GrowattModbus instance on the same transport.
 
@@ -792,8 +817,9 @@ class SharedModbusConnection:
             # #426: pairs with the acquire/release/close lines so one reload cycle can be
             # read end to end - which hub opened which socket, and whether anything closed it.
             logger.debug(
-                "[SharedConn %s] hub=0x%x opened client=0x%x",
+                "[SharedConn %s] hub=0x%x opened client=0x%x %s",
                 self.connection_id, id(self), id(self._client),
+                _describe_socket(self._client),
             )
             self._flush_receive_buffer()
         elif self.is_serial:
@@ -820,8 +846,9 @@ class SharedModbusConnection:
     def disconnect(self) -> None:
         if self._client is not None:
             logger.debug(
-                "[SharedConn %s] hub=0x%x closing client=0x%x",
+                "[SharedConn %s] hub=0x%x closing client=0x%x %s",
                 self.connection_id, id(self), id(self._client),
+                _describe_socket(self._client),
             )
             try:
                 self._client.close()
@@ -833,6 +860,12 @@ class SharedModbusConnection:
                     "[SharedConn %s] hub=0x%x close() raised: %s",
                     self.connection_id, id(self), err,
                 )
+            # What close() actually did. A client still reporting an open socket here is a
+            # connection the hub believes it has released (#426).
+            logger.debug(
+                "[SharedConn %s] hub=0x%x after close: %s",
+                self.connection_id, id(self), _describe_socket(self._client),
+            )
             self._connected = False
 
     def reset(self, reason: str = "") -> None:
@@ -1184,6 +1217,8 @@ class GrowattModbus:
         # Warn-once: the PVISO sentinel is reported on every poll for the whole life of
         # an affected device, so one line a session is enough (#404).
         self._pv_iso_sentinel_logged: bool = False
+        # Warn-once for the orphan-socket check; see _check_for_orphan_client_socket (#426).
+        self._orphan_socket_warned: bool = False
 
         # Whether the battery current candidates agreed on the last poll, and whether we
         # have already said so. Gates the battery power scale detection (#406).
@@ -2202,8 +2237,47 @@ class GrowattModbus:
 
             return raw_value * scale
 
+    def _check_for_orphan_client_socket(self) -> None:
+        """Warn if this client has a socket of its own while a hub is in charge (#426).
+
+        Under a shared hub every read and write is routed through the hub's client, and
+        `connect()` returns early without opening anything - so `self.client`, which is
+        constructed regardless, should never hold a connection. pymodbus sync clients
+        auto-connect on their first transaction, so if any path reached this one directly it
+        would open a socket the hub does not know about, never closes, and cannot see.
+
+        That would fit what was measured on #426 exactly: two OS connections per logged
+        client, one freed by close() and one left behind, accumulating one per reload.
+
+        Stated as a hypothesis under test rather than a finding. Reading the code, the read
+        and write paths do branch on `_shared_conn` and return before touching this client -
+        so if this never fires, the second socket is inside pymodbus and this rules out a
+        whole layer. Warned once per connection either way; it must not become per-poll
+        noise on a system that is behaving.
+        """
+        if self._shared_conn is None or self._orphan_socket_warned:
+            return
+        client = getattr(self, "client", None)
+        if client is None:
+            return
+        try:
+            if not client.is_socket_open():
+                return
+        except Exception:
+            return
+
+        self._orphan_socket_warned = True
+        logger.warning(
+            "[%s@%s] This client holds its own socket while the shared hub is in charge - "
+            "%s. Nothing closes it, and the hub cannot see it. Please report this line on "
+            "issue #426.",
+            self.register_map.get('name', '?'), self.connection_id,
+            _describe_socket(client),
+        )
+
     def read_all_data(self) -> Optional[GrowattData]:
         """Read all relevant data from inverter"""
+        self._check_for_orphan_client_socket()
         data = GrowattData()
         
         # Determine register range based on map
