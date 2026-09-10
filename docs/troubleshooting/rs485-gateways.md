@@ -144,6 +144,8 @@ Every answer in the stream now belongs to the previous question, so reads keep t
 
 The root cause is response latency exceeding the timeout, so the fix is upstream of the mismatches: **take Max Register Block Size down** (a 125-register read is far less likely to be answered in time than five short ones), **raise Modbus Request Delay** to 500-1000 ms, and **raise Scan Interval**. Raising the Connection Timeout also stops the retry duplicating the request, but a genuinely wedged read then costs a minute before the poll gives up — try the other three first.
 
+Quickest route: set **Connection hardware** to the Growatt dongle option in **Configure**, which applies all four in one step — see [Setup asks what your hardware is](#setup-asks-what-your-hardware-is).
+
 **Is latency per-request or per-register?** This decides whether a smaller block size helps or hurts. Read the same register range at several block sizes and compare total time:
 
 - If time scales with the number of registers, smaller blocks help.

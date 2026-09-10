@@ -30,7 +30,7 @@
           "port": "Modbus TCP port (usually 502)",
           "slave_id": "Inverter Modbus address (usually 1)",
           "add_anyway": "Adds the inverter even though it did not answer. Use this if it is offline for now, or if it is not supported yet and you need the register scanner to produce a scan.",
-          "gateway_type": "What the inverter is reached through. This only sets starting values for the polling settings below (scan interval, timeout, request delay, block size) - it does not change how anything is read, and you can adjust all of them afterwards. Pick the Growatt dongle option if you use a ShineWiFi-X, ShineLan or similar: those need slower, smaller reads to stay connected."
+          "gateway_type": "Sets starting values for the polling settings below. Pick a Growatt dongle if you use one - they need slower, smaller reads to stay connected."
         }
       },
       "serial": {
@@ -116,7 +116,7 @@
           "max_block_size": "Registers requested per Modbus read. Auto lets the profile decide. Lower this if entities are unavailable or stuck at zero and the log shows short reads or \"Unable to decode request\" - some RS485 gateways truncate large responses.",
           "protocol_variant": "Ten inverter families exist as two register maps - a V1.39 legacy one and a VPP V2.01 one. Auto uses whatever auto-detection concluded at setup and is right for almost everyone. Change it only if sensors that should work are reporting nothing: an inverter without VPP support on the V2.01 map cannot read the 30000/31000 range, and the reverse leaves the VPP sensors empty.",
           "slave_id": "Modbus unit ID the inverter answers on. Usually 1. If every reading is unavailable and the log shows transport errors, this is worth checking with a standalone Modbus client - some inverters ignore the address configured in ShineTools and only answer on 1.",
-          "gateway_type": "What the inverter is reached through. Changing this re-applies that hardware's suggested scan interval, timeout, request delay and block size - except for any of those you edit in the same save, which are kept as you set them."
+          "gateway_type": "Changing this re-applies that hardware's suggested scan interval, timeout, request delay and block size. Anything you edit in the same save is kept."
         }
       }
     },

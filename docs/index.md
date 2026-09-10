@@ -69,14 +69,25 @@ The setup wizard runs auto-detection automatically for VPP-capable inverters. Fo
 | Host / Device | IP address (e.g. `192.168.1.100`) | Path (e.g. `/dev/ttyUSB0`) |
 | Port / Baudrate | `502` | `9600` |
 | Slave ID | `1` (usually) | `1` (usually) |
+| Connection hardware | What the inverter is reached through | - |
+
+**Connection hardware** decides the polling timings you start with. The defaults suit a
+dedicated RS485 gateway; a Growatt ShineWiFi-X or ShineLan dongle needs slower, smaller
+reads or it drops out a minute or two after setup. Pick the one that matches and the four
+timing settings are filled in for you — see
+[RS485 Gateways](troubleshooting/rs485-gateways.md#setup-asks-what-your-hardware-is) for
+the values and the evidence behind them. You can change any of them afterwards.
 
 **Options (after setup):**
 
 | Option | Default | Description |
 | --- | --- | --- |
 | Device Name | "Growatt" | Prefix for all sensor names |
-| Scan Interval | 30 s | Polling frequency (5–300 s) |
+| Connection hardware | Dedicated RS485 gateway | Re-applies suggested timings for that hardware |
+| Scan Interval | 60 s | Polling frequency (5–300 s) |
 | Connection Timeout | 10 s | Response timeout (1–60 s) |
+| Modbus Request Delay | 250 ms | Pause between requests (50–1000 ms) |
+| Max Register Block Size | Auto | Registers per read — lower it for a gateway that truncates |
 | Invert Grid Power | Auto | Fix a backwards CT clamp |
 | USB / Serial Port | - | Change the adapter path without re-adding the entry |
 | Host / TCP Port | - | Change the gateway address without re-adding the entry |
