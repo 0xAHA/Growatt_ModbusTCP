@@ -4,16 +4,53 @@
 
 ---
 
-## Unreleased
+## v2.0.2
 
-- **Connection Timeout is a number box instead of a slider**, matching the Unit / Slave ID
-  change in v2.0.2-b6. Home Assistant renders a narrow numeric range as a slider, which is
-  why these two fields were affected and the wider ones were not.
+Issues: #426 #427 #429 #432 #433
 
-- Entities pointing at `sensor.growatt_grid_ac_power` on a MOD or MID three-phase profile
-  should be repointed to `sensor.growatt_solar_ac_power`. The AC Power entity added in
-  v2.0.2-b5 is created on the solar device, so it takes a solar-prefixed id rather than
-  reviving the old one. Flagged by @as-wallpen. (#427)
+Promotes the v2.0.2-b1 to -b7 beta line to stable. Mostly connection reliability, plus one
+entity that had never been created on the profiles that could populate it.
+
+- **Shared connections no longer leak a socket per config-entry reload.** Reading the serial
+  number, firmware, protocol version and inverter clock went straight to the underlying
+  Modbus client instead of through the shared connection, opening a second connection that
+  nothing owned or closed. A clean start held two connections instead of one, and every
+  reload added another. **Affects anyone running two or more inverters through one gateway**,
+  or a gateway with a low client limit - an Elfin EW11 accepts five. Diagnosed by
+  @KevlarD-67. (#426)
+- **A frame the gateway answers badly is re-read instead of costing the whole block.** A
+  response whose length does not match the request has always been discarded, but the read
+  was then lost for that poll - so entities dropped to unavailable in ones and twos while the
+  connection looked fine. Most useful on Growatt WiFi dongles and PUSR-class bridges; a
+  healthy adapter never reaches this path. Thanks @TobiGitHubi, whose ShineWiFi-X answered 17
+  of 200 requests this way. (#433)
+- **Setup asks what your inverter is connected through**, and sets the polling timings to
+  match. A dedicated RS485 gateway keeps today's defaults; a Growatt ShineWiFi-X, ShineLan or
+  PUSR-class bridge starts on a slower interval, longer timeout, more delay between requests
+  and 25-register reads. The same question is in **Configure**, where changing it re-applies
+  those timings except for anything you edit in the same save. **Existing setups are not
+  affected.** (#433)
+- **AC Power now appears on MOD and MID three-phase profiles.** The entity was never created
+  on those profiles, so two earlier fixes aimed at its value could not reach it. It reads the
+  inverter's total output register, or the sum of the three phases where firmware does not
+  serve it. **New entity on** MOD 6000-15000TL3-X, MOD 6000-15000TL3-XH and MID 11-30KTL3-XH,
+  confirmed on hardware by @as-wallpen at two opposite operating points. (#427)
+  **If you had a `sensor.growatt_grid_ac_power` from an older version, repoint anything using
+  it to `sensor.growatt_solar_ac_power`** - AC Power belongs to the solar device, so the new
+  entity takes a solar-prefixed id rather than reviving the old one.
+- **"Detect grid orientation" no longer reports an unread inverter as zero solar.** Running
+  it on an entry that has never had a successful read said "Insufficient Solar - current
+  production 0 W, try again when the sun is shining", to someone whose panels were making
+  over a kilowatt. It now says the inverter has not answered, and lists what to check. Found
+  by @JHPHendriks. (#432)
+- **The "no response since setup" repair notice now mentions a held serial port.** A USB
+  RS485 adapter can only be opened by one program at a time, so a second Growatt integration
+  on the same adapter stops this one reading anything - with a symptom identical to a wrong
+  unit ID. (#432)
+- **Unit / Slave ID and Connection Timeout are number boxes rather than sliders**, and the
+  unit ID is now range-checked at setup as well as in Configure.
+- Registers 35/36 are read as signed on the MIC, MID, MIN and MOD profiles, so a negative AC
+  output power is reported rather than withheld. Confirmed by @rj6zs826fn-web. (#429)
 
 ---
 
