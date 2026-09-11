@@ -197,13 +197,22 @@ The integration pre-configures sensors with the correct `state_class` and `devic
 
 ## Night-time Behaviour
 
-When the inverter powers down at night the integration detects the absence of valid register data and marks the inverter as offline. Sensors retain their last daytime values rather than dropping to zero or showing unavailable — preventing phantom energy spikes in the HA Energy Dashboard.
+Inverters behave in one of two ways once the sun goes down, and the integration treats them differently. Which one you see depends on your hardware, not on a setting.
 
-- Sensors remain **available** with last known values
-- `last_successful_update` attribute shows when data was last confirmed fresh
+**It still answers Modbus, but reports zeros ("dormant").** Common on hybrids, which stay powered for the battery. Sensors stay **available** holding their last daytime values, rather than dropping to zero — a lifetime total falling from 5000 kWh to 0 would otherwise read as a counter reset and spike the Energy Dashboard.
+
+**It stops answering Modbus entirely.** Usual on grid-tied models, which power down completely with no sun. The inverter is marked offline and **all entities go unavailable**. That is deliberate: Home Assistant's statistics engine ignores unavailable states, so an unresponsive inverter leaves a gap rather than recording a flatline as though it were measured.
+
+So **unavailable entities overnight are normal** on a model that powers down, and are not a fault to report. The same is true of the first minutes of daylight — an inverter showing a few watts on its display may not be answering Modbus yet.
+
+In both cases:
+
+- `last_successful_update` shows when data was last confirmed fresh
 - Lifetime energy totals are **persisted to HA storage** and restored across HA restarts
+- Sensors resume normal operation automatically when the inverter wakes
 
-Sensors resume normal operation automatically when the inverter wakes at sunrise.
+!!! note "After a Home Assistant restart there is nothing to hold"
+    Retained values live in the running integration. Restart Home Assistant while the inverter is asleep and the entities stay unavailable until the first poll that succeeds, even on a model that would otherwise hold its values.
 
 ---
 
