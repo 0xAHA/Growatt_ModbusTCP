@@ -57,8 +57,47 @@ try:
 except ImportError:
     TCP_AVAILABLE = False
 
+try:
+    from pymodbus.exceptions import ConnectionException as _PymodbusConnectionException
+except ImportError:  # pragma: no cover - pymodbus always provides this
+    _PymodbusConnectionException = None
+
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+def _peer_closed_the_connection(exc: Exception) -> bool:
+    """True when the failure was the far end hanging up, not failing to answer.
+
+    These are two different faults and the post-failure quiet window only makes sense for
+    one of them:
+
+    - **The peer stopped answering.** A gateway that serialises clients is busy with
+      somebody else, and opening another socket queues behind whatever is stalling it.
+      Backing off is right, and that is what the window is for.
+    - **The peer closed the socket.** There is nothing left to queue behind - pymodbus
+      calls `close()` before raising, so the transport is already gone. The only way back
+      is a new connection, and refusing to make one just extends the outage.
+
+    Treating the second as the first is a regression from v1.10.0. On a ShineWiFi-X that
+    drops its end regularly, the reset-and-retry that used to recover the block was refused
+    from the second consecutive failure onward, so a recoverable blip took the entities
+    offline instead (#433):
+
+        read_input_registers(0, 7) transport error ... Connection unexpectedly closed
+        not reconnecting yet: 2.0s of the post-failure quiet window remain (2 reset(s))
+        not reconnecting yet: 4.0s of the post-failure quiet window remain (3 reset(s))
+        Failed to read register block (0-6)
+        -> entities unavailable
+
+    Typed rather than matched on the message: pymodbus raises `ConnectionException` for a
+    closed socket and `ModbusIOException` for a timeout, which is exactly the distinction
+    needed. `OSError` covers the socket errors that can surface underneath it.
+    """
+    if _PymodbusConnectionException is not None and isinstance(
+            exc, _PymodbusConnectionException):
+        return True
+    return isinstance(exc, (ConnectionResetError, BrokenPipeError, ConnectionAbortedError))
 
 
 # =============================================================================
@@ -901,7 +940,7 @@ class SharedModbusConnection:
             )
             self._connected = False
 
-    def reset(self, reason: str = "") -> None:
+    def reset(self, reason: str = "", peer_closed: bool = False) -> None:
         """Force-close the socket so the next ensure_connected() does a real reconnect.
 
         pymodbus sync clients never clear their socket after a silent connection loss
@@ -909,13 +948,28 @@ class SharedModbusConnection:
         sync clients), so is_socket_open() keeps returning True and ensure_connected()
         would reuse the dead socket forever. Without this, only an HA restart recovers
         a wedged connection.
+
+        `peer_closed` says the far end hung up rather than failed to answer, and it skips
+        the post-failure quiet window entirely - see _peer_closed_the_connection(). A closed
+        socket has nothing to back off from: the only route back is a new connection, and
+        the reconnect is still bounded by the per-poll recovery budget, so exempting it
+        cannot turn into a reconnect storm.
         """
         logger.warning(
             "[SharedConn %s] Resetting connection%s",
             self.connection_id, f": {reason}" if reason else "",
         )
-        self._reset_at = time.monotonic()
-        self._consecutive_resets += 1
+        if peer_closed:
+            # No window, and no escalation: repeated hang-ups are not evidence that the
+            # gateway is overloaded, which is the state the escalation is metering.
+            self._reset_at = 0.0
+            logger.debug(
+                "[SharedConn %s] peer closed the connection - reconnecting without a "
+                "quiet window", self.connection_id,
+            )
+        else:
+            self._reset_at = time.monotonic()
+            self._consecutive_resets += 1
         self.disconnect()
 
     def _flush_receive_buffer(self) -> None:
@@ -1089,7 +1143,8 @@ class SharedModbusConnection:
                         "(%s) — resetting and retrying once",
                         self.connection_id, start, count, exc,
                     )
-                    self.reset("transport error during block read")
+                    self.reset("transport error during block read",
+                               peer_closed=_peer_closed_the_connection(exc))
                     if self.ensure_connected():
                         continue
                 logger.debug("[SharedConn %s] read_input_registers(%d, %d, slave=%d) error: %s",
@@ -1123,7 +1178,8 @@ class SharedModbusConnection:
                         "(%s) — resetting and retrying once",
                         self.connection_id, start, count, exc,
                     )
-                    self.reset("transport error during block read")
+                    self.reset("transport error during block read",
+                               peer_closed=_peer_closed_the_connection(exc))
                     if self.ensure_connected():
                         continue
                 logger.debug("[SharedConn %s] read_holding_registers(%d, %d, slave=%d) error: %s",
@@ -1180,7 +1236,8 @@ class SharedModbusConnection:
                         "resetting and retrying once",
                         self.connection_id, register, value, exc,
                     )
-                    self.reset("transport error during write")
+                    self.reset("transport error during write",
+                               peer_closed=_peer_closed_the_connection(exc))
                     if self.ensure_connected():
                         continue
                 logger.debug("[SharedConn %s] write_register(%d, %d, slave=%d) error: %s",
@@ -1218,7 +1275,8 @@ class SharedModbusConnection:
                         "(%s) — resetting and retrying once",
                         self.connection_id, register, len(values), exc,
                     )
-                    self.reset("transport error during write")
+                    self.reset("transport error during write",
+                               peer_closed=_peer_closed_the_connection(exc))
                     if self.ensure_connected():
                         continue
                 logger.debug("[SharedConn %s] write_registers(%d, slave=%d) error: %s",

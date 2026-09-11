@@ -146,6 +146,21 @@ The root cause is response latency exceeding the timeout, so the fix is upstream
 
 Quickest route: set **Connection hardware** to the Growatt dongle option in **Configure**, which applies all four in one step — see [Setup asks what your hardware is](#setup-asks-what-your-hardware-is).
 
+!!! info "A gateway that hangs up is reconnected to immediately"
+    Two failures look similar in a log and are not the same thing. A gateway that stops
+    *answering* is usually busy, and opening another socket queues behind whatever is
+    stalling it — so from the second consecutive failure the integration waits before
+    reconnecting, 2 s doubling to 32 s.
+
+    A gateway that **closes** the connection is different: there is nothing to queue behind,
+    and the only way back is a new socket. From **v2.0.3** that case skips the wait entirely.
+
+    Before v2.0.3 both were treated the same, which on a ShineWiFi-X that drops its end
+    regularly meant a blip that used to be recovered mid-poll took the entities offline
+    instead ([#433](https://github.com/0xAHA/Growatt_ModbusTCP/issues/433)). If you are on
+    v1.10.0 through v2.0.2 and see `not reconnecting yet: ...s of the post-failure quiet
+    window remain` in a debug log, that is this.
+
 !!! warning "Smaller blocks do not always help this dongle"
     On the ShineWiFi-X in [#433](https://github.com/0xAHA/Growatt_ModbusTCP/issues/433) the preset above was **not** enough. With 25-register blocks the log filled with frames of **125 and 20 registers** answering requests for four to eight — sizes nothing in the poll asks for, so they are not truncations of our reads. 17 of 200 requests (8%) came back as somebody else's answer.
 

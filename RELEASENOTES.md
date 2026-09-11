@@ -4,6 +4,25 @@
 
 ---
 
+## v2.0.3
+
+Issues: #433
+
+- **A gateway that closes the connection is now reconnected to immediately.** Since v1.10.0
+  the integration has waited before reopening a socket after consecutive failures - 2 seconds
+  doubling to 32 - which is right for a gateway that has stopped answering, because opening
+  another socket just queues behind whatever is stalling it. It was also being applied when
+  the gateway **closed** the connection, where there is nothing to queue behind and a new
+  socket is the only way back. The recovery that normally rescues the block was refused from
+  the second consecutive failure onward, so a blip took the entities offline instead.
+
+  **Affects anyone on v1.10.0 to v2.0.2 whose gateway drops its end**, which on a ShineWiFi-X
+  is often. Found by @TobiGitHubi from a debug log, who reported that it had been stable
+  before v2.0.0 - that is what identified it as something we changed rather than marginal
+  hardware. Gateways that stall rather than hang up keep the existing back-off unchanged.
+
+---
+
 ## v2.0.2
 
 Issues: #426 #427 #429 #432 #433
