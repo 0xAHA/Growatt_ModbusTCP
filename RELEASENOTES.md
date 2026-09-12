@@ -4,6 +4,24 @@
 
 ---
 
+## v2.0.4-b2
+
+Issues: #437
+
+- **SPF: new BLU/LBU Mode control.** Growatt added the setting to the SPF 6000 ES Plus in
+  firmware 100.08/101.07, on holding register 116 — `BLU` charges the battery before serving
+  the load, `LBU` serves the load first. Reported and confirmed on hardware by
+  @dartyukh-afk, who wrote each value and read the inverter's own display back.
+
+  **New entity on SPF profiles**, and it reads back rather than being write-only. Two
+  options, not three: the same register on SPE carries a third ordering (`LUB`) that SPF
+  does not have, so offering it here would write a mode the hardware has no meaning for.
+
+  **On firmware older than 100.08/101.07** the setting does not exist and the control will
+  show unknown rather than a made-up value.
+
+---
+
 ## v2.0.4-b1
 
 Issues: #370, PR #409

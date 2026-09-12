@@ -188,6 +188,7 @@ Charge Stop SOC and AC Charge Enable — an overlap that runs through this whole
 |--------|------|----------|-----------------|-------------|
 | Output Priority | Select | 1 | SBU (0), SOL (1), UTI (2), SUB (3) | Output source priority |
 | Charge Priority | Select | 2 | CSO (0), SNU (1), OSO (2) | Battery charge source priority |
+| BLU/LBU Mode | Select | 116 | BLU (0), LBU (1) | Which load PV energy serves first. Firmware 100.08/101.07 and later only |
 | AC Input Mode | Select | 8 | APL (0), UPS (1), GEN (2) | AC input mode (appliance / UPS / generator) |
 | Battery Type | Select | 39 | AGM (0), FLD (1), User (2), Lithium (3), User 2 (4) | Battery chemistry (⚠️ set with caution) |
 | Max Charge Current | Number | 34 | 10–100 A | **Total** charging current, solar + utility combined (LCD Program 02) |
@@ -203,6 +204,17 @@ Charge Stop SOC and AC Charge Enable — an overlap that runs through this whole
 - `SOL` — Solar → Utility → Battery (solar-first, grid backup)
 - `UTI` — Utility → Solar → Battery (grid-first, battery preserved)
 - `SUB` — Solar & Utility → Battery (combined source charging)
+
+**BLU/LBU Mode options** (register 116, added by firmware 100.08/101.07):
+- `BLU` — Battery → Load → Utility: PV charges the battery before serving the load
+- `LBU` — Load → Battery → Utility: PV serves the load before charging the battery
+
+This is a different setting from Output Priority above, which picks the *source*; this one
+picks what PV energy does first. The protocol table calls the register `uwLoadFirst`, and
+the same register on **SPE** carries a third ordering (`LUB`) that SPF does not have — so
+the control is offered with two options on SPF and three on SPE. Confirmed on an SPF 6000 ES
+Plus by writing each value and reading the inverter's display back
+([#437](https://github.com/0xAHA/Growatt_ModbusTCP/issues/437)).
 
 **Charge Priority options:**
 - `CSO` — Solar first, grid only when solar insufficient

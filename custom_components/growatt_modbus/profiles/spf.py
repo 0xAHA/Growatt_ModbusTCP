@@ -169,6 +169,21 @@ SPF_3000_6000_ES_PLUS = {
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Active power rate control'},
 
+        # BLU / LBU selection, added by firmware 100.08/101.07 (#437).
+        #
+        # The protocol table calls this register `uwLoadFirst` and documents three values -
+        # 0 charge first, 1 load first, 2 feed first. Those are the same three orderings the
+        # SPE profile exposes as BLU / LBU / LUB (Battery-Load-Utility, Load-Battery-Utility,
+        # Load-Utility-Battery), so the naming differs but the register does not.
+        #
+        # Only the first two are offered here. The reporter's SPF 6000 ES Plus shows exactly
+        # two on its screen and has no LUB, confirmed by writing each value and reading the
+        # display back - so offering a third would let someone write a mode this hardware
+        # does not have.
+        116: {'name': 'spf_blu_lbu_mode', 'scale': 1, 'unit': '', 'access': 'RW',
+              'desc': 'BLU/LBU energy priority (uwLoadFirst): 0=BLU (battery first), 1=LBU (load first)',
+              'values': {0: 'BLU', 1: 'LBU'}},
+
         # Output Priority Configuration
         1: {'name': 'output_config', 'scale': 1, 'unit': '', 'access': 'RW',
             'desc': 'Output source priority',

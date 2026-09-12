@@ -522,6 +522,27 @@ WRITABLE_REGISTERS = {
         'unit': 'kW',
         'desc': 'Grid export power limit (0-12kW, stored as 0-120 × 0.1 kW)',
     },
+    # SPF 6000 ES Plus and siblings, firmware 100.08/101.07 and later (#437).
+    #
+    # Same register as spe_output_priority below and the same underlying setting - the
+    # protocol calls it uwLoadFirst - but only two of the three orderings exist on SPF, so
+    # this is a separate entry rather than widening that one's `only_profiles`. Offering a
+    # LUB option here would let someone write a mode the hardware does not implement.
+    #
+    # Named for what the inverter's own screen shows rather than for what the register
+    # does, deliberately: SPF already has `output_config` (SBU/SOL/UTI/SUB) called "Output
+    # Priority", and a second control with a similar name would be read as the same thing.
+    'spf_blu_lbu_mode': {
+        'register': 116,
+        'label': 'BLU/LBU Mode',
+        'only_profiles': ['SPF_3000_6000_ES_PLUS'],
+        'scale': 1,
+        'valid_range': (0, 1),
+        'options': {0: 'BLU', 1: 'LBU'},
+        'desc': 'Energy priority (uwLoadFirst): BLU=Battery first, LBU=Load first. '
+                'Added by firmware 100.08/101.07; older firmware does not have it.',
+    },
+
     'spe_output_priority': {
         'register': 116,
         'label': 'SPE Output Priority',

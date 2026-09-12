@@ -433,6 +433,7 @@ class GrowattData:
     fast_mppt_enable: int = 0        # reg 238 — fast MPPT algorithm enable
 
     # Control registers (writable holding registers)
+    spf_blu_lbu_mode: int = 0         # SPF holding 116: 0=BLU (battery first), 1=LBU (load first)
     export_limit_mode: int = 0        # 0=Disabled, 1=RS485, 2=RS232, 3=CT
     export_limit_power: int = 0       # 0-1000 (0-100.0%)
     export_limit_failed_power_rate: int = 0       # 0-1000 raw (×0.1 = 0-100%); fallback output power cap when export limit fails
@@ -5251,6 +5252,24 @@ class GrowattModbus:
                         logger.debug("[DEVICE INFO] VPP serial read returned unexpected data, keeping legacy: %r", vpp_serial)
             except Exception as e:
                 logger.debug("[DEVICE INFO] VPP serial read failed, keeping legacy: %s", e)
+
+        # --- BLU / LBU energy priority (116) --- SPF only, gated on the profile (#437)
+        #
+        # Read rather than left write-only so the select shows what the inverter is
+        # actually set to. Gated on the register being in the profile, because it is a
+        # documented off-grid register that only SPF maps - nothing else should pay for
+        # the read, and firmware older than 100.08/101.07 does not have the setting.
+        if 116 in holding_map:
+            try:
+                blu_lbu = self.read_holding_registers(116, 1)
+                if blu_lbu is not None and len(blu_lbu) >= 1:
+                    data.spf_blu_lbu_mode = int(blu_lbu[0])
+                    logger.debug("[SPF] BLU/LBU mode (116): %s", data.spf_blu_lbu_mode)
+                else:
+                    data.unread_fields.add('spf_blu_lbu_mode')
+            except Exception as e:
+                data.unread_fields.add('spf_blu_lbu_mode')
+                logger.debug("Could not read BLU/LBU mode register 116: %s", e)
 
         # --- Export control (122–123) --- ALWAYS ATTEMPTED
         if 122 in holding_map or 123 in holding_map:
