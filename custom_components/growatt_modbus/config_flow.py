@@ -1238,6 +1238,7 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
         current_series = self.config_entry.data.get(CONF_INVERTER_SERIES, "min_7000_10000_tl_x")
         current_scan_interval = self.config_entry.options.get("scan_interval", 60)  # Default 60 seconds
         current_offline_scan_interval = self.config_entry.options.get("offline_scan_interval", 300)
+        current_clock_drift = self.config_entry.options.get("clock_drift_threshold_min", 5)
         current_timeout = self.config_entry.options.get("timeout", 10)
         current_invert_grid = self.config_entry.options.get("invert_grid_power", False)
         current_invert_battery = self.config_entry.options.get("invert_battery_power", False)
@@ -1326,6 +1327,14 @@ class GrowattModbusOptionsFlow(config_entries.OptionsFlow):
                 "timeout",
                 default=current_timeout
             ): _number_box(1, 60),
+            # 0 turns the clock-drift notice off. Some plants cannot clear it at all:
+            # the Growatt portal offers fixed UTC offsets with no daylight-saving zones,
+            # and the datalogger pushes that to the inverter, so an owner whose zone
+            # observes DST is structurally an hour out for half the year (#439).
+            vol.Required(
+                "clock_drift_threshold_min",
+                default=current_clock_drift
+            ): _number_box(0, 240),
             vol.Required(
                 "invert_grid_power",
                 default=current_invert_grid

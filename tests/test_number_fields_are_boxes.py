@@ -39,8 +39,9 @@ TREE = ast.parse(SOURCE)
 
 # The fields that rendered as sliders, and the range each must keep.
 BOXED = {
-    "slave_id": (1, 247),      # Modbus address range
-    "timeout": (1, 60),        # seconds
+    "slave_id": (1, 247),                 # Modbus address range
+    "timeout": (1, 60),                   # seconds
+    "clock_drift_threshold_min": (0, 240),  # minutes, 0 = notice off (#439)
 }
 
 # Left as they were, because they already render as boxes.
@@ -173,10 +174,22 @@ def test_the_wide_range_fields_are_left_alone(field):
         )
 
 
-def test_the_helper_is_not_quietly_applied_to_everything():
-    """Guard on the same point from the other side: exactly two fields use it."""
-    call_sites = re.findall(r":\s*_number_box\(", SOURCE)
-    assert len(call_sites) == 1, (
-        f"expected the timeout as the only direct _number_box field (the unit ID goes "
-        f"through _unit_id_field), found {len(call_sites)}"
-    )
+def test_the_helper_is_only_used_for_narrow_ranges():
+    """Guard on the same point from the other side, by the rule rather than by a count.
+
+    Home Assistant renders a bounded number as a slider only when the range is narrow, so
+    the box is for narrow fields and the wide ones neither need it nor should carry it.
+    An earlier version of this asserted "exactly one call site", which failed the moment a
+    legitimately narrow field was added - a count is not the property being protected.
+    """
+    spans = [
+        (int(low), int(high))
+        for low, high in re.findall(r"_number_box\((\d+),\s*(\d+)\)", SOURCE)
+    ]
+    assert spans, "no _number_box call sites found at all"
+
+    for low, high in spans:
+        assert high - low <= 250, (
+            f"_number_box({low}, {high}) spans {high - low}, which Home Assistant already "
+            f"renders as a plain box - converting it is churn on a field that works"
+        )

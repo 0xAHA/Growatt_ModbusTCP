@@ -2046,12 +2046,57 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 drift_s,
             )
 
-            if drift_abs > _CLOCK_DRIFT_THRESHOLD_S:
+            # User-configurable, and 0 turns the notice off entirely (#439).
+            #
+            # Some plants cannot clear this at all. The Growatt portal's plant timezone
+            # field offers fixed UTC offsets with no DST-aware zones, and the datalogger
+            # pushes that offset to the inverter - so from late March to late October an
+            # owner on UTC+2 is an hour out, structurally, with no portal setting that
+            # fixes it. A sync is reverted by the dongle within about a minute, and a
+            # scheduled one would fight it indefinitely and burn EEPROM writes for nothing.
+            threshold_s = self.config_entry.options.get(
+                "clock_drift_threshold_min", _CLOCK_DRIFT_THRESHOLD_S / 60) * 60
+            if threshold_s <= 0:
+                return
+
+            if drift_abs > threshold_s:
                 drift_min = drift_s / 60
                 direction = "ahead of" if drift_s > 0 else "behind"
-                self._pending_clock_notification = {
-                    "title": "Growatt: Inverter Clock Drift Detected",
-                    "message": (
+
+                # A whole-hour offset is a timezone, not drift.
+                #
+                # An RTC drifts gradually - seconds, then minutes - and does not arrive at
+                # exactly 3600 s. Landing within a minute of a whole hour says the clock is
+                # being *set* to a different zone, which is a different problem with a
+                # different answer, and telling that owner to press Sync is advice that
+                # cannot work: the datalogger overwrites it on its next push.
+                hours_off = round(drift_abs / 3600)
+                looks_like_timezone = hours_off >= 1 and abs(drift_abs - hours_off * 3600) <= 60
+
+                if looks_like_timezone:
+                    plural = "s" if hours_off != 1 else ""
+                    message = (
+                        f"The inverter's clock is **almost exactly {hours_off} hour{plural} "
+                        f"{direction}** Home Assistant time.\n\n"
+                        f"**Inverter time:** {inverter_dt.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                        f"**HA time:** {ha_dt.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                        f"**This is a timezone offset rather than clock drift.** A clock that "
+                        f"is genuinely drifting does not land on a whole hour. The usual cause "
+                        f"is the plant timezone in the Growatt portal, which offers fixed UTC "
+                        f"offsets with no daylight-saving zones - so it is correct in winter "
+                        f"and an hour out in summer. Your datalogger pushes that offset to the "
+                        f"inverter.\n\n"
+                        f"**Syncing will not hold** while the datalogger is attached: it "
+                        f"overwrites the inverter's clock within a minute or two. Correct the "
+                        f"plant timezone in the portal if it is simply wrong; if your zone "
+                        f"observes daylight saving and the portal has no entry for it, there is "
+                        f"nothing to correct and this notice can be turned off.\n\n"
+                        f"**To stop this notice:** set **Clock Drift Warning** to 0 in the "
+                        f"integration's options, or raise it above "
+                        f"{hours_off * 60} minutes."
+                    )
+                else:
+                    message = (
                         f"The inverter's internal clock is **{abs(drift_min):.1f} minutes {direction}** "
                         f"Home Assistant time.\n\n"
                         f"**Inverter time:** {inverter_dt.strftime('%Y-%m-%d %H:%M:%S')}\n"
@@ -2064,7 +2109,11 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         f"device and press it, or call the `growatt_modbus.sync_inverter_time` "
                         f"action. Failing that, set the time via the ShinePhone app, the inverter "
                         f"LCD menu, or the Growatt web portal."
-                    ),
+                    )
+
+                self._pending_clock_notification = {
+                    "title": "Growatt: Inverter Clock Drift Detected",
+                    "message": message,
                     "notification_id": "growatt_clock_drift",
                 }
 

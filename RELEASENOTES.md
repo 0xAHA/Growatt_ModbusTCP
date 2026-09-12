@@ -4,6 +4,25 @@
 
 ---
 
+## v2.0.4-b4
+
+Issues: #439
+
+- **A whole-hour clock offset is now reported as a timezone, not as drift.** An RTC drifts
+  gradually and does not land on exactly one hour, so a notification saying "almost exactly
+  one hour behind" now explains what it actually is — the plant timezone in the Growatt
+  portal, which offers fixed UTC offsets with no daylight-saving zones, pushed to the
+  inverter by the datalogger. It also says that pressing Inverter Clock Sync will not hold,
+  because the datalogger overwrites it within a minute or two. The previous message told
+  those owners to sync, which could not work on their hardware.
+
+- **New option: Clock Drift Warning (minutes).** Defaults to 5, unchanged from before, and
+  **0 turns the notice off**. For a plant whose zone observes daylight saving and whose
+  portal has no entry for it, the offset cannot be corrected at all and the only honest
+  answer is a way to stop asking. Reported by @ilSacramento on a MOD 8000TL3-XH in Åland.
+
+---
+
 ## v2.0.4-b3
 
 Issues: #438

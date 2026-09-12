@@ -474,6 +474,22 @@ VPP Control Authority (30100), VPP Remote Power Control (30407), VPP Commanded P
 Time period schedules run against the **inverter's own clock**, not Home Assistant's. That
 clock drifts — one SPH was two minutes out, which made a 13:00 export window start at 13:02.
 
+!!! warning "A whole-hour offset is a timezone, not drift — and a sync will not hold"
+    If the notification says the clock is **almost exactly one hour** out, the inverter's
+    clock is being *set* to a different zone rather than drifting. The usual cause is the
+    plant timezone in the Growatt portal, which offers fixed UTC offsets with **no
+    daylight-saving zones** — correct in winter, an hour out in summer — and your datalogger
+    pushes that to the inverter.
+
+    Pressing **Inverter Clock Sync** works and is then overwritten within a minute or two,
+    so a scheduled sync is not a workaround: it fights the datalogger indefinitely and burns
+    EEPROM writes for nothing.
+
+    If your zone observes daylight saving and the portal has no entry for it, there is
+    nothing to correct. Set **Clock Drift Warning** to `0` in the integration's options to
+    turn the notice off, or raise it above the offset
+    ([#439](https://github.com/0xAHA/Growatt_ModbusTCP/issues/439)).
+
 Two entities cover it, both on the **inverter** device under **Diagnostic**, and both
 **disabled by default** — enable them in the entity settings if you want them:
 

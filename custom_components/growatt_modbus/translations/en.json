@@ -98,7 +98,8 @@
           "slave_id": "Unit / Slave ID",
           "max_block_size": "Max Register Block Size",
           "protocol_variant": "Protocol Variant",
-          "gateway_type": "Connection hardware"
+          "gateway_type": "Connection hardware",
+          "clock_drift_threshold_min": "Clock Drift Warning (minutes)"
         },
         "data_description": {
           "device_name": "Friendly name for the device (appears before all sensor names)",
@@ -116,7 +117,8 @@
           "max_block_size": "Registers requested per Modbus read. Auto lets the profile decide. Lower this if entities are unavailable or stuck at zero and the log shows short reads or \"Unable to decode request\" - some RS485 gateways truncate large responses.",
           "protocol_variant": "Ten inverter families exist as two register maps - a V1.39 legacy one and a VPP V2.01 one. Auto uses whatever auto-detection concluded at setup and is right for almost everyone. Change it only if sensors that should work are reporting nothing: an inverter without VPP support on the V2.01 map cannot read the 30000/31000 range, and the reverse leaves the VPP sensors empty.",
           "slave_id": "Modbus unit ID the inverter answers on. Usually 1. If every reading is unavailable and the log shows transport errors, this is worth checking with a standalone Modbus client - some inverters ignore the address configured in ShineTools and only answer on 1.",
-          "gateway_type": "Changing this re-applies that hardware's suggested scan interval, timeout, request delay and block size. Anything you edit in the same save is kept."
+          "gateway_type": "Changing this re-applies that hardware's suggested scan interval, timeout, request delay and block size. Anything you edit in the same save is kept.",
+          "clock_drift_threshold_min": "Warn when the inverter's clock differs from Home Assistant by more than this. Set to 0 to turn the notice off - useful when a datalogger enforces a fixed UTC offset that a sync cannot hold."
         }
       }
     },
