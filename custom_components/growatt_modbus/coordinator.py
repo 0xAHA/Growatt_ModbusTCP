@@ -148,6 +148,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         
         # Device identification (populated during first refresh)
         self._serial_number = None
+        self._identification_complete = False
         self._firmware_version = None
         self._inverter_type = None
         self._model_name = None
@@ -1621,7 +1622,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         hub.reset("retry poll returned no data")
 
             if data is not None:
-                if not self._serial_number:
+                if not self._identification_complete:
                     self._read_device_identification()
                 self._refresh_inverter_clock()
                 self._recheck_profile_against_dtc()
@@ -1717,7 +1718,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     # Previously called during async_config_entry_first_refresh, but that
                     # blocked the HA bootstrap executor and triggered a CancelledError on
                     # slow/offline inverters. Called here while the connection is still open.
-                    if not self._serial_number:
+                    if not self._identification_complete:
                         self._read_device_identification()
                     # Before the disconnect - this path closes the socket on its way out.
                     self._refresh_inverter_clock()
@@ -1949,6 +1950,28 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 except Exception as e:
                     _LOGGER.debug(f"Could not read protocol version (73): {e}")
                     self._protocol_version = "OffGrid Modbus"
+
+            # Identification is done once we have learned ANYTHING, not once we have the
+            # serial (#438).
+            #
+            # The callers used to gate on `not self._serial_number`. On hardware whose
+            # serial register answers with an empty string that condition is never
+            # satisfied, so all six holding reads in this method repeated on every poll
+            # for the life of the session - 56 polls, 56 identifications, 336 reads in one
+            # reporter's hour-long capture, every one of them a chance for a transport
+            # error on a gateway that was already dropping connections.
+            #
+            # Gating on "did we learn anything" keeps the behaviour that guard was for: an
+            # inverter asleep at the first attempt answers none of these, learns nothing,
+            # and is asked again on the next poll until it wakes. One that answers some of
+            # them has told us what it is going to tell us, and asking again forever buys
+            # a serial number that is never coming.
+            self._identification_complete = any((
+                self._serial_number,
+                self._firmware_version,
+                self._inverter_type,
+                self._protocol_version,
+            ))
 
             # Consolidated identification summary — replaces scattered debug lines
             # with one INFO-level line visible in the default HA log.

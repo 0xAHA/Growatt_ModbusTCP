@@ -4,6 +4,23 @@
 
 ---
 
+## v2.0.4-b3
+
+Issues: #438
+
+- **Device identification no longer repeats on every poll.** Reading the serial, firmware,
+  inverter type and protocol version is meant to happen once per session, but the check that
+  decided whether it had already run looked only at the serial number. On hardware whose
+  serial register answers blank that check was never satisfied, so six holding reads were
+  repeated every poll for the life of the session — over three hundred an hour on one WIT,
+  all of them already answered.
+
+  **Affects any inverter that does not report a serial number.** No entity changes; the
+  effect is less Modbus traffic and one less duplicated line per poll in the log. Found in a
+  debug capture attached to #434 by @Wojak129.
+
+---
+
 ## v2.0.4-b2
 
 Issues: #437
