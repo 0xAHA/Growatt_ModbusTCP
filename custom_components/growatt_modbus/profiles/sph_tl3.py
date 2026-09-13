@@ -502,7 +502,10 @@ SPH_TL3_3000_10000_V201 = {
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
         31218: {'name': 'battery_soh', 'scale': 1, 'unit': '%', 'desc': 'Battery state of health'},
-        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
+        31222: {'name': 'battery_gauge_rm_low', 'scale': 1, 'unit': '',
+                'desc': 'Low word of the reserved UINT32 at 31221 (battery remaining capacity, Ah) - NOT temperature (#440)'},
+        31223: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True,
+                'desc': 'Battery environmental temperature (VPP spec: INT16, 0.1C, range -400..1250)'},
 
         # Battery Cluster 2 — VPP_V201_BATTERY2 (31300–31303, 31314–31322)
         **VPP_V201_BATTERY2,

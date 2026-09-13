@@ -1038,7 +1038,10 @@ SPH_3000_6000_V201 = {
         31218: {'name': 'battery_soh', 'scale': 1, 'unit': '%', 'desc': 'Battery state of health'},
         # Note: Registers 31220-31221 appear to contain incorrect data when paired as 32-bit
         # AC charge energy total is available in register 115 (legacy range) instead
-        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
+        31222: {'name': 'battery_gauge_rm_low', 'scale': 1, 'unit': '',
+                'desc': 'Low word of the reserved UINT32 at 31221 (battery remaining capacity, Ah) - NOT temperature (#440)'},
+        31223: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True,
+                'desc': 'Battery environmental temperature (VPP spec: INT16, 0.1C, range -400..1250)'},
 
         # Battery Cluster 2 State (31300-31323) - Optional second battery
         **VPP_V201_BATTERY2,
@@ -1205,7 +1208,10 @@ SPH_7000_10000_V201 = {
         # Note: Registers 31220-31221 appear to contain incorrect data when paired as 32-bit
         # AC charge energy total is available in registers 114/115 (legacy range) instead,
         # inherited from SPH_7000_10000 above.
-        31222: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True},
+        31222: {'name': 'battery_gauge_rm_low', 'scale': 1, 'unit': '',
+                'desc': 'Low word of the reserved UINT32 at 31221 (battery remaining capacity, Ah) - NOT temperature (#440)'},
+        31223: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'maps_to': 'battery_temp', 'signed': True,
+                'desc': 'Battery environmental temperature (VPP spec: INT16, 0.1C, range -400..1250)'},
 
         # Battery Cluster 2 State
         **VPP_V201_BATTERY2,

@@ -4,6 +4,26 @@
 
 ---
 
+## v2.0.4-b5
+
+Issues: #440
+
+- **SPH: Battery Temperature was reading the battery's remaining capacity.** One owner saw
+  **272 °C**. The VPP register at 31221 is a 32-bit value spanning two registers — remaining
+  capacity in Ah — so 31222 is its low word, and the temperature is at **31223**. The SPH
+  profiles resolved the sensor from 31222.
+
+  **Affects SPH and SPH-TL3 profiles on the V2.01 map.** The same correction was already
+  made for MID, MOD and WIT; the SPH family had been missed. Reported with a full register
+  scan by @trickyau, whose 31222 read `2727` — the same value as input register 1091, which
+  the V1.39 protocol documents as `BMS_GaugeRM`.
+
+  **If your battery temperature still looks wrong after this**, it is a separate question
+  about scale rather than about which register is read — say so on #440 with what your
+  ShinePhone app or inverter display shows.
+
+---
+
 ## v2.0.4-b4
 
 Issues: #439
