@@ -602,6 +602,33 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
                         "FC 0x10 - grid charging will not engage"
                     )
 
+                # Select the roster branch before writing into it (#400).
+                #
+                # 30407 chooses between the two routes through this block: the direct
+                # setpoint (30409 + 30408) and the roster (30412+ + 30411). Charge and
+                # Discharge both set it to 1 for the direct branch and never clear it, and
+                # Hold did not touch it - so **Charge -> Hold** left the selector on the
+                # direct branch with 30409 still at +100 %, wrote the roster period into the
+                # branch that was not selected, and held nothing. The entity reported Hold
+                # either way, because current_option returns the last commanded mode rather
+                # than device state.
+                #
+                # Found by @KevlarD-67 reading this against the 30407 behaviour measured in
+                # #349, not from a failed hold - so this makes the state explicit rather
+                # than fixing an observed symptom. Writing it is harmless where the selector
+                # was already 0: that is the state his successful roster measurement ran in.
+                #
+                # 30407 = 0 on its own returns the inverter to self-consumption, which is
+                # why it is not a hold by itself and why the roster below still matters. The
+                # brief window between this write and the period taking force is a few
+                # seconds of ordinary self-consumption.
+                if not client.write_register(self.VPP_REMOTE_POWER_ENABLE, 0):
+                    _LOGGER.warning(
+                        "[WIT-VPP] Could not clear remote power control (30407=0) before "
+                        "writing the HOLD roster - if the previous mode was Charge or "
+                        "Discharge, the direct setpoint may still be selected"
+                    )
+
                 # Get current time for TOU period
                 from datetime import datetime
                 now = datetime.now()

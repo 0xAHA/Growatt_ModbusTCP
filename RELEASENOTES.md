@@ -4,6 +4,25 @@
 
 ---
 
+## v2.0.4-b8
+
+Issues: #400
+
+- **WIT/MOD VPP: selecting Hold straight after Charge or Discharge now actually holds.**
+  Register 30407 chooses between the two routes through the VPP control block — the direct
+  setpoint and the TOU roster. Charge and Discharge set it for the direct route and never
+  cleared it, and Hold did not touch it, so a Hold selected after either wrote its period
+  into the route that was not selected while the previous setpoint stayed in force. The
+  entity reported Hold throughout, because it shows the last command rather than the
+  inverter's state.
+
+  **Affects anyone switching Mode (VPP) from Charge or Discharge to Hold.** Selecting Hold
+  from Hold, or after a restart, was unaffected. Found by @KevlarD-67 from a code reading
+  against the 30407 behaviour he measured in #349 — no failed hold was observed, so this
+  closes a gap rather than a reported symptom.
+
+---
+
 ## v2.0.4-b7
 
 Issues: #441
