@@ -446,6 +446,15 @@ SPH_TL3_3000_10000_V201 = {
     'name': 'SPH-TL3 Series 3-10kW (V2.01)',
     'description': 'Three-phase hybrid inverter with battery storage (3-10kW) and VPP Protocol V2.01',
     'notes': 'Combines legacy (0-124, 1000-1124 range) with V2.01 (30000+ range). Overlapping values served at both addresses.',
+    # Reg 53/54 = system AC output incl. battery discharge; use the per-MPPT DC sum instead.
+    #
+    # Carried on the base variant since #307 and lost here, because a _V201 variant merges
+    # `input_registers` from its base but writes its own top-level keys - so a flag added to
+    # the base is silently dropped unless it is repeated. The per-MPPT registers themselves
+    # came through the merge, so everything the flag needs was present and only the flag was
+    # missing: solar energy today rose overnight in step with battery discharge, which is
+    # #307 reappearing on the profile that `protocol_variant: auto` selects by default (#441).
+    'use_mppt_energy_today': True,
     'input_registers': {
         # === Legacy REGISTERS (0-124, 1000-1124 ranges) ===
         **SPH_TL3_3000_10000['input_registers'],

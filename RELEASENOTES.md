@@ -4,6 +4,29 @@
 
 ---
 
+## v2.0.4-b7
+
+Issues: #441
+
+- **SPH-TL3 and TL-XH on V2.01: Solar Energy Today no longer rises overnight.** Those
+  profiles were reading daily solar from register 53/54, which counts all AC output
+  *including battery discharge* — so the figure climbed through the night in step with the
+  battery. The per-MPPT DC registers are summed instead, as they already were on the legacy
+  variants of the same profiles.
+
+  **Affects SPH-TL3 3-10kW and TL-XH 3000-10000 on the V2.01 protocol variant**, which is
+  what auto-detection selects on that hardware — so the default configuration was the
+  affected one. Reported by @acsel91 with the cause already identified: a V2.01 variant
+  merges its base profile's registers but writes its own top-level keys, so the flag added
+  for #307 was silently dropped. His suggestion to check the other variants found the second
+  profile, and a test now compares every variant against its base so the next one cannot be
+  lost the same way.
+
+  **Your daily solar figure will read lower and correctly from the upgrade.** Yesterday's
+  recorded totals are unchanged.
+
+---
+
 ## v2.0.4-b6
 
 Issues: #401

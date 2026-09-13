@@ -147,6 +147,11 @@ TL_XH_3000_10000_V201 = {
     'name': 'TL-XH 3000-10000 (V2.01)',
     'description': 'Single-phase hybrid inverter with battery (3-10kW) and VPP Protocol V2.01',
     'notes': 'Combines legacy (0-124 range) with V2.01 (30000+ range). Overlapping values served at both addresses.',
+    # Same omission as SPH-TL3's V2.01 variant, found by the same audit: the base carries
+    # this flag, the variant writes its own top-level keys, and it was not repeated. Not
+    # reported on this hardware - the pv1/pv2 energy registers are inherited and present,
+    # so the flag does what it does on the base (#441).
+    'use_mppt_energy_today': True,
     'input_registers': {
         # === Legacy REGISTERS (0-124 range) ===
         **TL_XH_3000_10000['input_registers'],
