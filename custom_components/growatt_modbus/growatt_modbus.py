@@ -220,6 +220,16 @@ def _format_modbus_error(result) -> str:
 # one measured needs about 17 (#433).
 MAX_STALE_FRAME_RETRIES_PER_POLL = 30
 
+# Above this magnitude, a sign-bit-set 32-bit pair is a not-implemented sentinel rather
+# than a value that dipped below zero.
+#
+# Every unsigned pair we map is a physical quantity at 0.1 scale, so 1,000,000 raw is
+# 100 kW, 100 kAh or 100,000 kWh - past anything domestic or light-commercial hardware
+# produces, and far past the small negatives an underflow makes. A daily counter going
+# one count below zero arrives as 4,294,967,279; an unimplemented register answers with
+# something from the 0xFF.. family (#401).
+_UNDERFLOW_PLAUSIBLE_MAGNITUDE = 1_000_000
+
 RECONNECT_QUIET_BASE_SECONDS = 2.0
 RECONNECT_QUIET_MAX_SECONDS = 32.0
 
@@ -2535,12 +2545,40 @@ class GrowattModbus:
                 name = reg_info.get('name') or pair_info.get('name')
                 if name not in self._underflow_warned:
                     self._underflow_warned.add(name)
+                    as_signed = combined - 0x100000000
+
+                    # Say which of the two faults this looks like, rather than assuming.
+                    #
+                    # The message used to advise "the profile is probably missing 'signed':
+                    # True" for every case. That is right for a counter dipping a hair below
+                    # zero - -17 arriving as 4,294,967,279 - and badly wrong for a register
+                    # the firmware does not implement, which answers with an all-ones
+                    # pattern. One reporter read 0xFFED0000 and 0xFFE5FFE5 on per-phase grid
+                    # import and concluded the flag was missing, exactly as told. As signed
+                    # those are -124 kW and -170 kW on a 10 kW inverter: adding the flag
+                    # would have published them (#401).
+                    #
+                    # A genuine underflow sits just below zero. A sentinel does not.
+                    looks_like_sentinel = abs(as_signed) > _UNDERFLOW_PLAUSIBLE_MAGNITUDE
+                    if looks_like_sentinel:
+                        advice = (
+                            "That is too large to be a value dipping below zero, so this "
+                            "register is more likely not implemented on this firmware and "
+                            "answering with a not-set pattern. Do NOT add 'signed': True - "
+                            "it would publish that number. Report it on #401 with the raw "
+                            "value if the sensor matters to you."
+                        )
+                    else:
+                        advice = (
+                            "If this repeats, the profile is probably missing "
+                            "'signed': True for this register (#401)."
+                        )
+
                     logger.warning(
-                        "[UNDERFLOW] %s (registers %d/%d) read %d, which has the sign bit "
-                        "set on a pair not declared signed. As a signed value that is %s. "
-                        "Withholding it. If this repeats, the profile is probably missing "
-                        "'signed': True for this register (#401).",
-                        name, address, pair_addr, combined, combined - 0x100000000,
+                        "[UNDERFLOW] %s (registers %d/%d) read %d (0x%08X), which has the "
+                        "sign bit set on a pair not declared signed. As a signed value that "
+                        "is %s. Withholding it. %s",
+                        name, address, pair_addr, combined, combined, as_signed, advice,
                     )
                 else:
                     logger.debug(

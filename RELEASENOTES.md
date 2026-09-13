@@ -4,6 +4,24 @@
 
 ---
 
+## v2.0.4-b6
+
+Issues: #401
+
+- **The `UNDERFLOW` warning no longer advises adding `signed` to a register the firmware
+  does not implement.** A 32-bit pair that arrives with its sign bit set is withheld, and
+  the log used to give the same advice every time: the profile is probably missing
+  `'signed': True`. That is right for a counter dipping a hair below zero, and wrong for an
+  unimplemented register answering with an all-ones pattern — one owner read `0xFFED0000`
+  on per-phase grid import, which as a signed value is **-124 kW** on a 10 kW inverter.
+
+  The message now distinguishes the two by magnitude, says plainly not to add the flag in
+  the sentinel case, and prints the raw value in hex so the pattern is visible at a glance.
+  No behaviour change: those readings were already being withheld correctly. Reported by
+  @acsel91.
+
+---
+
 ## v2.0.4-b5
 
 Issues: #440
