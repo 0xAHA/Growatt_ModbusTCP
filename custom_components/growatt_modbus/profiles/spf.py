@@ -167,7 +167,17 @@ SPF_3000_6000_ES_PLUS = {
     'holding_registers': {
         # System Control
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
-        3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Active power rate control'},
+        # NOT the active power rate. The off-grid table gives 3-6 as UtiOutStart,
+        # UtiOutEnd, UtiChargeStart and UtiChargeEnd - hours, 0-23, shown in ShinePhone as
+        # the output and charging period times. Mapped as a power rate, the entity read 0 %
+        # at full output, and writing "100 %" would have written hour 100 into the
+        # inverter's output schedule (#444).
+        #
+        # Named rather than deleted so the next person sees what the register is. No control
+        # is offered for it yet: the four are a schedule and belong together as time
+        # entities, not as four bare numbers.
+        3: {'name': 'uti_out_start', 'scale': 1, 'unit': 'h', 'access': 'RW',
+            'desc': 'Utility output period start hour (LCD program 50), 0-23'},
 
         # BLU / LBU selection, added by firmware 100.08/101.07 (#437).
         #
@@ -261,7 +271,7 @@ SPF_3000_6000_ES_PLUS = {
         #
         # Cannot be set at all when battery type (39) is Lithium; see WRITABLE_REGISTERS.
         34: {'name': 'max_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
-             'valid_range': (10, 100),
+             'valid_range': (10, 400),
              'desc': 'Max total charge current, solar + utility (LCD Program 02). '
                      '10-100A confirmed on SPF 6000ES Plus; unavailable on Lithium'},
 

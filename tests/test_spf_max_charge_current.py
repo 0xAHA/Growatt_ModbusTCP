@@ -3,10 +3,14 @@
 Two things this control has to get right, and both come from the reporter's own testing
 rather than from the protocol document:
 
-1. The range is **10-100 A**, from the SPF 6000ES Plus LCD manual (Program 02), not the
-   0~400 in the family-wide off-grid protocol. The floor of 10 is the part that matters:
-   this panel scrolls to 999 and then silently discards an out-of-range save, so a slider
-   offering 0-9 would look accepted and change nothing.
+1. The floor is **10 A**, from the SPF 6000ES Plus LCD manual (Program 02). It is the part
+   that matters: this panel scrolls to 999 and then silently discards an out-of-range save,
+   so a slider offering 0-9 would look accepted and change nothing.
+
+   The ceiling was 100 from the same manual and is now the protocol's **400** (#444). A
+   second model on this profile, an SPF 5000 ES, reads 120 A - and Home Assistant rejects a
+   *state* outside the declared bounds, so that reading was discarded and looked like a
+   broken register. One model's manual bounds that model, not the family.
 
 2. It cannot be set at all when battery type is Lithium — "(If LI is selected in Program 5,
    this program can't be set up)". On hardware that discards rejected saves silently, a
@@ -46,10 +50,19 @@ def test_register_34_is_mapped_and_writable():
     assert reg["scale"] == 1, "raw 50 reads as 50 A on hardware — no scale factor"
 
 
-def test_the_range_is_the_manual_not_the_protocol_document():
-    """0~400 is the whole off-grid family. 10-100 is this model."""
-    assert ENTRY["valid_range"] == (10, 100)
-    assert SPF["holding_registers"][34]["valid_range"] == (10, 100)
+def test_the_floor_is_the_manual_and_the_ceiling_is_the_protocol():
+    """Originally 10-100, both ends from the SPF 6000ES Plus manual.
+
+    The ceiling moved to the protocol's 400 for #444. An SPF 5000 ES on the same profile
+    answers 120 A, and Home Assistant validates an entity's *state* against these bounds,
+    not just what a user may set - so the reading was rejected and the entity showed empty,
+    which was reported as a failed read on a register that was answering perfectly.
+
+    One model's manual is a poor ceiling for a family. The floor is a different matter and
+    is unchanged - see below.
+    """
+    assert ENTRY["valid_range"] == (10, 400)
+    assert SPF["holding_registers"][34]["valid_range"] == (10, 400)
 
 
 def test_the_floor_is_ten_not_zero():

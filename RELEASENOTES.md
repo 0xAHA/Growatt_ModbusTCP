@@ -4,6 +4,29 @@
 
 ---
 
+## v2.0.4-b9
+
+Issues: #444
+
+- **SPF/SPE: "Max Output Power Rate" is withdrawn — it was pointed at a schedule hour.**
+  Holding register 3 is the active power rate on grid-tied inverters, and `UtiOutStart` on
+  the off-grid protocol: the hour the utility output period starts, 0-23. The entity read
+  0 % at full output, and because it is writable, setting it to 100 would have written
+  **hour 100** into the inverter's output schedule.
+
+  **The entity disappears on SPF and SPE.** It was never reporting anything meaningful on
+  those models. Grid-tied profiles are unaffected. Found by @eugeniodb against ShinePhone
+  and the SPF 3500/5000 ES manual v4.0.
+
+- **SPF: Max Charge Current no longer shows empty on inverters that report above 100 A.**
+  The ceiling came from the SPF 6000ES Plus manual, and an SPF 5000 ES on the same profile
+  reads 120 A — which Home Assistant rejected, because it validates an entity's state
+  against the declared bounds and not only what a user may set. The ceiling is now the
+  protocol's 400 A. The floor stays at 10 A, which exists because that panel silently
+  discards an out-of-range save.
+
+---
+
 ## v2.0.4-b8
 
 Issues: #400

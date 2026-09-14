@@ -209,7 +209,24 @@ WRITABLE_REGISTERS = {
         'scale': 1,  # Direct percentage: 0-100
         'valid_range': (0, 100),  # 0% to 100%
         'unit': '%',
-        'desc': 'Maximum output power limitation'
+        'desc': 'Maximum output power limitation',
+        # Register 3 is NOT a power rate on the off-grid protocol (#444).
+        #
+        # V1.39 holding 3 is the active power rate and this control is right for every
+        # grid-tied family. The off-grid table says something else entirely:
+        #
+        #     3 | UtiOutStart    | Uti Time             | W | bit0~bit7
+        #     4 | UtiOutEnd      | Uti Output End Time  | W | bit0~bit7
+        #     5 | UtiChargeStart | Uti Time             | W | bit0~bit7
+        #     6 | UtiChargeEnd   | Uti Charge End Time  | W | bit0~bit7
+        #
+        # Hours, 0-23, which ShinePhone shows as the output and charging period times. On an
+        # SPF the entity read 0 % while the inverter was at full output - and being writable,
+        # anyone "setting the limit to 100" would have written **hour 100** into the
+        # inverter's output schedule. Reported by @eugeniodb against the app and the SPF
+        # 3500/5000 ES manual v4.0; his raw dump reads 0/0/0/0, the factory default rather
+        # than a failed read.
+        'not_profiles': ['SPF_3000_6000_ES_PLUS', 'SPE_8000_12000_ES'],
     },
 
     # =========================================================================
@@ -403,11 +420,22 @@ WRITABLE_REGISTERS = {
     'max_charge_current': {
         'register': 34,
         'scale': 1,
-        'valid_range': (10, 100),
+        # Floor from the SPF 6000ES Plus manual, ceiling from the protocol (#376, #444).
+        #
+        # The floor of 10 is load-bearing and stays: that panel accepts an out-of-range save
+        # in its UI and then silently discards it, so offering 0-9 would look like it worked.
+        #
+        # The ceiling of 100 was from the same manual and is one model's limit, not the
+        # family's. The off-grid table gives "34 | MaxChargeCurr | 0~400, step 1A, default
+        # 70", and an SPF 5000 ES answers 120 - which Home Assistant then refused to display,
+        # because it validates an entity's *state* against these bounds and not just what a
+        # user may set. A working register looked like a failed read.
+        'valid_range': (10, 400),
         'unit': 'A',
         'unavailable_when': ('battery_type', 3),
-        'desc': 'Max total charge current, solar + utility (LCD Program 02). 10-100A on '
-                'SPF 6000ES Plus; not settable when battery type is Lithium'
+        'desc': 'Max total charge current, solar + utility (LCD Program 02). Floor 10A from '
+                'the SPF 6000ES Plus manual, ceiling 400A from the off-grid protocol; not '
+                'settable when battery type is Lithium'
     },
     # Bulk and float charging voltage — LCD "Program 19" and "Program 20" (#384).
     #
