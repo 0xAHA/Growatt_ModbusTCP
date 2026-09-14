@@ -295,6 +295,18 @@ SPF_3000_6000_ES_PLUS = {
 
         # AC Charge Current — LCD "Program 11", 0A~80A per the same manual, which confirms
         # the limit this profile already assumed.
+        #
+        # The 80 was challenged on #444 by an SPF 5000 ES owner whose ShinePhone offers
+        # 0-100 A, and it survived the challenge because he tested the hardware rather than
+        # quoting the screen. Written over Modbus the register takes 100 and reads 100 back.
+        # He then forced the grid to charge and watched the battery current for three
+        # minutes: 76.7 A, 77.9 A, 78.5 A — it never approached 100, and the combined
+        # charge ceiling was not what held it (83 A total against a 100 A limit). His
+        # manual, SPF 3500/5000 ES v4.0, gives Program 11 as 0-80 A on this model.
+        #
+        # So the register stores a value the hardware will not deliver, and the entity
+        # follows the hardware. Do not widen this to match an app screen; widen it only if
+        # a device is measured charging above 80 A from the grid.
         38: {'name': 'ac_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
              'valid_range': (0, 80),
              'desc': 'AC charging current limit (SPF 6000 hardware max: 80A, stored directly)'},
@@ -314,7 +326,36 @@ SPF_3000_6000_ES_PLUS = {
         # DTC is used during auto-detection only (034xx for SPF 3-6K ES PLUS series)
         # Holding register 43 may contain DTC as fallback on some firmware versions
 
+        # Battery Undervoltage Cut-Off — the third of the three thresholds ShinePhone shows
+        # together, and the one that decides how deep the battery discharges in an outage.
+        #
+        # The off-grid table calls it `wBatLowCutOff` / "Bat cutoff" and gives no scale or
+        # range, so the scale comes from a device: an SPF 5000 ES on Lithium (register 39 =
+        # 3) read 100 here while its app showed 10 %, alongside 37 = 350 for 35 % and
+        # 95 = 850 for 85 % — all three at 0.1, all three matching the app exactly (#444).
+        #
+        # BATTERY TYPE DEPENDENT, on the same footing as 37 and 95 rather than on its own
+        # evidence: only the Lithium half is confirmed. The reporter also found register 94
+        # holding 420 against his manual's 42.0 V Low DC Cut-Off (Li Mode), which is what a
+        # voltage twin of this setting looks like — so a non-Lithium system may well put
+        # volts here as the other two do. If an AGM or Flooded owner reports this entity
+        # showing a percentage where the panel shows volts, it is this assumption that is
+        # wrong, not the scale.
+        #
+        # The value was already reaching the diagnostics under a name borrowed from another
+        # profile (`load_first_battery_minimum_soc`), so this surfaces a reading that was
+        # being taken anyway rather than adding a register to the poll.
+        82: {'name': 'bat_low_cutoff', 'scale': 0.1, 'unit': 'V/%', 'access': 'RW',
+             'valid_range': (0, 1000),
+             'desc': 'Battery undervoltage cut-off point. Lithium: 0-100%, Non-Lithium: '
+                     '20.0-64.0V (assumed, as for registers 37 and 95)',
+             'battery_dependent': True},
+
         # Generator Charge Current
+        #
+        # Reads 65535 — 0xFFFF — on an SPF 5000 ES, which is the all-ones "not supported"
+        # pattern rather than a 65 kA charge limit (#444). Withheld on that value; see
+        # GEN_CHARGE_CURRENT_NOT_SUPPORTED in growatt_modbus.py.
         83: {'name': 'gen_charge_current', 'scale': 1, 'unit': 'A', 'access': 'RW',
              'valid_range': (0, 80),
              'desc': 'Generator charging current limit (SPF 6000 hardware max: 80A, stored directly)'},

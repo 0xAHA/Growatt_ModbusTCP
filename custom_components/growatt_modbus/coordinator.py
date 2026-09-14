@@ -2096,6 +2096,25 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         f"{hours_off * 60} minutes."
                     )
                 else:
+                    # Off-grid can be read but not set (#444), so the button and the action
+                    # this used to recommend do not exist there. Telling an SPF owner to
+                    # press a button that is not on their device is worse than no advice.
+                    if getattr(self._client, "is_clock_writable", True):
+                        remedy = (
+                            "**To fix:** Enable the **Inverter Clock Sync** button on the "
+                            "inverter device and press it, or call the "
+                            "`growatt_modbus.sync_inverter_time` action. Failing that, set "
+                            "the time via the ShinePhone app, the inverter LCD menu, or the "
+                            "Growatt web portal."
+                        )
+                    else:
+                        remedy = (
+                            "**To fix:** set the time via the ShinePhone app or the inverter's "
+                            "front panel. Off-grid models can have their clock read but not "
+                            "set over Modbus - the year is written in a form that has only "
+                            "been confirmed on other protocol families, so this integration "
+                            "does not guess at it."
+                        )
                     message = (
                         f"The inverter's internal clock is **{abs(drift_min):.1f} minutes {direction}** "
                         f"Home Assistant time.\n\n"
@@ -2105,10 +2124,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         f"at its own midnight, not HA midnight. A large clock offset causes daily "
                         f"energy sensors to reset at the wrong time, which can produce incorrect "
                         f"daily totals and confuse the energy dashboard.\n\n"
-                        f"**To fix:** Enable the **Inverter Clock Sync** button on the inverter "
-                        f"device and press it, or call the `growatt_modbus.sync_inverter_time` "
-                        f"action. Failing that, set the time via the ShinePhone app, the inverter "
-                        f"LCD menu, or the Growatt web portal."
+                        f"{remedy}"
                     )
 
                 self._pending_clock_notification = {

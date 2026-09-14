@@ -99,7 +99,7 @@ that model has, for most entries, never been verified against hardware. See
 
 > **WIT residential models (4-15KTL3):** The VPP V2.03 spec (dated 2025.9.1) does **not** include the WIT 4-15KTL3 residential series in its DTC table — only commercial WIT (50K-100K) models appear. DTC 5603 was confirmed by a live register read (register 30000 = 5603 on a WIT 15KTL3, Issue #335) with protocol version register 30099 = 203, so the residential range follows V2.03 register structure despite being omitted from the spec's device table.
 
-**Non-VPP models** are not listed here. Legacy V1.39 devices (MIC 2500-5500MTL-S, TL3-S, SPH/SPM 8000-10000TL-HU), off-grid SPF (3400-3403) and SPE (64541) carry their DTC at holding register **43** rather than 30000. They appear in the [full DTC reference](../troubleshooting/dtc-debugging.md).
+**Non-VPP models** are not listed here. Legacy V1.39 devices (MIC 2500-5500MTL-S, TL3-S, SPH/SPM 8000-10000TL-HU), off-grid SPF (3400-3403, and 20105 for the SPF 5000 ES) and SPE (64541) carry their DTC at holding register **43** rather than 30000. They appear in the [full DTC reference](../troubleshooting/dtc-debugging.md).
 
 ---
 

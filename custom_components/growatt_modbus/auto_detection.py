@@ -557,6 +557,14 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
         'SPF 3000-6000 ES PLUS variant', 'spf_3000_6000_es_plus',
         ASSUMED, 'no device report on this DTC',
     ),
+    # Not in the 034xx block, and read from holding 43 rather than input 44 — the
+    # off-grid DTC read falls through to holding when input 44 is not one of the four
+    # 034xx codes, which is what happened here. Nothing else needs to change for this
+    # code to be picked up; it only has to be in this registry.
+    20105: DtcEntry(
+        'SPF 5000 ES', 'spf_3000_6000_es_plus',
+        CONFIRMED, 'SPF 5000 ES, firmware 067.02/068.02, register scan and diagnostics on issue #444 — profile confirmed by the same reporter mapping 24 ShinePhone settings against it',
+    ),
 
     # -- SPE series — single-phase hybrid (SPF protocol variant, 8-12kW) --
     64541: DtcEntry(

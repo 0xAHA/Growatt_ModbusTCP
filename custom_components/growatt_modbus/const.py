@@ -520,6 +520,16 @@ WRITABLE_REGISTERS = {
         'desc': 'Grid to Battery: SOC level to switch back from utility to battery mode',
         'battery_dependent': True
     },
+    'bat_low_cutoff': {
+        'register': 82,
+        'label': 'Battery Cut-Off',  # no "Voltage"/"SOC" — see bat_low_to_uti above
+        'scale': 0.1,
+        'valid_range': (0, 1000),  # Full range: Lithium 0-100%, Non-Lithium 20.0-64.0V
+        'unit': 'V/%',  # Unit depends on battery_type
+        'desc': 'Battery undervoltage cut-off point: how deep the battery discharges '
+                'before the inverter stops drawing from it',
+        'battery_dependent': True
+    },
 
     # SPE 8000-12000 ES Grid-Tie Export Controls (confirmed working via nicauswu field data, Issue #322)
     # These registers are SPE-only (only_profiles guard prevents cross-profile contamination).

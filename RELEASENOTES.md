@@ -4,6 +4,45 @@
 
 ---
 
+## v2.0.4-b11
+
+Issues: #439, #442, #444
+
+- **SPF/SPE: a new Battery Cut-Off control.** Holding register 82 is the battery
+  undervoltage cut-off point — how deep the battery is allowed to discharge before the
+  inverter stops drawing from it. It was reachable only from the front panel or ShinePhone.
+  Like the two switchover thresholds beside it, the entity shows a percentage on Lithium and
+  volts otherwise. **A new number entity appears on the Battery device.** Confirmed on an
+  SPF 5000 ES on Lithium by @eugeniodb; the non-Lithium half follows the two neighbouring
+  registers rather than its own measurement.
+
+- **SPF: Generator Charge Current goes unavailable on models without one.** An SPF 5000 ES
+  answers that register with `0xFFFF`, which was published as a 65535 A charge limit sitting
+  in a writable box. It is withheld now, as other all-ones "not supported" values already
+  are. **The entity disappears on models that answer this way**; it is unchanged where the
+  register holds a real figure. (#444)
+
+- **The Inverter Clock sensor now works on SPF and SPE.** An SPF 5000 ES read against a
+  known-good clock returned the full four-digit year and the standard field order, so the
+  off-grid layout is no longer treated as unknown. **A new diagnostic sensor is available on
+  off-grid profiles** — disabled by default, like everywhere else.
+
+  **Setting** the clock is still not offered there: the year is written in a form confirmed
+  on other protocol families only, and reading four digits does not say which form the
+  register accepts. Off-grid drift notices now say to use ShinePhone or the front panel
+  instead of naming a sync button those models do not have. (#444, #439)
+
+- **SPF: the AC Charge Current ceiling stays at 80 A, now with a measurement behind it.**
+  ShinePhone offers 0-100 A on the 5000 ES, and the register does store 100 — but the
+  hardware charges at 78 A and stops. Unchanged for users; recorded so it is not widened on
+  the strength of an app screen. (#444)
+
+- **DTC 20105 is recognised as an SPF 5000 ES.** It sits outside the 034xx block other
+  off-grid models use and is read from holding register 43. **Affected owners no longer have
+  to pick the profile by hand.** Confirmed from @eugeniodb's scan.
+
+---
+
 ## v2.0.4-b10
 
 Issues: #442, #443, #445

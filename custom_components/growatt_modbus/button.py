@@ -34,9 +34,11 @@ async def async_setup_entry(
 
     entities = []
 
-    # Off-grid profiles store the year differently and give register 51 to Chip Select
-    # rather than the weekday, so the clock write is not offered there at all (#393).
-    if coordinator.modbus_client.is_clock_supported:
+    # Off-grid profiles read their clock fine but the write encoding for the year has
+    # never been confirmed on one, so the button is not offered there (#393, #444). The
+    # Inverter Clock sensor is, so drift is still visible - it just has to be corrected
+    # from ShinePhone or the front panel.
+    if coordinator.modbus_client.is_clock_writable:
         entities.append(GrowattSyncClockButton(coordinator, config_entry))
 
     async_add_entities(entities)

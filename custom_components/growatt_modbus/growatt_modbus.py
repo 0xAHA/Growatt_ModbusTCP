@@ -575,6 +575,7 @@ class GrowattData:
     gen_charge_current: int = 0       # 0-800 (0-80A with scale 0.1)
     bat_low_to_uti: int = 0           # Battery-dependent: Non-Lithium 200-640 (20-64V), Lithium 5-100 (0.5-10%)
     ac_to_bat_volt: int = 0           # Battery-dependent: Non-Lithium 200-640 (20-64V), Lithium 5-100 (0.5-10%)
+    bat_low_cutoff: int = 0           # Battery-dependent, same encoding (holding 82, wBatLowCutOff)
 
     # Device Info
     firmware_version: str = ""
@@ -2344,6 +2345,16 @@ class GrowattModbus:
     # sensor at all (#404).
     PV_ISO_NOT_MEASURED_MIN = 65530.0
 
+    # Generator charge current (holding 83) at or above this is the same all-ones family of
+    # "not supported" codes, not a current.
+    #
+    # An SPF 5000 ES reads exactly 65535 there — it has no generator charge setting, and
+    # ShinePhone does not offer one on that model. Published raw it filled a writable number
+    # entity with 65535, which invites someone to correct it to a sensible figure and write
+    # a value the inverter does not have a register for. The profile's own ceiling is 80 A,
+    # so nothing legitimate comes near this (#444).
+    GEN_CHARGE_CURRENT_NOT_SUPPORTED = 65530
+
     # Deficit, in watts, that AC output must exceed before a PV reading of zero is treated
     # as impossible. Matches the margin the SPF sign correction uses for the same kind of
     # power-balance reasoning (#345), so the two agree about what counts as significant.
@@ -4064,11 +4075,28 @@ class GrowattModbus:
     # 2026/8/22 09:42:17 in the same registers. The year is the full four digits, not an
     # offset.
     #
-    # NOT off-grid. The off-grid protocol puts the clock at the same addresses but records
-    # "Year offset is 2000" and gives register 51 to Chip Select rather than a weekday, so
-    # writing this block unchanged to an SPF would set the year wrong and overwrite an
-    # unrelated register. No SPF scan has been offered to confirm the encoding, and guessing
-    # at a clock write is not worth the risk — see is_clock_supported().
+    # Off-grid reads the same, and writes are still withheld — but for a narrower reason
+    # than this note used to give (#444).
+    #
+    # An SPF 5000 ES on firmware 067.02 has now been read against a known-good clock:
+    #
+    #   host  2026-09-14 08:19:35 .. 08:19:38
+    #   45: 2026  46: 9  47: 14  48: 8  49: 20  50: 29  51: 0
+    #
+    # So register 45 reads back the **full four-digit year**, not the offset from 2000 that
+    # the off-grid document records, and 46-50 are month/day/hour/minute/second in the same
+    # order as V1.39. Reading the off-grid clock is therefore the same operation as reading
+    # any other, and is no longer refused. (Register 51 read 0, consistent with the
+    # document's Chip Select rather than a weekday; the off-grid weekday is at 72.)
+    #
+    # Writing stays withheld. What makes the V1.39 write work is an asymmetry — write 26,
+    # read back 2026 — which is in neither protocol document and was established on V1.39
+    # hardware alone. A four-digit read says nothing about which form the register accepts,
+    # and getting it wrong on an inverter that is ALSO fed by a datalogger is how a clock
+    # ends up in the year 26 AD. See is_clock_writable().
+    #
+    # Note for anyone tempted to cite the old reason: write_inverter_time() writes 45-50
+    # only. It has never touched register 51.
     CLOCK_REGISTER_START = 45
     CLOCK_REGISTER_COUNT = 7  # 45-51 inclusive
 
@@ -4088,13 +4116,28 @@ class GrowattModbus:
     CLOCK_WRITE_BUDGET = 6.0
 
     @property
-    def is_clock_supported(self) -> bool:
-        """Whether this profile's clock encoding is confirmed."""
+    def is_clock_readable(self) -> bool:
+        """Whether this profile's clock can be decoded.
+
+        Every profile, now that the off-grid layout has been read against a known-good
+        clock (#444). read_inverter_time() already accepted both year encodings, so the
+        only thing that was missing was a device to confirm which one off-grid uses.
+        """
+        return True
+
+    @property
+    def is_clock_writable(self) -> bool:
+        """Whether this profile's clock can be *set*.
+
+        Not off-grid: the write uses a two-digit year established on V1.39 hardware and
+        documented nowhere, and reading a four-digit year back does not tell us which form
+        the register accepts. See the note above CLOCK_REGISTER_START.
+        """
         return not self.register_map.get('offgrid_protocol', False)
 
     def read_inverter_time(self) -> Optional[datetime]:
         """Read the inverter's real-time clock, or None if it cannot be decoded."""
-        if not self.is_clock_supported:
+        if not self.is_clock_readable:
             return None
 
         regs = self.read_holding_registers(self.CLOCK_REGISTER_START, self.CLOCK_REGISTER_COUNT)
@@ -4145,12 +4188,13 @@ class GrowattModbus:
         leaves the clock untouched rather than half-written — a MIN TL-X reset its RTC to
         the year 2000 when five fields landed and the year did not.
         """
-        if not self.is_clock_supported:
+        if not self.is_clock_writable:
             raise ModbusWriteError(
                 self.CLOCK_REGISTER_START, [],
-                "clock sync is not supported on off-grid profiles — register 51 carries "
-                "Chip Select there rather than a weekday, and no scan has confirmed the "
-                "rest of the block (#393)",
+                "setting the clock is not supported on off-grid profiles — the year is "
+                "written as a two-digit offset, which is confirmed on V1.39 hardware only, "
+                "and no off-grid device has been seen accepting either form. Reading the "
+                "clock does work; set it from ShinePhone or the front panel (#393, #444)",
             )
 
         # Seconds is written last, roughly 1.2-1.5 s after the first field on TCP and
@@ -5430,17 +5474,34 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read battery control registers 34-39: {e}")
 
-        # Read generator charge current (83) and AC to battery voltage (95)
-        if 83 in holding_map:
+        # Read battery cut-off (82) and generator charge current (83), then AC to battery
+        # voltage (95). 82 and 83 are adjacent, so the pair costs the round trip that 83
+        # alone used to.
+        if 82 in holding_map or 83 in holding_map:
             try:
-                gen_charge_regs = self.read_holding_registers(83, 1)
-                logger.debug("[SPF CTRL] Raw gen_charge_current from reg 83: %r", gen_charge_regs)
+                cutoff_gen_regs = self.read_holding_registers(82, 2)
+                logger.debug("[SPF CTRL] Raw regs 82-83: %r", cutoff_gen_regs)
 
-                if gen_charge_regs is not None and len(gen_charge_regs) >= 1:
-                    data.gen_charge_current = int(gen_charge_regs[0])
-                    logger.debug("[SPF CTRL] gen_charge_current=%s A", data.gen_charge_current)
+                if cutoff_gen_regs is not None and len(cutoff_gen_regs) >= 2:
+                    if 82 in holding_map:
+                        data.bat_low_cutoff = int(cutoff_gen_regs[0])
+                        logger.debug("[SPF CTRL] bat_low_cutoff=%s", data.bat_low_cutoff)
+                    if 83 in holding_map:
+                        gen_raw = int(cutoff_gen_regs[1])
+                        if gen_raw >= self.GEN_CHARGE_CURRENT_NOT_SUPPORTED:
+                            # 0xFFFF, not a charge limit. Leave the field unset and mark it
+                            # unread so the entity goes unknown rather than publishing
+                            # 65535 A into a control the user can then try to write back.
+                            data.unread_fields.add('gen_charge_current')
+                            logger.debug(
+                                "[SPF CTRL] gen_charge_current raw %d is the all-ones "
+                                "not-supported pattern; withholding it (#444)", gen_raw,
+                            )
+                        else:
+                            data.gen_charge_current = gen_raw
+                            logger.debug("[SPF CTRL] gen_charge_current=%s A", data.gen_charge_current)
             except Exception as e:
-                logger.debug(f"Could not read gen_charge_current register: {e}")
+                logger.debug(f"Could not read battery cut-off / gen charge registers 82-83: {e}")
 
         if 95 in holding_map:
             try:

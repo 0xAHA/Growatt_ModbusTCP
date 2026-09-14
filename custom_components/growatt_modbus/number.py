@@ -284,6 +284,7 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
             'gen_charge_current': 'mdi:current-ac',
             'bat_low_to_uti': 'mdi:battery-alert',
             'ac_to_bat_volt': 'mdi:battery-charging',
+            'bat_low_cutoff': 'mdi:battery-off-outline',
             'vpp_export_limit_power_rate': 'mdi:transmission-tower-export',
             'load_first_battery_minimum_soc': 'mdi:battery-sync',
         }
@@ -337,6 +338,14 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         # entity, and a 0 written there once would linger as a plausible-looking value.
         flag = VPP_CONTROL_AVAILABILITY_FLAG.get(self._control_name)
         if flag is not None and not getattr(data, flag, False):
+            return None
+
+        # Same reasoning one step finer: the read path marks an individual control unread
+        # when its register answered with something that is not a value - an SPF 5000 ES
+        # returns 0xFFFF for generator charge current because it has no such setting (#444).
+        # The field keeps its 0 default, so without this the entity would publish 0 A, which
+        # is a plausible-looking limit rather than an obviously absent one.
+        if self._control_name in getattr(data, 'unread_fields', ()):
             return None
 
         raw_value = getattr(data, self._control_name, None)

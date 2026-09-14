@@ -147,13 +147,22 @@ def test_clock_entities_share_an_entity_category():
     assert set(categories.values()) == {"EntityCategory.DIAGNOSTIC"}, categories
 
 
-@pytest.mark.parametrize("filename", ["sensor.py", "button.py"])
-def test_clock_entities_are_withheld_on_off_grid(filename):
-    """Off-grid profiles store the year as an offset from 2000 and give register 51 to Chip
-    Select rather than the weekday, so neither reading nor writing the standard layout is
-    safe there. is_clock_supported is the one gate."""
-    assert "is_clock_supported" in _source(filename), (
-        f"{filename} creates a clock entity without checking profile support"
+@pytest.mark.parametrize("filename,gate", [
+    ("sensor.py", "is_clock_readable"),
+    ("button.py", "is_clock_writable"),
+])
+def test_clock_entities_check_the_gate_that_applies_to_them(filename, gate):
+    """The two halves diverged once an off-grid device confirmed the read layout (#444):
+    the sensor is offered everywhere, the button still is not. Each file must consult its
+    own gate - using the other one would either hide a working sensor or offer a write
+    whose year encoding has never been confirmed on that hardware."""
+    source = _source(filename)
+    assert gate in source, (
+        f"{filename} creates a clock entity without checking {gate}"
+    )
+    other = "is_clock_writable" if gate == "is_clock_readable" else "is_clock_readable"
+    assert other not in source, (
+        f"{filename} gates its clock entity on {other} rather than {gate}"
     )
 
 

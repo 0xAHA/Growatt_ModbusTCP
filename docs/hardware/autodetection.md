@@ -57,7 +57,7 @@ Based on **Growatt VPP Protocol V2.01 - Table 3-1**:
 |--------------|----------|----------|---------|------------------|-------|
 | **SPH 3000-6000TL BL (legacy)** | 3501 | Legacy | Yes | 0-124, 1000-1124 | Pre-UP model, reg 30099 = 0 |
 | **SPH 3000-6000TL BL -UP** | 3502 | V2.01 | Yes | 0-124, 1000-1124, 30000+, 31000+ | Upgraded model, reg 30099 = 201 |
-| **SPF 3000-6000 ES PLUS** | 3400-3403 | V2.01 | Yes | 0-124, 31200+ | Off-grid with battery |
+| **SPF 3000-6000 ES PLUS** | 3400-3403, 20105 | V2.01 | Yes | 0-124, 31200+ | Off-grid with battery. 20105 is the SPF 5000 ES, read from holding 43 |
 | **SPA 3000-6000TL BL** | 3735 | V2.01 | Yes | 0-124 | SPA variant of SPH |
 | **SPH 4000-10000TL3 BH-UP** | 3601 | V2.01 | Yes | 0-124, 1000-1124 | Three-phase hybrid |
 | **SPA 4000-10000TL3 BH-UP** | 3725 | V2.01 | Yes | 0-124 | SPA variant |

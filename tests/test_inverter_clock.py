@@ -236,22 +236,34 @@ def test_verification_compares_against_the_four_digit_year():
 
 
 # --------------------------------------------------------------------------
-# Off-grid is excluded, deliberately
+# Off-grid: reads allowed, writes still withheld
 # --------------------------------------------------------------------------
 
-def test_off_grid_profiles_report_no_clock_support():
-    assert _client(offgrid=True).is_clock_supported is False
-    assert _client(offgrid=False).is_clock_supported is True
+def test_off_grid_can_be_read_but_not_written():
+    assert _client(offgrid=True).is_clock_readable is True
+    assert _client(offgrid=True).is_clock_writable is False
+    assert _client(offgrid=False).is_clock_readable is True
+    assert _client(offgrid=False).is_clock_writable is True
 
 
-def test_off_grid_reads_return_none():
-    client = _client(offgrid=True, registers=[26, 8, 22, 14, 8, 19, 1])
-    assert client.read_inverter_time() is None
+def test_off_grid_reads_decode_the_four_digit_year():
+    """An SPF 5000 ES on firmware 067.02 was read against a known-good host clock and
+    returned the full year at register 45, not the offset from 2000 the off-grid document
+    records. These are that reporter's values (#444)."""
+    client = _client(offgrid=True, registers=[2026, 9, 14, 8, 20, 29, 0])
+    assert client.read_inverter_time() == datetime(2026, 9, 14, 8, 20, 29)
+
+
+def test_off_grid_reads_still_accept_a_two_digit_year():
+    """Only one off-grid device has been seen. If another stores the documented offset,
+    the existing both-encodings decode must still cover it."""
+    client = _client(offgrid=True, registers=[26, 9, 14, 8, 20, 29, 0])
+    assert client.read_inverter_time() == datetime(2026, 9, 14, 8, 20, 29)
 
 
 def test_off_grid_writes_are_refused_rather_than_guessed():
-    """Writing the V1.39 layout to an SPF would set the year to 2026 where the firmware
-    expects 26, and overwrite Chip Select at register 51."""
+    """Reading a four-digit year says nothing about which form the register accepts, and
+    the two-digit write is confirmed on V1.39 hardware only."""
     client = _client(offgrid=True)
     with pytest.raises(_gm.ModbusWriteError):
         client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))

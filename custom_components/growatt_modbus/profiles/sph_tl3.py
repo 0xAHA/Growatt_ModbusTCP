@@ -46,7 +46,33 @@ SPH_TL3_3000_10000 = {
         # AC Grid Frequency
         37: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
 
-        # Three-Phase AC Output - Phase R (with generic aliases for compatibility)
+        # Three-Phase AC Output, registers 38-49.
+        #
+        # UNRESOLVED on SPH-TL3, and left mapped as the protocol describes them until a
+        # second device says otherwise. An SPH 10000TL3 BH-UP owner measured this block
+        # against the rest of the same poll and found three things that do not fit (#442):
+        #
+        #   1. Power is the exact product of the other two, to the last digit, on all three
+        #      phases - 409.1 V x 0.4 A = 163.64 against 163.6 W read, and 409.4 x 11.1 =
+        #      4544 against 4548.8. A measured quantity does not agree with a computed one
+        #      that precisely, so 40-49 look derived rather than sensed on this firmware.
+        #   2. The voltage is line-to-line, not phase: 398-416 V on a 230/400 V supply.
+        #      Registers 50/51/52, which the protocol assigns to line-to-line, read a flat
+        #      0.0 V - checked independently with an ESPHome modbus_controller on the same
+        #      inverter, so the zeros are the device's and not ours.
+        #   3. The three do not sum to anything real. At 3.19 kW of actual output they
+        #      summed to 5.12 kW, with phase R alone at 4548.8 W and 11.1 A while the other
+        #      two sat at 0.7 A. No three-phase inverter delivers that.
+        #
+        # NOT changed on that evidence. One device, one firmware, and the names come from
+        # the V1.39 table which gives 38-49 as per-phase grid voltage, current and apparent
+        # power. Renaming or withholding them would break every other SPH-TL3 owner to fix
+        # one, and "the reading is odd on my unit" is not yet "the mapping is wrong".
+        #
+        # What would settle it: the same paired reading from a second SPH-TL3, or a
+        # single-phase load switched on one known phase with 38-52 captured either side.
+        # See also #442 on the `signed` flag - the same registers, and the reason it was
+        # left alone there is this one.
         38: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R voltage', 'alias': 'ac_voltage'},
         39: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R current', 'alias': 'ac_current'},
         40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41, 'alias': 'ac_power_high'},

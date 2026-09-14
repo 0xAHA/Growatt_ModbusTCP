@@ -94,6 +94,15 @@ These statuses live in `DTC_REGISTRY` in `auto_detection.py`, which is the singl
 | 3401 | SPF 3000-6000 ES PLUS (variant) | spf_3000_6000_es_plus | ⚠️ Unconfirmed |
 | 3402 | SPF 3000-6000 ES PLUS (variant) | spf_3000_6000_es_plus | ⚠️ Unconfirmed |
 | 3403 | SPF 3000-6000 ES PLUS (variant) | spf_3000_6000_es_plus | ⚠️ Unconfirmed |
+| 20105 | SPF 5000 ES | spf_3000_6000_es_plus | ✅ Confirmed (scan [#444](https://github.com/0xAHA/Growatt_ModbusTCP/issues/444)) |
+
+!!! note "20105 is not in the 034xx block"
+
+    The SPF 5000 ES reports its DTC at **holding register 43**, and the value is nowhere
+    near the 3400-3403 range the other off-grid models use. The off-grid detection reads
+    input 44 first, accepts only 3400-3403 there, and falls through to holding 43 - which
+    is how this one is found. If your off-grid scan reports an unknown DTC from holding 43,
+    that is worth reporting: the code itself is all that is needed to add the model.
 
 ### SPH / SPA Series — Single-Phase Hybrid
 

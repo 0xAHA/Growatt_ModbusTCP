@@ -157,15 +157,21 @@ Two consequences for how the action behaves:
 
 The action reads the clock back afterwards and logs a warning if it does not match.
 
-!!! warning "Not available on SPF/SPE"
+!!! warning "Reads on SPF/SPE, but cannot set the clock"
 
-    The off-grid protocol uses the same addresses but stores the year as an offset from 2000
-    and gives register 51 to Chip Select rather than the weekday. Writing the standard layout
-    would set the year wrongly and overwrite an unrelated register, so the action refuses
-    rather than guessing.
+    The **Inverter Clock** sensor works on off-grid models. An SPF 5000 ES read against a
+    known-good clock returned `45: 2026, 46: 9, 47: 14, 48: 8, 49: 20, 50: 29` - the full
+    four-digit year and the same field order as every other family, so drift is visible
+    there like anywhere else.
 
-    If you have an off-grid model and can post a register scan covering holding 45-51, that
-    is all that is needed to add support.
+    **Setting** it still refuses. What makes the write work elsewhere is that the year goes
+    in as two digits and reads back as four, an asymmetry that appears in no protocol
+    document and has only been confirmed on V1.39 hardware. Reading four digits does not
+    tell us which form the register accepts, and guessing wrong sets the year to 26 AD.
+
+    Set an off-grid clock from ShinePhone or the front panel. If you have an off-grid model
+    and are willing to write holding 45 and report what it reads back, that is the one
+    measurement needed to lift this.
 
 ---
 

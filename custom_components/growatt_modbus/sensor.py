@@ -1505,9 +1505,10 @@ async def async_setup_entry(
         )
     
     # Not register-driven, so it is not in SENSOR_DEFINITIONS: it reads the RTC directly
-    # rather than coming out of a GrowattData field. Off-grid profiles encode the year
-    # differently and are excluded, same as the sync button (#393).
-    if coordinator.modbus_client.is_clock_supported:
+    # rather than coming out of a GrowattData field. Offered on every profile since an
+    # off-grid device confirmed the layout reads the same as V1.39 (#444) - unlike the
+    # sync button, which still needs the write encoding confirmed.
+    if coordinator.modbus_client.is_clock_readable:
         entities.append(GrowattInverterClockSensor(coordinator, config_entry))
 
     _LOGGER.info("Created %d sensors for %s", len(entities), inverter_series)

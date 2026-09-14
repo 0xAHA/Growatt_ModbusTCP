@@ -34,7 +34,7 @@ CONST = importlib.import_module("growatt_under_test.const")
 COMPONENT = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
 SOURCE = (COMPONENT / "number.py").read_text(encoding="utf-8")
 
-BATTERY_DEPENDENT = ["bat_low_to_uti", "ac_to_bat_volt"]
+BATTERY_DEPENDENT = ["bat_low_to_uti", "ac_to_bat_volt", "bat_low_cutoff"]
 LITHIUM = 3
 
 
@@ -157,8 +157,14 @@ def test_the_reporters_values_decode_correctly_under_this_scale():
 
 
 def test_no_other_control_is_battery_dependent():
-    """Only these two registers change meaning with battery type. Inventing that behaviour
-    elsewhere would silently retype a control."""
+    """Only these three registers change meaning with battery type. Inventing that
+    behaviour elsewhere would silently retype a control.
+
+    bat_low_cutoff (holding 82) joined them in #444 on weaker evidence than the other two:
+    an SPF 5000 ES on Lithium reads 100 for the 10 % its app shows, which confirms the
+    percentage half only. It is listed here rather than pinned to a percentage because the
+    same reporter found register 94 holding 420 against his manual's 42.0 V Low DC Cut-Off
+    for Li mode - the shape of a voltage twin, which is how 37 and 95 already behave."""
     declared = {n for n, c in CONST.WRITABLE_REGISTERS.items() if c.get("battery_dependent")}
 
     assert declared == set(BATTERY_DEPENDENT), f"unexpected battery-dependent controls: {declared}"

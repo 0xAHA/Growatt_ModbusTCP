@@ -195,9 +195,10 @@ Charge Stop SOC and AC Charge Enable — an overlap that runs through this whole
 | Bulk Charge Voltage | Number | 35 | 48.0–58.4 V | C.V. charging voltage (LCD Program 19). Disabled by default |
 | Float Charge Voltage | Number | 36 | 48.0–58.4 V | Floating charging voltage (LCD Program 20). Disabled by default |
 | AC Charge Current | Number | 38 | 0–80 A | Max charging current from AC/grid (LCD Program 11) |
-| Generator Charge Current | Number | 83 | 0–80 A | Max charging current from generator |
+| Generator Charge Current | Number | 83 | 0–80 A | Max charging current from generator. Unavailable on models that answer `0xFFFF` — they have no such setting |
 | Battery to Utility Switchover | Number | 37 | 0–100 % (Lithium) / 20–64 V (Lead-acid) | SOC/voltage to switch from battery to utility |
 | Utility to Battery Switchover | Number | 95 | 0–100 % (Lithium) / 20–64 V (Lead-acid) | SOC/voltage to switch back from utility to battery |
+| Battery Cut-Off | Number | 82 | 0–100 % (Lithium) / 20–64 V (Lead-acid) | Undervoltage cut-off: how deep the battery discharges before the inverter stops drawing from it |
 
 **Output Priority options:**
 - `SBU` — Solar → Battery → Utility (battery-first, self-consumption focused)
@@ -505,7 +506,14 @@ likely EEPROM-backed with a finite write budget
 ([#392](https://github.com/0xAHA/Growatt_ModbusTCP/issues/392)), so it is not something to
 leave where it can be pressed absent-mindedly.
 
-Neither appears on off-grid (SPF/SPE) profiles, which encode the clock differently.
+On **off-grid (SPF/SPE)** profiles you get the sensor but not the button. An SPF 5000 ES
+read against a known-good clock returned `45: 2026, 46: 9, 47: 14, 48: 8, 49: 20, 50: 29` -
+the full four-digit year and the same field order as every other family - so drift is
+visible there like anywhere else. Setting the clock still refuses: what makes the write work
+elsewhere is that the year goes in as two digits and reads back as four, an asymmetry in no
+protocol document and confirmed on V1.39 hardware only. Set an off-grid clock from
+ShinePhone or the front panel
+([#444](https://github.com/0xAHA/Growatt_ModbusTCP/issues/444)).
 
 The state is formatted wall-clock text rather than a Home Assistant timestamp, because a
 timestamp sensor renders as relative time ("12 seconds ago", ticking) and is unreadable as
