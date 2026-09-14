@@ -22,10 +22,6 @@ Issues: #442, #443, #445
   which already declared it. No practical change — a battery voltage does not go negative —
   but a sign-bit reading is now decoded rather than withheld. (#442)
 
-- Internal: a test now fails if any profile gains a sensor nothing can populate. 450 such
-  sensors exist today across 32 profiles and come out in reviewed batches; this stops the
-  number growing meanwhile. (#445)
-
 ---
 
 ## v2.0.4-b9
