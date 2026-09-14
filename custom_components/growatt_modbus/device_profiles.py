@@ -157,6 +157,22 @@ STATUS_SENSORS: Set[str] = {
     # WIT debug/safety registers (read-only, disabled by default)
     "ntognd_detect", "nonstd_vac_enable", "enable_spec_set", "fast_mppt_enable",
     # Insulation/leakage diagnostics (ISO/DCI/GFCI — reg 3087-3091, disabled by default)
+    #
+    # `pv_iso` is worth a look if anyone reports it, and is recorded here rather than as an
+    # issue because it needs hardware to settle. It is in this shared group and therefore on
+    # 28 profiles, and most of those do not map input 200 — so on those it can only publish
+    # 0.0. A DCI or GFCI of zero is a correct reading on a healthy inverter, which is why
+    # those two are not suspicious; an insulation resistance of **exactly zero** is not, and
+    # would mean a dead short across the array.
+    #
+    # So the likely position is that `pv_iso` belongs with `DCDC_TEMP_SENSOR` below — opted
+    # into per profile rather than shared — but confirming that needs a scan from a profile
+    # that does map it, against one that does not. Both are disabled by default, which is
+    # why nobody has hit it.
+    #
+    # Do not remove it on the strength of this note alone: an earlier sweep that flagged
+    # sensors like these as unpopulatable was wrong about 7 in 8 of them, because it counted
+    # runtime-excluded sensors and legitimate zeroes as faults.
     "pv_iso", "dci_r", "gfci",
 }
 
