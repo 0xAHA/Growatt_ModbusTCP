@@ -270,7 +270,12 @@ MID_15000_25000TL3_X_V201 = {
 
         # Battery state — confirmed responding in issue #240 scan
         # 31214=4048 → 404.8V, 31215/31216=0/148 → 14.8A, 31217=33 → 33% SOC
-        31214: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Battery voltage (VPP)'},
+        # signed per the VPP spec: "31214 | Battery voltage | RO | INT16 | 0.1V". The TL-XH
+        # profiles already declared it and this one did not - an inconsistency found by
+        # auditing the same address across profiles (#442). Inert in normal operation, since
+        # a battery voltage does not go negative; declared so the two agree and so a
+        # sign-bit reading is decoded rather than withheld.
+        31214: {'name': 'battery_voltage', 'scale': 0.1, 'unit': 'V', 'signed': True, 'desc': 'Battery voltage (VPP)'},
         31215: {'name': 'battery_current_vpp_high', 'scale': 1, 'unit': '', 'pair': 31216},
         31216: {'name': 'battery_current_vpp_low', 'scale': 1, 'unit': '', 'pair': 31215, 'combined_scale': 0.1, 'combined_unit': 'A', 'signed': True, 'maps_to': 'battery_current'},
         31217: {'name': 'battery_soc', 'scale': 1, 'unit': '%', 'desc': 'Battery SOC (VPP)'},

@@ -67,7 +67,9 @@ KNOWN_PHANTOM_TEMPERATURES = {
     "mic_600_3300tl_x": {"boost_temp"},
     "mic_600_3300tl_x_v201": {"boost_temp"},
     "spe_8000_12000_es": {"battery_temp", "boost_temp", "ipm_temp"},
-    "spf_3000_6000_es_plus": {"battery_temp", "boost_temp", "ipm_temp"},
+    # battery_temp removed from this profile's sensor set in #443 - the SPF has no
+    # battery temperature sensor at all, which its own profile docstring says.
+    "spf_3000_6000_es_plus": {"boost_temp", "ipm_temp"},
     "tl3_s_3000_15000": {"boost_temp", "ipm_temp"},
 }
 

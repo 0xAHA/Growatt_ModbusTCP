@@ -4,6 +4,30 @@
 
 ---
 
+## v2.0.4-b10
+
+Issues: #442, #443, #445
+
+- **SPF: three sensors that could only ever read zero are removed.** Battery Temperature,
+  Load Energy Today and Load Energy Total had nothing behind them on this profile — the SPF
+  has no battery temperature sensor at all, which the profile's own notes say, and no
+  register for load energy. They published `0.0` for ever, which on a counter is worse than
+  absent because it goes into the Energy Dashboard. Reported by @takisbg.
+
+  **Those three entities disappear on SPF.** Their recorded history stays; nothing else on
+  the profile changes.
+
+- **MID: battery voltage from the VPP range is read as signed**, matching the VPP
+  specification (`31214 | Battery voltage | RO | INT16 | 0.1V`) and the TL-XH profiles,
+  which already declared it. No practical change — a battery voltage does not go negative —
+  but a sign-bit reading is now decoded rather than withheld. (#442)
+
+- Internal: a test now fails if any profile gains a sensor nothing can populate. 450 such
+  sensors exist today across 32 profiles and come out in reviewed batches; this stops the
+  number growing meanwhile. (#445)
+
+---
+
 ## v2.0.4-b9
 
 Issues: #444

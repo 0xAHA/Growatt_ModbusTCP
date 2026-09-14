@@ -840,6 +840,23 @@ INVERTER_PROFILES = {
         "has_pv3": False,
         "has_battery": True,
         "max_power_kw": 6.0,
+        # First reduction of the unpopulatable sensors on this profile (#443, #445).
+        #
+        # SPF has no BMS block and no grid-side energy meter, so several sensors inherited
+        # from the shared groups have nothing to fill them and published 0.0 for ever. A
+        # counter stuck at zero is not neutral: it goes into the Energy Dashboard and cannot
+        # afterwards be told apart from a real one.
+        #
+        # `battery_temp` is the clearest: this profile's own docstring says "Battery
+        # Temperature: NOT AVAILABLE (SPF hardware does not provide battery temp sensor)",
+        # and NO_BATTERY_TEMP exists for exactly this - it simply was not applied here.
+        #
+        # `load_energy_today`/`_total` are the ones @takisbg reported reading 0 kWh while
+        # the inverter was working normally.
+        #
+        # The rest of this profile's list is in tests/phantom_sensor_baseline.json and comes
+        # out in reviewed batches - removing an entity takes it off dashboards and stops its
+        # history, so it is not something to do in bulk on a static analysis.
         "sensors": (
             BASIC_PV_SENSORS |
             BASIC_AC_SENSORS |
@@ -849,7 +866,7 @@ INVERTER_PROFILES = {
             TEMPERATURE_SENSORS |
             STATUS_SENSORS |
             SPF_OFFGRID_SENSORS
-        ),
+        ) - NO_BATTERY_TEMP - {"load_energy_today", "load_energy_total"},
     },
 
     "spe_8000_12000_es": {
