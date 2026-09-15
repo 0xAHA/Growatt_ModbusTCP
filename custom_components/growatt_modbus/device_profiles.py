@@ -118,6 +118,24 @@ BATTERY4_SENSORS: Set[str] = {f"battery4_{f}" for f in _EXTRA_BATTERY_FIELDS}
 # hard filter available, so exclusion has to happen here.
 NO_BATTERY_TEMP: Set[str] = {"battery_temp"}
 
+# Boost and IPM temperature do not exist on the off-grid protocol (#443).
+#
+# TEMPERATURE_SENSORS carries both, and the off-grid families inherit that group whole -
+# but the off-grid register table has no Boost or IPM temperature at all. Its temperatures
+# are InvTemp (25), DcDc (26), Buck1/Buck2 (32/33) and, further out, TxTemp, LLCTemp and
+# EnvTemp. Nothing maps to these two names, so `_find_register_by_name` returns None, the
+# field keeps its 0.0 default and both sensors report 0.0 C for ever.
+#
+# Confirmed on hardware rather than inferred from the default: @takisbg's SPF 6000 ES PLUS
+# shows Boost 0.0 C and IPM 0.0 C in the same Diagnostic card where DC-DC reads 21.8 C and
+# Inverter reads 37.1 C - so the two with registers work and the two without do not.
+#
+# Do NOT map these to holding 94/95 to "fix" them. `profiles/helpers.py` uses those
+# addresses for ipm_temp and boost_temp on other families; on off-grid, holding 94 and 95
+# are the low-voltage cut-off and uwAC2BatVolt, which would publish a battery threshold as
+# a temperature.
+NO_BOOST_OR_IPM_TEMP: Set[str] = {"boost_temp", "ipm_temp"}
+
 # dcdc_temp is NOT in TEMPERATURE_SENSORS, and must not be put back there.
 #
 # It was, briefly, and the consequences were the exact bug the change above exists to
@@ -882,7 +900,7 @@ INVERTER_PROFILES = {
             TEMPERATURE_SENSORS |
             STATUS_SENSORS |
             SPF_OFFGRID_SENSORS
-        ) - NO_BATTERY_TEMP - {"load_energy_today", "load_energy_total"},
+        ) - NO_BATTERY_TEMP - NO_BOOST_OR_IPM_TEMP - {"load_energy_today", "load_energy_total"},
     },
 
     "spe_8000_12000_es": {
@@ -902,7 +920,7 @@ INVERTER_PROFILES = {
             TEMPERATURE_SENSORS |
             STATUS_SENSORS |
             SPE_OFFGRID_SENSORS
-        ),
+        ) - NO_BOOST_OR_IPM_TEMP,
     },
 
     # ========================================================================

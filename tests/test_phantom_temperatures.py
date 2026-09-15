@@ -60,16 +60,26 @@ def _register_names(profile_key: str) -> set[str]:
 # inventing an address or deleting a sensor that may work — both need a device.
 #
 # Listed explicitly so the count can only go down. A new profile with a phantom
-# temperature fails; these six are known debt, and removing a name from this list when a
-# scan settles it is the intended way to close them.
+# temperature fails; the rest are known debt, and removing a name from this list when a
+# scan settles it is the intended way to close them - which is what happened to the
+# off-grid pair below.
+#
+# `boost_temp` and `ipm_temp` closed on both off-grid profiles in #443. They were listed
+# here as "plausible for the hardware, no register mapped, no scan to settle it"; the
+# off-grid protocol table settles it, because it has no Boost or IPM temperature at any
+# address, and @takisbg's SPF 6000 ES PLUS showed both reading 0.0 C beside a DC-DC of
+# 21.8 C and an inverter temperature of 37.1 C. Removed from those sensor sets rather than
+# mapped - see NO_BOOST_OR_IPM_TEMP in device_profiles.py for why holding 94/95 are not
+# the answer on this family.
+#
+# SPE keeps `battery_temp`: unlike SPF, whose own docstring states the hardware has no
+# battery temperature sensor, the off-grid table does carry BMS temperatures (input 206,
+# 251, 252). It is unmapped rather than absent, and settling it needs a scan from an SPE.
 KNOWN_PHANTOM_TEMPERATURES = {
     "mic_2500_5500mtl_s": {"boost_temp"},
     "mic_600_3300tl_x": {"boost_temp"},
     "mic_600_3300tl_x_v201": {"boost_temp"},
-    "spe_8000_12000_es": {"battery_temp", "boost_temp", "ipm_temp"},
-    # battery_temp removed from this profile's sensor set in #443 - the SPF has no
-    # battery temperature sensor at all, which its own profile docstring says.
-    "spf_3000_6000_es_plus": {"boost_temp", "ipm_temp"},
+    "spe_8000_12000_es": {"battery_temp"},
     "tl3_s_3000_15000": {"boost_temp", "ipm_temp"},
 }
 

@@ -4,6 +4,22 @@
 
 ---
 
+## v2.0.4-b13
+
+Issues: #443
+
+- **SPF/SPE: Boost Temperature and IPM Temperature are removed.** Neither exists anywhere
+  in the off-grid register table — its temperatures are Inverter, DC-DC, Buck1 and Buck2 —
+  so both sensors reported 0.0 °C for ever. A power module apparently sitting at freezing
+  reads as a measurement rather than as missing data.
+
+  **Those two entities disappear on off-grid profiles.** Recorded history stays; the
+  temperatures that do have registers are unchanged. Found by @takisbg, whose Diagnostic
+  card showed both at 0.0 °C beside a DC-DC of 21.8 °C and an inverter temperature of
+  37.1 °C — the two with registers working, the two without not.
+
+---
+
 ## v2.0.4-b12
 
 Issues: #434
