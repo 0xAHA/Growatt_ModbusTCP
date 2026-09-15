@@ -166,18 +166,14 @@ def test_nothing_is_disputed_when_the_current_registers_disagree():
     assert c._battery_power_scale_disputed is False
 
 
-def test_the_decode_withholds_a_disputed_reading():
-    source = (COMPONENT / "growatt_modbus.py").read_text(encoding="utf-8")
-    assert "elif self._battery_power_scale_disputed:" in source, (
-        "battery power is still published while its scale is contradicted"
-    )
-    marker = source.index("elif self._battery_power_scale_disputed:")
-    block = source[marker:marker + 900]
-    for field in ("battery_power", "charge_power", "discharge_power"):
-        assert field in block, (
-            f"{field} is not marked unread, so it would publish 0 and look like an idle "
-            "battery rather than an unknown one (#384)"
-        )
+# The decode's withholding is tested in test_withheld_battery_is_unknown.py, by running
+# the read path and handing its output to the sensors.
+#
+# A test used to live here that read growatt_modbus.py and confirmed the withholding branch
+# marked the fields unread. It did, and the test passed throughout the bug it was meant to
+# prevent: Battery Power is a calculated sensor that never consulted those marks, and
+# published 0 W at two withheld polls on the reporter's WIT. Checking that a value is
+# flagged says nothing about whether anything reads the flag (#434).
 
 
 # ---------------------------------------------------------------------------

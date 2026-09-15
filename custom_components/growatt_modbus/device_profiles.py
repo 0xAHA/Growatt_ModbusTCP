@@ -136,6 +136,15 @@ NO_BATTERY_TEMP: Set[str] = {"battery_temp"}
 # a temperature.
 NO_BOOST_OR_IPM_TEMP: Set[str] = {"boost_temp", "ipm_temp"}
 
+# AC Voltage RS/ST/TR on a register map with nothing to fill them (#447).
+#
+# The read path fills these from registers named line_voltage_rs/st/tr. The V2.01 SPH-TL3
+# map has them at VPP 31106-31108; the legacy SPH-TL3 map has no such register at all,
+# because it does not read the VPP range, so on that profile the three sensors can only ever
+# publish their 0.0 default. Mapping the V1.39 addresses instead is not an option: input
+# 50-52 read 0.0 on two SPH 10000 TL3 BH-UP units with a live three-phase grid (#442, #447).
+NO_LINE_VOLTAGES: Set[str] = {"ac_voltage_rs", "ac_voltage_st", "ac_voltage_tr"}
+
 # dcdc_temp is NOT in TEMPERATURE_SENSORS, and must not be put back there.
 #
 # It was, briefly, and the consequences were the exact bug the change above exists to
@@ -757,7 +766,8 @@ INVERTER_PROFILES = {
         "has_pv3": False,
         "has_battery": True,
         "max_power_kw": 10.0,
-        "sensors": HYBRID_3P_SENSORS | BMS_SENSORS,
+        # The V2.01 variant below keeps the line voltages; it has a source for them.
+        "sensors": (HYBRID_3P_SENSORS | BMS_SENSORS) - NO_LINE_VOLTAGES,
     },
 
     # SPH-TL3 V2.01 VPP Protocol

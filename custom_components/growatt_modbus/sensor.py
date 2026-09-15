@@ -1728,7 +1728,14 @@ def _signed_grid_power(data) -> float | None:
     charge = getattr(data, "charge_power", 0) or 0
     discharge = getattr(data, "discharge_power", 0) or 0
 
-    if load == 0 and charge == 0 and discharge == 0:
+    # A withheld battery is not an idle one (#434). The guard below reads "no load and no
+    # battery flow" as "nothing to balance against", and answers 0.0 at night. But the read
+    # path zeros charge and discharge when it withholds them - on a failed block read
+    # (#384), or when voltage x current disputes the battery power scale - so at night a
+    # battery discharging 540 W arrived here as 0/0 and came out as an idle site with no
+    # grid flow. Only a battery that was actually read may vouch for that.
+    battery_unread = "charge_power" in unread or "discharge_power" in unread
+    if load == 0 and charge == 0 and discharge == 0 and not battery_unread:
         # Nothing to balance solar against. With no generation either, the site really is
         # idle and zero is a fair answer; with generation, the expression degenerates to
         # `solar` and would be published as grid flow.
@@ -1766,6 +1773,76 @@ def _signed_grid_power(data) -> float | None:
         return None
 
     return float((solar + discharge) - (load + charge))
+
+
+def _signed_battery_power(data) -> float | None:
+    """Battery power as one signed number, positive = charging. None when it is not knowable.
+
+    Battery Power is a calculated sensor: it is rebuilt from `charge_power` and
+    `discharge_power` rather than read from a field of its own. Calculated sensors return
+    before the generic "was this read?" check in native_value, so this one never looked -
+    and when the read path withheld both halves it saw 0 and 0 and published 0 W (#434).
+
+    The read path withholds them for two reasons, and both leave the fields at 0.0 with the
+    fact recorded in `unread_fields`: the battery block was not read this poll (#384), or
+    this poll's voltage x current contradicted the scale about to be applied to the power
+    register. A WIT reporter's history showed the second exactly - `0` at two polls where
+    the battery was discharging 10.3 A and 10.4 A - which is worse than a tenth of the
+    truth, because zero is what an idle battery really reads.
+
+    Extracted from the entity so tests can run it; see _signed_grid_power for why.
+    """
+    unread = getattr(data, "unread_fields", None) or set()
+    if any(name in unread for name in ("battery_power", "charge_power", "discharge_power")):
+        return None
+
+    charge = getattr(data, "charge_power", 0) or 0
+    discharge = getattr(data, "discharge_power", 0) or 0
+    if charge > 0:
+        return round(float(charge), 1)
+    if discharge > 0:
+        return round(-float(discharge), 1)
+    return 0.0
+
+
+def _house_consumption(data) -> float | None:
+    """House load in watts, from the load register or the energy balance. None if unknowable.
+
+    Prefers `power_to_load` when it was read and is non-zero. Otherwise balances
+    solar + battery discharge + grid import against battery charge + grid export -
+    self_consumption_power (reg 1037/1038 on HU) is NOT used, because it reports solar
+    self-consumed rather than total house load and omits battery discharge and grid import.
+
+    The balance used to run on whatever the fields held, withheld or not. With the battery
+    withheld (#434) both battery terms are 0, `has_battery` goes false, and the house was
+    reported as solar minus export - leaving out a battery that was carrying the load. Every
+    term of the balance must have been read, the same rule _signed_grid_power applies to
+    its own estimate. An input the profile never mapped is not unread, and keeps its default.
+    """
+    unread = getattr(data, "unread_fields", None) or set()
+
+    load = getattr(data, "power_to_load", 0) or 0
+    if load != 0 and "power_to_load" not in unread:
+        return round(max(0, load), 1)
+
+    if any(name in unread for name in (
+        "pv_total_power", "power_to_grid", "power_to_user", "charge_power", "discharge_power",
+    )):
+        return None
+
+    solar = getattr(data, "pv_total_power", 0) or 0
+    export = getattr(data, "power_to_grid", 0) or 0
+    import_power = getattr(data, "power_to_user", 0) or 0
+    charge = getattr(data, "charge_power", 0) or 0
+    discharge = getattr(data, "discharge_power", 0) or 0
+
+    has_battery = charge > 0 or discharge > 0
+    has_grid = export > 0 or import_power > 0
+    if has_battery or has_grid:
+        balance = solar + discharge - charge + import_power - export
+    else:
+        balance = max(0, solar - export)
+    return round(max(0, balance), 1)
 
 
 class GrowattModbusSensor(GrowattEntity, SensorEntity):
@@ -1927,43 +2004,20 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
                 
             elif self._sensor_key == "house_consumption":
-                # House consumption
-                load = getattr(data, "power_to_load", 0)
-
-                if load == 0:
-                    # Energy balance: solar + battery_discharge - battery_charge + grid_import - grid_export
-                    # self_consumption_power (reg 1037/1038 on HU) is NOT used — it reports
-                    # solar self-consumed, not total house load (omits battery discharge + grid import).
-                    solar = getattr(data, "pv_total_power", 0)
-                    export = getattr(data, "power_to_grid", 0)
-                    import_power = getattr(data, "power_to_user", 0)
-                    charge = getattr(data, "charge_power", 0)
-                    discharge = getattr(data, "discharge_power", 0)
-                    has_battery = (charge > 0 or discharge > 0)
-                    has_grid = (export > 0 or import_power > 0)
-                    if has_battery or has_grid:
-                        load = solar + discharge - charge + import_power - export
-                    else:
-                        load = max(0, solar - export)
-
-                raw_value = round(max(0, load), 1)
+                # See _house_consumption: every term of the balance must have been read.
+                raw_value = _house_consumption(data)
+                if raw_value is None:
+                    return None
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
-            
+
             elif self._sensor_key == "battery_power":
-                # Battery power: positive = charging, negative = discharging
-                charge_power = getattr(data, "charge_power", 0)
-                discharge_power = getattr(data, "discharge_power", 0)
-                
-                if charge_power > 0:
-                    raw_value = round(charge_power, 1)  # Positive for charging
-                elif discharge_power > 0:
-                    raw_value = round(-discharge_power, 1)  # Negative for discharging
-                else:
-                    raw_value = 0
-                
+                # See _signed_battery_power: a withheld battery is unknown, not 0 W (#434).
+                raw_value = _signed_battery_power(data)
+                if raw_value is None:
+                    return None
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)
-            
-            
+
+
             elif self._sensor_key == "grid_energy_today":
                 # Net grid energy = export − import. Positive = net export for the day.
                 export_energy = getattr(data, "energy_to_grid_today", 0)

@@ -280,6 +280,16 @@ what your model allows will be rejected by the inverter and the entity will reve
         check its value on the device page to confirm. Reported by @eugeniodb on
         [#428](https://github.com/0xAHA/Growatt_ModbusTCP/issues/428).
 
+
+**Grid Connection Status on SPF/SPE reports what the inverter is running on, not whether
+mains is present.** It reads the off-grid status code: AC charging in any combination, or
+bypassing the AC input straight to the load, is **On-grid**; discharging the battery, PV
+charging, or PV charging while discharging is **Off-grid**. Standby, Fault and Flash say
+nothing either way and fall back to the AC input voltage. So an SPF on battery-first
+priority can show **Off-grid with 230 V at its input** - the utility is there, and the
+inverter is choosing not to use it. If you want to know whether mains is up, use **Grid
+Voltage** ([#443](https://github.com/0xAHA/Growatt_ModbusTCP/issues/443)).
+
 ---
 
 ## WIT Commercial Hybrid Inverters
@@ -337,7 +347,10 @@ Two things follow from that, both fixed in v2.0.4-b12
 - **Battery Power goes unknown rather than wrong** in the window where voltage x current
   has already contradicted the scale in force but the replacement is not yet confirmed. A
   gap in the graph is recoverable; a plausible wrong number goes into long-term statistics
-  and cannot be told apart from a real one afterwards.
+  and cannot be told apart from a real one afterwards. **House Consumption and Grid Power
+  follow it** when they would otherwise have been worked out from the withheld battery
+  figures - before v2.0.4-b15 Battery Power showed 0 W in that window, which is what an idle
+  battery really reads, and the two derived sensors quietly left the battery out.
 
 If a remembered scale is ever wrong, real load overrules it: detection keeps running, and
 three consistent samples of the other scale replace it. Changing profile discards it

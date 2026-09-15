@@ -48,29 +48,32 @@ SPH_TL3_3000_10000 = {
 
         # Three-Phase AC Output, registers 38-49.
         #
-        # UNRESOLVED on SPH-TL3, and left mapped as the protocol describes them until a
-        # second device says otherwise. An SPH 10000TL3 BH-UP owner measured this block
-        # against the rest of the same poll and found three things that do not fit (#442):
+        # CONFIRMED ODD on two SPH 10000 TL3 BH-UP units, and still mapped as the protocol
+        # describes them - the observation is settled, what to do about it is not.
         #
-        #   1. Power is the exact product of the other two, to the last digit, on all three
-        #      phases - 409.1 V x 0.4 A = 163.64 against 163.6 W read, and 409.4 x 11.1 =
-        #      4544 against 4548.8. A measured quantity does not agree with a computed one
-        #      that precisely, so 40-49 look derived rather than sensed on this firmware.
-        #   2. The voltage is line-to-line, not phase: 398-416 V on a 230/400 V supply.
-        #      Registers 50/51/52, which the protocol assigns to line-to-line, read a flat
-        #      0.0 V - checked independently with an ESPHome modbus_controller on the same
-        #      inverter, so the zeros are the device's and not ours.
-        #   3. The three do not sum to anything real. At 3.19 kW of actual output they
-        #      summed to 5.12 kW, with phase R alone at 4548.8 W and 11.1 A while the other
-        #      two sat at 0.7 A. No three-phase inverter delivers that.
+        # #442 measured this block against the rest of one poll; #447, a different owner on
+        # a different site, confirms the same three things in a register scan at a quite
+        # different operating point:
         #
-        # NOT changed on that evidence. One device, one firmware, and the names come from
-        # the V1.39 table which gives 38-49 as per-phase grid voltage, current and apparent
-        # power. Renaming or withholding them would break every other SPH-TL3 owner to fix
-        # one, and "the reading is odd on my unit" is not yet "the mapping is wrong".
+        #   1. Power is the exact product of voltage and current. #442: 409.1 V x 0.4 A =
+        #      163.64 against 163.6 W, and 409.4 x 11.1 = 4544 against 4548.8. #447: 3128.4 W
+        #      / 7.9 A = 396.0 V, which is register 38 to the tenth. 40-49 are derived here,
+        #      not sensed.
+        #   2. The voltage is line-to-line, not phase. #442: 398-416 V. #447: 396-397 V while
+        #      the portal's DTSU666 meter showed 230.1 / 229.3 / 229.5 V per phase. The ratio
+        #      is sqrt(3). Registers 50/51/52, which V1.39 assigns to line-to-line, read 0.0
+        #      on both, so their real source on this hardware is VPP 31106-31108 (below).
+        #   3. So the per-phase power overstates by about sqrt(3). #447's phases summed to
+        #      9466 W against 5543 W of actual output - a ratio of 1.71. #442's summed to
+        #      5.12 kW against 3.19 kW.
         #
-        # What would settle it: the same paired reading from a second SPH-TL3, or a
-        # single-phase load switched on one known phase with 38-52 captured either side.
+        # NOT changed yet, deliberately. The fix is not a rename: dividing 38/42/46 by sqrt(3)
+        # would invent a phase voltage that is only exact on a perfectly balanced supply, and
+        # the power figures inherit the same error. Every SPH-TL3 owner sees these three
+        # entities, and a change to what they mean needs deciding once, properly, rather than
+        # folding into a release about something else. The line voltages, which had no source
+        # at all, are fixed now; this is the remaining half.
+        #
         # See also #442 on the `signed` flag - the same registers, and the reason it was
         # left alone there is this one.
         38: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R voltage', 'alias': 'ac_voltage'},
@@ -497,11 +500,41 @@ SPH_TL3_3000_10000_V201 = {
         # SPH-TL3 is a 2-string profile at VPP level.
         **VPP_V201_PV2_TOTAL,
 
-        # Three-Phase AC Output
-        31100: {'name': 'ac_voltage_r_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'ac_voltage_r'},
-        31101: {'name': 'ac_voltage_s_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'ac_voltage_s'},
-        31102: {'name': 'ac_voltage_t_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'ac_voltage_t'},
-        31103: {'name': 'ac_frequency_vpp', 'scale': 0.01, 'unit': 'Hz', 'maps_to': 'ac_frequency'},
+        # Grid AC block, 31100-31111 - laid out per the VPP input table (#447).
+        #
+        # This used to map 31100/31101/31102 as phase R/S/T voltage and 31103 as frequency.
+        # The VPP table gives 31100-31101 as Active power (INT32), 31102-31103 as Reactive
+        # power (INT32), 31104 reserved, 31105 Grid frequency, and 31106-31108 as the three
+        # line voltages. An SPH 10000 TL3 BH-UP scan agrees with the table and not with the
+        # old map: 31100/31101 = 0/55417 (5541.7 W, the inverter's output at the time),
+        # 31105 = 5001 (50.01 Hz), 31106-31108 = 3964/3971/3966.
+        #
+        # The old entries were never used - name lookup walks this dict in order, and the
+        # legacy 37/38/42/46 merged in above match `ac_frequency` and `ac_voltage_r/s/t`
+        # first - so removing them changes no published value. They are corrected rather than
+        # left because the next reader, or the next profile copied from this one, would have
+        # taken a power register for a voltage.
+        #
+        # No phase-voltage register exists in this block. Frequency keeps a documented
+        # fallback at 31105 for the same reason the old one existed.
+        31105: {'name': 'ac_frequency_vpp', 'scale': 0.01, 'unit': 'Hz', 'maps_to': 'ac_frequency',
+                'desc': 'Grid frequency (VPP input table, 0.01 Hz)'},
+
+        # Line voltages, 31106-31108 - the only source for AC Voltage RS/ST/TR on SPH-TL3.
+        #
+        # Named line_voltage_* because that is what the read path looks up to fill
+        # ac_voltage_rs/st/tr, exactly as on MID. Before this, nothing on either SPH-TL3
+        # profile carried those names, so the three sensors published their 0.0 default for
+        # ever - reported on #447, where the portal's meter showed 230 V per phase while
+        # Home Assistant showed 0. The V1.39 addresses for the same quantity, input 50-52,
+        # are not a substitute: they read 0.0 on two SPH 10000 TL3 BH-UP units on live
+        # grids (#442 checked with an ESPHome modbus_controller, #447 in a register scan).
+        31106: {'name': 'line_voltage_rs', 'scale': 0.1, 'unit': 'V',
+                'desc': 'AB line voltage (VPP input table); 396.4 V on #447'},
+        31107: {'name': 'line_voltage_st', 'scale': 0.1, 'unit': 'V',
+                'desc': 'BC line voltage (VPP input table); 397.1 V on #447'},
+        31108: {'name': 'line_voltage_tr', 'scale': 0.1, 'unit': 'V',
+                'desc': 'CA line voltage (VPP input table); 396.6 V on #447'},
 
         # Grid/Meter Power (maps to power_to_grid at 1029/1030)
         31112: {'name': 'meter_power_high', 'scale': 1, 'unit': '', 'pair': 31113, 'maps_to': 'power_to_grid'},

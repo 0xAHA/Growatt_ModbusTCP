@@ -251,6 +251,26 @@ The integration handles this for you: every entry pointing at the same device pa
 
 **Serial setups need v1.7.0 or later for this.** Before that, only TCP entries were coordinated — each serial entry opened its own client on the same adapter and paced only itself, which produced random read failures on *all* the inverters sharing that bus. If you have two entries on one adapter and see unexplained dropouts, this is the first thing to rule out.
 
+### WIT: every unit answers on address 1, whatever ShineTools says
+
+Sharing a bus depends on each inverter having its own Modbus address. **On the WIT HU15 the
+EMS/VPP RS485 address cannot be changed** - confirmed on firmware `3030` and `5050`, across
+two units. Setting the EMS COM address to 2, and separately to 3, in ShineTools was accepted
+and then read back as 1, and a standalone Modbus client found each unit answering only on 1
+([#414](https://github.com/0xAHA/Growatt_ModbusTCP/issues/414)).
+
+So **two such WITs on one shared RS485 bus collide**: both answer every request addressed to
+1, and neither reads reliably. It looks like an intermittent fault between the two, and the
+tell is that unplugging either inverter's RS485 line immediately steadies the other.
+Separate TCP ports or separate IPs on the network side do not help if the RS485 side behind
+them is one bus.
+
+Give each unit an RS485 bus of its own - a separate adapter, or a separate channel on a
+multi-channel gateway where that channel is genuinely its own bus rather than a shared one.
+The only other route is Growatt's own parallel / master-slave arrangement. Growatt does not
+publish firmware changelogs, so whether a later release honours the setting is unknown; test
+it with a standalone client before relying on it.
+
 ### Two adapters: check they are actually two
 
 The most common cheap USB-RS485 adapters use the **CH340** chip (USB vendor `1a86`), and CH340s ship **without a serial number**. That has two consequences if you own two of them:

@@ -79,7 +79,7 @@ Worth including: your adapter model, and whether the problem survives a restart 
 
     **Check it with a standalone client** (QModMaster, modpoll) pointed at the same host and port, trying unit IDs 1 to 8. Most Growatt inverters answer on **1**.
 
-    **Do not trust the address configured in ShineTools.** On a WIT running firmware 5050 the EMS COM address was set to 2 and the port went on answering only on 1.
+    **Do not trust the address configured in ShineTools.** On the WIT HU15 the EMS COM address is fixed at 1 on firmware 3030 and 5050 alike: set to 2 or 3, ShineTools reads it back as 1 and the port answers only on 1. See [two or more inverters on one adapter](rs485-gateways.md#two-or-more-inverters-on-one-adapter) if you were planning to share a bus.
 
     From v1.10.0-b7 the integration raises a repair notice when an entry has never had a successful read since setup, and the **Unit / Slave ID** can be corrected under **Configure** without deleting the entry — so your entity IDs, automations and statistics history survive the fix.
 

@@ -4,6 +4,36 @@
 
 ---
 
+## v2.0.4-b15
+
+Issues: #434, #447, #443, #414
+
+- **Battery Power shows unknown, not 0 W, when its reading is withheld.** v2.0.4-b12 began
+  withholding WIT battery power while its scale is in dispute, and Battery Charge Power and
+  Battery Discharge Power went unknown as intended — but Battery Power published **0 W**,
+  which is what an idle battery really reads. The same happened on any profile when the
+  battery block failed to read. **House Consumption and Grid Power** no longer fill in the
+  withheld battery as zero either. Found in @Wojak129's history export.
+
+- **SPH-TL3 (V2.01): AC Voltage RS, ST and TR now report.** Nothing on the SPH-TL3 profiles
+  fed them, so all three sat at 0 V. They now read the line voltages from the inverter's VPP
+  registers — around 400 V on a 230/400 V supply, which is correct for line-to-line.
+  Confirmed from @AzraelsDisk's register scan.
+
+  **On the legacy SPH-TL3 profile those three entities are removed.** It has no source for
+  them, and the older addresses read 0 on two inverters with a live grid.
+
+- **SPH-TL3 (V2.01): register map correction, no visible change.** Four entries were mapped
+  to power registers as if they were voltages and frequency. They were never used, so no
+  published value moves; they are corrected so they are not copied into another profile.
+
+- **Docs:** on the WIT HU15 the EMS/VPP RS485 address is fixed at 1 regardless of ShineTools,
+  so two units cannot share one RS485 bus (thanks @Svetlonos76). And on SPF/SPE, Grid
+  Connection Status reports what the inverter is running on, not whether mains is present —
+  Off-grid with 230 V at the input is normal on battery-first priority.
+
+---
+
 ## v2.0.4-b14
 
 Issues: #443
