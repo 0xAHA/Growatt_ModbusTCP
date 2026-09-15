@@ -1377,6 +1377,46 @@ SPF_STATUS_CODES = {
     12: {'name': 'PV Charge+Discharge',  'desc': 'PV charging battery while discharging to load'},
 }
 
+# Which off-grid status codes settle whether the utility is carrying the system (#443).
+#
+# Anything with AC in it - charging from the AC input in any combination, or bypassing it
+# straight to the load - proves the utility is present and in use. Discharge, PV Charge and
+# PV Charge+Discharge prove it is not. Standby, No Use, Fault and Flash say nothing either
+# way and defer to the measured AC input voltage.
+SPF_STATUS_AC_INPUT_ACTIVE = frozenset({6, 7, 8, 9, 10, 11})
+SPF_STATUS_AC_INPUT_IDLE = frozenset({2, 5, 12})
+
+# AC input volts above which the supply is considered present. Well clear of a floating
+# input and far below any nominal supply this hardware is sold against.
+SPF_GRID_PRESENT_VOLTS = 50.0
+
+
+def offgrid_grid_connection_status(
+    status: int,
+    grid_voltage: float,
+    grid_voltage_unread: bool = False,
+) -> str:
+    """Grid Connection Status for an SPF/SPE, from register 0 and the AC input voltage.
+
+    Register 0 carries `inverter_status` on every family and means different things in
+    each. The grid-tied reading is "0 = Waiting, 1 = Normal", both implying a grid
+    connection - but off-grid 0 is Standby and 1 is No Use, so applying it there returned
+    "On-grid" for the two states that mean the opposite, and "Unknown" for every state an
+    SPF actually runs in. A reporter's sensor had never shown anything but Unknown.
+
+    Lives here rather than in sensor.py so it can be tested against SPF_STATUS_CODES
+    directly instead of through a Home Assistant entity.
+    """
+    if status in SPF_STATUS_AC_INPUT_ACTIVE:
+        return "On-grid"
+    if status in SPF_STATUS_AC_INPUT_IDLE:
+        return "Off-grid"
+    # Nothing in the status code settles it. Fall back to the measurement - but a register
+    # that was not read is not evidence of a mains failure.
+    if grid_voltage_unread:
+        return "Unknown"
+    return "On-grid" if grid_voltage > SPF_GRID_PRESENT_VOLTS else "Off-grid"
+
 # Registers per Modbus request, as offered in the options flow.
 #
 # The keys are what the form stores; the values are what the read path uses, with 0

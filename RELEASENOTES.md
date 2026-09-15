@@ -4,6 +4,23 @@
 
 ---
 
+## v2.0.4-b14
+
+Issues: #443
+
+- **SPF/SPE: Grid Connection Status works.** It read the off-grid status register with the
+  grid-tied code table, and the two sets mean different things: off-grid `0` is Standby and
+  `1` is No Use, so the two codes that reported "On-grid" mean the opposite, while every
+  state an SPF actually runs in — Discharge, PV Charge, AC Charge, Bypass — fell through to
+  "Unknown". On off-grid hardware the sensor had never shown anything else.
+
+  **It now reports On-grid or Off-grid on SPF and SPE.** AC charging in any combination, or
+  bypassing the input straight to the load, means the utility is carrying the system;
+  Discharge and PV Charge mean it is not. Standby, No Use, Fault and Flash defer to the
+  measured AC input voltage. Grid-tied profiles are unchanged. Reported by @takisbg.
+
+---
+
 ## v2.0.4-b13
 
 Issues: #443

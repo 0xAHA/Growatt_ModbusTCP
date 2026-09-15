@@ -31,6 +31,7 @@ from .const import (
     CONF_INVERT_GRID_POWER,
     get_device_type_for_sensor,
     get_entity_category,
+    offgrid_grid_connection_status,
 )
 from .coordinator import GrowattModbusCoordinator
 from .entity import GrowattEntity
@@ -2094,6 +2095,17 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
                     if status in (7, 8):
                         return "Off-grid"
                     return "Unknown"
+                elif inverter_series.startswith(("spf_", "spe_")):
+                    # Off-grid reads the SAME register 0 with a completely different code
+                    # set, so the grid-tied interpretation below is wrong here (#443). The
+                    # decision lives in const.py beside SPF_STATUS_CODES, where it can be
+                    # tested against that table without a Home Assistant entity.
+                    return offgrid_grid_connection_status(
+                        data.status,
+                        getattr(data, "grid_voltage", 0.0) or 0.0,
+                        "grid_voltage" in getattr(data, "unread_fields", ()),
+                    )
+
                 else:
                     # Legacy inverter_status (reg 0): 0=Waiting, 1=Normal, 3=Fault
                     # For all grid-tied/hybrid profiles 0 (idle) and 1 (normal) both
