@@ -226,6 +226,15 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         _store_key = f"{DOMAIN}.{entry.entry_id}_energy_totals"
         self._energy_store: Store = Store(hass, version=1, key=_store_key)
 
+        # Battery power scale, carried across sessions (#434).
+        #
+        # It lives in the energy store rather than a store of its own because that file is
+        # already loaded at setup and written after polls - a second one would double the
+        # disk traffic to persist a single float. The profile key is stored beside it: a
+        # scale validated for one register map means nothing for another, so changing
+        # profile discards it rather than applying it to different registers.
+        self._persisted_battery_power_scale: float | None = None
+
         # Midnight grace window: set by _handle_midnight_reset() and checked in
         # _protect_energy_totals() to suppress stale pre-reset values that the inverter
         # reports before it clears its own daily counters (~30–90 s after HA midnight).
@@ -1495,7 +1504,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
             # Protect energy totals from dormant-inverter zeros; persist immediately
             # so a HA restart between polls doesn't cause a backward step (Issue #285).
-            if self._protect_energy_totals(data):
+            # A newly validated battery power scale rides the same write (#434).
+            scale_changed = self._note_validated_battery_power_scale()
+            if self._protect_energy_totals(data) or scale_changed:
                 await self._async_save_energy_totals()
 
             return data
@@ -1813,17 +1824,71 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 "Restored %d lifetime totals, %d daily totals from storage",
                 len(self._retained_lifetime_totals), len(self._retained_daily_totals),
             )
+            self._restore_battery_power_scale(stored)
         except Exception as err:
             _LOGGER.warning("Failed to load persisted energy totals (non-fatal): %s", err)
+
+    def _restore_battery_power_scale(self, stored: dict) -> None:
+        """Hand a previously validated battery power scale back to the client (#434).
+
+        Runs at setup, which is also what runs after a reload - so whatever rebuilds the
+        client on the reporter's gateway, the scale comes back with it instead of falling
+        to the profile default and needing 500 W of load to be re-earned.
+        """
+        scale = stored.get("battery_power_scale")
+        if scale is None:
+            return
+        if stored.get("battery_power_scale_profile") != self._profile_key_for_storage():
+            _LOGGER.debug(
+                "Discarding the stored battery power scale: it was validated for profile "
+                "%r and this entry now uses %r",
+                stored.get("battery_power_scale_profile"), self._profile_key_for_storage(),
+            )
+            return
+        if not isinstance(scale, (int, float)):
+            return
+        self._persisted_battery_power_scale = float(scale)
+        if self._client is not None:
+            self._client.restore_battery_power_scale(float(scale))
+
+    def _profile_key_for_storage(self) -> str:
+        """Identifies the register map a stored scale was validated against."""
+        client = self._client
+        if client is None:
+            return ""
+        return str(client.register_map.get("name", ""))
+
+    def _note_validated_battery_power_scale(self) -> bool:
+        """Record a newly confirmed scale for persistence. True if it changed.
+
+        Only a scale the detector fully validated this session is stored - never one that
+        was itself restored, or a mis-detection would copy itself forward for ever (#406).
+        """
+        client = self._client
+        if client is None:
+            return False
+        detected = getattr(client, "validated_battery_power_scale", None)
+        if detected is None or detected == self._persisted_battery_power_scale:
+            return False
+        self._persisted_battery_power_scale = float(detected)
+        _LOGGER.info(
+            "Storing the validated battery power scale of %sW so it survives a reconnect "
+            "or restart (#434)", detected,
+        )
+        return True
 
     async def _async_save_energy_totals(self) -> None:
         """Save energy retention dicts to HA storage."""
         try:
-            await self._energy_store.async_save({
+            payload = {
                 "lifetime_totals": dict(self._retained_lifetime_totals),
                 "daily_totals": dict(self._retained_daily_totals),
                 "daily_totals_date": datetime.now().date().isoformat(),
-            })
+            }
+            if self._persisted_battery_power_scale is not None:
+                payload["battery_power_scale"] = self._persisted_battery_power_scale
+                payload["battery_power_scale_profile"] = self._profile_key_for_storage()
+            await self._energy_store.async_save(payload)
         except Exception as err:
             _LOGGER.debug("Failed to save energy totals: %s", err)
 

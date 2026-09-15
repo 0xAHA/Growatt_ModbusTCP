@@ -1543,6 +1543,23 @@ class GrowattModbus:
         self._battery_power_scale_samples = []  # Store validation samples
         self._battery_power_scale_validated = False  # Set to True once detection is complete
 
+        # True when this poll's voltage x current says the profile's documented scale is
+        # wrong, but the override has not committed yet. Set by _detect_battery_power_scale
+        # and consumed at the decode, which withholds the reading rather than publish a
+        # figure it has just been told is a factor of ten out (#434).
+        self._battery_power_scale_disputed = False
+
+        # Set when a validated scale was restored from storage rather than detected in
+        # this session. The override is in force, but `_validated` stays False on purpose
+        # so detection keeps running and can correct a stored value that turns out to be
+        # wrong - a persisted mistake that could not be re-earned would be #406 made
+        # permanent.
+        self._battery_power_scale_restored = False
+
+        # Warn-once for the withheld reading above. The condition can hold for several
+        # polls, and a guard working as designed should not file a line a minute.
+        self._battery_power_scale_disputed_warned = False
+
         # Battery register range detection (VPP vs fallback)
         self._battery_register_range = None  # 'vpp' or 'fallback' - determined on first read
         self._battery_range_detected = False  # Set to True once detection is complete
@@ -2230,6 +2247,9 @@ class GrowattModbus:
         Returns:
             Detected scale (0.1 or 1.0), or None if detection uncertain
         """
+        # Nothing is in dispute until this poll's arithmetic says so.
+        self._battery_power_scale_disputed = False
+
         # Skip detection if already validated
         if self._battery_power_scale_validated:
             return self._battery_power_scale_override
@@ -2295,6 +2315,29 @@ class GrowattModbus:
 
         # Store sample for validation
         if detected_scale is not None:
+            # Does this poll contradict the scale currently in force?
+            #
+            # The three-sample rule protects against *latching* a wrong scale; it was never
+            # meant to make us publish a number we have this moment measured to be a factor
+            # of ten out. A WIT reporter watched exactly that: at 12:25:19 the first poll of
+            # a session read 230 W where voltage x current said 2310 W, because the override
+            # had not committed yet and the profile's documented 0.1 stood (#434).
+            #
+            # Recorded rather than acted on here - the decode withholds the reading. That is
+            # the trade this project takes everywhere: an unknown leaves a visible gap, a
+            # plausible-looking number goes into long-term statistics and cannot be told
+            # apart from a real one afterwards.
+            #
+            # Deliberately NOT "withhold until validated". Detection cannot run at all when
+            # the current candidates disagree (#406) or below the load gate, so a blanket
+            # rule would leave those owners with no battery power sensor for ever. This
+            # fires only when there is positive evidence of a contradiction.
+            in_force = self._battery_power_scale_override
+            if in_force is None:
+                in_force = self._documented_battery_power_scale()
+            if in_force is not None and detected_scale != in_force:
+                self._battery_power_scale_disputed = True
+
             self._battery_power_scale_samples.append(detected_scale)
 
             # Validate after collecting 3 consistent samples
@@ -2303,6 +2346,8 @@ class GrowattModbus:
                 if all(s == detected_scale for s in self._battery_power_scale_samples[-3:]):
                     self._battery_power_scale_override = detected_scale
                     self._battery_power_scale_validated = True
+                    self._battery_power_scale_disputed = False
+                    self._battery_power_scale_restored = False
                     logger.info(
                         f"WIT Battery Power Scale Auto-Detected: {detected_scale}W "
                         f"(V={voltage:.1f}V, I={current:.1f}A, Expected={expected_power:.0f}W, "
@@ -2311,6 +2356,73 @@ class GrowattModbus:
                     return detected_scale
 
         return None
+
+    def _documented_battery_power_scale(self) -> Optional[float]:
+        """The `combined_scale` the profile declares for battery power, or None.
+
+        This is what the decode applies when no override is in force, so it is the figure a
+        detected scale has to be compared against to know whether anything is in dispute.
+
+        Advisory only, and returns None rather than raising if the map cannot be reached:
+        the caller's fallback is "nothing is in dispute", which leaves the existing
+        behaviour exactly as it was. A lookup that exists to make the reading *more*
+        careful must not be able to break the reading itself.
+        """
+        try:
+            addr = self._find_register_by_name_with_fallback('battery_power_low')
+            if addr is None:
+                return None
+            register_map = getattr(self, 'register_map', None) or {}
+            info = (register_map.get('input_registers', {}).get(addr)
+                    or register_map.get('holding_registers', {}).get(addr))
+            if not info:
+                return None
+            scale = info.get('combined_scale')
+            return float(scale) if isinstance(scale, (int, float)) else None
+        except Exception:  # pragma: no cover - defensive, see docstring
+            return None
+
+    # ------------------------------------------------------------------
+    # Carrying a validated scale across the life of this object (#434)
+    #
+    # The override is instance state, and a WIT owner's gateway drops idle connections.
+    # Something rebuilds the client around those drops - the trigger is still unidentified -
+    # and a fresh object starts at None, so the documented 0.1 stands again. Above the
+    # detector's 500 W gate that self-heals within about three polls; below it detection
+    # cannot run, so the tenth persists until load rises. Overnight it never does, which is
+    # the whole of #434: not "it latched the wrong scale" but "it lost the right one and
+    # could not re-earn it while gated".
+    #
+    # So the coordinator persists a validated scale and hands it back here on the next
+    # setup. Two constraints, both from #406, where a bad detection at low load latched a
+    # wrong scale and produced 40 kW readings on a 6.5 kW battery:
+    #
+    #   * only a scale that passed the full validation is ever stored - never a restored
+    #     one, or a mistake would copy itself forward for ever
+    #   * a restored scale does not mark detection complete, so the detector keeps
+    #     watching and overwrites it the moment real load contradicts it
+    # ------------------------------------------------------------------
+
+    @property
+    def validated_battery_power_scale(self) -> Optional[float]:
+        """The scale this session detected and confirmed, or None. Safe to persist."""
+        if self._battery_power_scale_validated:
+            return self._battery_power_scale_override
+        return None
+
+    def restore_battery_power_scale(self, scale: float) -> None:
+        """Adopt a previously validated scale without treating detection as finished."""
+        if scale not in (0.1, 1.0):
+            logger.debug("[SCALE] Ignoring restored battery power scale %r", scale)
+            return
+        self._battery_power_scale_override = scale
+        self._battery_power_scale_restored = True
+        self._battery_power_scale_validated = False
+        logger.info(
+            "[SCALE] Restored the battery power scale of %sW confirmed in an earlier "
+            "session. Detection stays active and will correct it if real load disagrees.",
+            scale,
+        )
 
     def _set_from_register(self, data: "GrowattData", field_name: str, address: int) -> None:
         """Assign a decoded register to a field, or record that it could not be read.
@@ -4913,6 +5025,29 @@ class GrowattModbus:
                 if battery_appears_disconnected:
                     battery_power = 0.0
                     logger.debug(f"Battery power set to 0W (voltage {data.battery_voltage}V < {BATTERY_VOLTAGE_THRESHOLD}V AND SOC {data.battery_soc}% < {BATTERY_SOC_THRESHOLD}% — battery appears disconnected, ignoring registers HIGH={raw_high} LOW={raw_low})")
+                elif self._battery_power_scale_disputed:
+                    # This poll's voltage x current has just contradicted the scale about to
+                    # be applied, and the override has not committed yet. Publishing anyway
+                    # means writing a figure we have measured to be ten times out into a
+                    # sensor and its statistics (#434).
+                    data.unread_fields.update(
+                        ('battery_power', 'charge_power', 'discharge_power')
+                    )
+                    battery_power = 0.0
+                    if not self._battery_power_scale_disputed_warned:
+                        self._battery_power_scale_disputed_warned = True
+                        logger.warning(
+                            "[SCALE] Withholding battery power: voltage x current says the "
+                            "profile's documented scale is wrong for this inverter, and the "
+                            "corrected scale has not been confirmed yet. It needs three "
+                            "consistent readings above %.0f W. The sensor will be unknown "
+                            "until then (#434).", _BATTERY_SCALE_MIN_POWER_W,
+                        )
+                    else:
+                        logger.debug(
+                            "[SCALE] Battery power withheld again: scale still disputed "
+                            "(HIGH=%s LOW=%s)", raw_high, raw_low,
+                        )
                 else:
                     _bp = self._get_register_value(addr)
                     if _bp is None:

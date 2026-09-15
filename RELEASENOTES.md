@@ -4,6 +4,33 @@
 
 ---
 
+## v2.0.4-b12
+
+Issues: #434
+
+- **WIT: battery power no longer drops to a tenth of the truth after a connection drop.**
+  Some WIT firmware reports battery power in whole watts rather than the tenths the
+  specification gives, and the integration works that out by comparing the register against
+  battery voltage x current. The result was held only for the life of the Modbus client, so
+  anything that rebuilt it lost the correct scale — and it can only be re-earned while the
+  battery is working above 500 W. Overnight it never is, so the wrong reading could persist
+  until morning.
+
+  **The confirmed scale is now remembered** and applied from the first poll. Nothing to do
+  on upgrade; it is learned once and reused. Changing profile discards it, and real load
+  still overrules it if it is ever wrong. Reported and diagnosed by @Wojak129, whose two
+  captured connection drops — one either side of the 500 W threshold, one self-healing and
+  one not — are what identified the mechanism.
+
+- **WIT: Battery Power reports unknown instead of a figure already known to be wrong.**
+  In the window between voltage x current contradicting the scale in force and the
+  replacement being confirmed, the reading is withheld. **Battery Power, Charge Power and
+  Discharge Power may show unknown for a few polls after a first-ever setup**, where they
+  previously showed a value ten times out. Owners whose scale agrees with the specification
+  — most WIT owners — see no change. (#434)
+
+---
+
 ## v2.0.4-b11
 
 Issues: #439, #442, #444

@@ -318,6 +318,31 @@ neither case is a "Disabled" or 0 shown that the inverter did not report
 - Rate limiting is built in to prevent command flooding.
 - Conflict detection prevents simultaneous charge + discharge commands.
 
+**Battery Power can read a tenth of the truth, and how that is handled.** WIT firmware
+comes in two variants: most report battery power in tenths of a watt, as the VPP
+specification says, and some report it in whole watts. The integration works out which by
+comparing the power register against battery voltage x current, and needs **three
+consistent readings above 500 W** before it commits - a single decision taken at low load
+once latched the wrong answer and produced 40 kW readings on a 6.5 kW battery
+([#406](https://github.com/0xAHA/Growatt_ModbusTCP/issues/406)).
+
+Two things follow from that, both fixed in v2.0.4-b12
+([#434](https://github.com/0xAHA/Growatt_ModbusTCP/issues/434)):
+
+- **A confirmed scale is remembered** and applied from the first poll of the next session.
+  Before this, anything that rebuilt the Modbus client - a reload, and on at least one
+  gateway a dropped connection - lost it, and the correct scale could only be re-earned
+  once the battery was working above 500 W. Overnight it never is, so a tenth-of-the-truth
+  reading could persist until morning.
+- **Battery Power goes unknown rather than wrong** in the window where voltage x current
+  has already contradicted the scale in force but the replacement is not yet confirmed. A
+  gap in the graph is recoverable; a plausible wrong number goes into long-term statistics
+  and cannot be told apart from a real one afterwards.
+
+If a remembered scale is ever wrong, real load overrules it: detection keeps running, and
+three consistent samples of the other scale replace it. Changing profile discards it
+outright.
+
 See [WIT Control Guide](wit-guide.md) for full protocol documentation.
 
 ---
