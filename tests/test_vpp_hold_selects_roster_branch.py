@@ -22,8 +22,21 @@ Both signs collapse the discharge, so the `+1 %` roster hold does work on DTC 54
 worked in his rig **without 30407 being written**, because on his inverter the selector was
 already 0. That is the state this change now makes explicit rather than inherited.
 
-No failed hold was observed. This is a state-machine gap closed from a code reading, which
-is why the test states what the sequence must do rather than claiming a symptom.
+It began as a state-machine gap closed from a code reading, and is now **confirmed on
+hardware**. @KevlarD-67 ran it on a MOD 10KTL3-XH at night with his own control loop
+stopped, through `growatt_modbus.set_battery_mode` on v2.0.4-b9:
+
+    baseline            battery  0.00 kW   grid 469 W    30407=0  30409=0   30411=0
+    charge, 20 %        battery +1.52 kW                 30407=1  30409=20  30411=0
+    hold                battery +1.52 kW   grid 2166 W   30407=1  30409=20  30411=1
+
+The hold period was written - `[181, 306, 1]`, 03:01 to 05:06 at +1 % - into the roster
+branch, while the direct branch it left standing went on commanding a 20 % charge for the
+full four minutes. On a house with no PV that is an open-ended grid charge the entity
+reports as Hold.
+
+The cooldown half is still reasoned only: that run left 150 s between the calls precisely
+to rule it out, and the log carries no rate-limit line.
 """
 from __future__ import annotations
 
@@ -109,14 +122,48 @@ def test_hold_still_writes_the_roster_and_the_count():
     )
 
 
-def test_the_failure_is_not_claimed_as_observed():
-    """This came from a code reading, not a measurement. The comment must say so, or the
-    next person will treat 'Charge -> Hold holds nothing' as a confirmed field report.
-    """
-    window = SOURCE[SOURCE.index("Select the roster branch"):][:2000]
+def test_the_confirmation_is_recorded():
+    """It was reasoned first and measured afterwards. The comment has to carry the
+    measurement now, or the next reader will weaken a fix that has a field report behind
+    it - the opposite of the risk this test originally guarded."""
+    window = SOURCE[SOURCE.index("Select the roster branch"):][:3000]
 
-    assert "not from a failed hold" in window or "rather than fixing an observed" in window, (
-        "the comment does not record that this was reasoned rather than measured"
+    assert "confirmed on hardware" in window, (
+        "the comment still describes this as reasoned rather than measured"
+    )
+    assert "1.52 kW" in window, (
+        "the comment does not carry the measurement that confirmed it"
+    )
+
+
+def test_hold_clears_the_setpoint_behind_the_selector():
+    """30409 is inert while 30407 is 0, but Growatt's scheduler reopens 30407 on MOD - four
+    times in one evening on the reporter's inverter (#349) - and a stale setpoint returns
+    with it as a grid charge nobody commanded."""
+    hold = _branch("Hold")
+    assert "VPP_REMOTE_POWER_PERCENT, 0" in hold, (
+        "Hold leaves the previous mode's power setpoint standing at 30409"
+    )
+
+
+def test_clearing_the_setpoint_does_not_abort_a_working_hold():
+    """The distinction between the two clears: 30407 failing means no hold at all, so it
+    raises. 30409 failing leaves a hold that works now and could be undone later, so it
+    warns. Turning that into an abort would throw away a hold that is in force."""
+    hold = _branch("Hold")
+    at = hold.index("VPP_REMOTE_POWER_PERCENT, 0")
+    window = hold[at:at + 500]
+    assert "warning" in window.lower(), "the 30409 clear does not warn on failure"
+    assert "HomeAssistantError" not in window, (
+        "a failed 30409 clear aborts, discarding a hold that is already in force"
+    )
+
+
+def test_the_action_hold_clears_the_setpoint_too():
+    hold = _action_branch("hold")
+    assert "VPP_REMOTE_POWER_PERCENT, 0" in hold, (
+        "set_battery_mode's hold branch leaves 30409 standing - the exact state measured "
+        "on b9, where the battery kept charging at the previous setpoint"
     )
 
 

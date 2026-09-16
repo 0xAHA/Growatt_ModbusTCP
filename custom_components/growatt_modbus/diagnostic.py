@@ -1363,6 +1363,24 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                         "power setpoint and nothing further was written."
                     )
 
+                # And clear the setpoint behind it, for the reason given in select.py: 30409
+                # is inert while 30407 is 0, but Growatt's own scheduler reopens 30407 on
+                # MOD (#349), and a stale setpoint returns with it. Warned rather than
+                # aborted - the hold is already in force once the selector is cleared.
+                #
+                # This branch is the one @KevlarD-67 measured on b9: charge at 20 %, then
+                # hold, and the battery went on charging at 1.52 kW with 30407 = 1 and
+                # 30409 = 20 while the roster period sat unselected (#400).
+                cleared_setpoint = await hass.async_add_executor_job(
+                    client.write_register, VPP_REMOTE_POWER_PERCENT, 0, True
+                )
+                if not cleared_setpoint:
+                    _LOGGER.warning(
+                        "Could not clear the remote power setpoint (30409) after selecting "
+                        "the HOLD roster. The hold is in force, but a later re-enable of "
+                        "30407 would restore the previous setpoint."
+                    )
+
                 from datetime import datetime as dt
                 now = dt.now()
                 current_minutes = now.hour * 60 + now.minute

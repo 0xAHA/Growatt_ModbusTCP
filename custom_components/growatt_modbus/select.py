@@ -615,9 +615,11 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
                 # than device state.
                 #
                 # Found by @KevlarD-67 reading this against the 30407 behaviour measured in
-                # #349, not from a failed hold - so this makes the state explicit rather
-                # than fixing an observed symptom. Writing it is harmless where the selector
-                # was already 0: that is the state his successful roster measurement ran in.
+                # #349, and since **confirmed on hardware** by him: on a MOD 10KTL3-XH at
+                # night, `charge` at 20 % then `hold` left the battery charging at 1.52 kW
+                # with 30407 = 1 and 30409 = 20 still standing, while the hold period sat in
+                # the roster branch that was not selected. Grid import went 469 W -> 2166 W.
+                # An open-ended grid charge that the entity reported as Hold.
                 #
                 # 30407 = 0 on its own returns the inverter to self-consumption, which is
                 # why it is not a hold by itself and why the roster below still matters. The
@@ -639,6 +641,25 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
                         "HOLD schedule, so the inverter is still following the previous "
                         "mode's power setpoint. Nothing further was written. Try Hold "
                         "again; if it keeps failing, check the connection to the inverter."
+                    )
+
+                # And clear the setpoint behind it (#400).
+                #
+                # 30409 drives nothing while 30407 is 0, which is why this was left standing
+                # at first. @KevlarD-67's own #349 measurements are the argument against
+                # that: Growatt's scheduler reopened 30407 four times in one evening on his
+                # MOD. A stale +20 % would come back with it, as a grid charge nobody asked
+                # for and nothing in Home Assistant commanded.
+                #
+                # Warned rather than aborted, unlike the clear above: once 30407 is 0 the
+                # hold is already in force, and this is protection against something
+                # reopening it later. Failing it must not throw away a working hold.
+                if not client.write_register(self.VPP_REMOTE_POWER_PERCENT, 0,
+                                             bypass_rate_limit=True):
+                    _LOGGER.warning(
+                        "[WIT-VPP] Could not clear the remote power setpoint (30409=0) "
+                        "after selecting the HOLD roster. The hold is in force, but if "
+                        "anything re-enables 30407 later the old setpoint returns with it"
                     )
 
                 # Get current time for TOU period

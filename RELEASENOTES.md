@@ -4,6 +4,26 @@
 
 ---
 
+## v2.0.4-b18
+
+Issues: #400
+
+- **WIT/MOD VPP: Hold now clears the power setpoint, not just the branch selector.** Setting
+  Hold after Charge deselects the direct branch, which stops the charge — but the old
+  setpoint stayed in the register behind it. Growatt's own scheduler re-enables that branch
+  on MOD, and when it did, a stale charge command came back with it. Hold now clears both.
+
+  If the setpoint cannot be cleared the hold still stands, and says so in the log rather than
+  failing: by that point the battery has already stopped.
+
+- **The Charge-then-Hold fault is confirmed on hardware.** @KevlarD-67 measured it on a MOD
+  10KTL3-XH: after Hold the battery kept charging at 1.52 kW and grid import went from 469 W
+  to 2166 W, while the hold schedule sat in the branch that was not selected — an open-ended
+  grid charge reported as Hold. **Fixed in v2.0.4-b16 and b18**; this release adds the
+  setpoint half and records the measurement alongside the code.
+
+---
+
 ## v2.0.4-b17
 
 Issues: #434
