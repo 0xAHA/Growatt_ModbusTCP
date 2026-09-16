@@ -176,6 +176,31 @@ Charge Stop SOC and AC Charge Enable — an overlap that runs through this whole
 
 ---
 
+!!! warning "SPH-TL3: AC Voltage R/S/T are line-to-line, not phase voltages"
+    On the SPH-TL3 profiles the registers the protocol labels as phase voltage return
+    **line-to-line** voltage - about 400 V on a 230/400 V supply, not 230 V. Two
+    SPH 10000TL3 BH-UP owners have confirmed it, and one settled it directly by reading
+    those registers against the VPP registers documented as line voltage, seconds apart:
+
+    ```
+    38  ac_voltage_r   404.1 V      31106 (L1-L2)   404.0 V
+    42  ac_voltage_s   408.0 V      31107 (L2-L3)   407.7 V
+    46  ac_voltage_t   390.4 V      31108 (L3-L1)   390.5 V
+    ```
+
+    **Per-phase AC power inherits it.** Those registers are the product of the voltage and
+    current beside them, so using a line voltage makes each phase read about √3 too high -
+    measured on both inverters, to the last digit.
+
+    They are left as they are for now: dividing by √3 would invent a phase voltage that is
+    only correct on a perfectly balanced supply. **For per-phase voltage, use a meter** -
+    the figures in the Growatt portal come from one. From v2.0.4-b15 the same values are
+    also published, correctly labelled, as AC Voltage RS/ST/TR
+    ([#442](https://github.com/0xAHA/Growatt_ModbusTCP/issues/442),
+    [#447](https://github.com/0xAHA/Growatt_ModbusTCP/issues/447)).
+
+---
+
 ## SPF Off-Grid Inverters
 
 **Applies to:** SPF 3000-6000 ES PLUS

@@ -4,6 +4,30 @@
 
 ---
 
+## v2.0.4-b19
+
+Issues: #446, #447
+
+- **Single absurd power readings are withheld instead of published.** A 32-bit reading is
+  sent as two halves, and on one SPH-TL3 the value occasionally arrived in the wrong half —
+  publishing 98 kW, and once 1.8 MW, of grid import for a single poll before returning to
+  normal. Readings with that signature are now withheld, and the raw values are logged so
+  they can be recognised.
+
+  **A reading that keeps the same shape for three polls is published**, because a genuine
+  value can look like this: the check is for a glitch, and a glitch does not persist.
+  Reported by @acsel91 with 16 samples over two days, which is what made the pattern
+  identifiable — no plausibility threshold could have caught it, since his smallest was
+  6,553.8 W.
+
+- **Documented: on SPH-TL3, AC Voltage R/S/T are line-to-line voltages**, around 400 V on a
+  230/400 V supply rather than 230 V, and per-phase AC power inherits that — it reads about
+  √3 high. Confirmed on two inverters, one of which settled it by reading those registers
+  against the VPP registers documented as line voltage, seconds apart. **No entity changes
+  in this release**; for per-phase voltage use a meter. (#442, #447)
+
+---
+
 ## v2.0.4-b18
 
 Issues: #400

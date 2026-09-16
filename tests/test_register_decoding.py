@@ -37,6 +37,8 @@ def _client(input_registers: dict, cache: dict) -> GrowattModbus:
     client.register_map = {"name": "TEST", "input_registers": input_registers}
     client._register_cache = dict(cache)
     client._underflow_warned = set()   # warn-once tracking, see #401
+    client._pair_shape_suspect = {}     # word-corruption tracking, see #446
+    client._pair_shape_warned = set()
     return client
 
 

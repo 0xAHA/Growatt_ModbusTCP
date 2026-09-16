@@ -230,6 +230,42 @@ MAX_STALE_FRAME_RETRIES_PER_POLL = 30
 # something from the 0xFF.. family (#401).
 _UNDERFLOW_PLAUSIBLE_MAGNITUDE = 1_000_000
 
+# A 32-bit pair whose HIGH word carries a small integer while its LOW word sits at one end
+# of its range is a word-level corruption, not a reading (#446).
+#
+# An SPH-TL3 owner captured 16 of them over two days on grid import (1021/1022):
+#
+#     published W        raw        hex        high    low
+#        6,553.8       65538   0x00010002       1        2
+#       19,661.0      196610   0x00030002       3        2
+#       98,301.9      983019   0x000EFFEB      14    65515
+#    1,841,481.3    18414813   0x0118FCDD     280    64733
+#
+# In all 16 the high word held 1-280 where a correct reading has 0, and the low word was
+# within 7 counts of 0x0000 or within 803 of 0xFFFF - never in between. The published
+# figure is essentially `high x 6553.6 W`, with the true small reading sitting in the low
+# word. The rest of the frame decoded cleanly in the same poll, so this is not a corrupt
+# frame: RTU checksums the whole frame and a bad one costs every value in it.
+#
+# Magnitude alone cannot catch this. His smallest sample published 6,553.8 W, which is an
+# ordinary reading for a house with an EV charger - only the word shape distinguishes it.
+_PAIR_WORD_EXTREME_MARGIN = 1000
+
+# ...and the high word has to be SMALL. His 16 samples ran 1 to 280, which is what a value
+# landing in the wrong half looks like when the true reading is near zero.
+#
+# Without this bound the rule would also catch 0x7FFFFFFF - high 32767, low 65535 - which
+# tests/test_register_decoding.py pins as decoding normally: the line for the sign-bit guard
+# is drawn at the sign bit and not at plausibility (#401). A genuine reading that large is
+# absurd but it is not this fault, and narrowing here costs nothing.
+_PAIR_HIGH_WORD_MAX_FOR_CORRUPTION = 1024
+
+# ...but a genuine reading near a multiple of 65536 raw counts has the same shape, and a
+# steady one would be withheld for ever. A corruption is transient - his lasted a single
+# poll and was back to normal ten seconds later - so a shape that repeats this many polls
+# in a row for the same register is believed and published.
+_PAIR_SHAPE_REPEATS_BEFORE_BELIEVED = 3
+
 RECONNECT_QUIET_BASE_SECONDS = 2.0
 RECONNECT_QUIET_MAX_SECONDS = 32.0
 
@@ -1560,6 +1596,11 @@ class GrowattModbus:
         # polls, and a guard working as designed should not file a line a minute.
         self._battery_power_scale_disputed_warned = False
 
+        # Consecutive polls in which a 32-bit pair showed the word-level corruption shape
+        # (#446), keyed by (address, pair address). Cleared by any normal reading.
+        self._pair_shape_suspect: dict = {}
+        self._pair_shape_warned: set = set()
+
         # Battery register range detection (VPP vs fallback)
         self._battery_register_range = None  # 'vpp' or 'fallback' - determined on first read
         self._battery_range_detected = False  # Set to True once detection is complete
@@ -2357,6 +2398,19 @@ class GrowattModbus:
 
         return None
 
+    @staticmethod
+    def _pair_words_look_corrupted(high_value: int, low_value: int) -> bool:
+        """Does this 32-bit pair have the word-level corruption shape? (#446)
+
+        A correct reading below 6553.6 W has a high word of 0. These have a small integer
+        there and a low word jammed against 0x0000 or 0xFFFF, which is what a value landing
+        in the wrong half of the pair looks like.
+        """
+        if high_value == 0 or high_value > _PAIR_HIGH_WORD_MAX_FOR_CORRUPTION:
+            return False
+        return (low_value <= _PAIR_WORD_EXTREME_MARGIN
+                or low_value >= 0xFFFF - _PAIR_WORD_EXTREME_MARGIN)
+
     def _documented_battery_power_scale(self) -> Optional[float]:
         """The `combined_scale` the profile declares for battery power, or None.
 
@@ -2709,6 +2763,47 @@ class GrowattModbus:
                         name, combined, combined - 0x100000000,
                     )
                 return None
+
+            else:
+                # An unsigned pair with the sign bit clear. This is where a word-level
+                # corruption lands, because it is small enough not to trip the guard above
+                # (#446). See _PAIR_WORD_EXTREME_MARGIN for the measured signature.
+                #
+                # Only reached for unsigned pairs: a signed pair legitimately carries
+                # 0xFFFF in its high word for small negatives, which is the same shape.
+                shape_key = (address, pair_addr)
+                if self._pair_words_look_corrupted(high_value, low_value):
+                    seen = self._pair_shape_suspect.get(shape_key, 0) + 1
+                    self._pair_shape_suspect[shape_key] = seen
+                    if seen < _PAIR_SHAPE_REPEATS_BEFORE_BELIEVED:
+                        name = reg_info.get('name') or pair_info.get('name')
+                        if name not in self._pair_shape_warned:
+                            self._pair_shape_warned.add(name)
+                            logger.warning(
+                                "[PAIR SHAPE] %s (registers %d/%d) read HIGH=%d LOW=%d "
+                                "(0x%08X), which would publish %s. The high word carries a "
+                                "small value where a correct reading has 0, and the low "
+                                "word is at one end of its range - the signature of a "
+                                "word-level corruption rather than a measurement. "
+                                "Withholding it. If this repeats %d polls in a row it will "
+                                "be published as genuine (#446).",
+                                name, address, pair_addr, high_value, low_value, combined,
+                                f"{combined * combined_scale:,.1f}",
+                                _PAIR_SHAPE_REPEATS_BEFORE_BELIEVED,
+                            )
+                        else:
+                            logger.debug(
+                                "[PAIR SHAPE] %s withheld again: HIGH=%d LOW=%d",
+                                name, high_value, low_value,
+                            )
+                        return None
+                    logger.debug(
+                        "[PAIR SHAPE] %s has held the same shape for %d polls - publishing "
+                        "it as a genuine reading",
+                        reg_info.get('name') or pair_info.get('name'), seen,
+                    )
+                else:
+                    self._pair_shape_suspect.pop(shape_key, None)
 
             # WIT Battery Power Scale Override (auto-detected if needed)
             reg_name = reg_info.get('name') or pair_info.get('name')
