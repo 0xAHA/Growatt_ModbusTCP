@@ -3848,12 +3848,14 @@ class GrowattModbus:
             lock.release()
             logger.debug("[BATCH] Released %s bus after %s", scope, what)
 
-    def write_register(self, register: int, value: int) -> bool:
+    def write_register(self, register: int, value: int,
+                       bypass_rate_limit: bool = False) -> bool:
         """Write, holding the bus for the transaction (#398)."""
         with self._bus("write"):
-            return self._write_register_locked(register, value)
+            return self._write_register_locked(register, value, bypass_rate_limit)
 
-    def _write_register_locked(self, register: int, value: int) -> bool:
+    def _write_register_locked(self, register: int, value: int,
+                               bypass_rate_limit: bool = False) -> bool:
         """
         Write a single holding register.
 
@@ -3863,6 +3865,7 @@ class GrowattModbus:
 
         Returns:
             bool: True if write successful, False only for WIT rate limiting
+                  (which `bypass_rate_limit=True` skips - see below)
 
         Raises:
             ModbusWriteError: If the write fails, with detailed error information
@@ -3871,7 +3874,23 @@ class GrowattModbus:
             logger.debug(f"[WRITE] Request to write register {register} with value {value}")
 
             # WIT control rate limiting (v0.4.6) - prevent oscillation
-            if register in self._wit_control_registers:
+            #
+            # `bypass_rate_limit` is for a write that is one step of a larger command, where
+            # skipping it leaves the inverter in a state no user asked for. The limit exists
+            # to stop the same control being driven back and forth; it was never meant to
+            # veto part of a mode change (#400).
+            #
+            # The case that found it: 30407 selects between the direct setpoint and the TOU
+            # roster, and Charge sets it to 1. Hold clears it before writing its roster - but
+            # Charge had just stamped 30407's cooldown, so a Hold chosen within 30 s had the
+            # clear refused, logged a warning, and then wrote the hold period into the branch
+            # that was not selected, leaving the battery charging at 100 %. A fast
+            # Charge -> Hold is exactly how someone tries it.
+            #
+            # Only ever pass this for a write whose absence is worse than its cost. The
+            # timestamp below is still updated on success, so a bypassed write does not
+            # blind the limiter afterwards.
+            if register in self._wit_control_registers and not bypass_rate_limit:
                 import time
                 current_time = time.time()
                 last_write_time = self._wit_control_last_write.get(register, 0)

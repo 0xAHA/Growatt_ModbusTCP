@@ -4,6 +4,33 @@
 
 ---
 
+## v2.0.4-b16
+
+Issues: #400, #349
+
+- **WIT/MOD VPP: Hold after Charge could leave the battery charging.** Register 30407 chooses
+  between the direct power setpoint and the TOU schedule, and Hold has to clear it before
+  writing its schedule. Two ways that failed: the **Set Battery Mode** action never cleared it
+  at all, and in the Mode (VPP) select a Hold chosen **within 30 seconds** of Charge had the
+  clear refused by the control-write rate limit and carried on regardless — leaving the
+  previous mode's setpoint in force while the entity reported Hold.
+
+  **Hold now stops with an error** if it cannot clear that register, rather than writing a
+  hold that cannot hold. Found by @KevlarD-67 reading the code against his own measurements.
+
+- **Set Battery Mode (VPP) is documented for the models that can use it.** Its description
+  said WIT/WIS only, while it has always been available on MOD/MID XH hybrids too — the
+  action itself is unchanged apart from the fix above.
+
+- **Docs: a refused single-register write does not mean the slot is broken.** The
+  troubleshooting steps for time-of-use slots suggested `write_register` to isolate a failing
+  write. That sends FC06, and on a MOD 10KTL3-XH the slot *end* words refuse FC06 while the
+  time entity's FC16 pair write is accepted. The advice now uses `write_registers`, and notes
+  that writing a register's existing value back proves nothing when it succeeds. (#349,
+  @KevlarD-67)
+
+---
+
 ## v2.0.4-b15
 
 Issues: #434, #447, #443, #414

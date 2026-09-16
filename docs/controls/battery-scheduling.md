@@ -731,7 +731,24 @@ write succeeded but value reverted (possible cloud override)
 
 1. Check you are writing to a **holding register** (FC06/FC16), not an input register (FC04)
 2. Verify slave ID — some adapters require slave ID 1, others use the inverter's configured address
-3. Try `growatt_modbus.write_register` directly from **Settings → Tools → Actions** to isolate the issue from the entity
+3. Try `growatt_modbus.write_registers` (plural) from **Settings → Tools → Actions** to isolate
+   the issue from the entity - write the `[start, end, enable]` triple, not one word
+
+!!! warning "A single-register write can be refused where the entity's write works"
+    `growatt_modbus.write_register` (singular) sends **FC06**, one register at a time. The time
+    entities send **FC16** for the whole triple, and some firmware accepts only the second.
+
+    Measured on a MOD 10KTL3-XH, firmware `DN1.0`
+    ([#349](https://github.com/0xAHA/Growatt_ModbusTCP/issues/349)): FC06 on the slot *end*
+    words 3041, 3055 and 3059 returned `exception 2` (Illegal Data Address) on every attempt,
+    while FC16 on the pair was accepted on all nine slots. The start word 3050 did accept FC06.
+
+    So an FC06 refusal there is **not** evidence that the slot is broken or unsupported - it
+    can refuse while the control that uses it works normally. Use the plural action to test.
+
+    **And write a value that differs from the current one.** Writing a register's own value
+    back makes the read-back match whether or not anything landed, so a success proves
+    nothing. A refusal still counts.
 
 ### MOD TOU slots 5–9 not appearing
 

@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import EntityCategory
+from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     DOMAIN,
@@ -622,11 +623,22 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
                 # why it is not a hold by itself and why the roster below still matters. The
                 # brief window between this write and the period taking force is a few
                 # seconds of ordinary self-consumption.
-                if not client.write_register(self.VPP_REMOTE_POWER_ENABLE, 0):
-                    _LOGGER.warning(
-                        "[WIT-VPP] Could not clear remote power control (30407=0) before "
-                        "writing the HOLD roster - if the previous mode was Charge or "
-                        "Discharge, the direct setpoint may still be selected"
+                # bypass_rate_limit, because Charge and Discharge write 30407 themselves
+                # and stamp its 30 s cooldown. Without this, a Hold chosen within 30 s of
+                # either had the clear silently refused and wrote its roster into the branch
+                # that was not selected - the very sequence this clear exists to fix (#400).
+                #
+                # Aborting rather than warning: a hold that cannot deselect the direct branch
+                # is not a hold, and continuing would leave the setpoint from the previous
+                # mode in force - charging at 100 % after Charge - while the entity reported
+                # Hold. Failing visibly is the lesser harm.
+                if not client.write_register(self.VPP_REMOTE_POWER_ENABLE, 0,
+                                             bypass_rate_limit=True):
+                    raise HomeAssistantError(
+                        "Could not clear remote power control (30407) before writing the "
+                        "HOLD schedule, so the inverter is still following the previous "
+                        "mode's power setpoint. Nothing further was written. Try Hold "
+                        "again; if it keeps failing, check the connection to the inverter."
                     )
 
                 # Get current time for TOU period

@@ -1337,6 +1337,32 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 if not success:
                     _LOGGER.warning("Failed to enable AC charging (30410)")
 
+                # Select the roster branch before writing into it (#400).
+                #
+                # The same gap the Mode (VPP) select had: charge and discharge set 30407 = 1
+                # for the direct setpoint and never clear it, and hold wrote its roster
+                # without touching it - so charge -> hold left the direct branch selected
+                # with 30409 still standing, and held nothing.
+                #
+                # This action is reachable on MOD as well as WIT (its guard asks only for
+                # 30100/30407/30409, which MOD_6000_15000TL3_XH carries), so the select's fix
+                # did not cover it. Reported by @KevlarD-67 from the code, alongside the
+                # cooldown gap that the third argument below closes: charge stamps 30407's
+                # 30 s limiter, so without the bypass a quick charge -> hold has this write
+                # refused and carries on regardless.
+                #
+                # Positional rather than keyword because async_add_executor_job passes
+                # positionally.
+                success = await hass.async_add_executor_job(
+                    client.write_register, VPP_REMOTE_POWER_ENABLE, 0, True
+                )
+                if not success:
+                    raise HomeAssistantError(
+                        "Failed to clear remote power control (30407) before writing the "
+                        "HOLD schedule. The inverter is still following the previous mode's "
+                        "power setpoint and nothing further was written."
+                    )
+
                 from datetime import datetime as dt
                 now = dt.now()
                 current_minutes = now.hour * 60 + now.minute
