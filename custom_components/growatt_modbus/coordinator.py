@@ -14,6 +14,8 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.storage import Store
 
 from .const import (
+    battery_power_scale_from_store,
+    battery_power_scale_into_payload,
     DOMAIN,
     CONF_SLAVE_ID,
     CONF_REGISTER_MAP,
@@ -234,6 +236,11 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # scale validated for one register map means nothing for another, so changing
         # profile discards it rather than applying it to different registers.
         self._persisted_battery_power_scale: float | None = None
+
+        # The payload as it was last read from or written to storage. A save rebuilds the
+        # dict from scratch, so without this a write in a session that has not restored yet
+        # drops the stored scale for good (#434).
+        self._stored_payload: dict | None = None
 
         # Midnight grace window: set by _handle_midnight_reset() and checked in
         # _protect_energy_totals() to suppress stale pre-reset values that the inverter
@@ -1824,6 +1831,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 "Restored %d lifetime totals, %d daily totals from storage",
                 len(self._retained_lifetime_totals), len(self._retained_daily_totals),
             )
+            self._stored_payload = dict(stored)
             self._restore_battery_power_scale(stored)
         except Exception as err:
             _LOGGER.warning("Failed to load persisted energy totals (non-fatal): %s", err)
@@ -1835,21 +1843,24 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         client on the reporter's gateway, the scale comes back with it instead of falling
         to the profile default and needing 500 W of load to be re-earned.
         """
-        scale = stored.get("battery_power_scale")
+        scale, reason = battery_power_scale_from_store(
+            stored, self._profile_key_for_storage()
+        )
         if scale is None:
+            # At INFO, not debug. A reporter whose scale did not come back needs to know
+            # which of these happened, and asking them to turn on debug and restart again
+            # costs a day (#434).
+            _LOGGER.info("Battery power scale not restored: %s", reason)
             return
-        if stored.get("battery_power_scale_profile") != self._profile_key_for_storage():
-            _LOGGER.debug(
-                "Discarding the stored battery power scale: it was validated for profile "
-                "%r and this entry now uses %r",
-                stored.get("battery_power_scale_profile"), self._profile_key_for_storage(),
-            )
-            return
-        if not isinstance(scale, (int, float)):
-            return
-        self._persisted_battery_power_scale = float(scale)
+
+        self._persisted_battery_power_scale = scale
         if self._client is not None:
-            self._client.restore_battery_power_scale(float(scale))
+            self._client.restore_battery_power_scale(scale)
+        else:
+            _LOGGER.info(
+                "Battery power scale of %sW read from storage, but the client is not built "
+                "yet - it will be re-detected instead", scale,
+            )
 
     def _profile_key_for_storage(self) -> str:
         """Identifies the register map a stored scale was validated against."""
@@ -1885,10 +1896,15 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 "daily_totals": dict(self._retained_daily_totals),
                 "daily_totals_date": datetime.now().date().isoformat(),
             }
-            if self._persisted_battery_power_scale is not None:
-                payload["battery_power_scale"] = self._persisted_battery_power_scale
-                payload["battery_power_scale_profile"] = self._profile_key_for_storage()
+            # Never drop a scale this session has not restored - see the note in const.py.
+            battery_power_scale_into_payload(
+                payload,
+                self._persisted_battery_power_scale,
+                self._profile_key_for_storage(),
+                previous=self._stored_payload,
+            )
             await self._energy_store.async_save(payload)
+            self._stored_payload = dict(payload)
         except Exception as err:
             _LOGGER.debug("Failed to save energy totals: %s", err)
 

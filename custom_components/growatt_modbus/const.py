@@ -1391,6 +1391,75 @@ SPF_STATUS_AC_INPUT_IDLE = frozenset({2, 5, 12})
 SPF_GRID_PRESENT_VOLTS = 50.0
 
 
+# ---------------------------------------------------------------------------
+# Persisting the detected battery power scale (#434)
+#
+# The scale rides the per-entry energy-totals store. Two rules the coordinator got wrong
+# the first time, both of which are one-way failures:
+#
+#   * A save must never drop a scale it is not carrying. The payload is rebuilt from
+#     scratch on every write, so a save in a session that has not restored yet erased the
+#     stored value permanently - and the next restart then had nothing to restore.
+#   * A skip must say why. "Nothing stored" and "stored for a different profile" need
+#     different answers from a reporter, and both used to be silent.
+#
+# Pure, and here rather than in coordinator.py, so the round trip can be tested without
+# Home Assistant - coordinator.py imports it, tests/ cannot.
+# ---------------------------------------------------------------------------
+
+BATTERY_SCALE_STORE_KEY = "battery_power_scale"
+BATTERY_SCALE_PROFILE_KEY = "battery_power_scale_profile"
+
+# The only two values the detector can validate. Anything else in the file is not ours.
+BATTERY_SCALE_VALID = (0.1, 1.0)
+
+
+def battery_power_scale_from_store(stored, profile_key: str):
+    """(scale, reason) for a stored battery power scale.
+
+    `scale` is None whenever it must not be applied; `reason` is always a short phrase
+    suitable for a log line, including on success.
+    """
+    if not isinstance(stored, dict):
+        return None, "no stored data for this entry"
+
+    scale = stored.get(BATTERY_SCALE_STORE_KEY)
+    if scale is None:
+        return None, "no scale has been stored yet"
+
+    # bool is a subclass of int, and True would otherwise sail through as 1.0.
+    if isinstance(scale, bool) or not isinstance(scale, (int, float)):
+        return None, f"stored value {scale!r} is not a number"
+    if float(scale) not in BATTERY_SCALE_VALID:
+        return None, f"stored value {scale!r} is not a scale this integration writes"
+
+    saved_profile = stored.get(BATTERY_SCALE_PROFILE_KEY)
+    if saved_profile != profile_key:
+        return None, (
+            f"it was validated for profile {saved_profile!r} and this entry now uses "
+            f"{profile_key!r}"
+        )
+    return float(scale), "restored from storage"
+
+
+def battery_power_scale_into_payload(payload: dict, scale, profile_key: str,
+                                     previous=None) -> dict:
+    """Put the scale keys into a payload about to be written.
+
+    With no scale in hand, carry forward whatever the file already held. Rebuilding the
+    payload without these keys is what erased a validated scale between sessions.
+    """
+    if scale is not None:
+        payload[BATTERY_SCALE_STORE_KEY] = float(scale)
+        payload[BATTERY_SCALE_PROFILE_KEY] = profile_key
+        return payload
+
+    if isinstance(previous, dict) and previous.get(BATTERY_SCALE_STORE_KEY) is not None:
+        payload[BATTERY_SCALE_STORE_KEY] = previous[BATTERY_SCALE_STORE_KEY]
+        payload[BATTERY_SCALE_PROFILE_KEY] = previous.get(BATTERY_SCALE_PROFILE_KEY)
+    return payload
+
+
 def offgrid_grid_connection_status(
     status: int,
     grid_voltage: float,

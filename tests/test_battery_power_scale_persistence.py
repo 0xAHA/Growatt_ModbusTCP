@@ -35,6 +35,7 @@ from pathlib import Path
 import pytest
 
 _gm = importlib.import_module("growatt_under_test.growatt_modbus")
+_const = importlib.import_module("growatt_under_test.const")
 
 COMPONENT = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
 
@@ -197,19 +198,6 @@ def test_the_scale_is_restored_at_setup():
     assert "_restore_battery_power_scale" in body
 
 
-def test_a_stored_scale_from_another_profile_is_discarded():
-    """A scale validated against one register map means nothing for another."""
-    source = _coordinator_source()
-    tree = ast.parse(source)
-    fn = next(
-        node for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef) and node.name == "_restore_battery_power_scale"
-    )
-    body = ast.get_source_segment(source, fn) or ""
-    assert "battery_power_scale_profile" in body
-    assert "return" in body
-
-
 def test_only_a_validated_scale_reaches_storage():
     source = _coordinator_source()
     tree = ast.parse(source)
@@ -224,14 +212,107 @@ def test_only_a_validated_scale_reaches_storage():
     )
 
 
-def test_the_scale_rides_the_existing_energy_write():
-    """A second store file would double the disk traffic to persist one float."""
+def test_the_coordinator_uses_the_shared_decision():
+    """The rules below are only worth testing if the coordinator actually runs them."""
+    source = _coordinator_source()
+    assert "battery_power_scale_from_store" in source
+    assert "battery_power_scale_into_payload" in source
+
+
+def test_a_skipped_restore_is_reported_at_info():
+    """A reporter whose scale did not come back must be able to say which branch fired
+    without being asked to enable debug and restart again (#434)."""
     source = _coordinator_source()
     tree = ast.parse(source)
     fn = next(
         node for node in ast.walk(tree)
-        if isinstance(node, ast.AsyncFunctionDef) and node.name == "_async_save_energy_totals"
+        if isinstance(node, ast.FunctionDef) and node.name == "_restore_battery_power_scale"
     )
     body = ast.get_source_segment(source, fn) or ""
-    assert "battery_power_scale" in body
-    assert "battery_power_scale_profile" in body
+    assert "_LOGGER.info" in body and "reason" in body
+
+
+# ---------------------------------------------------------------------------
+# The store round trip, run rather than read
+#
+# The tests above check that the coordinator calls the right things. They cannot check
+# what those things decide, because coordinator.py imports Home Assistant and this suite
+# does not - which is why the decision lives in const.py. Three source-level tests stood
+# here through a restore that did not fire on a reporter's inverter (#434); these run it.
+# ---------------------------------------------------------------------------
+
+PROFILE = "WIT 4-15kW Hybrid"
+
+
+def _saved(scale, profile=PROFILE, previous=None):
+    """A payload as _async_save_energy_totals would write it."""
+    payload = {"lifetime_totals": {"energy_total": 1234.5}, "daily_totals": {},
+               "daily_totals_date": "2026-09-16"}
+    return _const.battery_power_scale_into_payload(payload, scale, profile, previous=previous)
+
+
+def test_a_saved_scale_comes_back():
+    """THE round trip. Save 1.0, load it, get 1.0."""
+    stored = _saved(1.0)
+    scale, reason = _const.battery_power_scale_from_store(stored, PROFILE)
+    assert scale == 1.0, reason
+
+
+def test_a_save_with_nothing_in_hand_keeps_what_is_already_stored():
+    """THE wipe. Every save rebuilds the payload, so a write in a session that has not
+    restored yet used to drop the stored scale permanently - and the next restart then had
+    nothing to restore, which is what a reporter saw after upgrading."""
+    already = _saved(1.0)
+    rewritten = _saved(None, previous=already)
+
+    scale, reason = _const.battery_power_scale_from_store(rewritten, PROFILE)
+    assert scale == 1.0, f"the stored scale was dropped by a later save: {reason}"
+
+
+def test_a_save_with_nothing_stored_and_nothing_in_hand_writes_nothing():
+    payload = _saved(None, previous=None)
+    assert _const.BATTERY_SCALE_STORE_KEY not in payload
+
+
+def test_a_new_scale_overwrites_the_carried_one():
+    already = _saved(1.0)
+    rewritten = _saved(0.1, previous=already)
+    assert _const.battery_power_scale_from_store(rewritten, PROFILE)[0] == 0.1
+
+
+def test_a_scale_from_another_profile_is_refused_and_says_so():
+    stored = _saved(1.0, profile="SPH-TL3 Series 3-10kW (V2.01)")
+    scale, reason = _const.battery_power_scale_from_store(stored, PROFILE)
+    assert scale is None
+    assert "SPH-TL3" in reason and PROFILE in reason, reason
+
+
+def test_nothing_stored_says_so():
+    scale, reason = _const.battery_power_scale_from_store({"lifetime_totals": {}}, PROFILE)
+    assert scale is None
+    assert "no scale" in reason
+
+
+def test_an_empty_store_says_so():
+    scale, reason = _const.battery_power_scale_from_store(None, PROFILE)
+    assert scale is None
+    assert "no stored data" in reason
+
+
+@pytest.mark.parametrize("junk", ["1.0", None, True, 0.5, 10, [], {}])
+def test_only_a_scale_this_integration_writes_is_accepted(junk):
+    """0.1 and 1.0 are the only two the detector can validate. A bool would otherwise
+    arrive as 1.0, because bool is a subclass of int."""
+    stored = {_const.BATTERY_SCALE_STORE_KEY: junk,
+              _const.BATTERY_SCALE_PROFILE_KEY: PROFILE}
+    assert _const.battery_power_scale_from_store(stored, PROFILE)[0] is None
+
+
+def test_a_restored_scale_reaches_the_client_unchanged():
+    """End to end: what comes out of the store is what the client adopts, and it stays
+    open to correction by real load."""
+    scale, _ = _const.battery_power_scale_from_store(_saved(1.0), PROFILE)
+    client = _client()
+    client.restore_battery_power_scale(scale)
+    assert client._battery_power_scale_override == 1.0
+    assert client.validated_battery_power_scale is None

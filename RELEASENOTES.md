@@ -4,6 +4,26 @@
 
 ---
 
+## v2.0.4-b17
+
+Issues: #434
+
+- **WIT: a remembered battery power scale could be erased instead of reused.** Every write to
+  the integration's storage rebuilt the file from scratch, and left the scale out whenever the
+  running session did not have one in hand. So a single save before the scale was restored
+  deleted it permanently, and the next restart had nothing to restore — the battery power
+  reading then had to be re-detected, which needs the battery working above 500 W.
+
+  **Storage now keeps a scale it is not carrying**, so this repairs itself: the next time your
+  inverter validates one, it stays put. Reported by @Wojak129, whose restart re-detected from
+  scratch instead of restoring.
+
+- **The reason a scale was not restored is now in the log.** Nothing stored, stored for a
+  different inverter profile, or storage unreadable were all silent. Each now says which, at
+  INFO, so it can be read from an ordinary log rather than reproduced with debug logging on.
+
+---
+
 ## v2.0.4-b16
 
 Issues: #400, #349
