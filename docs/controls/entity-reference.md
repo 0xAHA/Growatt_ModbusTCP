@@ -188,9 +188,11 @@ Charge Stop SOC and AC Charge Enable — an overlap that runs through this whole
     46  ac_voltage_t   390.4 V      31108 (L3-L1)   390.5 V
     ```
 
-    **Per-phase AC power inherits it.** Those registers are the product of the voltage and
-    current beside them, so using a line voltage makes each phase read about √3 too high -
-    measured on both inverters, to the last digit.
+    **The three per-phase AC Power entities are not readings.** On both inverters the S and
+    T power registers are empty, so this integration computes all three from voltage times
+    current - and because the voltage is line-to-line, they come out about √3 too high. The
+    inverter fills only the R register, which holds total output rather than a per-phase
+    value.
 
     They are left as they are for now: dividing by √3 would invent a phase voltage that is
     only correct on a perfectly balanced supply. **For per-phase voltage, use a meter** -

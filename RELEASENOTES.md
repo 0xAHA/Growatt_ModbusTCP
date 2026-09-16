@@ -21,10 +21,16 @@ Issues: #446, #447
   6,553.8 W.
 
 - **Documented: on SPH-TL3, AC Voltage R/S/T are line-to-line voltages**, around 400 V on a
-  230/400 V supply rather than 230 V, and per-phase AC power inherits that — it reads about
-  √3 high. Confirmed on two inverters, one of which settled it by reading those registers
-  against the VPP registers documented as line voltage, seconds apart. **No entity changes
-  in this release**; for per-phase voltage use a meter. (#442, #447)
+  230/400 V supply rather than 230 V. Confirmed on two inverters, one of which settled it by
+  reading those registers against the VPP registers documented as line voltage, seconds
+  apart. **No entity changes in this release**; for per-phase voltage use a meter.
+  (#442, #447)
+
+  **Correction (2026-09-17):** this note first said the inverter derives per-phase AC power
+  from that voltage. It does not — the inverter leaves two of the three power registers
+  empty, and the integration computes all three itself. The effect on those entities is the
+  same, and they still read about √3 high, but the cause is ours. Withdrawn by @acsel91, who
+  had reported it.
 
 ---
 

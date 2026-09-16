@@ -55,17 +55,24 @@ SPH_TL3_3000_10000 = {
         # a different site, confirms the same three things in a register scan at a quite
         # different operating point:
         #
-        #   1. Power is the exact product of voltage and current. #442: 409.1 V x 0.4 A =
-        #      163.64 against 163.6 W, and 409.4 x 11.1 = 4544 against 4548.8. #447: 3128.4 W
-        #      / 7.9 A = 396.0 V, which is register 38 to the tenth. 40-49 are derived here,
-        #      not sensed.
-        #   2. The voltage is line-to-line, not phase. #442: 398-416 V. #447: 396-397 V while
+        #   1. The voltage is line-to-line, not phase. #442: 398-416 V. #447: 396-397 V while
         #      the portal's DTSU666 meter showed 230.1 / 229.3 / 229.5 V per phase. The ratio
         #      is sqrt(3). Registers 50/51/52, which V1.39 assigns to line-to-line, read 0.0
         #      on both, so their real source on this hardware is VPP 31106-31108 (below).
-        #   3. So the per-phase power overstates by about sqrt(3). #447's phases summed to
-        #      9466 W against 5543 W of actual output - a ratio of 1.71. #442's summed to
-        #      5.12 kW against 3.19 kW.
+        #      Settled directly on #447: 38/42/46 read 404.4 / 408.0 / 391.3 V against
+        #      31106/31107/31108 at 404.8 / 407.8 / 391.1 V, same instant.
+        #   2. Only 40/41 is populated. 44/45 and 48/49 read a flat zero on both inverters,
+        #      at idle and at 5.5 kW.
+        #   3. So the three per-phase power ENTITIES are not readings at all: with S and T
+        #      empty, the V x I fallback below synthesises all three - from a line-to-line
+        #      voltage, which is why they come out about sqrt(3) high.
+        #
+        # CORRECTED 2026-09-17. This block previously said the power registers were "the
+        # exact product of voltage and current, to the last digit" and therefore derived by
+        # the firmware. They are not: that agreement was OUR fallback, and @acsel91
+        # withdrew the observation once he had DEBUG on. The #447 figures quoted for it -
+        # 3128.4 / 3159.2 / 3178.4 W summing to 9466 W - are the fallback's output, not the
+        # inverter's. Anything reasoning from "the firmware computes these" is unfounded.
         #
         # NOT changed yet, deliberately. The fix is not a rename: dividing 38/42/46 by sqrt(3)
         # would invent a phase voltage that is only exact on a perfectly balanced supply, and
