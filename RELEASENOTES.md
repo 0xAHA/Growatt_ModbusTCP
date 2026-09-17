@@ -4,6 +4,25 @@
 
 ---
 
+## v2.0.4-b20
+
+Issues: #400
+
+- **Fixes Hold failing with an error on v2.0.4-b16 to b19.** Setting Hold — from the
+  Mode (VPP) select on WIT, or the Set Battery Mode action on MOD — raised an internal error
+  on **any inverter using a shared Modbus connection**, which is the usual setup where one
+  connection serves the integration. The write that clears the branch selector reached the
+  inverter and *then* threw, so the action reported failure after it had already changed the
+  register.
+
+  **The state it left behind was the one b18 was written to prevent:** the selector cleared,
+  the previous mode's power setpoint still standing, and no hold schedule written. If you
+  use Hold, upgrade past this.
+
+  Diagnosed from the traceback by @KevlarD-67, who found the cause as well as the symptom.
+
+---
+
 ## v2.0.4-b19
 
 Issues: #446, #447

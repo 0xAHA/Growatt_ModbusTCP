@@ -181,6 +181,7 @@ def test_the_action_hold_clears_the_setpoint_too():
 # ---------------------------------------------------------------------------
 
 import importlib
+import threading
 import time
 
 _gm = importlib.import_module("growatt_under_test.growatt_modbus")
@@ -241,6 +242,90 @@ def test_a_bypassed_write_still_stamps_the_limiter():
 
     client.write_register(VPP_REMOTE_POWER_ENABLE, 0, bypass_rate_limit=True)
     assert client._wit_control_last_write[VPP_REMOTE_POWER_ENABLE] > before
+
+
+# ---------------------------------------------------------------------------
+# The shared-connection path (#400)
+#
+# Every test above drives the DIRECT client path, because _writable_client sets
+# _shared_conn to None. That is why they all passed while a bypassed write raised
+# UnboundLocalError on a shared connection - which is the common configuration, and the one
+# the reporter runs.
+#
+# _write_register_locked imported `time` inside two branches. A local import binds the name
+# for the whole function, so skipping the rate-limit branch left `time` unbound, and the
+# shared path's cooldown stamp raised AFTER the register had been written: 30407 cleared on
+# the inverter, the action reporting failure, and no hold period written.
+# ---------------------------------------------------------------------------
+
+
+class _FakeSharedConn:
+    """Enough of the shared hub for write_register to take that branch."""
+
+    def __init__(self):
+        self._lock = threading.RLock()
+        self.writes = []
+
+    def ensure_connected(self):
+        return True
+
+    def connect_refusal_reason(self):
+        return "not refused"
+
+    def write_register(self, register, value, slave_id):
+        self.writes.append((register, value))
+        return True
+
+
+def _shared_client():
+    client = _gm.GrowattModbus(connection_type="tcp", host="10.0.0.1", port=502,
+                               register_map="WIT_4000_15000TL3")
+    client._shared_conn = _FakeSharedConn()
+    return client
+
+
+def test_a_bypassed_write_survives_the_shared_connection_path():
+    """THE b16 regression. The write reached the inverter and then raised, so the caller
+    saw a failure for a write that had already happened."""
+    client = _shared_client()
+    client._wit_control_last_write[VPP_REMOTE_POWER_ENABLE] = time.time()
+
+    assert client.write_register(VPP_REMOTE_POWER_ENABLE, 0, bypass_rate_limit=True) is True
+    assert client._shared_conn.writes == [(VPP_REMOTE_POWER_ENABLE, 0)]
+
+
+def test_the_shared_path_stamps_the_limiter_after_a_bypassed_write():
+    client = _shared_client()
+    before = time.time() - 29
+    client._wit_control_last_write[VPP_REMOTE_POWER_ENABLE] = before
+
+    client.write_register(VPP_REMOTE_POWER_ENABLE, 0, bypass_rate_limit=True)
+    assert client._wit_control_last_write[VPP_REMOTE_POWER_ENABLE] > before
+
+
+def test_the_shared_path_still_honours_the_cooldown():
+    """The limiter must keep working on this path too, for writes that do not bypass."""
+    client = _shared_client()
+    client._wit_control_last_write[VPP_REMOTE_POWER_ENABLE] = time.time()
+
+    assert client.write_register(VPP_REMOTE_POWER_ENABLE, 0) is False
+    assert client._shared_conn.writes == []
+
+
+def test_no_function_local_time_import_shadows_the_module_one():
+    """The shape of the bug, pinned. `import time` inside any branch of that function makes
+    `time` local to all of it, so a path that skips the branch raises UnboundLocalError."""
+    import ast
+    source = (COMPONENT / "growatt_modbus.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    fn = next(n for n in ast.walk(tree)
+              if isinstance(n, ast.FunctionDef) and n.name == "_write_register_locked")
+    shadowing = [a.name for n in ast.walk(fn) if isinstance(n, ast.Import)
+                 for a in n.names if a.asname is None and a.name == "time"]
+    assert not shadowing, (
+        "a function-local `import time` is back in _write_register_locked; it shadows the "
+        "module-level import for the whole function body (#400)"
+    )
 
 
 def test_the_bypass_is_off_by_default():

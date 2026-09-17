@@ -3986,7 +3986,10 @@ class GrowattModbus:
             # timestamp below is still updated on success, so a bypassed write does not
             # blind the limiter afterwards.
             if register in self._wit_control_registers and not bypass_rate_limit:
-                import time
+                # NO local `import time` here. It would bind `time` as a local name for the
+                # whole function, and this branch is skipped when the write bypasses the
+                # limiter - leaving the stamp further down raising UnboundLocalError AFTER
+                # the register had been written (#400). `time` is imported at module scope.
                 current_time = time.time()
                 last_write_time = self._wit_control_last_write.get(register, 0)
                 time_since_last_write = current_time - last_write_time
@@ -4064,7 +4067,6 @@ class GrowattModbus:
 
             # Update WIT cooldown timestamp only after confirmed successful write (F-005)
             if register in self._wit_control_registers:
-                import time
                 self._wit_control_last_write[register] = time.time()
                 self._check_wit_control_conflicts(register, value)
 
