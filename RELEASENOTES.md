@@ -4,6 +4,22 @@
 
 ---
 
+## v2.0.4-b23
+
+Issues: #449
+
+- **A device type code of 0 is no longer reported as an unsupported model.** On firmware
+  that leaves the DTC register empty, the log carried `✗ DTC Detection - Unknown DTC code:
+  0 (not in supported models)` once after every restart — naming a fully supported inverter
+  as unsupported, with no way to clear it. An empty register is not a code, and is now
+  logged at debug instead.
+
+  Nothing was ever changed by that message: no profile was switched and no entity was
+  affected. Applies to any model whose DTC register reads 0. Reported by @JosvL on a
+  MIN 5000TL-XH.
+
+---
+
 ## v2.0.4-b22
 
 Issues: #447, #446

@@ -36,6 +36,18 @@ WARNING - ✗ DTC Detection - Unknown DTC code: 9999 (not in supported models)
 INFO - DTC and model name detection failed, trying register-based detection...
 ```
 
+!!! note "A DTC of 0 is not an unknown code"
+    "Unknown DTC code" names a value your inverter actually reported. A register that
+    answers **0** has given no answer at all, and says nothing about whether your model is
+    supported.
+
+    Until v2.0.4-b23 the profile re-check below passed a zero straight through, so owners of
+    fully supported inverters saw `✗ DTC Detection - Unknown DTC code: 0 (not in supported
+    models)` once after every restart, with no way to clear it
+    ([#449](https://github.com/0xAHA/Growatt_ModbusTCP/issues/449)). It is now logged at
+    debug. On an older version the message is harmless: nothing was changed by it, and your
+    profile was never altered.
+
 ### The failures above are silent, and they are permanent
 
 All three leave detection falling back to register probing or model-name matching. That

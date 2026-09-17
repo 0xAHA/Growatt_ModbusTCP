@@ -733,6 +733,23 @@ def detect_profile_from_dtc(dtc_code: int) -> Optional[str]:
     Returns:
         Profile key or None if no match
     """
+    # A register that answers 0 has told us nothing, and nothing is not a model.
+    #
+    # Both detection callers test `if dtc_code:` before calling, so an empty value only
+    # reaches here from the once-per-session profile re-check, which passes the raw
+    # register straight through. The result was "Unknown DTC code: 0 (not in supported
+    # models)" at WARNING on every restart and reload - telling the owner of a perfectly
+    # supported inverter that their model is unsupported, over a register that simply came
+    # back empty. They could not clear it and reasonably read it as a fault (#449).
+    #
+    # Reading 0 is "Read OK" with no value (rule 3), never evidence about the hardware.
+    # Detection logs its own accurate line when this happens, so nothing is lost here.
+    if not dtc_code:
+        _LOGGER.debug(
+            "No device type code reported (register returned %s) - nothing to match", dtc_code
+        )
+        return None
+
     entry = DTC_REGISTRY.get(dtc_code)
     if entry:
         if entry.provenance == CONFIRMED:
