@@ -4,6 +4,26 @@
 
 ---
 
+## v2.0.4-b22
+
+Issues: #447, #446
+
+- **Absurd one-off spikes are now caught on grid power too.** v2.0.4-b19 began withholding
+  single readings that arrive corrupted, but it deliberately skipped any reading that is
+  allowed to be negative — which is exactly what grid power is. So the guard stepped over
+  the sensor most likely to show the fault.
+
+  **It now covers those readings as well**, using a different test: a real value, whether
+  importing or exporting, always sits at one end of its range, and a corrupted one lands in
+  the middle. Genuine readings up to about ±107 kW are unaffected, and anything that holds
+  the same shape for three polls is published rather than withheld.
+
+  Reported by @AzraelsDisk, whose Grid Power showed a burst of spikes to 9 MW against a
+  −20 W baseline — and whose own register scan had caught the corruption live. Same inverter
+  model as @acsel91's report in #446, which found the original fault.
+
+---
+
 ## v2.0.4-b21
 
 Issues: #448

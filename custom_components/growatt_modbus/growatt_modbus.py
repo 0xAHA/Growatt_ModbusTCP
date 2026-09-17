@@ -260,6 +260,27 @@ _PAIR_WORD_EXTREME_MARGIN = 1000
 # absurd but it is not this fault, and narrowing here costs nothing.
 _PAIR_HIGH_WORD_MAX_FOR_CORRUPTION = 1024
 
+# The same fault on a SIGNED pair needs a different test (#447).
+#
+# A signed pair cannot use the rule above: a legitimate small negative carries 0xFFFF in its
+# high word, which is the corrupt shape for an unsigned pair. But the real values still sit
+# at one end or the other, and the corruption sits in between:
+#
+#     -0.9 W      high 65535        +1,810 W     high 0
+#     -246 W      high 65535       +11,862 W     high 1
+#  -11,862 W      high 65534       +30,000 W     high 4
+#
+#     corrupt:    high 579, 915, 1373, 63726, 65289   <- neither end
+#
+# A second SPH 10000 TL3 BH-UP owner photographed +9 MW and +6 MW spikes on grid power,
+# which decode from high words of 1373 and 915. His own register scan caught two of them
+# live, at 1017 and 1019. Grid power is declared signed on his profile, so the unsigned
+# guard steps over it - the gap this closes.
+#
+# 16 counts of headroom at each end is roughly +/-107 kW at 0.1 W, far beyond any inverter
+# this integration supports, so no real reading can reach the middle.
+_SIGNED_PAIR_HIGH_WORD_BAND = 16
+
 # ...but a genuine reading near a multiple of 65536 raw counts has the same shape, and a
 # steady one would be withheld for ever. A corruption is transient - his lasted a single
 # poll and was back to normal ten seconds later - so a shape that repeats this many polls
@@ -2399,6 +2420,16 @@ class GrowattModbus:
         return None
 
     @staticmethod
+    def _signed_pair_words_look_corrupted(high_value: int) -> bool:
+        """Does this SIGNED pair's high word sit in neither extreme band? (#447)
+
+        Real values cluster at both ends - near 0x0000 going up, near 0xFFFF going down.
+        A value that landed in the wrong half puts a mid-range number there instead.
+        """
+        return not (high_value <= _SIGNED_PAIR_HIGH_WORD_BAND
+                    or high_value >= 0xFFFF - _SIGNED_PAIR_HIGH_WORD_BAND)
+
+    @staticmethod
     def _pair_words_look_corrupted(high_value: int, low_value: int) -> bool:
         """Does this 32-bit pair have the word-level corruption shape? (#446)
 
@@ -2685,6 +2716,43 @@ class GrowattModbus:
 
             # Handle signed values if specified
             if reg_info.get('signed') or pair_info.get('signed'):
+                # Same word-level corruption as #446, on a pair the unsigned guard cannot
+                # test (#447). See _SIGNED_PAIR_HIGH_WORD_BAND for the measured shapes.
+                shape_key = (address, pair_addr)
+                if self._signed_pair_words_look_corrupted(high_value):
+                    seen = self._pair_shape_suspect.get(shape_key, 0) + 1
+                    self._pair_shape_suspect[shape_key] = seen
+                    if seen < _PAIR_SHAPE_REPEATS_BEFORE_BELIEVED:
+                        name = reg_info.get('name') or pair_info.get('name')
+                        _as_signed = (combined - 0x100000000
+                                      if combined > 0x7FFFFFFF else combined)
+                        if name not in self._pair_shape_warned:
+                            self._pair_shape_warned.add(name)
+                            logger.warning(
+                                "[PAIR SHAPE] %s (registers %d/%d) read HIGH=%d LOW=%d "
+                                "(0x%08X), which would publish %s. On a signed pair a real "
+                                "reading keeps its high word near 0 or near 65535; this one "
+                                "is in between, which is the signature of a value landing "
+                                "in the wrong half. Withholding it. If this repeats %d "
+                                "polls in a row it will be published as genuine (#447).",
+                                name, address, pair_addr, high_value, low_value, combined,
+                                f"{_as_signed * combined_scale:,.1f}",
+                                _PAIR_SHAPE_REPEATS_BEFORE_BELIEVED,
+                            )
+                        else:
+                            logger.debug(
+                                "[PAIR SHAPE] %s withheld again: HIGH=%d LOW=%d",
+                                name, high_value, low_value,
+                            )
+                        return None
+                    logger.debug(
+                        "[PAIR SHAPE] %s has held the same shape for %d polls - publishing "
+                        "it as a genuine reading",
+                        reg_info.get('name') or pair_info.get('name'), seen,
+                    )
+                else:
+                    self._pair_shape_suspect.pop(shape_key, None)
+
                 if combined > 0x7FFFFFFF:  # If sign bit is set
                     combined = combined - 0x100000000
             elif combined > 0x7FFFFFFF:
