@@ -280,6 +280,17 @@ enable registers (not bit-packed like MOD).
 | Grid First Period 1–3 Start/End | 1080–1087 | Grid First windows 1–3 |
 | Grid First Period 1–3 Enable | 1082, 1085, 1088 | Enable each slot |
 
+!!! danger "A schedule set in ShinePhone wins, and you cannot see it from here"
+    Periods created in **ShinePhone → Advanced Setting → TimeElectricity Price** are not the
+    same thing as the time period entities or `sync_tou_schedule`. They are not exposed over
+    Modbus, do not appear in diagnostics, and **take effect regardless of what this
+    integration sets**.
+
+    The symptom is an inverter doing something nothing in Home Assistant explains - typically
+    charging from the grid - while every control you change reverts or appears to be ignored.
+    Delete the period in the app; the change takes effect within a poll
+    ([#448](https://github.com/0xAHA/Growatt_ModbusTCP/issues/448)).
+
 > **SPH HU note:** The SPH 8000–10000 TL-HU uses a different holding register architecture.
 > Battery management registers (1044, 1070–1071, 1090–1108) return Modbus exceptions on HU
 > hardware — these settings must be made via the inverter LCD or ShinePhone app. The

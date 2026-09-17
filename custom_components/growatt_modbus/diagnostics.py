@@ -29,7 +29,7 @@ from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from .const import DOMAIN, profile_register_names
 
 # Host/device path can identify a network or a person's hardware layout, and the
 # serial number identifies the unit itself. Users routinely paste diagnostics into
@@ -155,6 +155,23 @@ async def async_get_config_entry_diagnostics(
     data = getattr(coordinator, "data", None)
     if data is not None and is_dataclass(data):
         diagnostics["data"] = _safe(asdict(data))
+        # A field the profile does not map is NOT a reading (#448).
+        #
+        # asdict() dumps every field, and one whose register this profile never defines
+        # keeps its declared default. In a WIT dump that made `tl_xh_priority_mode: 3` -
+        # a MIN TL-XH register at 3018, absent from every WIT map, defaulting to 3 - look
+        # like a live value disagreeing with `priority_mode`. The reporter built a
+        # hypothesis on it, reasonably. `unread_fields` does not catch these either: it
+        # records reads that were attempted and failed, and these are never attempted.
+        diagnostics["data_note"] = (
+            "Fields whose register this profile does not map are NOT readings - they hold "
+            "the dataclass default. Check a field against profile_register_names below "
+            "before drawing conclusions from it. 'unread_fields' lists registers that were "
+            "attempted and failed, which is a different thing."
+        )
+        diagnostics["profile_register_names"] = _safe(
+            profile_register_names(getattr(client, "register_map", None))
+        )
     else:
         diagnostics["data"] = None
 

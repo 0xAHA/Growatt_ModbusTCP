@@ -1414,6 +1414,36 @@ BATTERY_SCALE_PROFILE_KEY = "battery_power_scale_profile"
 BATTERY_SCALE_VALID = (0.1, 1.0)
 
 
+def profile_register_names(register_map) -> list:
+    """Every field name the selected profile can actually fill, sorted.
+
+    Diagnostics dumps the whole GrowattData dataclass, and a field the profile does not map
+    keeps its declared default - which reads exactly like a measurement. A WIT owner
+    reasonably built a hypothesis on `tl_xh_priority_mode: 3` in his dump; that register
+    (3018) is a MIN TL-XH address his profile has never mapped, and 3 is the default in the
+    dataclass (#448).
+
+    `unread_fields` cannot cover this: it records registers that were *attempted and
+    failed*, and a block the profile does not define is skipped before any attempt.
+
+    So rather than guess which fields are stale - many are legitimately derived, and
+    misclassifying those would mislead in a new way - the dump carries this list and lets
+    the reader check whether a field has any backing register at all.
+    """
+    if not isinstance(register_map, dict):
+        return []
+    names = set()
+    for space in ("input_registers", "holding_registers"):
+        for reg in (register_map.get(space) or {}).values():
+            if not isinstance(reg, dict):
+                continue
+            for key in ("name", "alias", "maps_to"):
+                value = reg.get(key)
+                if value:
+                    names.add(str(value))
+    return sorted(names)
+
+
 def battery_power_scale_from_store(stored, profile_key: str):
     """(scale, reason) for a stored battery power scale.
 

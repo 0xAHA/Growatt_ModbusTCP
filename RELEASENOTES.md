@@ -4,6 +4,28 @@
 
 ---
 
+## v2.0.4-b21
+
+Issues: #448
+
+- **Diagnostics no longer present unused values as if they were readings.** The dump lists
+  every internal field, and one whose register your inverter's profile does not use simply
+  shows its starting value — which looks identical to something measured. A WIT owner
+  reasonably read one of those as a live setting that disagreed with another, and spent time
+  on it. The dump now includes the list of names your profile can actually fill, and a note
+  saying that anything missing from it is not a reading. Reported by @Svetlonos76.
+
+- **Documented: a schedule set in the ShinePhone app overrides this integration, and cannot
+  be seen or cleared from it.** A time period configured under *Advanced Setting →
+  TimeElectricity Price* takes effect regardless of what you set here, and
+  `sync_tou_schedule` does not clear it — it writes a different schedule. The symptom is an
+  inverter doing something no Home Assistant entity accounts for, usually charging from the
+  grid, while every control you change appears to revert. Deleting the period in the app
+  fixes it within one poll. Now covered on the action's page, in Battery & Scheduling, and
+  in the troubleshooting guide. (#448)
+
+---
+
 ## v2.0.4-b20
 
 Issues: #400

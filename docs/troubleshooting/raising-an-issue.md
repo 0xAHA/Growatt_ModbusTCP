@@ -87,6 +87,8 @@ Worth including: your adapter model, and whether the problem survives a restart 
 
 Usually the Growatt cloud overwriting your change. If a **ShineWiFi or ShineLink dongle** is connected, the cloud can restore its own settings within seconds of a local write. The integration detects this and raises a repair notice.
 
+**Check the app's own schedule before anything else.** A time-of-use period set in **ShinePhone → Advanced Setting → TimeElectricity Price** overrides Modbus controls while it is active, and it is invisible from this integration — nothing in the diagnostics shows it. One WIT owner's forgotten *Battery First 11:51-15:30* period charged his battery from the grid at 14-16 kW while every control he set reverted, and `sync_tou_schedule` did not clear it either; deleting the period in the app fixed it within one poll ([#448](https://github.com/0xAHA/Growatt_ModbusTCP/issues/448)). If the inverter is doing something no Home Assistant entity accounts for, that is the first place to look.
+
 Say which control, what you set it to, and what it reverted to.
 
 ### Your inverter model isn't supported, or auto-detection picks the wrong profile

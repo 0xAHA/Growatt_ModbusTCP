@@ -271,6 +271,19 @@ Pushes a whole schedule so the inverter follows it even if Home Assistant is off
 20 periods, and **they must not overlap or touch** — end at `XX:59`, start the next at
 `XX:00`. See [Battery & Scheduling](battery-scheduling.md).
 
+!!! warning "This writes the VPP schedule only — it does not clear one set in the app"
+    The action writes the VPP time-of-use block (registers 30411 and 30412 upward) on WIT
+    inverters. A schedule created in **ShinePhone → Advanced Setting → TimeElectricity
+    Price** lives somewhere this action does not reach, and **an all-day period written here
+    will not override it**.
+
+    A WIT owner spent an evening on this: a forgotten *Battery First 11:51-15:30, 100%*
+    period was charging his battery from the grid at 14-16 kW, and neither Modbus writes nor
+    two calls to this action stopped it. Deleting the period inside ShinePhone stopped it
+    within one poll ([#448](https://github.com/0xAHA/Growatt_ModbusTCP/issues/448)).
+
+    **If a schedule appears to be ignoring you, check the app first.**
+
 ```yaml
 action: growatt_modbus.sync_tou_schedule
 data:
