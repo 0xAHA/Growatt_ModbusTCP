@@ -5552,6 +5552,13 @@ class GrowattModbus:
             if value is not None:
                 data.box_connect_flag = int(value)
 
+            # A register that did not read this poll must not be reported as its default
+            # (#450). box_connect_flag lives at 3320, outside the 3281-3298 sub-range these
+            # fields share, so a block timeout on that sub-range leaves connect=1 (read fine)
+            # sitting next to mode/temp/grid/load silently falling back to their dataclass
+            # defaults - 0, which decodes as "Off-Grid" indistinguishably from a genuine
+            # reading. Marking the field unread instead makes the sensor unknown for that
+            # poll, matching the pattern _set_from_register already uses elsewhere (#384).
             for attr, reg_name in (
                 ('box_bypass_status', 'box_bypass_status'),
                 ('box_work_mode',     'box_work_mode'),
@@ -5564,6 +5571,8 @@ class GrowattModbus:
                     v = self._get_register_value(a)
                     if v is not None:
                         setattr(data, attr, int(v))
+                    else:
+                        data.unread_fields.add(attr)
 
             for attr, reg_name in (
                 ('box_temperature',   'box_temperature'),
@@ -5574,6 +5583,8 @@ class GrowattModbus:
                     v = self._get_register_value(a)
                     if v is not None:
                         setattr(data, attr, float(v))
+                    else:
+                        data.unread_fields.add(attr)
 
             # 32-bit paired: call _get_register_value on the _low address
             for attr, low_name in (
@@ -5585,6 +5596,8 @@ class GrowattModbus:
                     v = self._get_register_value(a)
                     if v is not None:
                         setattr(data, attr, float(v))
+                    else:
+                        data.unread_fields.add(attr)
 
             if data.box_connect_flag:
                 logger.debug(

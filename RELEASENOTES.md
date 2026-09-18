@@ -4,6 +4,23 @@
 
 ---
 
+## v2.0.4-b24
+
+Issues: #450
+
+- **A failed Backup Box register read no longer reports Off-Grid.** Backup Box work mode,
+  temperature, grid power and load power are read from a single 18-register block; when
+  that block times out, the connection-status register (read separately) still answers, but
+  these four silently fell back to `0` — which is exactly what a genuine Off-Grid reading
+  looks like. A transport hiccup was indistinguishable from the grid actually failing.
+
+  These fields now report unknown for the poll instead, the same treatment already used
+  elsewhere for a failed read. Applies to any Backup Box (Growatt ARK) install. Reported by
+  @monchote, whose debug log caught the exact moment it happened and showed the next poll
+  reading correctly.
+
+---
+
 ## v2.0.4-b23
 
 Issues: #449
