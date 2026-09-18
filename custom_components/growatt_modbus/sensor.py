@@ -947,7 +947,13 @@ SENSOR_DEFINITIONS = {
             "name": f"Battery {n} {label}",
             "icon": icon,
             **extra,
-            "attr": f"battery{n}_{field}",
+            # The driver's dynamic reader (growatt_modbus.py) sets every field under its
+            # own name except current, which it stores as batteryN_current_low - the 32-bit
+            # pair carries a combined value there, same as battery_current_low on cluster 1.
+            # Sensor KEY stays batteryN_current (matching BATTERY2/3/4_SENSORS), but attr
+            # must point at the name the driver actually sets, or this reads unavailable
+            # forever (#451).
+            "attr": f"battery{n}_{field}" + ("_low" if field == "current" else ""),
             "condition": (lambda nn: lambda data: hasattr(data, f"battery{nn}_voltage"))(n),
             "disabled_by_default": True,
         }

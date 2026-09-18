@@ -174,6 +174,29 @@ Charge Stop SOC and AC Charge Enable — an overlap that runs through this whole
 - Time periods use HHMM format: `530` = 05:30, `2300` = 23:00.
 - Controls are polled on every coordinator update and reflected in Home Assistant state without restart.
 
+### A second physical battery pack — Battery 2 sensors
+
+WIT, MOD and MID hybrids can run more than one battery stack (e.g. two Growatt APX units),
+each wired to its own register cluster — 31300-31399 for pack 2, mirroring the primary
+pack's own 31200-31299. Ten **Battery 2** sensors exist for this (Voltage, Current, Power,
+SOC, SOH, Temperature, and Charge/Discharge Energy Today/Total), and **Battery 3** for a
+third stack on models that support it.
+
+They appear **disabled by default** — enable them from the entity's settings if your
+install has more than one pack. They stay unavailable (not zero) on anything else, because
+the integration only creates a value once the pack's own voltage register answers above 0;
+a single-pack install never populates them.
+
+**These are not summed into the main Battery Power/SOC/etc. sensors.** Two packs of
+different capacity don't average or add meaningfully at the SOC/voltage level, so each
+pack's figures stand on their own — add Battery Power and Battery 2 Power yourself in a
+template or the Energy dashboard if you want a combined view.
+
+Confirmed on a MID 25kTL3-XH with a 10 kWh and a 20 kWh APX pack
+([#451](https://github.com/0xAHA/Growatt_ModbusTCP/issues/451)) — reading Battery 2 Power
+recovered the second pack, which had been read from the inverter and discarded before this
+was wired up.
+
 ---
 
 !!! warning "SPH-TL3: AC Voltage R/S/T are line-to-line, not phase voltages"

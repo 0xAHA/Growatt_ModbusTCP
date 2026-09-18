@@ -982,9 +982,14 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
+        # BATTERY2_SENSORS: this register map already defines battery cluster 2 at
+        # 31300-31399 (mirroring MOD's own cluster at 31200-31299), and the driver reads it
+        # dynamically whenever batteryN_voltage answers > 0. A commercial MID/MOD install
+        # with two physical battery packs (e.g. two APX units) had no way to see the second
+        # one - reading it, then discarding it because nothing offered the entity (#451).
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
                      | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
-                     | AC_POWER_TOTAL_SENSOR)
+                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 
@@ -1003,9 +1008,11 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 30.0,
+        # BATTERY2_SENSORS — see the identical comment on mod_6000_15000tl3_xh_v201, whose
+        # register map this profile shares (#451).
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
                      | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
-                     | AC_POWER_TOTAL_SENSOR)
+                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 

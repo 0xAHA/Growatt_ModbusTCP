@@ -4,6 +4,27 @@
 
 ---
 
+## v2.0.4-b25
+
+Issues: #451
+
+- **A second physical battery pack (e.g. two APX units) is no longer read and discarded.**
+  On WIT, MOD and MID hybrids the integration already read a second battery cluster's
+  voltage, power, SOC and more whenever it answered — but nothing offered the resulting
+  entities, and one sensor (Current) pointed at the wrong internal name and would have read
+  unavailable even where it was offered. Ten new **Battery 2** sensors exist now (Voltage,
+  Current, Power, SOC, SOH, Temperature, Charge/Discharge Energy Today/Total), plus
+  **Battery 3** on models that support a third stack. They appear **disabled by default** —
+  enable them if you have more than one pack; they stay unavailable, not zero, on a
+  single-pack install.
+
+  They are not summed into the existing Battery Power/SOC sensors — two packs of different
+  capacity don't average meaningfully at that level, so each pack's figures stand on their
+  own. Applies to WIT, MOD and MID hybrid profiles. Confirmed on a MID 25kTL3-XH with a
+  10 kWh and a 20 kWh APX pack, reported by @Rocko84.
+
+---
+
 ## v2.0.4-b24
 
 Issues: #450
