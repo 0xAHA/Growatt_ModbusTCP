@@ -26,6 +26,14 @@ what the reporter proposed:
 The cost of that rule is a genuine reading near a multiple of 65536 raw counts, which has
 the same shape. A corruption is transient - his lasted one poll and was normal ten seconds
 later - so the same shape repeating three polls in a row is believed and published.
+
+**The margin was symmetric at first, and that cost a genuine reading.** A MOD TL3-XH
+owner's power_to_load read high=1 low=167 - an ordinary 6,570 W load with an EV charger
+running, confirmed the same poll against an independent register - and sat withheld for
+73 seconds because 167 was inside the single 1000-count margin used at both ends. The 16
+samples above are tight at the bottom (no low word further than 7 from 0x0000) and loose
+at the top (one outlier 802 below 0xFFFF), so the margin is now two numbers, not one:
+narrow at the bottom, unchanged at the top (@KevlarD-67).
 """
 from __future__ import annotations
 
@@ -60,12 +68,41 @@ def test_a_genuine_large_reading_is_untouched():
     assert looks_corrupted(1, 44400) is False
 
 
-def test_the_boundary_is_where_the_margin_says():
-    margin = _gm._PAIR_WORD_EXTREME_MARGIN
+def test_the_low_end_boundary_is_where_the_margin_says():
+    margin = _gm._PAIR_WORD_LOW_END_MARGIN
     assert looks_corrupted(1, margin) is True
     assert looks_corrupted(1, margin + 1) is False
+
+
+def test_the_high_end_boundary_is_where_the_margin_says():
+    margin = _gm._PAIR_WORD_HIGH_END_MARGIN
     assert looks_corrupted(1, 0xFFFF - margin) is True
     assert looks_corrupted(1, 0xFFFF - margin - 1) is False
+
+
+def test_the_margin_is_asymmetric():
+    """The whole point of #446's follow-up: a genuine reading with a small low word is far
+    more common than one that lands just below 0xFFFF, so the two ends need different
+    tolerances rather than one margin sized for the worse of the two."""
+    assert _gm._PAIR_WORD_LOW_END_MARGIN < _gm._PAIR_WORD_HIGH_END_MARGIN
+
+
+def test_a_real_load_reading_with_a_small_low_word_is_not_withheld():
+    """A MOD TL3-XH owner's power_to_load read high=1 low=167 - a genuine 6,570 W load with
+    an EV charger on it, confirmed the same poll against an independent register
+    (backup_box_load_power: 6,506.9 W). 167 was inside the old symmetric 1000-count margin
+    and withheld for 73 seconds. It must clear the tightened low end (@KevlarD-67)."""
+    assert looks_corrupted(1, 167) is False
+
+
+def test_all_sixteen_original_samples_still_caught_by_the_tightened_margin():
+    """The low end narrowed from 1000 to 16 to let @KevlarD-67's genuine reading through.
+    It must not have narrowed past any of the 16 samples that motivated the guard in the
+    first place - the nine bottom-cluster samples run no wider than a low word of 7."""
+    for high, low in REPORTED:
+        assert looks_corrupted(high, low) is True, (
+            f"HIGH={high} LOW={low} - one of the original 16 samples - now passes as genuine"
+        )
 
 
 def test_a_large_high_word_is_not_this_fault():

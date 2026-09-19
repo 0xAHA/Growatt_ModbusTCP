@@ -249,7 +249,18 @@ _UNDERFLOW_PLAUSIBLE_MAGNITUDE = 1_000_000
 #
 # Magnitude alone cannot catch this. His smallest sample published 6,553.8 W, which is an
 # ordinary reading for a house with an EV charger - only the word shape distinguishes it.
-_PAIR_WORD_EXTREME_MARGIN = 1000
+#
+# The margin is asymmetric, and has to be: his 16 samples cluster tight at the bottom (low
+# within 7 of 0x0000, nine of them) and loose at the top (within 74 of 0xFFFF in six, and
+# one outlier at 802). A single margin wide enough for the top outlier - 1000 - left the
+# bottom permissive from 8 up to 1000, and a MOD TL3-XH owner hit it: power_to_load read
+# high=1 low=167, a genuine 6,570 W load with an EV charger on it, confirmed against an
+# independent register (backup_box_load_power) reading 6,506.9 W the same poll. 167 is nine
+# times the widest genuine bottom sample seen and comfortably clear of the withheld reading
+# below it - narrowing here recovers real load readings without touching the sample that
+# set the top margin (#446, @KevlarD-67).
+_PAIR_WORD_LOW_END_MARGIN = 16
+_PAIR_WORD_HIGH_END_MARGIN = 1000
 
 # ...and the high word has to be SMALL. His 16 samples ran 1 to 280, which is what a value
 # landing in the wrong half looks like when the true reading is near zero.
@@ -2439,8 +2450,8 @@ class GrowattModbus:
         """
         if high_value == 0 or high_value > _PAIR_HIGH_WORD_MAX_FOR_CORRUPTION:
             return False
-        return (low_value <= _PAIR_WORD_EXTREME_MARGIN
-                or low_value >= 0xFFFF - _PAIR_WORD_EXTREME_MARGIN)
+        return (low_value <= _PAIR_WORD_LOW_END_MARGIN
+                or low_value >= 0xFFFF - _PAIR_WORD_HIGH_END_MARGIN)
 
     def _documented_battery_power_scale(self) -> Optional[float]:
         """The `combined_scale` the profile declares for battery power, or None.
@@ -2835,7 +2846,8 @@ class GrowattModbus:
             else:
                 # An unsigned pair with the sign bit clear. This is where a word-level
                 # corruption lands, because it is small enough not to trip the guard above
-                # (#446). See _PAIR_WORD_EXTREME_MARGIN for the measured signature.
+                # (#446). See _PAIR_WORD_LOW_END_MARGIN / _PAIR_WORD_HIGH_END_MARGIN for
+                # the measured signature.
                 #
                 # Only reached for unsigned pairs: a signed pair legitimately carries
                 # 0xFFFF in its high word for small negatives, which is the same shape.

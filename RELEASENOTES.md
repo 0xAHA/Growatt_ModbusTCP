@@ -4,6 +4,39 @@
 
 ---
 
+## v2.0.5-b1
+
+Issues: #446
+
+- **A genuine reading could be mistaken for the grid-power corruption fixed in v2.0.4.**
+  The guard added for that fault withholds a 32-bit pair whose high word is small and
+  whose low word sits jammed against one end of its range — the signature of a value
+  landing in the wrong half of the pair. The margin at the low end was wide enough to also
+  catch ordinary readings: a MOD TL3-XH's `power_to_load` read a genuine 6,570 W (EV
+  charger included, confirmed against an independent register in the same poll) and was
+  withheld for 73 seconds because its low word, 167, fell inside the old margin.
+
+  **The margin is now two numbers instead of one.** The original 16 reported samples are
+  tight at the low end (no more than 7 counts from zero) and loose at the high end (up to
+  802 counts), so the low end is tightened to 16 — comfortably past every genuine bottom
+  sample seen, comfortably short of every corrupted one — while the high end is unchanged.
+  All 16 original samples are still caught.
+
+  Applies to any profile using this guard (SPH-TL3, MOD, MID, WIT and others sharing the
+  affected register pairs). Reported and precisely characterised by @KevlarD-67, on a MOD
+  TL3-XH.
+
+---
+
+## v2.0.4
+
+Promoted to stable from the pre-release line below (b1 through b26). Every change in that
+line is included — see each `v2.0.4-bN` section for the individual reports and hardware
+confirmations behind it, or the [GitHub release](https://github.com/0xAHA/Growatt_ModbusTCP/releases/tag/v2.0.4)
+for a summary grouped by area.
+
+---
+
 ## v2.0.4-b26
 
 Issues: #443
