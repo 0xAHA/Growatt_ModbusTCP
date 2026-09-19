@@ -2177,9 +2177,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         f"{hours_off * 60} minutes."
                     )
                 else:
-                    # Off-grid can be read but not set (#444), so the button and the action
-                    # this used to recommend do not exist there. Telling an SPF owner to
-                    # press a button that is not on their device is worse than no advice.
+                    # Off-grid clock writes are confirmed working (#443) — same remedy for
+                    # every profile now. is_clock_writable is kept as the check rather than
+                    # inlining True, so a future model that genuinely cannot write its clock
+                    # still gets an accurate notice instead of this one going stale again.
                     if getattr(self._client, "is_clock_writable", True):
                         remedy = (
                             "**To fix:** Enable the **Inverter Clock Sync** button on the "
@@ -2190,11 +2191,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         )
                     else:
                         remedy = (
-                            "**To fix:** set the time via the ShinePhone app or the inverter's "
-                            "front panel. Off-grid models can have their clock read but not "
-                            "set over Modbus - the year is written in a form that has only "
-                            "been confirmed on other protocol families, so this integration "
-                            "does not guess at it."
+                            "**To fix:** set the time via the ShinePhone app or the "
+                            "inverter's front panel. This model's clock can be read but not "
+                            "set over Modbus."
                         )
                     message = (
                         f"The inverter's internal clock is **{abs(drift_min):.1f} minutes {direction}** "

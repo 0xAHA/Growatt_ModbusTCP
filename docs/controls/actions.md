@@ -157,21 +157,25 @@ Two consequences for how the action behaves:
 
 The action reads the clock back afterwards and logs a warning if it does not match.
 
-!!! warning "Reads on SPF/SPE, but cannot set the clock"
+!!! note "Off-grid (SPF/SPE) uses a different year encoding, not the button"
 
-    The **Inverter Clock** sensor works on off-grid models. An SPF 5000 ES read against a
-    known-good clock returned `45: 2026, 46: 9, 47: 14, 48: 8, 49: 20, 50: 29` - the full
-    four-digit year and the same field order as every other family, so drift is visible
-    there like anywhere else.
+    The **Inverter Clock** sensor works on off-grid models the same as everywhere else. An
+    SPF 5000 ES read against a known-good clock returned `45: 2026, 46: 9, 47: 14, 48: 8,
+    49: 20, 50: 29` - the full four-digit year and the same field order as every other
+    family, so drift is visible there like anywhere else.
 
-    **Setting** it still refuses. What makes the write work elsewhere is that the year goes
-    in as two digits and reads back as four, an asymmetry that appears in no protocol
-    document and has only been confirmed on V1.39 hardware. Reading four digits does not
-    tell us which form the register accepts, and guessing wrong sets the year to 26 AD.
+    **Setting it now works too, and takes the opposite form.** Every other confirmed family
+    writes the year as two digits and reads it back as four - write 26, read 2026. An
+    SPF 3000-6000 ES PLUS, tested directly with a friend watching the front panel, does the
+    reverse: writing `26` is accepted, briefly displayed, and then quietly reverted on its
+    own; writing `2027` is accepted, displayed, and held. This action already writes
+    whichever form your profile needs, so there is nothing to configure -
+    [#443](https://github.com/0xAHA/Growatt_ModbusTCP/issues/443) has the full test if
+    you want the detail.
 
-    Set an off-grid clock from ShinePhone or the front panel. If you have an off-grid model
-    and are willing to write holding 45 and report what it reads back, that is the one
-    measurement needed to lift this.
+    Confirmed on an SPF 3000-6000 ES PLUS. SPE shares the same off-grid clock block with no
+    reason so far to expect it differs, but has not been tested directly - if yours behaves
+    otherwise, #443 is the place to say so.
 
 ---
 

@@ -4385,11 +4385,27 @@ class GrowattModbus:
     # any other, and is no longer refused. (Register 51 read 0, consistent with the
     # document's Chip Select rather than a weekday; the off-grid weekday is at 72.)
     #
-    # Writing stays withheld. What makes the V1.39 write work is an asymmetry — write 26,
-    # read back 2026 — which is in neither protocol document and was established on V1.39
-    # hardware alone. A four-digit read says nothing about which form the register accepts,
-    # and getting it wrong on an inverter that is ALSO fed by a datalogger is how a clock
-    # ends up in the year 26 AD. See is_clock_writable().
+    # Writing was withheld for the same reason a four-digit read could not settle it: V1.39
+    # accepts the year as an offset (write 26, read back 2026), an asymmetry in neither
+    # protocol document, and there was no way to know which form off-grid wanted without
+    # actually writing to one.
+    #
+    # That measurement now exists. On an SPF 3000-6000 ES PLUS (#443), with a friend at the
+    # inverter to watch the front panel:
+    #
+    #   holding 49 (minute) written 55 -> read back 55, panel showed 55 -> single-register
+    #   writes into this block work on off-grid, same as every other family.
+    #
+    #   holding 45 (year) written 26 -> panel briefly showed 26, then reverted to 2026 on
+    #   its own. Written 2027 -> panel showed 2027, read back 2027, held.
+    #
+    # So off-grid takes the opposite form from V1.39: the full four digits, not an offset.
+    # Writing 26 is not refused - it is accepted, displayed, and then quietly discarded,
+    # which is a worse failure than an error would have been. write_inverter_time() now
+    # writes register 45 as when.year on an off-grid profile and when.year - 2000
+    # everywhere else. Confirmed on this one device; SPE shares offgrid_protocol and the
+    # same clock block with no reason yet to expect it differs, but has not been tested
+    # directly - if it turns out to disagree, that is a real report to want on #443.
     #
     # Note for anyone tempted to cite the old reason: write_inverter_time() writes 45-50
     # only. It has never touched register 51.
@@ -4425,11 +4441,13 @@ class GrowattModbus:
     def is_clock_writable(self) -> bool:
         """Whether this profile's clock can be *set*.
 
-        Not off-grid: the write uses a two-digit year established on V1.39 hardware and
-        documented nowhere, and reading a four-digit year back does not tell us which form
-        the register accepts. See the note above CLOCK_REGISTER_START.
+        True everywhere now. Off-grid used to be excluded because a four-digit read said
+        nothing about which form register 45 accepts to write - that was settled on an
+        SPF 3000-6000 ES PLUS with a controlled single-register test (#443), and it takes
+        the opposite form from V1.39: the full year, not an offset. See the note above
+        CLOCK_REGISTER_START, and write_inverter_time() for where the two forms diverge.
         """
-        return not self.register_map.get('offgrid_protocol', False)
+        return True
 
     def read_inverter_time(self) -> Optional[datetime]:
         """Read the inverter's real-time clock, or None if it cannot be decoded."""
@@ -4475,24 +4493,24 @@ class GrowattModbus:
         detected the format by reading the register, which can only ever produce the
         four-digit form and therefore always wrote a value the inverter rejects (#393).
 
+        **Off-grid takes the opposite form: the full year, not an offset.** Confirmed on an
+        SPF 3000-6000 ES PLUS by writing register 45 directly and watching the front panel
+        (#443) — `26` is accepted, displayed, and then quietly reverted to what was already
+        there; `2027` is accepted and held. Guessing the V1.39 form on an off-grid inverter
+        would not have errored, and the front panel would have shown it working, right up
+        until the write silently discarded itself.
+
         Each field is written on its own with FC 0x06, spaced apart, in the reference's
         order. Its author notes that settings registers on that hardware generally need
         FC 0x10 and answer FC 0x06 with Illegal Function, but that the RTC block at 45-50
-        is an exception and does take single writes.
+        is an exception and does take single writes. The same SPF confirmed single writes
+        into this block work at all, by writing its minute register and reading it back
+        before the year was ever touched.
 
         The year goes first on purpose. It is the field observed to fail, so a refusal
         leaves the clock untouched rather than half-written — a MIN TL-X reset its RTC to
         the year 2000 when five fields landed and the year did not.
         """
-        if not self.is_clock_writable:
-            raise ModbusWriteError(
-                self.CLOCK_REGISTER_START, [],
-                "setting the clock is not supported on off-grid profiles — the year is "
-                "written as a two-digit offset, which is confirmed on V1.39 hardware only, "
-                "and no off-grid device has been seen accepting either form. Reading the "
-                "clock does work; set it from ShinePhone or the front panel (#393, #444)",
-            )
-
         # Seconds is written last, roughly 1.2-1.5 s after the first field on TCP and
         # longer on a slow gateway. Writing `when.second` therefore lands the clock that
         # far behind: a reporter measured a consistent 1.4-1.6 s residual immediately
@@ -4511,9 +4529,13 @@ class GrowattModbus:
             time.sleep(wait)
             when = when + timedelta(seconds=wait)
 
-        # Year first, and as an offset. Seconds is a placeholder - see below.
+        # Year first, in whichever form this hardware family takes. Off-grid wants the
+        # full four digits; everything else wants the offset from 2000 (#443). Seconds is
+        # a placeholder - see below.
+        is_offgrid = self.register_map.get('offgrid_protocol', False)
+        year_value = when.year if is_offgrid else when.year - 2000
         fields = [
-            (self.CLOCK_REGISTER_START,     when.year - 2000, "year"),
+            (self.CLOCK_REGISTER_START,     year_value,       "year"),
             (self.CLOCK_REGISTER_START + 1, when.month,       "month"),
             (self.CLOCK_REGISTER_START + 2, when.day,         "day"),
             (self.CLOCK_REGISTER_START + 3, when.hour,        "hour"),
@@ -4522,8 +4544,9 @@ class GrowattModbus:
         ]
 
         logger.info(
-            "[CLOCK] Setting inverter clock to %s (year written as %d)",
-            when.strftime("%Y-%m-%d %H:%M:%S"), when.year - 2000,
+            "[CLOCK] Setting inverter clock to %s (year written as %d, %s form)",
+            when.strftime("%Y-%m-%d %H:%M:%S"), year_value,
+            "off-grid" if is_offgrid else "offset",
         )
 
         started = time.monotonic()

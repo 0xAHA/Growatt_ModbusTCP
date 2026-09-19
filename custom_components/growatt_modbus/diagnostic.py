@@ -779,13 +779,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         coordinator = _coordinator_for_entry(hass, config_entry_id)
         client = coordinator.modbus_client
 
+        # Off-grid clock writes are confirmed working (#443) — this is no longer reachable
+        # under current logic, but is_clock_writable stays the single source of truth in
+        # case a future model genuinely cannot write its clock.
         if not client.is_clock_writable:
             raise ValueError(
-                "Setting the clock is not available on off-grid profiles. The year is "
-                "written as a two-digit offset, an encoding confirmed on V1.39 hardware "
-                "only, and no off-grid device has been seen accepting either form. "
-                "Reading the clock does work - set it from ShinePhone or the front panel "
-                "(#393, #444)."
+                "Setting the clock is not available on this model. Reading the clock "
+                "still works - set it from ShinePhone or the front panel instead."
             )
 
         # One line per call, at debug. Confirmed working on a MIN TL-X in v1.8.4: the write

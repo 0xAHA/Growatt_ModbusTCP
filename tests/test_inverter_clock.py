@@ -17,8 +17,16 @@ Confirmed on hardware from two unrelated device classes before implementing:
   registers
 
 The year is the full four digits on both. The off-grid protocol uses the same addresses but
-records "Year offset is 2000" and assigns register 51 to Chip Select, so writing this block
-to an SPF would set the year wrong and clobber an unrelated register.
+records "Year offset is 2000" and assigns register 51 to Chip Select, and for a long time
+that meant writes were withheld there entirely: a four-digit read says nothing about which
+form the register accepts, and guessing wrong risks the year 26 AD.
+
+That question is answered now (#443). An SPF 3000-6000 ES PLUS was tested directly, with a
+friend at the inverter watching the front panel: register 49 (minute) took a plain
+single-register write and held it. Register 45 (year) told the two forms apart cleanly -
+writing `26` was accepted, briefly displayed, and then reverted to `2026` on its own;
+writing `2027` was accepted, displayed, and held. Off-grid takes the full year, the
+opposite of the year-2000 offset every other confirmed family uses.
 """
 from __future__ import annotations
 
@@ -236,12 +244,12 @@ def test_verification_compares_against_the_four_digit_year():
 
 
 # --------------------------------------------------------------------------
-# Off-grid: reads allowed, writes still withheld
+# Off-grid: reads and writes both work, but the year goes in differently (#443)
 # --------------------------------------------------------------------------
 
-def test_off_grid_can_be_read_but_not_written():
+def test_off_grid_can_now_be_read_and_written():
     assert _client(offgrid=True).is_clock_readable is True
-    assert _client(offgrid=True).is_clock_writable is False
+    assert _client(offgrid=True).is_clock_writable is True
     assert _client(offgrid=False).is_clock_readable is True
     assert _client(offgrid=False).is_clock_writable is True
 
@@ -255,19 +263,38 @@ def test_off_grid_reads_decode_the_four_digit_year():
 
 
 def test_off_grid_reads_still_accept_a_two_digit_year():
-    """Only one off-grid device has been seen. If another stores the documented offset,
-    the existing both-encodings decode must still cover it."""
+    """No off-grid device has been seen storing the documented year-2000 offset, but the
+    both-encodings decode covers it if one turns up."""
     client = _client(offgrid=True, registers=[26, 9, 14, 8, 20, 29, 0])
     assert client.read_inverter_time() == datetime(2026, 9, 14, 8, 20, 29)
 
 
-def test_off_grid_writes_are_refused_rather_than_guessed():
-    """Reading a four-digit year says nothing about which form the register accepts, and
-    the two-digit write is confirmed on V1.39 hardware only."""
-    client = _client(offgrid=True)
-    with pytest.raises(_gm.ModbusWriteError):
-        client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
-    assert client._fake.written is None, "an off-grid inverter was written to anyway"
+def test_off_grid_writes_the_full_year_not_an_offset():
+    """THE finding from #443. Writing 26 to an SPF 3000-6000 ES PLUS was accepted, shown
+    on the panel, and then quietly reverted on its own - the opposite of every other
+    confirmed family, where 26 is exactly right. Writing the full year is what held."""
+    client = _client(offgrid=True, registers=[2026, 8, 22, 14, 8, 19, 6])
+    client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
+    assert client._fake.singles[45] == 2026, (
+        "an off-grid inverter was sent the year-2000 offset, which this hardware accepts, "
+        "displays, and silently discards"
+    )
+
+
+def test_non_offgrid_still_gets_the_offset_form():
+    """The fix must not have flipped this for everyone - only off-grid takes the full
+    year."""
+    client = _client(offgrid=False, registers=[2026, 8, 22, 14, 8, 19, 6])
+    client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5))
+    assert client._fake.singles[45] == 26
+
+
+def test_off_grid_write_is_no_longer_refused():
+    """Confirms the write actually reaches the fake client now, rather than raising before
+    ever touching it."""
+    client = _client(offgrid=True, registers=[2026, 8, 22, 14, 8, 19, 6])
+    assert client.write_inverter_time(datetime(2026, 8, 25, 9, 30, 5)) is True
+    assert client._fake.singles, "nothing was written at all"
 
 
 # --------------------------------------------------------------------------
@@ -312,14 +339,13 @@ def test_the_service_is_registered_and_documented():
 
 
 def test_the_undocumented_year_encoding_stays_documented():
-    """The year register takes two digits and reports four. That is in neither protocol
-    document and it is the reason three earlier builds failed, so the explanation has to
-    survive somewhere a maintainer will find it.
+    """The year register takes two digits and reports four on V1.39. That is in neither
+    protocol document and it is the reason three earlier builds failed, so the explanation
+    has to survive somewhere a maintainer will find it.
 
     It now lives in the docs rather than being repeated in the service picker: the action
     is confirmed working on a MIN TL-X, so the encoding is implementation detail rather
-    than a caveat every user needs at the point of use. What the UI description must still
-    carry is the scope limit, because that one changes what the action will do (#393)."""
+    than a caveat every user needs at the point of use (#393)."""
     root = Path(__file__).parent.parent
 
     docs = (root / "docs" / "controls" / "actions.md").read_text(encoding="utf-8")
@@ -327,8 +353,17 @@ def test_the_undocumented_year_encoding_stays_documented():
     assert "MIN TL-X" in docs, "the docs do not name the model it is confirmed on"
     assert "issues/393" in docs, "the docs do not say where to report other models"
 
-    assert "SPF/SPE" in _service_block("sync_inverter_time"), (
-        "the UI description does not state that off-grid models are excluded"
+
+def test_the_service_picker_no_longer_claims_off_grid_is_excluded():
+    """Off-grid clock writes are confirmed working (#443) - the UI description must not
+    still tell an SPF/SPE owner the action will not attempt their model."""
+    block = _service_block("sync_inverter_time")
+    assert "off-grid" in block.lower() and "SPF" in block, (
+        "the UI description dropped off-grid entirely - it should say the action covers "
+        "SPF/SPE with a different year encoding, not go silent about it"
+    )
+    assert "Not attempted on" not in block and "excluded" not in block.lower(), (
+        "the UI description still tells an off-grid owner this action skips their model"
     )
 
 

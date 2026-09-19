@@ -4,6 +4,30 @@
 
 ---
 
+## v2.0.4-b26
+
+Issues: #443
+
+- **Off-grid (SPF/SPE) inverters can now have their clock set from Home Assistant.** The
+  Inverter Clock Sync button and the `sync_inverter_time` action were previously withheld
+  on these models — reading the clock worked, but nothing was known about which form the
+  year register wanted to accept for a write, and guessing wrong risked setting the year to
+  26 AD.
+
+  That question is now answered: an SPF 3000-6000 ES PLUS was tested directly, with a
+  friend confirming the front panel at each step. Minute writes work exactly like every
+  other family. The year register takes the **opposite** form — writing `26` (the form
+  every other confirmed model uses) is accepted, briefly shown, and then silently reverted;
+  writing the full year (`2027`) is accepted and held. This action now writes whichever
+  form your profile needs automatically.
+
+  Applies to SPF and SPE profiles. Confirmed on an SPF 3000-6000 ES PLUS; SPE shares the
+  same clock block with no reason so far to expect it differs, but has not been tested
+  directly. Reported and tested by @takisbg, across a careful two-stage procedure (minutes
+  first, year only once minutes were confirmed safe).
+
+---
+
 ## v2.0.4-b25
 
 Issues: #451

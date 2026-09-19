@@ -594,14 +594,19 @@ likely EEPROM-backed with a finite write budget
 ([#392](https://github.com/0xAHA/Growatt_ModbusTCP/issues/392)), so it is not something to
 leave where it can be pressed absent-mindedly.
 
-On **off-grid (SPF/SPE)** profiles you get the sensor but not the button. An SPF 5000 ES
-read against a known-good clock returned `45: 2026, 46: 9, 47: 14, 48: 8, 49: 20, 50: 29` -
-the full four-digit year and the same field order as every other family - so drift is
-visible there like anywhere else. Setting the clock still refuses: what makes the write work
-elsewhere is that the year goes in as two digits and reads back as four, an asymmetry in no
-protocol document and confirmed on V1.39 hardware only. Set an off-grid clock from
-ShinePhone or the front panel
+**Off-grid (SPF/SPE)** gets both the sensor and the button, the same as every other
+profile. An SPF 5000 ES read against a known-good clock returned `45: 2026, 46: 9, 47: 14,
+48: 8, 49: 20, 50: 29` - the full four-digit year and the same field order as every other
+family - so drift is visible there like anywhere else
 ([#444](https://github.com/0xAHA/Growatt_ModbusTCP/issues/444)).
+
+Setting it now works too, and quietly uses a different year encoding to do it: every other
+confirmed family writes the year as two digits and reads it back as four, but an
+SPF 3000-6000 ES PLUS, tested directly against the front panel, does the opposite - a
+two-digit write is accepted, briefly shown, and then reverted on its own, while the full
+four-digit year is accepted and held. The button and the action already write whichever
+form your profile needs; there is nothing to choose
+([#443](https://github.com/0xAHA/Growatt_ModbusTCP/issues/443)).
 
 The state is formatted wall-clock text rather than a Home Assistant timestamp, because a
 timestamp sensor renders as relative time ("12 seconds ago", ticking) and is unreadable as
