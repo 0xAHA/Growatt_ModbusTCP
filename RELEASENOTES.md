@@ -4,6 +4,30 @@
 
 ---
 
+## v2.0.5-b2
+
+Issues: #453
+
+- **The profile-mismatch notice fired for every MOD owner on the canonical profile key,
+  and its own suggested fix was silently undone on the next load.** v2.0.4's Battery 2
+  sensors were added to `mod_6000_15000tl3_xh_v201` but not to `mod_6000_15000tl3_xh`, the
+  key it is aliased back to on every setup — so the two profiles this integration treats as
+  interchangeable silently stopped being interchangeable. The equivalence guard that keeps
+  the notice quiet when two profiles behave identically correctly noticed they no longer
+  did, and recommended switching to the profile that gets aliased straight back before the
+  recommendation could ever be followed.
+
+  **`mod_6000_15000tl3_xh` now carries the same Battery 2 sensors as its v201 counterpart**,
+  restoring the equivalence the alias depends on. A permanent test now checks every entry
+  in the alias table for this, so a future addition to one side without the other fails a
+  test instead of reaching an inverter.
+
+  Applies to any MOD 6000-15000TL3-XH owner on the canonical (non-v201) profile key — which,
+  since v201 keys get aliased back automatically, is effectively everyone on this hardware.
+  Reported and precisely traced to the exact comparison by @KevlarD-67.
+
+---
+
 ## v2.0.5-b1
 
 Issues: #446

@@ -967,9 +967,18 @@ INVERTER_PROFILES = {
         "has_pv3": True,
         "has_battery": True,
         "max_power_kw": 15.0,
+        # BATTERY2_SENSORS: must stay identical to mod_6000_15000tl3_xh_v201's sensor set -
+        # PROFILE_ALIASES maps that key back to this one on every load, on the strength of
+        # the two being "functionally identical". b25 (#451) added BATTERY2_SENSORS to the
+        # v201 key alone, so the two diverged silently: the alias kept collapsing owners
+        # onto this key, the #405 equivalence guard started firing because the sensor sets
+        # no longer matched, and its own suggested fix - switching to v201 - was aliased
+        # straight back, so the notice could never be resolved (#453). See the note above
+        # PROFILE_ALIASES: this is exactly the drift that rule exists to prevent, and
+        # test_profile_aliases_stay_equivalent holds it from here.
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
                      | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
-                     | AC_POWER_TOTAL_SENSOR)
+                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 

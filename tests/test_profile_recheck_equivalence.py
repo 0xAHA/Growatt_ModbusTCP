@@ -65,6 +65,36 @@ def test_the_two_profiles_really_are_equivalent():
     ]
 
 
+def test_profile_aliases_stay_equivalent():
+    """The invariant PROFILE_ALIASES documents about itself, made a hard failure (#453).
+
+    The rules comment above PROFILE_ALIASES says plainly: alias two keys only when they are
+    functionally identical, and never alias keys that differ in register_map or sensor set.
+    Nothing enforced it. b25 (#451) added BATTERY2_SENSORS to mod_6000_15000tl3_xh_v201
+    without adding it to mod_6000_15000tl3_xh, the key PROFILE_ALIASES maps it back to on
+    every load - so the two silently diverged.
+
+    The consequence reached a real inverter: the #405 equivalence guard started firing for
+    every DTC 5400 MOD owner on the canonical key, its suggested fix (switch to v201) was
+    aliased straight back by __init__.py before the next load, and the notice could never
+    be resolved by following the advice that caused it. Reported by @KevlarD-67, who traced
+    it to this exact comparison.
+    """
+    aliases = importlib.import_module("growatt_under_test.device_profiles").PROFILE_ALIASES
+    assert aliases, "nothing to check - if the alias table is ever emptied, remove this test"
+
+    for alias_key, canonical_key in aliases.items():
+        alias, canonical = PROFILES[alias_key], PROFILES[canonical_key]
+        assert alias["register_map"] == canonical["register_map"], (
+            f"{alias_key} -> {canonical_key}: aliased keys must share a register_map"
+        )
+        assert set(alias["sensors"]) == set(canonical["sensors"]), (
+            f"{alias_key} -> {canonical_key}: aliased keys must share a sensor set - "
+            f"otherwise the #405 equivalence guard fires for every owner on the canonical "
+            f"key, recommending a switch that gets silently aliased back (#453)"
+        )
+
+
 def test_the_check_compares_behaviour_not_just_names():
     """The original guard returned early only on `suggested == configured`, which is name
     identity. Two differently-named profiles that behave identically slipped straight past
