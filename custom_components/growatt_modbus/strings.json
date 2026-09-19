@@ -712,6 +712,9 @@
     "button": {
       "sync_inverter_clock": {
         "name": "Inverter Clock Sync"
+      },
+      "wake_apx_battery": {
+        "name": "Wake APX Battery"
       }
     }
   }
