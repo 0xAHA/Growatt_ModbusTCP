@@ -4,6 +4,26 @@
 
 ---
 
+## v2.0.5-b4
+
+Issues: #400
+
+- **On MIN TL-XH, the generic Priority Mode sensor could show "Load First" while the
+  inverter was actually running Battery First or Grid First.** The writable Priority Mode
+  select reads the real register (3018) correctly and always has, but the separate
+  diagnostic "Priority Mode" sensor reads a differently-named field that this profile has
+  never populated — so it sat at its default forever, regardless of the inverter's actual
+  state. Confirmed on hardware: Battery First was selected and the inverter visibly ran
+  Battery First (solar charged the battery while the house imported its full load from the
+  grid), while the diagnostic sensor kept reporting Load First throughout — two entities
+  describing different states from the same inverter.
+
+  The diagnostic sensor now reflects the same state the select and the inverter agree on.
+  Applies to MIN TL-XH profiles. Root cause found, and the fix verified, by
+  @GoncaloRibeiro11.
+
+---
+
 ## v2.0.5-b3
 
 Issues: #451

@@ -94,6 +94,11 @@ _VPP_HOLDING_FAIL_THRESHOLD = 3
 ERROR_KIND_LINK = "link"
 ERROR_KIND_NO_RESPONSE = "no-response"
 
+# MIN TL-XH holding 3018 uses a different numeric encoding from the common priority_mode
+# sensor (0/1/2). Keep the raw value for the writable select and translate it for the
+# existing diagnostic sensor so both entities describe the same inverter state (#400).
+TL_XH_PRIORITY_MODE_TO_STANDARD = {0: 0, 2: 1, 3: 2}
+
 
 def _peer_closed_the_connection(exc: Exception) -> bool:
     """True when the failure was the far end hanging up, not failing to answer.
@@ -6109,11 +6114,29 @@ class GrowattModbus:
                 logger.debug(f"Could not read batt_first_charge_power_rate register 3047: {e}")
 
         # MIN TL-XH Priority Mode (register 3018: 0=Load First, 2=Battery First, 3=Grid First)
+        #
+        # The generic "Priority Mode" sensor reads data.priority_mode, a plain dataclass
+        # field with no gate at all - not even the decorative hasattr() kind (rule 6). This
+        # profile has never had a register named 'priority_mode', so that field sat at its
+        # default (0, "Load First") on every poll, forever, regardless of the inverter's
+        # actual state - which was being read correctly all along, just into a different
+        # field (tl_xh_priority_mode) that only the writable select uses.
+        #
+        # A reporter selected Battery First, confirmed it on hardware (solar charged the
+        # battery while the house imported its full load from the grid - Battery First
+        # behaviour, unambiguously), while the diagnostic sensor kept reporting Load First
+        # throughout. Translating into the shared field as well, not instead, keeps both
+        # readings correct: the select still shows the raw hardware value, the generic
+        # sensor now shows the same state in its own encoding (#400).
         if 3018 in holding_map:
             try:
                 pm_regs = self.read_holding_registers(3018, 1)
                 if pm_regs is not None and len(pm_regs) >= 1:
-                    data.tl_xh_priority_mode = int(pm_regs[0])
+                    raw_priority_mode = int(pm_regs[0])
+                    data.tl_xh_priority_mode = raw_priority_mode
+                    standard_priority_mode = TL_XH_PRIORITY_MODE_TO_STANDARD.get(raw_priority_mode)
+                    if standard_priority_mode is not None:
+                        data.priority_mode = standard_priority_mode
                     logger.debug("[TL-XH CTRL] tl_xh_priority_mode=%s", data.tl_xh_priority_mode)
             except Exception as e:
                 logger.debug(f"Could not read tl_xh_priority_mode register 3018: {e}")
