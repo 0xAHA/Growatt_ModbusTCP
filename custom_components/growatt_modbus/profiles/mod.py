@@ -359,14 +359,23 @@ MOD_6000_15000TL3_XH = {
         31301: {'name': 'battery2_power', 'scale': 1, 'unit': '', 'pair': 31300, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
         # Battery 2 Energy
+        #
+        # The LOW register carries no _low suffix, matching battery2_power above and the
+        # shared VPP_V201_BATTERY2 block in vpp_v201.py that SPH/TL-XH/SPH-TL3/WIT-XHU all
+        # use. This file hand-copies the block rather than importing it, and the copy had
+        # drifted: these four carried an extra _low that nothing else in the codebase does.
+        # The driver's dynamic battery-cluster reader (growatt_modbus.py) searches for the
+        # unsuffixed name, so on this profile the four energy fields were never found at
+        # all - not corrupted, not withheld, simply never looked up - while every other
+        # cluster-2 field on the very same successful poll read correctly (#451).
         31302: {'name': 'battery2_charge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31303},
-        31303: {'name': 'battery2_charge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31302, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31303: {'name': 'battery2_charge_energy_today', 'scale': 1, 'unit': '', 'pair': 31302, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         31304: {'name': 'battery2_charge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31305},
-        31305: {'name': 'battery2_charge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31304, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31305: {'name': 'battery2_charge_energy_total', 'scale': 1, 'unit': '', 'pair': 31304, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         31306: {'name': 'battery2_discharge_energy_today_high', 'scale': 1, 'unit': '', 'pair': 31307},
-        31307: {'name': 'battery2_discharge_energy_today_low', 'scale': 1, 'unit': '', 'pair': 31306, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31307: {'name': 'battery2_discharge_energy_today', 'scale': 1, 'unit': '', 'pair': 31306, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         31308: {'name': 'battery2_discharge_energy_total_high', 'scale': 1, 'unit': '', 'pair': 31309},
-        31309: {'name': 'battery2_discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31308, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
+        31309: {'name': 'battery2_discharge_energy_total', 'scale': 1, 'unit': '', 'pair': 31308, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # Battery 2 State
         31314: {'name': 'battery2_voltage', 'scale': 0.1, 'unit': 'V', 'signed': True,

@@ -4,6 +4,29 @@
 
 ---
 
+## v2.0.5-b3
+
+Issues: #451
+
+- **Battery 2's four energy sensors (Charge/Discharge Today/Total) never populated on
+  MOD/MID hybrids, even when the rest of Battery 2 worked correctly.** The MOD register
+  map hand-copies its battery cluster 2 definitions instead of importing the shared block
+  every other profile uses, and the copy had drifted: its four energy registers carried an
+  extra `_low` suffix that `battery2_power` right next to them does not, and that the
+  driver's reader does not expect. The registers were never wrong and never withheld — they
+  were simply never looked up, on every poll, including the ones where voltage, current,
+  power, SOC, SOH and temperature all read correctly from the same block.
+
+  A debug log confirmed it precisely: the block read for the affected registers succeeded
+  repeatedly, with every other field in it decoding correctly each time, while the four
+  energy fields stayed unknown regardless. A permanent test now checks every real register
+  map for this class of naming mismatch, not just this one instance.
+
+  Applies to MOD and MID hybrid profiles with a second battery cluster. Reported by
+  @Rocko84, who provided the debug log that pinned it down.
+
+---
+
 ## v2.0.5-b2
 
 Issues: #453

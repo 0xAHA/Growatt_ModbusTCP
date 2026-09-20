@@ -20,6 +20,16 @@ Two things stopped it reaching Home Assistant regardless:
    but the driver only ever sets `batteryN_current_low` (the 32-bit pair's combined value,
    same convention as `battery_current_low` on cluster 1). That sensor would have read
    unavailable forever, on any profile that already listed BATTERY2_SENSORS (WIT).
+
+3. mod.py hand-copies the cluster-2 block instead of importing VPP_V201_BATTERY2 from
+   vpp_v201.py the way every other consumer does (SPH, TL-XH, SPH-TL3, WIT-XHU, and MOD's
+   own cluster 3/4 via `**VPP_V201_BATTERY3`/`**VPP_V201_BATTERY4`), and the copy had
+   drifted: its four energy registers carried a `_low` suffix that battery2_power right
+   above them does not, and that the driver's search list does not expect. The reporter's
+   debug log proved this precisely - the block read for 31300-31323 succeeded on multiple
+   polls, `Battery 2: 30.9V SOC=10% P=0W` logged correctly each time, and the four energy
+   fields were still never set, because `_find_register_by_name` was asked for a name that
+   existed nowhere in the map (#451, second report).
 """
 from __future__ import annotations
 
@@ -29,8 +39,44 @@ from pathlib import Path
 
 _gm = importlib.import_module("growatt_under_test.growatt_modbus")
 _dp = importlib.import_module("growatt_under_test.device_profiles")
+_const = importlib.import_module("growatt_under_test.const")
 
 COMPONENT_DIR = Path(_dp.__file__).parent
+REGISTER_MAPS = _const.REGISTER_MAPS
+
+# Exactly the driver's own search list in _read_battery_data (growatt_modbus.py), so this
+# test drifts with the code it is checking rather than needing to be kept in sync by hand.
+_CLUSTER_FIELDS = (
+    "power", "current_low", "soc", "soh", "temp",
+    "charge_energy_today", "charge_energy_total",
+    "discharge_energy_today", "discharge_energy_total",
+)
+
+
+def test_every_real_register_map_names_cluster_fields_the_way_the_driver_searches():
+    """Whichever cluster N a register map offers (batteryN_voltage present), it must offer
+    every field the driver's loop looks for, under the exact name the loop searches for -
+    voltage is set separately and is not in _CLUSTER_FIELDS above, only gates the rest."""
+    for map_key, register_map in REGISTER_MAPS.items():
+        regs = register_map.get("input_registers", {})
+        names = {info.get("name") for info in regs.values()} | {
+            info.get("alias") for info in regs.values() if info.get("alias")
+        } | {
+            info.get("maps_to") for info in regs.values() if info.get("maps_to")
+        }
+
+        for n in (2, 3, 4):
+            if f"battery{n}_voltage" not in names:
+                continue  # this map doesn't offer cluster n at all - nothing to check
+            missing = [
+                f"battery{n}_{field}" for field in _CLUSTER_FIELDS
+                if f"battery{n}_{field}" not in names
+            ]
+            assert not missing, (
+                f"{map_key} offers battery{n}_voltage but not {missing} - the driver's "
+                f"dynamic reader will never find these fields even on hardware that "
+                f"populates the registers"
+            )
 
 # Battery cluster 2, at the same relative layout as cluster 1 (31200-31299).
 CLUSTER2_MAP = {
