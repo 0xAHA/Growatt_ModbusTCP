@@ -527,13 +527,55 @@ VPP Control Authority (30100), VPP Remote Power Control (30407), VPP Commanded P
 
 ---
 
-## MIN / MIN TL-XH Grid-Tied Inverters
+## MIN Grid-Tied Inverters (no battery)
 
-**Applies to:** MIN 3000-6000TL-X, MIN 7000-10000TL-X, MIN TL-XH 3000-10000 V2.01
+**Applies to:** MIN 3000-6000TL-X, MIN 7000-10000TL-X — genuinely grid-tied, no battery port.
 
-**Control:** No battery control available. These are grid-tied inverters without battery management registers.
+**Control:** No battery control available. These models have no battery management registers.
 
 **Available controls:** None beyond the universal `on_off` (register 0) and `active_power_rate` (register 3) which are present on all models but not exposed as control entities by default.
+
+---
+
+## MIN TL-XH Hybrid (with a battery — e.g. APX)
+
+**Applies to:** MIN TL-XH 3000-10000, V2.01, DTC 5100, with a battery attached.
+
+**Control method:** Persistent writes to V1.39 registers, same family as MOD/MID above but a
+different address set. Confirmed on hardware, not assumed from the register table
+([#400](https://github.com/0xAHA/Growatt_ModbusTCP/issues/400) — @GoncaloRibeiro11's
+Battery First selection was independently confirmed by the house drawing its full load from
+the grid while solar charged the battery).
+
+### Controls
+
+| Entity | Type | Register | Options / Range | Description |
+|--------|------|----------|-----------------|--------------|
+| Priority Mode | Select | 3018 | Load First (0), Battery First (2), Grid First (3) | Note the encoding: 1 is not used, unlike the 0/1/2 scheme on SPH/MOD/MID |
+| Charge Power Rate | Number | 3047 | 1–100 % | Battery charge power limit when Battery First is active |
+| Charge Stopped SOC | Number | 3048 | 0–100 % | SOC at which charging stops when Battery First is active |
+| Discharge Stopped SOC | Number | 3067 | 1–100 % | SOC at which discharging stops when Grid First is active |
+
+!!! warning "3048 and 3067 can silently refuse a write near the current SOC, and this is confirmed at the inverter, not the integration"
+    On at least one DTC 5100 unit (MIN 4600TL-XH with an APX battery), writing a value close
+    to the register's current one is accepted with no Modbus exception and simply does not
+    take — read back immediately, over both FC06 and FC16, the register still holds its old
+    value.
+
+    **This is not a Modbus-only symptom.** The same change made in ShinePhone — explicitly
+    submitted, then confirmed with the app's own **Read** action — reverted the same way:
+    the app briefly showed the new value, then read back the old one. A full register sweep
+    of the V1.39 holding range and the VPP 30400-30524 range found the submitted value
+    nowhere. The inverter's own official app cannot make this write persist either, which
+    places this squarely at the inverter/firmware, not at anything reading or writing the
+    register incorrectly.
+
+    A separate DTC 5400 (MOD) unit shows no such floor down to 10% with the same register
+    layout, so this is firmware-family specific rather than universal — see the equivalent
+    warning under MOD/MID above for that comparison. If you hit this, the practical
+    workaround is the same one already documented for the 3067 revert on MOD: there is
+    currently no way to move these values from outside the inverter's own menu, if the menu
+    can move them at all on your firmware.
 
 ---
 
@@ -553,7 +595,8 @@ VPP Control Authority (30100), VPP Remote Power Control (30407), VPP Commanded P
 | **SPF** ES PLUS | Yes | Persistent writes | Output Priority, Charge Priority, AC Input Mode, Battery Type | Max Charge Current, AC Charge Current, Gen Charge Current, Battery→Utility Switchover, Utility→Battery Switchover |
 | **WIT** (4–15kW) | Yes (timed) | VPP overrides | Work Mode, Control Authority, VPP Export Limit Enable, Remote Power Control | Active Power Rate, Export Limit, VPP Export Rate, Remote Duration, Remote Power |
 | **MOD / MID** TL3-XH | Yes | Persistent writes | Allow Grid Charge, Time Period Priority/Enable (×9) | Charge Rate, Charge Stop SOC, Grid Charge Stop SOC, Discharge Rate, Discharge Stop SOC, Time Period Start/End (×9) |
-| **MIN / TL-XH** | No | — | — | — |
+| **MIN** (no battery) | No | — | — | — |
+| **MIN TL-XH** (with battery) | Yes | Persistent writes | Priority Mode | Charge Rate, Charge Stop SOC, Discharge Stop SOC |
 | **MIC** | No | — | — | — |
 
 ---
