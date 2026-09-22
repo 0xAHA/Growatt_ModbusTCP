@@ -123,7 +123,10 @@ def test_the_equivalence_guard_runs_before_the_notice_is_raised():
     body = _recheck_source()
 
     guard = body.index("INVERTER_PROFILES")
-    notice = body.index("_pending_profile_issue")
+    # The exact assignment, not the bare substring: _pending_profile_issue_clear (#454)
+    # contains this name as a prefix, and an early-return branch sets that flag well
+    # before this point - matching the bare substring would find that instead.
+    notice = body.index("_pending_profile_issue = {")
     assert guard < notice, (
         "the equivalence check happens after the repair notice is prepared"
     )

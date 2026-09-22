@@ -4,6 +4,27 @@
 
 ---
 
+## v2.0.5-b5
+
+Issues: #454
+
+- **A `profile_mismatch` repair notice raised before the b25/#453 alias fix landed stayed
+  in the repair list forever, even after upgrading and restarting.** The re-check that
+  raises the notice never had a matching path to withdraw it — only `unit_id_never_responded`
+  self-clears on success. It now does the same: whenever the DTC re-check finds the
+  configured and suggested profiles equivalent (a straight name match, or the same register
+  map and sensor set under different names), any existing notice for that entry is removed.
+  A restart or config entry reload is needed to re-run the check. Found by @as-wallpen, on
+  the exact case #453 fixed.
+
+- **Documentation correction:** the v2.0.4-b25 release note overstated what a single
+  battery-pack install sees from the Battery 2 sensors — they are not created at all there,
+  not merely disabled. See the correction added to that entry below, and the updated
+  [Entity Reference](docs/controls/entity-reference.md#a-second-physical-battery-pack-battery-2-sensors).
+  Also found by @as-wallpen.
+
+---
+
 ## v2.0.5-b4
 
 Issues: #400
@@ -141,6 +162,15 @@ Issues: #451
   **Battery 3** on models that support a third stack. They appear **disabled by default** —
   enable them if you have more than one pack; they stay unavailable, not zero, on a
   single-pack install.
+
+  **Correction (2026-09-21):** the last sentence overstates what a single-pack install
+  sees. The entities are not created at all there — not disabled, not unavailable, simply
+  absent from the registry — because creation itself is gated on the pack's own voltage
+  register answering above 0 at startup, not just the value shown afterward. "Disabled by
+  default" only describes what happens when a second pack genuinely exists. Found by
+  @as-wallpen, on a single-stack MID 25KTL3-XH where a debug log showed the cluster
+  reading successfully while no `battery2_*` field appeared anywhere in the coordinator
+  data ([#454](https://github.com/0xAHA/Growatt_ModbusTCP/issues/454)).
 
   They are not summed into the existing Battery Power/SOC sensors — two packs of different
   capacity don't average meaningfully at that level, so each pack's figures stand on their

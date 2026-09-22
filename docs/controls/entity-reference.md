@@ -182,10 +182,15 @@ pack's own 31200-31299. Ten **Battery 2** sensors exist for this (Voltage, Curre
 SOC, SOH, Temperature, and Charge/Discharge Energy Today/Total), and **Battery 3** for a
 third stack on models that support it.
 
-They appear **disabled by default** — enable them from the entity's settings if your
-install has more than one pack. They stay unavailable (not zero) on anything else, because
-the integration only creates a value once the pack's own voltage register answers above 0;
-a single-pack install never populates them.
+**On an install with more than one pack**, they appear disabled — enable them from the
+entity's settings.
+
+**On a single-pack install, they do not appear at all**, not even as a disabled or
+unavailable entity — there is nothing to enable. Creation itself is gated on the pack's own
+voltage register answering above 0 at startup, not just the value shown, so a profile with
+one pack never creates the entity in the first place (confirmed via a debug log showing the
+second cluster's block reading successfully while `battery2_*` remained entirely absent from
+both the entity registry and the coordinator data — [#454](https://github.com/0xAHA/Growatt_ModbusTCP/issues/454)).
 
 **These are not summed into the main Battery Power/SOC/etc. sensors.** Two packs of
 different capacity don't average or add meaningfully at the SOC/voltage level, so each

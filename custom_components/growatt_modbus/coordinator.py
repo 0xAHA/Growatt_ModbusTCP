@@ -294,6 +294,15 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # per session against a live connection instead.
         self._profile_recheck_done: bool = False
         self._pending_profile_issue: dict | None = None
+        # Set when the recheck finds the equivalence now holds, so a stale
+        # profile_mismatch from a previous session can be cleared. Not gated on "did this
+        # session raise it" - the issue is persistent across restarts and the flag that
+        # would track that is not, so the clear has to be unconditional here and safe to
+        # attempt against an issue that never existed (#454, reported by @as-wallpen: the
+        # notice survived the b25 alias-equivalence fix because nothing ever cleared it).
+        # Deleted from the async side only - the recheck itself runs in the executor,
+        # where issue_registry calls are not safe.
+        self._pending_profile_issue_clear = False
 
     @property
     def inverter_clock(self) -> datetime | None:
@@ -383,6 +392,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         configured = self.config_entry.data.get(CONF_INVERTER_SERIES, "")
         if suggested == configured:
             _LOGGER.debug("Profile re-check: DTC %s agrees with the profile in use", dtc)
+            self._pending_profile_issue_clear = True
             return
 
         # Say nothing when the two profiles would behave identically.
@@ -417,6 +427,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 dtc, suggested, configured,
             )
             self._profile_recheck_done = True
+            self._pending_profile_issue_clear = True
             return
 
         entry = DTC_REGISTRY.get(dtc)
@@ -1498,6 +1509,24 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     )
                 except Exception as err:
                     _LOGGER.debug("Could not create profile mismatch issue: %s", err)
+
+            # Clear a stale profile_mismatch left over from a previous session. The recheck
+            # sets this whenever the equivalence check now holds - which includes the case
+            # that motivated it: an alias-table fix (#453) landing after the notice was
+            # raised, with nothing to restore the two profiles' equivalence except an
+            # update the user has now installed. Attempted unconditionally rather than
+            # tracked against "did this session raise it" - that flag would reset on every
+            # restart while the issue itself persists, which is the bug. Wrapped the same
+            # way the create call above is, so a delete against an ID that was never raised
+            # costs nothing worse than a debug line (#454, reported by @as-wallpen).
+            if self._pending_profile_issue_clear:
+                self._pending_profile_issue_clear = False
+                try:
+                    ir.async_delete_issue(
+                        self.hass, DOMAIN, f"profile_mismatch_{self.config_entry.entry_id}",
+                    )
+                except Exception as err:
+                    _LOGGER.debug("Could not clear profile mismatch issue: %s", err)
 
             if self._pending_clock_notification:
                 notif = self._pending_clock_notification

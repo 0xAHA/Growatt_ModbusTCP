@@ -107,3 +107,62 @@ def test_a_hand_picked_protocol_variant_silences_the_check():
         "the variant is checked after the register read rather than before it"
     )
     assert "PROTOCOL_VARIANT_AUTO" in body, "the comparison is against a literal, not the const"
+
+
+# ---------------------------------------------------------------------------
+# A stale profile_mismatch must clear once equivalence returns (#454)
+#
+# A notice raised before an alias-table fix (#453) landed was staying in the issue
+# registry forever after the fix was installed and the recheck confirmed the profiles
+# equivalent again - nothing ever deleted it. Reported by @as-wallpen, on the exact
+# equivalence guard #405 added for the same report.
+# ---------------------------------------------------------------------------
+
+def test_both_equivalence_branches_flag_the_issue_for_clearing():
+    """Both ways the recheck can conclude "nothing to gain" - a straight name match, and
+    the behavioural equivalence check - must mark the stale issue for deletion. Neither
+    knows whether an issue was actually raised (that would need a flag surviving a
+    restart, which is the bug), so both simply always flag it."""
+    body = _method("_recheck_profile_against_dtc")
+    assert body.count("self._pending_profile_issue_clear = True") == 2, (
+        "expected exactly one clear-flag in the name-match branch and one in the "
+        "behavioural-equivalence branch"
+    )
+
+
+def test_the_clear_flag_is_not_gated_on_a_this_session_flag():
+    """The bug was exactly this: a flag that resets on every restart guarding a clear for
+    an issue that persists across restarts. If a guard reappears here, it has almost
+    certainly reintroduced #454."""
+    body = _method("_recheck_profile_against_dtc")
+    assert "issue_raised" not in body, (
+        "a since-this-session flag is gating the clear again - the issue is persistent "
+        "and restarts reset in-memory flags, so this cannot work (#454)"
+    )
+
+
+def test_the_async_side_actually_deletes_the_issue():
+    """The recheck runs in the executor and cannot touch issue_registry itself - this is
+    the consumer that turns the flag into a real delete, the same way _pending_profile_issue
+    is turned into the create call right above it."""
+    body = _method("_async_update_data")
+
+    assert "_pending_profile_issue_clear" in body, (
+        "the update loop never checks the clear flag the recheck sets"
+    )
+    assert "async_delete_issue" in body, (
+        "the clear flag is checked but nothing actually deletes the issue"
+    )
+    # Same ID the create call uses, or the delete targets a different issue entirely.
+    create_id = 'f"profile_mismatch_{self.config_entry.entry_id}"'
+    assert body.count(create_id) == 2, (
+        "the delete call must target the exact same issue_id the create call uses"
+    )
+
+
+def test_the_clear_flag_is_reset_after_being_consumed():
+    """Otherwise every future poll re-attempts the delete forever, which is harmless but
+    pointless - the same shape the create-side flag already avoids."""
+    body = _method("_async_update_data")
+    clear_block = body[body.index("_pending_profile_issue_clear"):]
+    assert "self._pending_profile_issue_clear = False" in clear_block[:200]
