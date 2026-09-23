@@ -4,6 +4,20 @@
 
 ---
 
+## v2.0.5-b8
+
+Issues: #400
+
+- **The Wake APX Battery button (new in v2.0.5-b7) could fail immediately with "The
+  inverter rejected the APX wake command" whenever a VPP direct-charge branch was already
+  active.** The button's own first step - clearing that branch so it can be replaced -
+  primed the same 30-second control cooldown that then blocked its very next write, to the
+  same register, moments later. Both writes are part of one bounded command and now bypass
+  the cooldown consistently. Found on hardware and fixed by @GoncaloRibeiro11 (PR #457),
+  the same day b7 shipped.
+
+---
+
 ## v2.0.5-b7
 
 Issues: #400, #432, #455
