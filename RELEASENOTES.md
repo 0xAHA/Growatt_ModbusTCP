@@ -6,7 +6,7 @@
 
 ## v2.0.5-b7
 
-Issues: #400, #432
+Issues: #400, #432, #455
 
 - **New: Wake APX Battery button, for MIN TL-XH on VPP 2.01 firmware (DTC 5100) whose APX
   pack has gone to sleep in a way Priority Mode alone does not wake.** Disabled by default,
@@ -29,6 +29,13 @@ Issues: #400, #432
   scan read the entry's connection details under the wrong key. Manually re-entering the
   same device path as a workaround always worked, which is why this went unnoticed until
   now. Found by @JHPHendriks on issue #432.
+
+- **Battery SOC's Energy Dashboard icon stayed permanently full regardless of charge
+  level.** The sensor set an explicit icon alongside `device_class: battery`, and an
+  explicit icon always overrides Home Assistant's own charge-level icon - only the icon's
+  colour was changing with state, not its fill. Fixed for Battery SOC and for the Peak
+  Shaving Reserve SOC diagnostic sensor, which had the same issue. Found by
+  @AzraelsDisk on issue #455.
 
 ---
 

@@ -703,7 +703,11 @@ SENSOR_DEFINITIONS = {
     },
     "battery_soc": {
         "name": "Battery SOC",
-        "icon": "mdi:battery",
+        # No explicit icon: an icon set here always wins over Home Assistant's own
+        # charge-level icon (mdi:battery, mdi:battery-60, mdi:battery-outline, ...), which
+        # device_class BATTERY otherwise computes from the state automatically - so the
+        # Energy Dashboard's battery tile stayed permanently full instead of reflecting SOC
+        # (#455, reported by @AzraelsDisk).
         "device_class": SensorDeviceClass.BATTERY,
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": PERCENTAGE,
@@ -1153,7 +1157,8 @@ SENSOR_DEFINITIONS = {
     },
     "peak_shaving_reserve_soc": {
         "name": "Peak Shaving Reserve SOC",
-        "icon": "mdi:battery-lock",
+        # No explicit icon - same reasoning as battery_soc (#455): an icon here would
+        # override Home Assistant's own charge-level icon for device_class BATTERY.
         "device_class": SensorDeviceClass.BATTERY,
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": PERCENTAGE,
