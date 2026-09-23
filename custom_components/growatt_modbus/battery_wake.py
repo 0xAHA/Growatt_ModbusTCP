@@ -18,7 +18,9 @@ VPP_REMOTE_POWER_DURATION = 30408
 
 WAKE_DURATION_MINUTES = 1
 WAKE_POWER_PERCENT = 5
-WAKE_AC_CHARGE_MODE = 2
+# VPP 2.01 on MIN TL-XH accepts 0/1 here. Mode 2 belongs to VPP 2.03 and is
+# silently normalised back to 1 by this firmware.
+WAKE_AC_CHARGE_MODE = 1
 WAKE_PULSE_SECONDS = 12
 
 
@@ -45,7 +47,7 @@ def wake_apx_battery(
 
     The pulse is deliberately small and bounded. Register 30408 is set to one
     minute as a second safety limit if the explicit 30407 clear cannot be sent.
-    Existing VPP control is never overwritten.
+    Existing VPP control is paused for the pulse and restored afterwards.
     """
     original_authority: int | None = None
     original_remote: list[int] | None = None
@@ -57,21 +59,27 @@ def wake_apx_battery(
             original_authority = _read_exact(client, VPP_CONTROL_AUTHORITY, 1)[0]
             original_remote = _read_exact(client, VPP_REMOTE_POWER_ENABLE, 4)
 
-            if original_authority != 0:
-                raise BatteryWakeError(
-                    "VPP control authority is already active; wake pulse not applied"
-                )
-
             if original_remote[0] != 0:
-                raise BatteryWakeError(
-                    "VPP remote power control is already active; wake pulse not applied"
-                )
+                # Deselect the active direct branch before replacing its parameters.
+                # The original selector and parameters are restored after the pulse.
+                cleanup_required = True
+                if not client.write_register(
+                    VPP_REMOTE_POWER_ENABLE,
+                    0,
+                    bypass_rate_limit=True,
+                ):
+                    raise BatteryWakeError(
+                        "Active VPP remote power control could not be paused"
+                    )
 
             # From the first write onward, cleanup is required even if a response
             # is lost: the inverter may have accepted a write the client did not see.
             cleanup_required = True
 
-            if not client.write_register(VPP_CONTROL_AUTHORITY, 1):
+            if original_authority != 1 and not client.write_register(
+                VPP_CONTROL_AUTHORITY,
+                1,
+            ):
                 raise BatteryWakeError("The inverter rejected VPP control authority")
 
             # Set duration, power and AC charge mode atomically before selecting
@@ -99,25 +107,9 @@ def wake_apx_battery(
         remote_cleared = False
         try:
             with client.write_batch("MIN TL-XH APX wake release"):
-                # Restore local control first. If clearing 30407 fails, the direct
-                # command then has no authority and remains limited to 5% / one minute.
-                try:
-                    authority_restored = client.write_register(
-                        VPP_CONTROL_AUTHORITY,
-                        int(original_authority),
-                        bypass_rate_limit=True,
-                    )
-                    if not authority_restored:
-                        cleanup_errors.append(
-                            "VPP control authority could not be restored"
-                        )
-                except ModbusWriteError as exc:
-                    cleanup_errors.append(
-                        f"VPP control authority could not be restored: {exc}"
-                    )
-
-                # This clear is part of the same user command, so the normal
-                # 30-second anti-oscillation cooldown must not veto it (#400).
+                # Deselect the wake command before restoring the old parameters. This
+                # clear is part of the same user command, so the normal 30-second
+                # anti-oscillation cooldown must not veto it (#400).
                 try:
                     remote_cleared = bool(
                         client.write_register(
@@ -141,10 +133,13 @@ def wake_apx_battery(
                 # be deselected. If 30407 could not be cleared, retaining the small,
                 # one-minute command is safer than reinstating a larger old setpoint.
                 if remote_cleared:
+                    parameters_restored = False
                     try:
-                        parameters_restored = client.write_registers(
-                            VPP_REMOTE_POWER_DURATION,
-                            original_remote[1:4],
+                        parameters_restored = bool(
+                            client.write_registers(
+                                VPP_REMOTE_POWER_DURATION,
+                                original_remote[1:4],
+                            )
                         )
                         if not parameters_restored:
                             cleanup_errors.append(
@@ -154,6 +149,42 @@ def wake_apx_battery(
                         cleanup_errors.append(
                             f"VPP parameters 30408-30410 could not be restored: {exc}"
                         )
+
+                    # Re-select the previous branch only after its parameters are back.
+                    # Otherwise an old direct-power branch could be re-enabled with the
+                    # wake setpoint still behind it.
+                    if parameters_restored:
+                        try:
+                            selector_restored = client.write_register(
+                                VPP_REMOTE_POWER_ENABLE,
+                                int(original_remote[0]),
+                                bypass_rate_limit=True,
+                            )
+                            if not selector_restored:
+                                cleanup_errors.append(
+                                    "VPP branch selector could not be restored"
+                                )
+                        except ModbusWriteError as exc:
+                            cleanup_errors.append(
+                                f"VPP branch selector could not be restored: {exc}"
+                            )
+
+                # Restore authority last. If it was originally zero, this also removes
+                # authority from any bounded wake command that could not be cleared.
+                try:
+                    authority_restored = client.write_register(
+                        VPP_CONTROL_AUTHORITY,
+                        int(original_authority),
+                        bypass_rate_limit=True,
+                    )
+                    if not authority_restored:
+                        cleanup_errors.append(
+                            "VPP control authority could not be restored"
+                        )
+                except ModbusWriteError as exc:
+                    cleanup_errors.append(
+                        f"VPP control authority could not be restored: {exc}"
+                    )
         except ModbusWriteError as exc:
             cleanup_errors.append(f"wake release batch could not start: {exc}")
 

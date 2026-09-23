@@ -21,6 +21,7 @@ class _FakeClient:
         authority: int = 0,
         remote_enabled: int = 0,
         fail_stop: bool = False,
+        fail_parameter_restore: bool = False,
         unavailable_remote_block: bool = False,
     ):
         self.registers = {
@@ -31,6 +32,7 @@ class _FakeClient:
             30410: 1,
         }
         self.fail_stop = fail_stop
+        self.fail_parameter_restore = fail_parameter_restore
         self.unavailable_remote_block = unavailable_remote_block
         self.writes: list[tuple] = []
         self.batches: list[str] = []
@@ -54,6 +56,8 @@ class _FakeClient:
 
     def write_registers(self, register, values):
         self.writes.append((register, list(values)))
+        if self.fail_parameter_restore and list(values) == [45, 37, 1]:
+            return False
         for offset, value in enumerate(values):
             self.registers[register + offset] = value
         return True
@@ -66,7 +70,7 @@ def test_wake_pulse_is_low_bounded_and_restores_previous_state():
     _wake.wake_apx_battery(client, sleep_fn=sleeps.append)
 
     assert sleeps == [12]
-    assert (30408, [1, 5, 2]) in client.writes
+    assert (30408, [1, 5, 1]) in client.writes
     assert (30407, 1, False) in client.writes
     assert (30407, 0, True) in client.writes
     assert client.registers == {
@@ -78,22 +82,54 @@ def test_wake_pulse_is_low_bounded_and_restores_previous_state():
     }
 
 
-def test_existing_remote_control_is_never_overwritten():
-    client = _FakeClient(remote_enabled=1)
+def test_active_vpp_session_is_paused_and_restored():
+    client = _FakeClient(authority=1, remote_enabled=1)
+    sleeps = []
 
-    with pytest.raises(_wake.BatteryWakeError, match="already active"):
-        _wake.wake_apx_battery(client, sleep_fn=lambda _: None)
+    _wake.wake_apx_battery(client, sleep_fn=sleeps.append)
 
-    assert client.writes == []
+    assert sleeps == [12]
+    assert client.writes[0] == (30407, 0, True)
+    assert (30100, 1, False) not in client.writes
+    assert (30408, [1, 5, 1]) in client.writes
+    assert client.registers == {
+        30100: 1,
+        30407: 1,
+        30408: 45,
+        30409: 37,
+        30410: 1,
+    }
 
 
-def test_existing_vpp_authority_is_never_overwritten():
+def test_stale_remote_selector_without_authority_is_restored():
+    client = _FakeClient(authority=0, remote_enabled=1)
+
+    _wake.wake_apx_battery(client, sleep_fn=lambda _: None)
+
+    assert client.writes[0] == (30407, 0, True)
+    assert (30100, 1, False) in client.writes
+    assert client.registers == {
+        30100: 0,
+        30407: 1,
+        30408: 45,
+        30409: 37,
+        30410: 1,
+    }
+
+
+def test_existing_vpp_roster_authority_is_preserved():
     client = _FakeClient(authority=1)
 
-    with pytest.raises(_wake.BatteryWakeError, match="authority is already active"):
-        _wake.wake_apx_battery(client, sleep_fn=lambda _: None)
+    _wake.wake_apx_battery(client, sleep_fn=lambda _: None)
 
-    assert client.writes == []
+    assert (30100, 1, False) not in client.writes
+    assert client.registers == {
+        30100: 1,
+        30407: 0,
+        30408: 45,
+        30409: 37,
+        30410: 1,
+    }
 
 
 def test_unavailable_remote_block_fails_before_any_write():
@@ -113,7 +149,21 @@ def test_failed_stop_keeps_the_one_minute_five_percent_safety_limit():
 
     assert client.registers[30100] == 0
     assert client.registers[30407] == 1
-    assert [client.registers[register] for register in (30408, 30409, 30410)] == [1, 5, 2]
+    assert [client.registers[register] for register in (30408, 30409, 30410)] == [1, 5, 1]
+
+
+def test_failed_parameter_restore_leaves_direct_branch_deselected():
+    client = _FakeClient(
+        authority=1,
+        remote_enabled=1,
+        fail_parameter_restore=True,
+    )
+
+    with pytest.raises(_wake.BatteryWakeError, match="parameters"):
+        _wake.wake_apx_battery(client, sleep_fn=lambda _: None)
+
+    assert client.registers[30100] == 1
+    assert client.registers[30407] == 0
 
 
 def test_button_is_profile_specific_and_disabled_by_default():

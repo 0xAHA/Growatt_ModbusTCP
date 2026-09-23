@@ -108,7 +108,8 @@ class GrowattWakeApxBatteryButton(GrowattEntity, ButtonEntity):
 
     Disabled by default because registers 30407-30410 are not declared by the MIN TL-XH
     profile and support is firmware-dependent. The press probes the whole block before
-    writing anything and restores the previous values after the pulse.
+    writing anything, briefly pauses any active VPP command, and restores the previous
+    values after the pulse.
     """
 
     _attr_entity_category = EntityCategory.CONFIG
