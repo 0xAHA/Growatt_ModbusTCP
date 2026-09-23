@@ -1269,8 +1269,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         CRITICAL - HOLD Mode Implementation:
         - Simply setting 30407=0 returns to SELF-CONSUMPTION, NOT true HOLD!
         - In self-consumption, battery WILL discharge to supply house load
-        - True HOLD requires TOU workaround: Set +1% charge via TOU period
-        - This firmware quirk creates actual idle state
+        - HOLD uses a TOU workaround instead: Set +1% charge via TOU period
+        - Close to idle, not zero: ~+140 W on MOD DTC 5400, ~270-310 W on MIN DTC 5100,
+          both measured at night with no PV (#400). See GrowattWitVppBatteryModeSelect.
         - WARNING: +1% = HOLD, but -1% = FULL DISCHARGE (asymmetric behavior!)
         """
         device_id = call.data["device_id"]
@@ -1333,7 +1334,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 _LOGGER.warning("Failed to enable VPP control authority, continuing anyway...")
 
             if mode == "hold":
-                # HOLD: Use TOU +1% charge workaround for TRUE standby
+                # HOLD: Use TOU +1% charge workaround - close to idle, not zero (#400)
                 _LOGGER.debug("Setting HOLD mode via TOU +1%% workaround")
 
                 success = await hass.async_add_executor_job(client.write_register, VPP_AC_CHARGE_ENABLE, 1)
@@ -1500,7 +1501,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         - Next period starts at XX:00 (e.g., 360 = 06:00)
         - The inverter will REJECT writes if periods overlap!
 
-        For HOLD mode, use power=1 (+1% charge = true standby)
+        For HOLD mode, use power=1 (+1% charge - close to idle, not an exact zero)
         """
         device_id = call.data["device_id"]
         periods = call.data["periods"]

@@ -310,7 +310,7 @@ read_register:
 
 set_battery_mode:
   name: Set Battery Mode (VPP)
-  description: "Set battery charge/discharge/hold mode via VPP protocol registers (30xxx). Available on any model whose profile carries the VPP control registers 30100, 30407 and 30409 - WIT and WIS, and MOD/MID XH three-phase hybrids. CHARGE: Forces battery charging from grid+PV. DISCHARGE: Forces battery discharging to load. HOLD: Uses TOU +1% workaround for true standby (simply disabling remote control returns to self-consumption where battery discharges). HOLD was designed for WIT/WIS; the action refuses any model whose profile lacks those three registers."
+  description: "Set battery charge/discharge/hold mode via VPP protocol registers (30xxx). Available on any model whose profile carries the VPP control registers 30100, 30407 and 30409 - WIT and WIS, and MOD/MID XH three-phase hybrids. CHARGE: Forces battery charging from grid+PV. DISCHARGE: Forces battery discharging to load. HOLD: Uses a TOU +1% workaround to bring the battery close to idle (simply disabling remote control returns to self-consumption, where the battery discharges). It is not an exact zero: at night with no PV, a MOD 10KTL3-XH (DTC 5400) settled at about 140 W charging. HOLD was designed for WIT/WIS; the action refuses any model whose profile lacks those three registers."
   fields:
     device_id:
       name: Device
@@ -330,7 +330,7 @@ set_battery_mode:
               value: "charge"
             - label: "Discharge (to load)"
               value: "discharge"
-            - label: "Hold (true standby)"
+            - label: "Hold (near idle)"
               value: "hold"
     power_percent:
       name: Power Percentage
@@ -374,7 +374,7 @@ write_registers:
 
 sync_tou_schedule:
   name: Sync TOU Schedule
-  description: "Write Time-of-Use schedule to inverter for autonomous operation. The inverter will follow this schedule even if Home Assistant goes offline. Maximum 20 periods. CRITICAL: Periods CANNOT overlap! Use XX:59 end times (e.g., 119 for 01:59) then start next at XX:00 (e.g., 120 for 02:00). For HOLD mode, use power=1 (+1% charge = true standby)."
+  description: "Write Time-of-Use schedule to inverter for autonomous operation. The inverter will follow this schedule even if Home Assistant goes offline. Maximum 20 periods. CRITICAL: Periods CANNOT overlap! Use XX:59 end times (e.g., 119 for 01:59) then start next at XX:00 (e.g., 120 for 02:00). For HOLD mode, use power=1 (+1% charge brings the battery near idle - not an exact zero; see Set Battery Mode)."
   fields:
     device_id:
       name: Device
@@ -385,7 +385,7 @@ sync_tou_schedule:
           integration: growatt_modbus
     periods:
       name: Schedule Periods
-      description: "List of TOU periods. CRITICAL: NO OVERLAPPING! Use XX:59 end times. power=1 for HOLD (true standby), +100 for charge, -100 for discharge."
+      description: "List of TOU periods. CRITICAL: NO OVERLAPPING! Use XX:59 end times. power=1 for HOLD (near idle, not an exact zero), +100 for charge, -100 for discharge."
       required: true
       example: '[{"start": 0, "end": 119, "power": 100}, {"start": 120, "end": 1019, "power": 1}, {"start": 1020, "end": 1259, "power": -100}]'
       selector:

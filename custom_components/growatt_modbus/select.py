@@ -493,8 +493,8 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
     CRITICAL - HOLD Mode Implementation:
     - Simply setting 30407=0 returns to SELF-CONSUMPTION, NOT true HOLD!
     - In self-consumption, battery WILL discharge to supply house load
-    - True HOLD requires TOU workaround: Set +1% charge via TOU period
-    - This firmware quirk creates actual idle state (battery neither charges nor discharges)
+    - HOLD uses a TOU workaround instead: Set +1% charge via TOU period
+    - On WIT this was reported as an idle state; see below for what MOD and MIN measure
     - WARNING: +1% = HOLD, but -1% = FULL DISCHARGE (asymmetric behavior!)
 
     The asymmetry above is a WIT observation and should not be assumed to generalise.
@@ -506,8 +506,15 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
 
     That null is on the direct branch (30409 + 30408 + 30407 + 30100). The HOLD path
     below uses the ROSTER branch (30412-30414 + 30411), which is a different route
-    through the same block - and 30407 selects between them (#349). Whether the TOU
-    workaround holds on MOD is being measured separately and is NOT yet answered (#400).
+    through the same block - and 30407 selects between them (#349).
+
+    Measured on the roster branch since (#400): the workaround is close to idle but not
+    zero on either non-WIT family tested. A MOD 10KTL3-XH (DTC 5400) under this exact HOLD
+    sequence, at night with no PV, settled at about +140 W (charging) for four minutes; the
+    direct branch at 30409 = 0 with 30410 = 0 sat at about -140 W instead - the same offset
+    on the opposite side. A MIN 4600TL-XH (DTC 5100) charged at roughly 270-310 W under
+    roster +1% with AC charge on. HOLD writes 30410 = 1 on every entry, which is what puts
+    it on the charging side. No metered WIT result has been posted to compare against.
 
     NOTE: Legacy registers 201/202 do NOT work on WIT inverters!
     """
@@ -587,9 +594,9 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
             client.write_register(self.VPP_CONTROL_AUTHORITY, 1)
 
             if option == "Hold":
-                # HOLD: Use TOU +1% charge workaround for TRUE standby
+                # HOLD: Use TOU +1% charge workaround to get close to idle
                 # Simply disabling remote control (30407=0) returns to self-consumption
-                # where battery WILL discharge! This TOU workaround creates true idle.
+                # where battery WILL discharge! Close to idle, not zero - see docstring.
                 # CRITICAL: +1% = HOLD, but -1% = FULL DISCHARGE (asymmetric!)
                 _LOGGER.debug("[WIT-VPP] Setting HOLD mode via TOU +1%% workaround")
 
