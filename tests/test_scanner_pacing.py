@@ -148,3 +148,21 @@ def test_an_explicit_block_size_still_wins():
     assert re.search(r"[\"']block_size[\"']\s+not in call\.data", handler), (
         "the entry's block size is applied unconditionally, overriding an explicit one"
     )
+
+
+def test_the_serial_device_path_uses_the_real_key():
+    """The config entry stores the serial path under CONF_DEVICE_PATH ("device_path"),
+    the same key config_flow.py writes it under. Reading the bare literal "device"
+    instead always misses, so a config_entry-selected serial scan connected to None
+    regardless of which device was picked (#432, @JHPHendriks: "Cannot connect to
+    None @ 9600 baud" - baudrate resolved correctly, only the device path did not,
+    which is the signature of a wrong dict key rather than a real connection failure)."""
+    handler = _service_handler_source()
+    assert 'entry_data.get("device")' not in handler, (
+        "reads the entry's serial device path under the literal key \"device\", which "
+        "config_flow.py never writes - always resolves to None (#432)"
+    )
+    assert "CONF_DEVICE_PATH" in handler, (
+        "the device path is not resolved from CONF_DEVICE_PATH, the key config_flow.py "
+        "actually stores it under"
+    )

@@ -14,7 +14,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 
-from .const import DOMAIN, CONF_INVERTER_SERIES, resolve_block_size, hold_tou_periods
+from .const import DOMAIN, CONF_DEVICE_PATH, CONF_INVERTER_SERIES, resolve_block_size, hold_tou_periods
 from .device_profiles import fill_register_map, get_display_name_for_profile, get_profile
 from .auto_detection import ASSUMED, CONFIRMED, DTC_REGISTRY, convert_to_legacy_profile
 
@@ -500,7 +500,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             connection_type = entry_data.get("connection_type", "tcp")
             host = entry_data.get("host")
             port = entry_data.get("port", 502)
-            device = entry_data.get("device")
+            # Stored under CONF_DEVICE_PATH ("device_path"), not "device" - the plain
+            # string here always missed, so a config_entry-selected serial scan connected
+            # to None regardless of which device was picked (#432, @JHPHendriks).
+            device = entry_data.get(CONF_DEVICE_PATH)
             baudrate = entry_data.get("baudrate", 9600)
             slave_id = entry_data.get("slave_id", 1)
 

@@ -4,6 +4,34 @@
 
 ---
 
+## v2.0.5-b7
+
+Issues: #400, #432
+
+- **New: Wake APX Battery button, for MIN TL-XH on VPP 2.01 firmware (DTC 5100) whose APX
+  pack has gone to sleep in a way Priority Mode alone does not wake.** Disabled by default,
+  and only created on that one hardware-tested profile. Sends a bounded 5%, one-minute VPP
+  direct-charge request for 12 seconds, then reverses itself completely - clearing the pulse
+  and restoring whatever VPP authority, branch and parameters were active before the press.
+  Hardware-tested and contributed by @GoncaloRibeiro11 (PR #456). See
+  [Entity Reference](docs/controls/entity-reference.md) for details.
+
+  Separately, the same hardware investigation found that on this DTC 5100/VPP 2.01 firmware,
+  none of the tested Battery Mode paths - including the MOD/WIT `Hold` workaround - produce
+  a true zero-power hold; the closest available state still shows residual discharge. `Hold`
+  is not being changed or exposed differently for this profile as a result of this alone,
+  but treat it as unconfirmed on MIN TL-XH VPP 2.01 rather than assumed to behave like
+  MOD/WIT.
+
+- **The Universal Register Scanner (`export_register_dump`) always failed to connect when a
+  serial-connected device was selected from the dropdown**, with "Cannot connect to None @
+  9600 baud" - the baud rate resolved correctly; only the serial port did not, because the
+  scan read the entry's connection details under the wrong key. Manually re-entering the
+  same device path as a workaround always worked, which is why this went unnoticed until
+  now. Found by @JHPHendriks on issue #432.
+
+---
+
 ## v2.0.5-b6
 
 Issues: #432

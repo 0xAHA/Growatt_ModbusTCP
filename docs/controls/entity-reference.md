@@ -582,6 +582,25 @@ the grid while solar charged the battery).
     currently no way to move these values from outside the inverter's own menu, if the menu
     can move them at all on your firmware.
 
+### Waking a sleeping APX battery (MIN TL-XH, VPP 2.01 only)
+
+| Entity | What it does |
+|---|---|
+| `button.<name>_wake_apx_battery` | Sends a short, bounded charge request to wake a sleeping APX pack |
+
+**Disabled by default**, and only created on `MIN_TL_XH_3000_10000_V201` — the one profile
+this has been hardware-tested against (a MIN 4600TL-XH, DTC 5100, APX S0). An APX pack can
+go to sleep in a way that changing Priority Mode alone does not wake; this button requests a
+5%, one-minute VPP direct-charge pulse instead, held for 12 seconds, then reverses itself —
+clearing the pulse and restoring whatever VPP authority, branch selection and parameters
+were active before the press, in the order that keeps a partial failure safe rather than
+leaving a larger old setpoint re-armed behind a pulse that never cleared
+([#400](https://github.com/0xAHA/Growatt_ModbusTCP/issues/400)).
+
+If your inverter uses VPP 2.03 rather than 2.01, this button does not appear — mode `2`
+(2.03's wake value) is silently normalised back to `1` on 2.01 firmware, so the two are not
+interchangeable, and only the 2.01 behaviour has been confirmed on hardware so far.
+
 ---
 
 ## MIC Micro Inverters
