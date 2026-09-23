@@ -91,7 +91,11 @@ def wake_apx_battery(
             ):
                 raise BatteryWakeError("The inverter rejected the APX wake parameters")
 
-            if not client.write_register(VPP_REMOTE_POWER_ENABLE, 1):
+            if not client.write_register(
+                VPP_REMOTE_POWER_ENABLE,
+                1,
+                bypass_rate_limit=True,
+            ):
                 raise BatteryWakeError("The inverter rejected the APX wake command")
 
         sleep_fn(pulse_seconds)

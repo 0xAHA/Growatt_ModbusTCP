@@ -71,7 +71,7 @@ def test_wake_pulse_is_low_bounded_and_restores_previous_state():
 
     assert sleeps == [12]
     assert (30408, [1, 5, 1]) in client.writes
-    assert (30407, 1, False) in client.writes
+    assert (30407, 1, True) in client.writes
     assert (30407, 0, True) in client.writes
     assert client.registers == {
         30100: 0,
@@ -92,6 +92,7 @@ def test_active_vpp_session_is_paused_and_restored():
     assert client.writes[0] == (30407, 0, True)
     assert (30100, 1, False) not in client.writes
     assert (30408, [1, 5, 1]) in client.writes
+    assert (30407, 1, True) in client.writes
     assert client.registers == {
         30100: 1,
         30407: 1,
@@ -108,6 +109,7 @@ def test_stale_remote_selector_without_authority_is_restored():
 
     assert client.writes[0] == (30407, 0, True)
     assert (30100, 1, False) in client.writes
+    assert (30407, 1, True) in client.writes
     assert client.registers == {
         30100: 0,
         30407: 1,
