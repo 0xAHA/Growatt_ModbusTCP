@@ -139,16 +139,25 @@ def _peer_closed_the_connection(exc: Exception) -> bool:
 # =============================================================================
 
 class ModbusWriteError(Exception):
-    """Exception raised when a Modbus write operation fails.
+    """Raised for a failed Modbus operation - not only writes.
 
-    Contains detailed error information including the register address,
-    values attempted, and the actual Modbus error message.
+    `_bus()` serialises reads, writes and whole polls on the same lock and raises this on
+    a timeout regardless of which one was waiting, so callers that only distinguish it from
+    other exceptions (everything except _bus() itself) keep working unchanged. `operation`
+    exists so the message says what actually failed: a lock timeout on a read is not a
+    write failure, and telling a user their read timed out via "Failed to write registers"
+    sends them looking at the wrong half of the driver (#432, @JHPHendriks - the read/write
+    mismatch in a bus-busy message on a plain register read).
     """
-    def __init__(self, register: int, values: list, error_message: str):
+    def __init__(self, register: int, values: list, error_message: str, operation: str = "write"):
         self.register = register
         self.values = values
         self.error_message = error_message
-        super().__init__(f"Failed to write registers {register}-{register + len(values) - 1}: {error_message}")
+        if operation == "write":
+            summary = f"Failed to write registers {register}-{register + len(values) - 1}: {error_message}"
+        else:
+            summary = f"Failed to {operation}: {error_message}"
+        super().__init__(summary)
 
 
 def _format_modbus_error(result) -> str:
@@ -3962,7 +3971,8 @@ class GrowattModbus:
         )
         if not lock.acquire(timeout=SHARED_LOCK_TIMEOUT):
             raise ModbusWriteError(
-                0, [], f"Modbus bus busy (lock timeout after {SHARED_LOCK_TIMEOUT}s on {what})"
+                0, [], f"Modbus bus busy (lock timeout after {SHARED_LOCK_TIMEOUT}s)",
+                operation=what,
             )
         try:
             yield

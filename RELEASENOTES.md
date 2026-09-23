@@ -4,6 +4,21 @@
 
 ---
 
+## v2.0.5-b6
+
+Issues: #432
+
+- **A Modbus read that timed out waiting for the bus was reported as a failed write.**
+  Reads, writes and whole polls share one lock, and a timeout on it always raised the same
+  exception with a message hardcoded to "Failed to write registers..." - so a plain register
+  read, including the `read_register` diagnostic service, could surface as a write failure
+  with a nonsensical register range. The message now names the operation that actually timed
+  out (read, write or poll). No behaviour changes - the same exception type is still raised,
+  only what it says changes. Found by @JHPHendriks while diagnosing a separate reported
+  issue, on a screenshot showing exactly this mismatch.
+
+---
+
 ## v2.0.5-b5
 
 Issues: #454
