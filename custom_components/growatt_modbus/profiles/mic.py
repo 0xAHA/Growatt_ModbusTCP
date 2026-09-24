@@ -72,7 +72,8 @@ MIC_600_3300TL_X = {
         144: {'name': 'test_treat_time', 'scale': 1, 'unit': 'ms'},
     },
     'holding_registers': {
-        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Low byte: on/off (1/0), High byte: auto start (1/0)'},
+        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Low byte: on/off (1/0), High byte: auto start (1/0)',
+            'onoff_encoding': 'legacy_autostart'},
         2: {'name': 'pf_cmd_memory', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Power factor memory state (0/1)'},
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Max output active power percent (0-100)'},
         4: {'name': 'reactive_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Max output reactive power percent (0-100)'},

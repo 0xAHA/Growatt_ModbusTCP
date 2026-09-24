@@ -86,7 +86,8 @@ TL3_S_3000_15000 = {
     'holding_registers': {
         # Legacy protocol V3.14: two settings in one register. 0x0101 (257) is the documented
         # default and what a dhaa01 unit reads back (#432) - a plain 0 or 1 clears auto start.
-        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Low byte: on/off (1/0), High byte: auto start (1/0)'},
+        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Low byte: on/off (1/0), High byte: auto start (1/0)',
+            'onoff_encoding': 'legacy_autostart'},
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Max output active power percent (0-100)'},
         30: {'name': 'com_address', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Modbus communication address'},
     },

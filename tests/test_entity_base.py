@@ -25,7 +25,7 @@ from pathlib import Path
 import pytest
 
 COMPONENT = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
-PLATFORMS = ["sensor.py", "binary_sensor.py", "number.py", "select.py", "time.py"]
+PLATFORMS = ["sensor.py", "binary_sensor.py", "number.py", "select.py", "switch.py", "time.py"]
 
 
 def _entity_classes(path: Path) -> list[tuple[str, list[str]]]:

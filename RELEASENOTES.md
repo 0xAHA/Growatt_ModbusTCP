@@ -4,6 +4,33 @@
 
 ---
 
+## v2.0.5-b9
+
+Issues: #400, #432
+
+- **New: Inverter Power switch - remote on/off, on every model that has an on/off
+  register.** Disabled by default so nobody turns an inverter off by accident; enable it
+  from the inverter device's entity settings. Off-grid models (SPF, SPE) get **AC Output**
+  instead, which is what their protocol actually controls - turning it off cuts power to
+  everything the inverter supplies. Each protocol family is written in its own encoding;
+  on MIC and TL3-S the register also holds the auto-start setting, which is preserved. The
+  switch shows the last command sent, not a reading. Not yet confirmed on hardware for any
+  family - see [Entity Reference](docs/controls/entity-reference.md). Requested by
+  @JHPHendriks.
+
+- **TL3-S on firmware dhaa01 now polls with Max Register Block Size on Auto.** That
+  firmware refuses a single 113-register read, so every poll failed and every entity stayed
+  unavailable. The profile now reads in blocks of up to 50, which the reference TL3-S
+  handles too. If you set a smaller block size as a workaround, you can return it to Auto.
+  Found and tested by @JHPHendriks.
+
+- **Set Battery Mode (VPP) and Sync TOU Schedule no longer describe Hold as "true
+  standby".** Measured on hardware it is close to idle, not an exact zero: about 140 W
+  charging on a MOD 10KTL3-XH at night, and more on a MIN TL-XH. Wording only - what Hold
+  writes is unchanged. Measurements by @KevlarD-67 and @GoncaloRibeiro11.
+
+---
+
 ## v2.0.5-b8
 
 Issues: #400

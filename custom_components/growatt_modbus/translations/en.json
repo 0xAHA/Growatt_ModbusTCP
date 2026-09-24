@@ -716,6 +716,14 @@
       "wake_apx_battery": {
         "name": "Wake APX Battery"
       }
+    },
+    "switch": {
+      "inverter_power": {
+        "name": "Inverter Power"
+      },
+      "ac_output": {
+        "name": "AC Output"
+      }
     }
   }
 }

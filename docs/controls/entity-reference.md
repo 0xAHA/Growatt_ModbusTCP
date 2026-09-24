@@ -625,6 +625,45 @@ interchangeable, and only the 2.01 behaviour has been confirmed on hardware so f
 
 ---
 
+## Turning the inverter on and off
+
+| Entity | What it does |
+|---|---|
+| `switch.<name>_inverter_power` | Remote on/off for the inverter |
+| `switch.<name>_ac_output` | Off-grid models (SPF, SPE) instead: enables or disables the AC output |
+
+**Disabled by default on every model**, so nobody switches an inverter off by accident —
+enable it under the inverter device's entity settings. Off-grid owners especially: turning
+**AC Output** off cuts power to everything the inverter supplies.
+
+The switch shows the **last command sent**, not a reading from the inverter, and offers both
+actions rather than a toggle. On several families the register cannot be trusted to read
+back the real state, so a changed setting from ShinePhone or the front panel will not show
+here.
+
+Each protocol family encodes on/off differently, and the integration picks the right one
+from your profile:
+
+| Family | Register | What is written |
+|---|---|---|
+| MIN, MID, MOD, SPH, SPA, TL-XH, WIT (V1.39) | holding 0 | `1` on, `0` off. The battery converter codes (`3`/`2`) are never used |
+| MIC, TL3-S (legacy V3.14) | holding 0 | Low byte on/off only. The high byte is **auto start** — whether the inverter comes back after a power cut — and is read first and written back unchanged |
+| SPF, SPE (off-grid) | holding 0 | High byte AC output (`0x0000` on, `0x0100` off); the low byte is read first and kept |
+| MIN TL-XH2 (VPP only) | holding 30101 | `1` on, `0` off. Not stored — the inverter returns to on after a reboot |
+
+On the two read-first families, if the register cannot be read nothing is written; guessing
+the other byte is the mistake the read exists to avoid.
+
+!!! warning "Not yet confirmed on hardware for every family"
+    The encodings above come from Growatt's protocol documents. At the time of writing none
+    has been confirmed by switching a real inverter off and back on through this switch. On
+    MIN TL-XH2 in particular, other VPP controls are known to need control authority (30100)
+    before they act; the switch does not grant it, so 30101 may be ignored there. If you test
+    one, please report the result
+    ([#432](https://github.com/0xAHA/Growatt_ModbusTCP/issues/432)).
+
+---
+
 ## Keeping the inverter's clock accurate
 
 Time period schedules run against the **inverter's own clock**, not Home Assistant's. That
