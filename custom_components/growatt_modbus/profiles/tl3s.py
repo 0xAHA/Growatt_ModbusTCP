@@ -6,6 +6,10 @@
 TL3_S_3000_15000 = {
     'name': 'TL3-S 3000-15000',
     'description': 'Three-phase grid-tied string inverter (3-15kW), legacy protocol',
+    # Firmware dhaa01 answers Illegal Function to a 113-register input read (0-112) but
+    # serves the same data in reads of up to 50, confirmed at 50/25/10/5/1 (#432,
+    # @JHPHendriks). The DH1.0 reference unit (#299) reads 125 at once, so 50 suits both.
+    'max_block_size': 50,
     'notes': (
         'Legacy 0-179 register range. Two MPPT inputs: PV1 (regs 3-6), PV2 voltage/current only (regs 7-8). '
         'Regs 9-10 are firmware version bytes (ASCII "DH"/"1.") not PV2 power — pv2_power stays 0, use pv_total_power. '
@@ -80,7 +84,9 @@ TL3_S_3000_15000 = {
         112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
     },
     'holding_registers': {
-        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
+        # Legacy protocol V3.14: two settings in one register. 0x0101 (257) is the documented
+        # default and what a dhaa01 unit reads back (#432) - a plain 0 or 1 clears auto start.
+        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Low byte: on/off (1/0), High byte: auto start (1/0)'},
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Max output active power percent (0-100)'},
         30: {'name': 'com_address', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Modbus communication address'},
     },
