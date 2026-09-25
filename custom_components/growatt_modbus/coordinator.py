@@ -288,6 +288,12 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self._inverter_clock: datetime | None = None
         self._clock_poll_wanted: bool = False
 
+        # On/off register, for the Inverter Power switch on profiles where it reads back
+        # the real state. Same opt-in as the clock: nothing is read until the switch -
+        # disabled by default - is enabled and asks.
+        self._onoff_register: int | None = None
+        self._onoff_raw: int | None = None
+
         # Profile re-check (#405). Detection runs once, in the config flow, and is never
         # revisited - so one failed read of register 30000 at setup strands an inverter
         # on a lesser profile permanently, with nothing telling the owner. Checked once
@@ -321,6 +327,26 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         next reload is not worth the bookkeeping.
         """
         self._clock_poll_wanted = True
+
+    @property
+    def onoff_raw(self) -> int | None:
+        """The on/off register as of the last poll; None until requested or when unreadable."""
+        return self._onoff_raw
+
+    def enable_onoff_polling(self, register: int) -> None:
+        """Start reading the on/off register each poll. Called by the Inverter Power switch."""
+        self._onoff_register = register
+
+    def _refresh_onoff(self) -> None:
+        """Read the on/off register into _onoff_raw. Runs in the executor, both fetch paths."""
+        if self._onoff_register is None:
+            return
+        try:
+            regs = self._client.read_holding_registers(self._onoff_register, 1)
+            self._onoff_raw = int(regs[0]) if regs else None
+        except Exception as err:
+            _LOGGER.debug("Could not read on/off register this poll: %s", err)
+            self._onoff_raw = None
 
     def _recheck_profile_against_dtc(self) -> None:
         """Re-read the device type code and check it agrees with the profile in use.
@@ -1672,6 +1698,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 if not self._identification_complete:
                     self._read_device_identification()
                 self._refresh_inverter_clock()
+                self._refresh_onoff()
                 self._recheck_profile_against_dtc()
 
             time.sleep(inter_slave_delay)
@@ -1769,6 +1796,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         self._read_device_identification()
                     # Before the disconnect - this path closes the socket on its way out.
                     self._refresh_inverter_clock()
+                    self._refresh_onoff()
                     self._recheck_profile_against_dtc()
                     self._client.disconnect()
                     return data

@@ -39,10 +39,16 @@ class PowerControlError(Exception):
 
 @dataclass(frozen=True)
 class PowerControl:
-    """Where this profile's on/off lives and how it is encoded."""
+    """Where this profile's on/off lives and how it is encoded.
+
+    `readback` is set only where a real unit has been seen to read back its state - 0 while
+    off AND 1 while on, not a single reading, which cannot tell a live register from one
+    stuck at a value. Everywhere else the switch shows the last command sent.
+    """
 
     register: int
     encoding: str
+    readback: bool = False
 
     @property
     def is_read_modify_write(self) -> bool:
@@ -64,11 +70,30 @@ def resolve_power_control(register_map: dict) -> PowerControl | None:
     """
     holding = register_map.get("holding_registers", {})
     if 0 in holding:
+        readback = bool(holding[0].get("onoff_readback"))
         if register_map.get("offgrid_protocol"):
-            return PowerControl(0, ENCODING_OFFGRID_OUTPUT)
-        return PowerControl(0, holding[0].get("onoff_encoding", ENCODING_PLAIN))
+            return PowerControl(0, ENCODING_OFFGRID_OUTPUT, readback)
+        return PowerControl(0, holding[0].get("onoff_encoding", ENCODING_PLAIN), readback)
     if VPP_ONOFF_REGISTER in holding:
-        return PowerControl(VPP_ONOFF_REGISTER, ENCODING_VPP)
+        return PowerControl(VPP_ONOFF_REGISTER, ENCODING_VPP,
+                            bool(holding[VPP_ONOFF_REGISTER].get("onoff_readback")))
+    return None
+
+
+def decode(control: PowerControl, raw: int | None) -> bool | None:
+    """On/off from a register read, or None when the value is not one this encoding defines.
+
+    Anything outside the documented values is unknown rather than guessed - a register
+    answering garbage must not show as a confident on or off.
+    """
+    if raw is None:
+        return None
+    if control.encoding in (ENCODING_PLAIN, ENCODING_VPP):
+        return {1: True, 0: False}.get(raw)
+    if control.encoding == ENCODING_LEGACY_AUTOSTART:
+        return {0x0000: False, 0x0100: False, 0x0001: True, 0x0101: True}.get(raw)
+    if control.encoding == ENCODING_OFFGRID_OUTPUT:
+        return {0x0000: True, 0x0001: True, 0x0100: False, 0x0101: False}.get(raw)
     return None
 
 

@@ -150,6 +150,57 @@ def test_plain_write_does_not_read():
 
 
 # ---------------------------------------------------------------------------
+# Reading the state back
+# ---------------------------------------------------------------------------
+
+# Confirmed on a MIN TL-X by switching it off and on: register 0 read 0 then 1. The V2.01
+# variants are the same inverters and inherit the entry.
+READBACK = {"MIN_3000_6000TL_X", "MIN_7000_10000TL_X",
+            "MIN_3000_6000TL_X_V201", "MIN_7000_10000TL_X_V201"}
+
+
+@pytest.mark.parametrize("name", sorted(REGISTER_MAPS))
+def test_readback_is_enabled_only_where_a_unit_confirmed_it(name):
+    """V1.39 documents register 0 as write-only. A read is trusted only on hardware seen
+    to read 0 while off AND 1 while on - one reading cannot tell a live register from one
+    stuck at a value."""
+    control = pc.resolve_power_control(REGISTER_MAPS[name])
+    if control is None:
+        return
+    assert control.readback is (name in READBACK), (
+        f"{name}: readback={control.readback}, but it has "
+        f"{'' if name in READBACK else 'not '}been confirmed on hardware"
+    )
+
+
+@pytest.mark.parametrize("control,raw,expected", [
+    (PLAIN, 1, True), (PLAIN, 0, False), (PLAIN, 3, None), (PLAIN, 257, None),
+    (VPP, 1, True), (VPP, 0, False), (VPP, 9, None),          # 9 = bypass (V2.03)
+    (LEG, 0x0101, True), (LEG, 0x0001, True), (LEG, 0x0100, False), (LEG, 0x0000, False),
+    (LEG, 0x0201, None),
+    (OFF, 0x0000, True), (OFF, 0x0001, True), (OFF, 0x0100, False), (OFF, 0x0101, False),
+    (OFF, 0x0005, None),
+    (PLAIN, None, None),
+])
+def test_decode_accepts_only_documented_values(control, raw, expected):
+    """Anything else is unknown - a register answering garbage must not show as a
+    confident on or off."""
+    assert pc.decode(control, raw) is expected
+
+
+def test_the_state_is_read_on_both_fetch_paths():
+    """The two fetch paths have diverged before (v1.3.5); the clock read lives in one
+    method both call, and so must this."""
+    coordinator = (COMPONENT / "coordinator.py").read_text(encoding="utf-8")
+    assert coordinator.count("self._refresh_onoff()") >= 2
+
+
+def test_the_switch_only_asks_for_reads_where_they_are_trusted():
+    source = (COMPONENT / "switch.py").read_text(encoding="utf-8")
+    assert "if self._control.readback:\n            self.coordinator.enable_onoff_polling" in source
+
+
+# ---------------------------------------------------------------------------
 # The entity
 # ---------------------------------------------------------------------------
 

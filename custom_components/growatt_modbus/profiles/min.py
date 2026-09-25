@@ -116,7 +116,10 @@ MIN_3000_6000TL_X = {
         3119: {'name': 'dry_contact_state', 'scale': 1, 'unit': '', 'desc': 'Dry contact relay current state: 0=Off, 1=On'},
     },
     'holding_registers': {
-        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
+        # Reads back the real state despite V1.39 marking it write-only: 0 while switched
+        # off, 1 while on, on the maintainer's MIN TL-X (2026-09-26).
+        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On',
+            'onoff_readback': True},
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Max output power %'},
         30: {'name': 'modbus_address', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Modbus address 1-254'},
 
@@ -312,7 +315,10 @@ MIN_7000_10000TL_X = {
         3119: {'name': 'dry_contact_state', 'scale': 1, 'unit': '', 'desc': 'Dry contact relay current state: 0=Off, 1=On'},
     },
     'holding_registers': {
-        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
+        # Reads back the real state despite V1.39 marking it write-only: 0 while switched
+        # off, 1 while on, on the maintainer's MIN TL-X (2026-09-26).
+        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On',
+            'onoff_readback': True},
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Max output power %'},
         15: {'name': 'lcd_language', 'scale': 1, 'unit': '', 'access': 'RW'},
         22: {'name': 'baud_rate', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=9600, 1=38400'},

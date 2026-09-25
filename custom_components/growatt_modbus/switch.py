@@ -15,7 +15,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DEVICE_TYPE_INVERTER
 from .entity import GrowattEntity
-from .power_control import PowerControl, PowerControlError, resolve_power_control, set_power
+from .power_control import (
+    PowerControl,
+    PowerControlError,
+    decode,
+    resolve_power_control,
+    set_power,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,10 +45,11 @@ async def async_setup_entry(
 class GrowattPowerSwitch(GrowattEntity, SwitchEntity):
     """Remote on/off.
 
-    Shows the last command sent, not a read-back: V1.39 documents register 0 as write-only
-    and VPP 30101 as not stored, so a read cannot be trusted to reflect the inverter on
-    every family. `assumed_state` makes Home Assistant offer both actions rather than a
-    toggle built on a state it does not know.
+    Where the profile marks the register as reading back (confirmed on a real unit), the
+    state is read from the inverter each poll and the switch is an ordinary toggle.
+    Elsewhere it shows the last command sent: V1.39 documents register 0 as write-only and
+    VPP 30101 as not stored, so an unconfirmed read cannot be trusted to reflect the
+    inverter, and `assumed_state` makes Home Assistant offer both actions instead.
     """
 
     _attr_entity_category = EntityCategory.CONFIG
@@ -61,6 +68,23 @@ class GrowattPowerSwitch(GrowattEntity, SwitchEntity):
         self._control = control
         self._attr_translation_key = "ac_output" if control.is_ac_output else "inverter_power"
         self._attr_is_on = None
+        if control.readback:
+            self._attr_assumed_state = False
+
+    async def async_added_to_hass(self) -> None:
+        """Ask the coordinator to start reading the register, where it reads back.
+
+        Disabled entities are never added, so leaving the switch off costs no reads.
+        """
+        await super().async_added_to_hass()
+        if self._control.readback:
+            self.coordinator.enable_onoff_polling(self._control.register)
+
+    @property
+    def is_on(self) -> bool | None:
+        if self._control.readback:
+            return decode(self._control, self.coordinator.onoff_raw)
+        return self._attr_is_on
 
     async def async_turn_on(self, **kwargs) -> None:
         await self._async_set(True)
@@ -80,5 +104,8 @@ class GrowattPowerSwitch(GrowattEntity, SwitchEntity):
             "Inverter %s: wrote %d (0x%04X) to holding register %d (%s)",
             "on" if on else "off", value, value, self._control.register, self._control.encoding,
         )
+        if self._control.readback:
+            await self.coordinator.async_request_refresh()
+            return
         self._attr_is_on = on
         self.async_write_ha_state()
