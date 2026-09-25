@@ -306,10 +306,17 @@ _PAIR_HIGH_WORD_MAX_FOR_CORRUPTION = 1024
 # this integration supports, so no real reading can reach the middle.
 _SIGNED_PAIR_HIGH_WORD_BAND = 16
 
-# ...but a genuine reading near a multiple of 65536 raw counts has the same shape, and a
-# steady one would be withheld for ever. A corruption is transient - his lasted a single
-# poll and was back to normal ten seconds later - so a shape that repeats this many polls
-# in a row for the same register is believed and published.
+# ...but on an UNSIGNED pair a genuine reading near a multiple of 65536 raw counts has the
+# same shape, and a steady one would be withheld for ever. So the same high word repeating
+# this many polls in a row for one register is believed and published. The same high word,
+# not just any suspect shape: garbage varies from poll to poll and a steady load does not,
+# and counting any shape published multi-megawatt readings (#446).
+#
+# Signed pairs have no such escape - the middle band they withhold starts ~107 kW from
+# zero, where no genuine reading can be.
+#
+# Warnings for either guard are emitted once per register per session; repeats are debug
+# lines, so counting WARNING lines in a log undercounts events (@KevlarD-67, #446).
 _PAIR_SHAPE_REPEATS_BEFORE_BELIEVED = 3
 
 RECONNECT_QUIET_BASE_SECONDS = 2.0
@@ -2743,40 +2750,33 @@ class GrowattModbus:
             if reg_info.get('signed') or pair_info.get('signed'):
                 # Same word-level corruption as #446, on a pair the unsigned guard cannot
                 # test (#447). See _SIGNED_PAIR_HIGH_WORD_BAND for the measured shapes.
-                shape_key = (address, pair_addr)
+                #
+                # Never believed, however often it repeats. The band leaves ~107 kW of
+                # headroom each way, so a reading in the middle is never real - and an
+                # escape hatch here published a +8.5 MW spike on grid power, where the same
+                # impossible shape happened to hold for three polls (#446, @AzraelsDisk).
                 if self._signed_pair_words_look_corrupted(high_value):
-                    seen = self._pair_shape_suspect.get(shape_key, 0) + 1
-                    self._pair_shape_suspect[shape_key] = seen
-                    if seen < _PAIR_SHAPE_REPEATS_BEFORE_BELIEVED:
-                        name = reg_info.get('name') or pair_info.get('name')
-                        _as_signed = (combined - 0x100000000
-                                      if combined > 0x7FFFFFFF else combined)
-                        if name not in self._pair_shape_warned:
-                            self._pair_shape_warned.add(name)
-                            logger.warning(
-                                "[PAIR SHAPE] %s (registers %d/%d) read HIGH=%d LOW=%d "
-                                "(0x%08X), which would publish %s. On a signed pair a real "
-                                "reading keeps its high word near 0 or near 65535; this one "
-                                "is in between, which is the signature of a value landing "
-                                "in the wrong half. Withholding it. If this repeats %d "
-                                "polls in a row it will be published as genuine (#447).",
-                                name, address, pair_addr, high_value, low_value, combined,
-                                f"{_as_signed * combined_scale:,.1f}",
-                                _PAIR_SHAPE_REPEATS_BEFORE_BELIEVED,
-                            )
-                        else:
-                            logger.debug(
-                                "[PAIR SHAPE] %s withheld again: HIGH=%d LOW=%d",
-                                name, high_value, low_value,
-                            )
-                        return None
-                    logger.debug(
-                        "[PAIR SHAPE] %s has held the same shape for %d polls - publishing "
-                        "it as a genuine reading",
-                        reg_info.get('name') or pair_info.get('name'), seen,
-                    )
-                else:
-                    self._pair_shape_suspect.pop(shape_key, None)
+                    name = reg_info.get('name') or pair_info.get('name')
+                    _as_signed = (combined - 0x100000000
+                                  if combined > 0x7FFFFFFF else combined)
+                    if name not in self._pair_shape_warned:
+                        self._pair_shape_warned.add(name)
+                        logger.warning(
+                            "[PAIR SHAPE] %s (registers %d/%d) read HIGH=%d LOW=%d "
+                            "(0x%08X), which would publish %s. On a signed pair a real "
+                            "reading keeps its high word near 0 or near 65535; this one "
+                            "is in between, which is the signature of a value landing "
+                            "in the wrong half. Withholding it - no real reading can land "
+                            "here, so it is never published (#447). Repeats log at debug.",
+                            name, address, pair_addr, high_value, low_value, combined,
+                            f"{_as_signed * combined_scale:,.1f}",
+                        )
+                    else:
+                        logger.debug(
+                            "[PAIR SHAPE] %s withheld again: HIGH=%d LOW=%d",
+                            name, high_value, low_value,
+                        )
+                    return None
 
                 if combined > 0x7FFFFFFF:  # If sign bit is set
                     combined = combined - 0x100000000
@@ -2855,6 +2855,10 @@ class GrowattModbus:
                         "[UNDERFLOW] %s: %d withheld again (signed: %s)",
                         name, combined, combined - 0x100000000,
                     )
+                # A poll of a different kind breaks a word-corruption streak - "in a row"
+                # has to mean consecutive polls. Left alone, garbage alternating between
+                # this and the shape below accumulated into a believed reading (#446).
+                self._pair_shape_suspect.pop((address, pair_addr), None)
                 return None
 
             else:
@@ -2867,8 +2871,15 @@ class GrowattModbus:
                 # 0xFFFF in its high word for small negatives, which is the same shape.
                 shape_key = (address, pair_addr)
                 if self._pair_words_look_corrupted(high_value, low_value):
-                    seen = self._pair_shape_suspect.get(shape_key, 0) + 1
-                    self._pair_shape_suspect[shape_key] = seen
+                    # Only the SAME high word counts toward belief. A genuine steady
+                    # reading near a 65536 boundary keeps its high word (1 for a 6.6 kW
+                    # load, 2 for a 13 kW EV charge); garbage does not. Counting any
+                    # suspect shape published an SPH-TL3 owner's per-phase import at
+                    # 6,022,667 W after three different corrupted reads - high words 19,
+                    # 724 and 918 - fed straight into grid import (#446, @AzraelsDisk).
+                    prev_seen, prev_high = self._pair_shape_suspect.get(shape_key, (0, None))
+                    seen = prev_seen + 1 if prev_high == high_value else 1
+                    self._pair_shape_suspect[shape_key] = (seen, high_value)
                     if seen < _PAIR_SHAPE_REPEATS_BEFORE_BELIEVED:
                         name = reg_info.get('name') or pair_info.get('name')
                         if name not in self._pair_shape_warned:
@@ -2879,8 +2890,9 @@ class GrowattModbus:
                                 "small value where a correct reading has 0, and the low "
                                 "word is at one end of its range - the signature of a "
                                 "word-level corruption rather than a measurement. "
-                                "Withholding it. If this repeats %d polls in a row it will "
-                                "be published as genuine (#446).",
+                                "Withholding it. If the same high word repeats %d polls in "
+                                "a row it will be published as genuine (#446). Repeats log "
+                                "at debug.",
                                 name, address, pair_addr, high_value, low_value, combined,
                                 f"{combined * combined_scale:,.1f}",
                                 _PAIR_SHAPE_REPEATS_BEFORE_BELIEVED,

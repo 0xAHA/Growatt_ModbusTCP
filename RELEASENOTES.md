@@ -4,6 +4,22 @@
 
 ---
 
+## v2.0.5-b10
+
+Issues: #446
+
+- **Multi-megawatt spikes could still reach grid import and grid power on SPH-TL3.** The
+  word-corruption guard withheld each bad reading, but published one anyway once a register
+  had looked corrupted for three polls running - without checking it was the same value
+  each time. A register returning different garbage every poll therefore got its third bad
+  value published: an SPH 10000 TL3 BH-UP's per-phase grid import produced 6,022,667 W this
+  way, from its own logged readings. Now only the same value holding steady counts, which
+  still lets a genuine steady load through; and on signed pairs such as grid power the
+  guard never publishes, because no real reading can fall in the range it withholds. Found
+  by @AzraelsDisk. Spikes already in your history are not removed by this.
+
+---
+
 ## v2.0.5-b9
 
 Issues: #400, #432

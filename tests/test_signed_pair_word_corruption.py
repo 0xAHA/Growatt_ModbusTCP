@@ -115,12 +115,14 @@ def test_a_large_genuine_import_still_decodes():
     assert _client(65534, 12452)._get_register_value(1030) == pytest.approx(-11862.0)
 
 
-def test_a_persistent_shape_is_published_after_three_polls():
-    """A glitch does not persist; a real reading does. Same escape as the unsigned guard."""
+def test_a_persistent_shape_is_never_published():
+    """This used to pin the opposite: three identical polls published +9 MW. On a signed
+    pair the withheld band starts ~107 kW from zero, so no genuine reading can be there to
+    rescue - the escape hatch only ever let impossible values through, and an SPH-TL3 owner
+    got +8.5 MW on grid power from it (#446, @AzraelsDisk)."""
     client = _client(1373, 19072)
-    assert client._get_register_value(1030) is None
-    assert client._get_register_value(1030) is None
-    assert client._get_register_value(1030) == pytest.approx(9_000_000.0)
+    for _ in range(10):
+        assert client._get_register_value(1030) is None
 
 
 def test_a_good_reading_clears_the_suspicion():

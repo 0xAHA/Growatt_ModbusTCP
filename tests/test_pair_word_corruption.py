@@ -187,6 +187,46 @@ def test_a_persistent_shape_is_published_after_three_polls():
     )
 
 
+def test_a_steady_load_with_a_moving_low_word_is_still_believed():
+    """The case the escape exists for: the high word holds, the low word wanders within
+    the margin as a real load moves a few watts."""
+    client = _client(UNSIGNED_PAIR, 1, 5)
+    assert client._get_register_value(1022) is None
+    client._register_cache = {1021: 1, 1022: 9}
+    assert client._get_register_value(1022) is None
+    client._register_cache = {1021: 1, 1022: 12}
+    assert client._get_register_value(1022) == pytest.approx(6554.8)
+
+
+def test_different_garbage_never_accumulates_into_belief():
+    """THE regression (#446, @AzraelsDisk): an SPH-TL3's per-phase import legs returned a
+    different corrupted shape each poll, with sign-bit garbage in between. Counting any
+    suspect shape published the third one - 6,022,667.4 W into grid import. These are his
+    logged raw words, in the order his log shows them."""
+    client = _client(UNSIGNED_PAIR, 0, 0)
+    for high, low in [(19, 65526), (0xFF7D, 0x004F), (724, 0), (918, 64626),
+                      (19, 65526), (724, 0), (918, 64626)]:
+        client._register_cache = {1021: high, 1022: low}
+        assert client._get_register_value(1022) is None, (
+            f"HIGH={high} LOW={low} was published - varied garbage accumulated into a "
+            f"believed reading"
+        )
+
+
+def test_an_underflow_poll_breaks_the_streak():
+    """"In a row" means consecutive polls. A sign-bit reading in between is not the same
+    shape and must reset the count, not pause it."""
+    client = _client(UNSIGNED_PAIR, 2, 3)
+    assert client._get_register_value(1022) is None
+    assert client._get_register_value(1022) is None
+    client._register_cache = {1021: 0xFFE5, 1022: 0xFFE5}
+    assert client._get_register_value(1022) is None
+    client._register_cache = {1021: 2, 1022: 3}
+    assert client._get_register_value(1022) is None, (
+        "the streak survived an underflow poll and completed on the next suspect read"
+    )
+
+
 def test_a_normal_reading_clears_the_suspicion():
     """Otherwise two glitches an hour apart would publish the second one."""
     client = _client(UNSIGNED_PAIR, 14, 65515)
