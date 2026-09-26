@@ -213,6 +213,16 @@ async def async_setup_entry(
             [ctrl for ctrl, _ in deferred_vpp],
         )
 
+        listener_removed = False
+
+        @callback
+        def _remove_vpp_listener_once() -> None:
+            nonlocal listener_removed
+            if listener_removed:
+                return
+            listener_removed = True
+            _remove_vpp_listener()
+
         @callback
         def _async_check_deferred_vpp() -> None:
             if not coordinator.has_real_data:
@@ -237,10 +247,10 @@ async def async_setup_entry(
             if new_entities:
                 async_add_entities(new_entities)
             if not deferred_vpp:
-                _remove_vpp_listener()
+                _remove_vpp_listener_once()
 
         _remove_vpp_listener = coordinator.async_add_listener(_async_check_deferred_vpp)
-        config_entry.async_on_unload(_remove_vpp_listener)
+        config_entry.async_on_unload(_remove_vpp_listener_once)
 
 
 class GrowattGenericSelect(GrowattEntity, SelectEntity):
