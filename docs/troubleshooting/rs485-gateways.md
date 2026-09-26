@@ -338,3 +338,13 @@ Occasional dropped frames are normal on RS485 and cannot be eliminated entirely.
 You do not necessarily have to choose. On both systems in #367 the inverter has a **`SYS COM` port separate from the USB port the ShineWiFi dongle occupies**, so a second RS485 master can run alongside the stock dongle. Home Assistant gets a local Modbus path, and the dongle keeps feeding Growatt's own app.
 
 Note this is one local path and one cloud path — not two paths into Home Assistant. If you keep the dongle, be aware the Growatt cloud can overwrite local writes to control registers within seconds; the integration logs a `Write reversion detected` warning when it sees this.
+
+### Sharing one port with a broker (community tool)
+
+If your inverter has only one free port, [growatt-rtu-broker](https://github.com/l4m4re/growatt-rtu-broker)
+by @l4m4re runs on a Raspberry Pi between the inverter and everything that talks to it: a
+Shine dongle and one or more Home Assistant instances share a single RS485 link, each
+connection optionally read-only. It also has a sniffer port that logs the traffic between
+the dongle and the inverter, which shows exactly what the Growatt app and portal write.
+It is experimental and third-party, and has not been tested with this integration by us
+([#458](https://github.com/0xAHA/Growatt_ModbusTCP/issues/458)).
