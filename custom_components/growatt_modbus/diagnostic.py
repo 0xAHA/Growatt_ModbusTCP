@@ -1385,8 +1385,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                         "30407 would restore the previous setpoint."
                     )
 
-                from datetime import datetime as dt
-                now = dt.now()
+                # Home Assistant's zone, the one the inverter clock is synced in (#458).
+                import homeassistant.util.dt as dt_util
+                now = dt_util.now()
                 current_minutes = now.hour * 60 + now.minute
 
                 # Shared with the Mode (VPP) select. TOU period words are minutes since

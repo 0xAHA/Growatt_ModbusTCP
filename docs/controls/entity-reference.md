@@ -681,9 +681,17 @@ clock drifts — one SPH was two minutes out, which made a 13:00 export window s
     daylight-saving zones** — correct in winter, an hour out in summer — and your datalogger
     pushes that to the inverter.
 
-    Pressing **Inverter Clock Sync** works and is then overwritten within a minute or two,
-    so a scheduled sync is not a workaround: it fights the datalogger indefinitely and burns
-    EEPROM writes for nothing.
+    Pressing **Inverter Clock Sync** works and is then overwritten at the datalogger's next
+    push. A ShineWiLan-X2 has been captured writing the inverter's time registers (holding
+    45–50) roughly **every five minutes**
+    ([#458](https://github.com/0xAHA/Growatt_ModbusTCP/issues/458)), so a scheduled sync is
+    not a workaround: it fights the datalogger indefinitely and burns EEPROM writes for
+    nothing.
+
+    Before v2.0.5-b11 there was a second cause: on a host whose system clock runs in UTC
+    (Docker without a `TZ` setting, for example) the check compared against the host's time
+    rather than Home Assistant's, and reported the whole UTC offset as drift. Update before
+    concluding it is the datalogger.
 
     If your zone observes daylight saving and the portal has no entry for it, there is
     nothing to correct. Set **Clock Drift Warning** to `0` in the integration's options to

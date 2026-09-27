@@ -73,6 +73,7 @@ class _Client:
     def __init__(self, values: dict):
         self._values = values
         self._addr = {name: 1000 + i for i, name in enumerate(values)}
+        self._phase_total_populated: set = set()
 
     def _find_all_registers_by_name(self, name):
         return [self._addr[name]] if name in self._values else []
@@ -151,6 +152,56 @@ def test_all_three_phases_are_mapped(profile):
 
 
 # --------------------------------------------------------------------------- behaviour
+
+
+def _session(*polls):
+    """Several polls against ONE client, as the real session does - the total having read
+    non-zero on an earlier poll is what the resolver learns from."""
+    client = _Client(polls[0])
+    results = []
+    for values in polls:
+        client._values = values
+        data = _Data()
+        resolve(client, data, "power_to_user", "power_to_user_low", IMPORT_PHASES)
+        results.append(data)
+    return results
+
+
+def test_once_the_total_has_filled_a_zero_is_a_measurement_not_a_gap():
+    """acsel91's SPH-TL3 (#446): the total fills during import, and between imports the
+    S/T legs are often withheld as garbage - so every zero-import poll went unknown."""
+    _, idle = _session(
+        {"power_to_user_low": 6300.0, "power_to_user_r_low": 2100.0,
+         "power_to_user_s_low": 2100.0, "power_to_user_t_low": 2100.0},
+        {"power_to_user_low": 0.0, "power_to_user_r_low": 0.0,
+         "power_to_user_s_low": None, "power_to_user_t_low": None},
+    )
+    assert "power_to_user" not in idle.unread_fields
+    assert idle.power_to_user == 0.0
+
+
+def test_once_the_total_has_filled_garbage_legs_cannot_reach_it():
+    """The route AzraelsDisk's multi-megawatt spikes took: total 0, a corrupt leg summed in."""
+    _, idle = _session(
+        {"power_to_user_low": 1500.0, "power_to_user_r_low": 500.0,
+         "power_to_user_s_low": 500.0, "power_to_user_t_low": 500.0},
+        {"power_to_user_low": 0.0, "power_to_user_r_low": 0.0,
+         "power_to_user_s_low": 6_022_667.4, "power_to_user_t_low": 0.0},
+    )
+    assert idle.power_to_user == 0.0
+
+
+def test_a_total_never_seen_filled_still_defers_to_the_legs():
+    """Firmware that never populates the total is the reason the legs exist (#419); the
+    learning must not take that away from it."""
+    first, second = _session(
+        {"power_to_user_low": 0.0, "power_to_user_r_low": 800.0,
+         "power_to_user_s_low": 700.0, "power_to_user_t_low": 900.0},
+        {"power_to_user_low": 0.0, "power_to_user_r_low": 400.0,
+         "power_to_user_s_low": 300.0, "power_to_user_t_low": 500.0},
+    )
+    assert first.power_to_user == pytest.approx(2400.0)
+    assert second.power_to_user == pytest.approx(1200.0)
 
 
 def test_a_populated_total_wins():

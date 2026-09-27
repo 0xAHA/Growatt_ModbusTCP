@@ -4,6 +4,31 @@
 
 ---
 
+## v2.0.5-b11
+
+Issues: #432, #446, #458
+
+- **The Inverter Power switch now shows the inverter's real state on MIN TL-X**, and works
+  as an ordinary toggle there. The register reads back 0 while off and 1 while on,
+  confirmed on a real unit. Other models still show the last command sent, until each is
+  confirmed the same way.
+
+- **The clock drift notice and the VPP Hold window used the host's time zone instead of
+  Home Assistant's.** On a host whose system clock runs in UTC (Docker without a `TZ`
+  setting, for example) the notice reported the whole UTC offset as drift straight after a
+  correct clock sync, and Hold computed its time window hours away from the inverter's own
+  clock. Both now use Home Assistant's configured zone, the one the clock sync already
+  used. Found by @l4m4re, who also supplied the fix for the notice.
+
+- **Grid import (`power_to_user`) no longer goes unknown whenever nothing is being
+  imported on SPH-TL3.** With the total register at zero it fell back to summing the
+  per-phase registers, which on this model are often withheld as corrupt, and a corrupt
+  phase that slipped through reached grid import as a spike. Once the total has read
+  non-zero, the inverter is known to fill it, and its zero is now taken as a real zero.
+  Found by @acsel91 and @AzraelsDisk.
+
+---
+
 ## v2.0.5-b10
 
 Issues: #446

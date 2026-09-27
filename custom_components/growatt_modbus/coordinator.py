@@ -12,6 +12,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.storage import Store
+import homeassistant.util.dt as dt_util
 
 from .const import (
     battery_power_scale_from_store,
@@ -2173,7 +2174,11 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 _LOGGER.debug("Inverter clock returned invalid values: %s", raw)
                 return
 
-            ha_dt = datetime.now()
+            # Home Assistant's configured zone, not the host's. The RTC is wall-clock time
+            # with no zone, and the clock sync writes it in HA's zone - so on a host running
+            # in UTC (Docker without TZ, a dev container) the host clock reported a false
+            # drift of the whole UTC offset, straight after a correct sync (@l4m4re, #458).
+            ha_dt = dt_util.now().replace(tzinfo=None)
             drift_s = (inverter_dt - ha_dt).total_seconds()
             drift_abs = abs(drift_s)
 

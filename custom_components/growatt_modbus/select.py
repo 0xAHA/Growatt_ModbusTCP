@@ -669,9 +669,11 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
                         "anything re-enables 30407 later the old setpoint returns with it"
                     )
 
-                # Get current time for TOU period
-                from datetime import datetime
-                now = datetime.now()
+                # The inverter runs this window against its own clock, which the clock sync
+                # sets in Home Assistant's zone - so the window must be in that zone too, not
+                # the host's. On a host in UTC it would otherwise land hours off (#458).
+                import homeassistant.util.dt as dt_util
+                now = dt_util.now()
                 current_minutes = now.hour * 60 + now.minute
 
                 # Create TOU period: (now - 5min) to (now + 2 hours) at +1% charge.

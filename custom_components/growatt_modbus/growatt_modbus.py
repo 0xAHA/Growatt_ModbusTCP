@@ -1652,6 +1652,9 @@ class GrowattModbus:
         # Consecutive polls in which a 32-bit pair showed the word-level corruption shape
         # (#446), keyed by (address, pair address). Cleared by any normal reading.
         self._pair_shape_suspect: dict = {}
+        # Phase-total quantities whose total register has read non-zero this session, so
+        # the firmware is known to populate it and a zero there is a real zero (#446).
+        self._phase_total_populated: set = set()
         self._pair_shape_warned: set = set()
 
         # Battery register range detection (VPP vs fallback)
@@ -4780,6 +4783,17 @@ class GrowattModbus:
                 break
 
         if total:
+            self._phase_total_populated.add(attr)
+            setattr(data, attr, total)
+            return
+
+        # Once the total has read non-zero this session, the firmware fills it, and a zero is
+        # a measurement - nothing flowing - not an unpopulated register. The legs exist for
+        # firmware that never fills the total; consulting them anyway cost twice on an SPH
+        # 10000 TL3 BH-UP whose S/T legs often read garbage. With no import the sum went
+        # unknown whenever a leg was withheld, and a leg that got past the guard reached
+        # grid import as a multi-megawatt spike (@acsel91, @AzraelsDisk, #446).
+        if total is not None and attr in self._phase_total_populated:
             setattr(data, attr, total)
             return
 
