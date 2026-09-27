@@ -703,10 +703,10 @@ clock drifts — one SPH was two minutes out, which made a 13:00 export window s
 
     Pressing **Inverter Clock Sync** works and is then overwritten at the datalogger's next
     push. A ShineWiLan-X2 has been captured writing the inverter's time registers (holding
-    45–50) roughly **every five minutes**
-    ([#458](https://github.com/0xAHA/Growatt_ModbusTCP/issues/458)), so a scheduled sync is
-    not a workaround: it fights the datalogger indefinitely and burns EEPROM writes for
-    nothing.
+    45–50) in **bursts**: none for several hours, then about every five minutes for an hour
+    ([#458](https://github.com/0xAHA/Growatt_ModbusTCP/issues/458)). What triggers a burst
+    is not known yet. Either way a scheduled sync is not a workaround: it fights the
+    datalogger indefinitely and burns EEPROM writes for nothing.
 
     Before v2.0.5-b11 there was a second cause: on a host whose system clock runs in UTC
     (Docker without a `TZ` setting, for example) the check compared against the host's time
