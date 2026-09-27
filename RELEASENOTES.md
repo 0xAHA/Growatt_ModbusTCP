@@ -4,6 +4,20 @@
 
 ---
 
+## v2.0.5-b13
+
+Issues: #400, #449, #458
+
+- **The inverter's device page now shows the firmware build alongside the firmware
+  version**, e.g. `AL1.0 (ALBA18010122)`, and diagnostics include it as `firmware_build`. The
+  Growatt portal's *Version* is its first ten characters. The short version alone reads the same
+  across builds that behave differently: on MIN TL-XH, VPP support and whether low SOC-limit
+  writes stick have both been seen to depend on the build. Read from V1.39 holding registers
+  82-87; nothing is shown where those don't hold a complete build string. Decoding worked out
+  by @l4m4re.
+
+---
+
 ## v2.0.5-b12
 
 Issues: #447

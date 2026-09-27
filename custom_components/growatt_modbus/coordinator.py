@@ -40,7 +40,7 @@ from .const import (
     DEFAULT_INTER_SLAVE_DELAY_MS,
 )
 
-from .const import REGISTER_MAPS, resolve_block_size
+from .const import REGISTER_MAPS, decode_firmware_build, resolve_block_size
 
 from .growatt_modbus import GrowattModbus, GrowattData, SharedModbusConnection, ModbusWriteError
 
@@ -153,6 +153,8 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self._serial_number = None
         self._identification_complete = False
         self._firmware_version = None
+        # Holding 82-87, "FW Build No." - the string the Growatt portal shows as Version.
+        self._firmware_build = None
         self._inverter_type = None
         self._model_name = None
         self._protocol_version = None  # VPP Protocol version (from register 30099)
@@ -2029,7 +2031,24 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     _LOGGER.debug(f"Read firmware version: {self._firmware_version}")
             except Exception as e:
                 _LOGGER.debug(f"Could not read firmware version: {e}")
-            
+
+            # Firmware build string (V1.39 holding 82-87, "FW Build No.").
+            #
+            # 9-11 is what V1.39 calls the firmware version, but it reads "AL1.0" on MIN
+            # TL-XH units whose builds differ - ALBA130101 drops low SOC-limit writes and
+            # ALBA180101 accepts them, and ALBA10010129 lacks VPP entirely where
+            # ALBA18010122 has it. The build string is what tells them apart, and what the
+            # Growatt portal shows as "Version" (@l4m4re, #458; #400, #449).
+            #
+            # Off-grid profiles are skipped: their holding 82+ are unrelated settings.
+            if not profile.get("offgrid_protocol", False):
+                try:
+                    self._firmware_build = decode_firmware_build(self._read_holding(82, 6))
+                    if self._firmware_build:
+                        _LOGGER.debug("Read firmware build: %s", self._firmware_build)
+                except Exception as e:
+                    _LOGGER.debug(f"Could not read firmware build: {e}")
+
             # Read inverter type (registers 125-132)
             try:
                 registers = self._read_holding(125, 8)
@@ -2445,9 +2464,11 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             if self._serial_number:
                 device_info["serial_number"] = self._serial_number
 
-            # Add firmware version if available
-            if self._firmware_version:
-                device_info["sw_version"] = self._firmware_version
+            # Add firmware version if available, with the build string where there is one
+            if self._firmware_version and self._firmware_build:
+                device_info["sw_version"] = f"{self._firmware_version} ({self._firmware_build})"
+            elif self._firmware_version or self._firmware_build:
+                device_info["sw_version"] = self._firmware_version or self._firmware_build
 
             # Add protocol version (VPP 2.01 or Legacy)
             if self._protocol_version:

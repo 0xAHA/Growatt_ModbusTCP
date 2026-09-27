@@ -1761,6 +1761,21 @@ def combine_registers(high: int, low: int) -> int:
     return (high << 16) | low
 
 
+def decode_firmware_build(registers) -> str | None:
+    """V1.39 holding 82-87, "FW Build No.", as the string the Growatt portal shows.
+
+    None unless all twelve bytes are printable ASCII: on other protocol families those
+    addresses hold settings (a TL3-S reads 100, 0, 0, 0, 0, 0 there), and a partial decode
+    would present a meaningless fragment as a version.
+    """
+    if not registers or len(registers) != 6:
+        return None
+    raw = b"".join(int(r).to_bytes(2, "big") for r in registers)
+    if not all(0x20 <= b <= 0x7E for b in raw):
+        return None
+    return raw.decode("ascii").strip() or None
+
+
 def scale_value(raw_value: float, scale: float) -> float:
     """Apply scaling factor to raw register value."""
     return raw_value * scale

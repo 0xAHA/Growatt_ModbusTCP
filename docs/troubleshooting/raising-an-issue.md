@@ -89,7 +89,12 @@ Usually the Growatt cloud overwriting your change. If a **ShineWiFi or ShineLink
 
 **Check the app's own schedule before anything else.** A time-of-use period set in **ShinePhone → Advanced Setting → TimeElectricity Price** overrides Modbus controls while it is active, and it is invisible from this integration — nothing in the diagnostics shows it. One WIT owner's forgotten *Battery First 11:51-15:30* period charged his battery from the grid at 14-16 kW while every control he set reverted, and `sync_tou_schedule` did not clear it either; deleting the period in the app fixed it within one poll ([#448](https://github.com/0xAHA/Growatt_ModbusTCP/issues/448)). If the inverter is doing something no Home Assistant entity accounts for, that is the first place to look.
 
-Say which control, what you set it to, and what it reverted to.
+Say which control, what you set it to, and what it reverted to — and your **firmware
+build**. From v2.0.5-b13 it appears in brackets after the firmware version on the inverter's
+device page (for example `AL1.0 (ALBA18010122)`); the Growatt portal's *Version* shows its
+first ten characters. Controls have been seen to behave differently between builds of the same model:
+a MIN TL-XH on ALBA13 dropped SOC-limit writes that one on ALBA18 accepted
+([#400](https://github.com/0xAHA/Growatt_ModbusTCP/issues/400)).
 
 ### Your inverter model isn't supported, or auto-detection picks the wrong profile
 
