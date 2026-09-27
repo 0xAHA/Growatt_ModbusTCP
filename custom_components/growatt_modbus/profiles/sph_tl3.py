@@ -83,10 +83,20 @@ SPH_TL3_3000_10000 = {
         #
         # See also #442 on the `signed` flag - the same registers, and the reason it was
         # left alone there is this one.
+        # AC Power is the documented real output power, Pac (35/36, W). It used to read 40/41
+        # through an alias, which V1.39 documents as apparent power (VA) - and which on this
+        # firmware is the three-phase VA total, not phase R. Real power sits under it by a
+        # near-constant reactive part: ~1% at 3-7 kW, ~25% at 0.9 kW. 35/36 matched an
+        # independent wallbox meter to 0.4% across a 6.7 kW step (@acsel91), and a second
+        # SPH 10000 TL3 BH-UP read 35/36 = 5538.9 W against 40/41 = 5561.1 VA (#447).
+        35: {'name': 'ac_power_high', 'scale': 1, 'unit': '', 'pair': 36},
+        # Signed like the same pair on MOD/MID/WIT (#429): it goes negative when the inverter
+        # draws through its AC side.
+        36: {'name': 'ac_power_low', 'scale': 1, 'unit': '', 'pair': 35, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
         38: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase R voltage', 'alias': 'ac_voltage'},
         39: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'desc': 'Phase R current', 'alias': 'ac_current'},
-        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41, 'alias': 'ac_power_high'},
-        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'W', 'alias': 'ac_power_low'},
+        40: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 41},
+        41: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 40, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         # Three-Phase AC Output - Phase S
         42: {'name': 'ac_voltage_s', 'scale': 0.1, 'unit': 'V', 'desc': 'Phase S voltage'},

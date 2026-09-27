@@ -19,8 +19,12 @@ and across the three-phase maps it lands in three different places:
 
     MOD_6000_15000TL3_X / _XH    reg 36, a distinct total          -> sensor is correct
     WIT_*, TL3_S_*               a distinct total                  -> sensor is correct
-    SPH_TL3_*                    aliases reg 41 = ac_power_r_low   -> would publish PHASE R
+    SPH_TL3_*                    reg 36 (Pac) since #447           -> sensor is correct
     MID_15000_25000TL3_X(_V201)  no total, no phase powers either  -> nothing to read or sum
+
+SPH_TL3 used to alias reg 41 as the total, and was excluded here because that would have
+published it as the whole system. #447 found 41 to be the three-phase apparent power and
+mapped the documented real power, 35/36, confirmed on two units.
 
 So the test derives the expectation from each map and asserts against it. A new three-phase
 profile inherits the right answer, and an alias change on any map fails here rather than
@@ -78,12 +82,21 @@ def test_the_reporters_profile_has_the_entity():
     )
 
 
+# Supportable by the map but deliberately not offered. SPA-TL3 shares the SPH-TL3 map, and
+# 35/36 has only been confirmed on SPH-TL3 hardware - an AC-coupled SPA answering 0 there
+# would publish a plausible wrong number. Remove once an SPA-TL3 reading confirms it.
+UNCONFIRMED_ON_THIS_HARDWARE = {"spa_tl3_4000_10000_v201"}
+
+
 @pytest.mark.parametrize("key", sorted(THREE_PHASE))
 def test_membership_matches_what_the_map_can_support(key):
     profile = THREE_PHASE[key]
     register_map = profile["register_map"]
     present = "ac_power" in profile["sensors"]
     supportable = _aggregate_is_supportable(register_map)
+    if key in UNCONFIRMED_ON_THIS_HARDWARE:
+        assert supportable and not present, f"{key}: re-check the exemption - it no longer applies"
+        return
 
     assert present == supportable, (
         f"{key} ({register_map}): ac_power {'is' if present else 'is not'} in the sensor set "
@@ -92,29 +105,27 @@ def test_membership_matches_what_the_map_can_support(key):
     )
 
 
-def test_the_sph_tl3_maps_are_the_reason_this_is_per_profile():
-    """The guard that stops the obvious shortcut.
-
-    Adding `ac_power` to THREE_PHASE_SENSORS would be one line and would give every
-    three-phase profile the entity - including SPH-TL3, where `ac_power_low` aliases the
-    phase R register. That publishes a third of the output as the total: a plausible number,
-    which is the worst kind of wrong.
-    """
+def test_membership_stays_per_profile():
+    """The guard that stops the obvious shortcut. Adding `ac_power` to THREE_PHASE_SENSORS
+    would be one line and would give the entity to maps with nothing behind it (MID) and to
+    SPA-TL3, where the total is unconfirmed."""
     assert "ac_power" not in _dp.THREE_PHASE_SENSORS, (
-        "ac_power has been added to THREE_PHASE_SENSORS, which gives it to SPH-TL3 profiles "
-        "whose ac_power_low aliases ac_power_r_low - one phase published as the whole system"
+        "ac_power has been added to THREE_PHASE_SENSORS, which gives it to every three-phase "
+        "profile regardless of what its map can support"
     )
 
+
+def test_sph_tl3_now_reads_a_genuine_total_not_phase_r():
+    """#447: the total is Pac (35/36), distinct from phase R (40/41) - which is what made
+    the SPH-TL3 entity safe to offer."""
     for key, profile in THREE_PHASE.items():
         if not profile["register_map"].startswith("SPH_TL3"):
             continue
         total = _resolve(profile["register_map"], "ac_power_low")
         phase_r = _resolve(profile["register_map"], "ac_power_r_low")
-        assert total == phase_r, (
-            f"{key}: the alias this test guards against has changed - re-derive whether an "
-            f"aggregate is now safe on this map rather than leaving the exclusion in place"
+        assert total == 36 and phase_r == 41, (
+            f"{key}: ac_power_low resolves to {total}, phase R to {phase_r}"
         )
-        assert "ac_power" not in profile["sensors"]
 
 
 @pytest.mark.parametrize("key", sorted(THREE_PHASE))

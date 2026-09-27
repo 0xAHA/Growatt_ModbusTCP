@@ -35,7 +35,7 @@ from .const import (
 )
 from .coordinator import GrowattModbusCoordinator
 from .entity import GrowattEntity
-from .device_profiles import get_sensors_for_profile
+from .device_profiles import get_profile, get_sensors_for_profile
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1816,7 +1816,7 @@ def _signed_battery_power(data) -> float | None:
     return 0.0
 
 
-def _house_consumption(data) -> float | None:
+def _house_consumption(data, ac_side: bool = False) -> float | None:
     """House load in watts, from the load register or the energy balance. None if unknowable.
 
     Prefers `power_to_load` when it was read and is non-zero. Otherwise balances
@@ -1831,6 +1831,24 @@ def _house_consumption(data) -> float | None:
     its own estimate. An input the profile never mapped is not unread, and keeps its default.
     """
     unread = getattr(data, "unread_fields", None) or set()
+
+    # SPH-TL3: the load register is a DC-side balance and overstates the house by the
+    # conversion loss (~10%), so balance the AC side instead - what the inverter delivers,
+    # plus what the grid supplies, minus what goes back (#447). Only while the battery is
+    # not charging from the grid: then power flows INTO the inverter's AC side, which this
+    # has not been measured through, so that case keeps the previous behaviour below.
+    if ac_side and not any(
+        name in unread for name in (
+            "ac_power", "power_to_grid", "power_to_user", "charge_power", "pv_total_power",
+        )
+    ):
+        charge = getattr(data, "charge_power", 0) or 0
+        solar = getattr(data, "pv_total_power", 0) or 0
+        if charge <= solar:
+            ac_output = getattr(data, "ac_power", 0) or 0
+            import_power = getattr(data, "power_to_user", 0) or 0
+            export = getattr(data, "power_to_grid", 0) or 0
+            return round(max(0, ac_output + import_power - export), 1)
 
     load = getattr(data, "power_to_load", 0) or 0
     if load != 0 and "power_to_load" not in unread:
@@ -1877,6 +1895,13 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
 
         self._sensor_key = sensor_key
         self._sensor_def = sensor_def
+
+        # Per device profile, not register map: SPA-TL3 shares SPH-TL3's map (#447).
+        self._house_from_ac_side = False
+        if sensor_key == "house_consumption":
+            series = config_entry.data.get(CONF_INVERTER_SERIES, "")
+            self._house_from_ac_side = bool(
+                get_profile(series).get("house_load_from_ac_output")) if series else False
 
         # Name comes from strings.json / translations/*.json under entity.sensor.<key>.name
         # rather than from sensor_def['name'], so the 22 shipped languages can translate it.
@@ -2016,7 +2041,7 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
                 
             elif self._sensor_key == "house_consumption":
                 # See _house_consumption: every term of the balance must have been read.
-                raw_value = _house_consumption(data)
+                raw_value = _house_consumption(data, ac_side=self._house_from_ac_side)
                 if raw_value is None:
                     return None
                 return self.coordinator.get_sensor_value(self._sensor_key, raw_value)

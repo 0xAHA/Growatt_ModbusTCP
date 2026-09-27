@@ -4,6 +4,26 @@
 
 ---
 
+## v2.0.5-b12
+
+Issues: #447
+
+- **SPH-TL3: House Consumption now comes from the AC side, and reads about 10 % lower.** It
+  used the inverter's load register (1037/1038), which on this firmware is calculated from
+  DC-side terms and so includes the conversion loss. It is now AC output + grid import −
+  grid export, which matched an independent wallbox meter to 0.4 %. Expect a step down in
+  your House Consumption history from this version. **Power to Load** still shows the
+  inverter's own figure. While the battery charges from the grid, House Consumption keeps
+  the previous method, as that case has not been measured yet. SPA-TL3 is unchanged.
+
+- **SPH-TL3: new AC Power entity**, the inverter's real output power (registers 35/36). It
+  was never offered here before, because the register it would have used holds apparent
+  power (VA), which reads about 1 % high at several kW and about 25 % high below 1 kW.
+  Measured and verified by @acsel91, and confirmed on a second unit from @AzraelsDisk's
+  register scan.
+
+---
+
 ## v2.0.5-b11
 
 Issues: #432, #446, #458

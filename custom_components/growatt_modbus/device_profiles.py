@@ -766,8 +766,17 @@ INVERTER_PROFILES = {
         "has_pv3": False,
         "has_battery": True,
         "max_power_kw": 10.0,
+        # House Consumption from the AC side (AC output + import - export), not 1037/1038:
+        # that register closes the DC balance to within 15 W on two units, so it overstates
+        # the house by the conversion loss, ~10%. The AC side matched an independent wallbox
+        # meter to 0.4% (@acsel91, #447). A device-profile key rather than a register-map one
+        # because SPA-TL3 shares this map, and on AC-coupled storage the solar comes from a
+        # separate inverter this cannot see.
+        "house_load_from_ac_output": True,
+        # AC Power: the map now has a genuine total (Pac, 35/36) rather than an alias of
+        # phase R, confirmed on two SPH 10000 TL3 BH-UP units (#447).
         # The V2.01 variant below keeps the line voltages; it has a source for them.
-        "sensors": (HYBRID_3P_SENSORS | BMS_SENSORS) - NO_LINE_VOLTAGES,
+        "sensors": (HYBRID_3P_SENSORS | BMS_SENSORS | AC_POWER_TOTAL_SENSOR) - NO_LINE_VOLTAGES,
     },
 
     # SPH-TL3 V2.01 VPP Protocol
@@ -780,7 +789,8 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
-        "sensors": HYBRID_3P_SENSORS | BMS_SENSORS,
+        "house_load_from_ac_output": True,  # see sph_tl3_3000_10000 (#447)
+        "sensors": HYBRID_3P_SENSORS | BMS_SENSORS | AC_POWER_TOTAL_SENSOR,
     },
 
     # ========================================================================

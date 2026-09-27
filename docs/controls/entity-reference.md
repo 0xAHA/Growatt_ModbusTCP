@@ -136,6 +136,26 @@ lists both meanings side by side, selected by device class.
 > v1.7.6 it was never populated by a register, and any value it showed was a stale artefact.
 > It is removed automatically on upgrade. Use **Battery Discharge Total** instead.
 
+### House Consumption and AC Power on SPH-TL3
+
+On SPH-TL3, **House Consumption** is AC output + grid import − grid export, and **AC Power**
+is the inverter's real output power (registers 35/36, W). Both are taken from the AC side:
+
+| Sensor | Source | Why |
+|---|---|---|
+| AC Power | 35/36 — real power, W | 40/41 is apparent power (VA). It reads ~1 % high at several kW and ~25 % high below 1 kW |
+| House Consumption | AC Power + import − export | 1037/1038 is computed by the inverter from DC-side terms, so it includes the conversion loss and reads ~10 % high |
+| Power to Load | 1037/1038, unchanged | Still available, as the inverter reports it |
+
+The AC-side figure matched an independent wallbox meter to 0.4 % across a 6.7 kW step; the
+load register overshot by 3.5 %. The same relationship showed on a second unit's register
+scan ([#447](https://github.com/0xAHA/Growatt_ModbusTCP/issues/447)).
+
+While the battery is **charging from the grid**, House Consumption falls back to the load
+register, because that case has not yet been measured through the AC side. SPA-TL3 is not
+affected: it shares the register map, but its solar comes from a separate inverter, so an
+AC-side balance would leave that solar out.
+
 ### Battery capacity from the BMS fuel gauge
 
 Two sensors report what the battery's own gauge measures, rather than what the inverter
