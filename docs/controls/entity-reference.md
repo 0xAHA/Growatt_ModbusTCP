@@ -579,7 +579,6 @@ the grid while solar charged the battery).
 | Priority Mode | Select | 3018 | Load First (0), Battery First (2), Grid First (3) | Note the encoding: 1 is not used, unlike the 0/1/2 scheme on SPH/MOD/MID |
 | Charge Power Rate | Number | 3047 | 1–100 % | Battery charge power limit when Battery First is active |
 | Charge Stopped SOC | Number | 3048 | 0–100 % | SOC at which charging stops when Battery First is active |
-| Discharge Power Rate | Sensor | 3066 | 0–100 % | Read-only battery discharge power limit reported by the inverter |
 | On-Grid Discharge Stop SOC | Number | 3067 | 1–100 % | SOC at which on-grid battery discharge stops |
 | Off-Grid Discharge Stop SOC | Number | 30475 | 10–100 % | SOC at which off-grid battery discharge stops (VPP V2.01) |
 
@@ -588,9 +587,14 @@ the grid while solar charged the battery).
     returned no Modbus exception but an immediate read still held the old value, over both
     FC06 and FC16. Growatt upgraded the same inverter to `ALBA18010122`; registers 3048 and
     3067 then accepted SOC changes. Register 30475 answered and accepted a same-value
-    verification write. Register 3066 answered reads, but a real 0→100% change was rejected:
-    FC06 returned Illegal Function (exception 1) and FC16 returned a device exception.
-    It is therefore exposed as a read-only sensor rather than a control.
+    verification write.
+
+    The app's **Discharge Power** setting was 100%, while holding register 3066 read 0.
+    A real 0→100% write to 3066 was rejected over both FC06 and FC16, proving that the
+    earlier matching value was coincidental. Register 30474 read 100%, but VPP 2.01 defines
+    it as the actual/last remote power setpoint; it can retain the previous command after
+    remote control is disabled and is not a persistent discharge limit. No register has
+    therefore been confirmed for the app's Discharge Power setting on this DTC 5100 build.
 
     **This is not a Modbus-only symptom.** The same change made in ShinePhone — explicitly
     submitted, then confirmed with the app's own **Read** action — reverted the same way:
@@ -606,6 +610,14 @@ the grid while solar charged the battery).
     workaround is the same one already documented for the 3067 revert on MOD: there is
     currently no way to move these values from outside the inverter's own menu, if the menu
     can move them at all on your firmware.
+
+!!! warning "Do not leave VPP Control Authority enabled without an active command"
+    On the measured MIN 4600TL-XH, `30100 = 1`, `30407 = 0` and `30411 = 0` left the
+    inverter in VPP standby: Load First was selected, but the grid supplied most of the
+    house and the battery discharged only about 102 W. Clearing Control Authority
+    (`30100 = 0`) restored local Load First control immediately, and battery discharge rose
+    to about 1,348 W. Disable VPP Control Authority after a remote charge/discharge action
+    instead of leaving the master switch enabled on an inactive branch.
 
 ### Waking a sleeping APX battery (MIN TL-XH, VPP 2.01 only)
 

@@ -587,7 +587,6 @@ class GrowattData:
     # MOD GEN4 power rate limits per priority mode
     grid_first_discharge_power_rate: int = 0  # 0-100% discharge rate when Grid First (register 3036)
     batt_first_charge_power_rate: int = 0      # 0-100% charge rate when Battery First (register 3047)
-    tl_xh_discharge_power_rate: int = 0        # 0-100% discharge rate on MIN TL-XH (register 3066)
     tl_xh_priority_mode: int = 3               # MIN TL-XH priority mode: 0=Load First, 2=Battery First, 3=Grid First (register 3018)
     batt_first_charge_stopped_soc: int = 0     # SOC % to stop charging in Battery First mode (register 3048)
     grid_first_discharge_stopped_soc: int = 0  # SOC % to stop discharging in Grid First mode (register 3067)
@@ -6150,21 +6149,6 @@ class GrowattModbus:
                     logger.debug("[MOD CTRL] batt_first_charge_power_rate=%s%%", data.batt_first_charge_power_rate)
             except Exception as e:
                 logger.debug(f"Could not read batt_first_charge_power_rate register 3047: {e}")
-
-        # MIN TL-XH discharge rate (register 3066). Growatt's updated build exposes the
-        # value used by the Battery Settings screen, but still rejects value-changing
-        # FC06 and FC16 writes on the measured DTC-5100 unit.
-        if 3066 in holding_map:
-            try:
-                discharge_rate_regs = self.read_holding_registers(3066, 1)
-                if discharge_rate_regs is not None and len(discharge_rate_regs) >= 1:
-                    data.tl_xh_discharge_power_rate = int(discharge_rate_regs[0])
-                    logger.debug(
-                        "[TL-XH SETTING] tl_xh_discharge_power_rate=%s%%",
-                        data.tl_xh_discharge_power_rate,
-                    )
-            except Exception as e:
-                logger.debug(f"Could not read tl_xh_discharge_power_rate register 3066: {e}")
 
         # MIN TL-XH Priority Mode (register 3018: 0=Load First, 2=Battery First, 3=Grid First)
         #

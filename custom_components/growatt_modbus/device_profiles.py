@@ -606,7 +606,6 @@ INVERTER_PROFILES = {
             PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
-            {"tl_xh_discharge_power_rate"} |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS |
             BACKUP_BOX_SENSORS

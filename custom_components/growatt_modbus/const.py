@@ -1143,7 +1143,6 @@ SENSOR_DEVICE_MAP = {
         'battery_voltage', 'battery_current', 'battery_soc',
         'battery_temp', 'battery_power',
         'battery_charge_power', 'battery_discharge_power',
-        'tl_xh_discharge_power_rate',
         'battery_charge_today', 'battery_discharge_today',
         'battery_charge_total', 'battery_discharge_total',
         'priority_mode',  # Battery priority mode

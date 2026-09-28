@@ -342,11 +342,8 @@ def test_mod_still_creates_the_controls_it_should():
         assert expected in created, f"MOD-XH lost the {expected} control"
 
 
-def test_min_tl_xh_exposes_the_firmware_confirmed_battery_settings():
-    """The Battery Settings values were matched against a live DTC-5100 after Growatt
-    updated its firmware: 3066=0%, 3067=20%, and 30475=16%. A real 0->100% change on
-    3066 was rejected over both FC06 and FC16, so it must remain a read-only sensor.
-    """
+def test_min_tl_xh_exposes_the_firmware_confirmed_soc_controls():
+    """The SOC controls were confirmed on a live DTC-5100 after a firmware update."""
     map_key = "MIN_TL_XH_3000_10000_V201"
     holding = _holding(map_key)
     writable = {
@@ -359,11 +356,3 @@ def test_min_tl_xh_exposes_the_firmware_confirmed_battery_settings():
         assert str(holding[address].get("access", "")).upper() == "RW"
         assert WRITABLE_REGISTERS[name]["register"] == address
         assert name in _controls_created_for(map_key)
-
-    assert holding[3066]["name"] == "tl_xh_discharge_power_rate"
-    assert str(holding[3066].get("access", "")).upper() in {"R", "RO"}
-    assert "tl_xh_discharge_power_rate" not in WRITABLE_REGISTERS
-    assert "tl_xh_discharge_power_rate" not in _controls_created_for(map_key)
-    assert "tl_xh_discharge_power_rate" in _dp.get_sensors_for_profile(
-        "min_tl_xh_3000_10000_v201"
-    )
