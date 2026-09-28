@@ -751,6 +751,18 @@ SENSOR_DEFINITIONS = {
         "condition": lambda data: hasattr(data, 'discharge_power'),
         "description": "Power currently being drawn from the battery (always ≥ 0). Shows the discharge rate only — zero when charging. Sourced from a dedicated inverter register on models that provide separate charge/discharge registers.",
     },
+    "tl_xh_discharge_power_rate": {
+        "name": "Discharge Power Rate",
+        "icon": "mdi:battery-minus",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": PERCENTAGE,
+        "attr": "tl_xh_discharge_power_rate",
+        "description": (
+            "Configured battery discharge power limit reported by holding register 3066. "
+            "This is read-only because a DTC 5100 MIN TL-XH on firmware ALBA18010122 "
+            "rejected value-changing writes over both FC06 and FC16."
+        ),
+    },
     "battery_charge_today": {
         "name": "Battery Charge Today",
         "icon": "mdi:battery-plus",

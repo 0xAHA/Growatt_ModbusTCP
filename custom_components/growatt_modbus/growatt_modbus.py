@@ -6151,15 +6151,16 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read batt_first_charge_power_rate register 3047: {e}")
 
-        # MIN TL-XH discharge rate (register 3066). Older firmware rejected writes;
-        # Growatt's updated build exposes the value used by the Battery Settings screen.
+        # MIN TL-XH discharge rate (register 3066). Growatt's updated build exposes the
+        # value used by the Battery Settings screen, but still rejects value-changing
+        # FC06 and FC16 writes on the measured DTC-5100 unit.
         if 3066 in holding_map:
             try:
                 discharge_rate_regs = self.read_holding_registers(3066, 1)
                 if discharge_rate_regs is not None and len(discharge_rate_regs) >= 1:
                     data.tl_xh_discharge_power_rate = int(discharge_rate_regs[0])
                     logger.debug(
-                        "[TL-XH CTRL] tl_xh_discharge_power_rate=%s%%",
+                        "[TL-XH SETTING] tl_xh_discharge_power_rate=%s%%",
                         data.tl_xh_discharge_power_rate,
                     )
             except Exception as e:

@@ -878,16 +878,6 @@ WRITABLE_REGISTERS = {
         'unit': '%',
         'desc': 'Discharge power rate when Grid First mode (1-100%)'
     },
-    'tl_xh_discharge_power_rate': {
-        'register': 3066,
-        'label': 'Discharge Power Rate',
-        'scale': 1,
-        'valid_range': (0, 100),
-        'unit': '%',
-        'only_profiles': ['MIN_TL_XH_3000_10000_V201'],
-        'desc': 'Battery discharge power limit on MIN TL-XH. Register 3066 read 0% '
-                'and accepted a same-value write after a Growatt firmware update (#400).'
-    },
     'tl_xh_priority_mode': {
         'register': 3018,
         'scale': 1,
@@ -1153,6 +1143,7 @@ SENSOR_DEVICE_MAP = {
         'battery_voltage', 'battery_current', 'battery_soc',
         'battery_temp', 'battery_power',
         'battery_charge_power', 'battery_discharge_power',
+        'tl_xh_discharge_power_rate',
         'battery_charge_today', 'battery_discharge_today',
         'battery_charge_total', 'battery_discharge_total',
         'priority_mode',  # Battery priority mode
