@@ -582,7 +582,7 @@ the grid while solar charged the battery).
 | Discharge Stopped SOC | Number | 3067 | 1–100 % | SOC at which discharging stops when Grid First is active |
 
 !!! warning "3048 and 3067 can silently refuse a write near the current SOC, and this is confirmed at the inverter, not the integration"
-    On at least one DTC 5100 unit (MIN 4600TL-XH with an APX battery), writing a value close
+    On at least one DTC 5100 unit (MIN 4200TL-XH with an APX battery), writing a value close
     to the register's current one is accepted with no Modbus exception and simply does not
     take — read back immediately, over both FC06 and FC16, the register still holds its old
     value.
@@ -609,7 +609,7 @@ the grid while solar charged the battery).
 | `button.<name>_wake_apx_battery` | Sends a short, bounded charge request to wake a sleeping APX pack |
 
 **Disabled by default**, and only created on `MIN_TL_XH_3000_10000_V201` — the one profile
-this has been hardware-tested against (a MIN 4600TL-XH, DTC 5100, APX S0). An APX pack can
+this has been hardware-tested against (a MIN 4200TL-XH, DTC 5100, APX S0). An APX pack can
 go to sleep in a way that changing Priority Mode alone does not wake; this button requests a
 5%, one-minute VPP direct-charge pulse instead, held for 12 seconds, then reverses itself —
 clearing the pulse and restoring whatever VPP authority, branch selection and parameters
