@@ -500,6 +500,12 @@ MIN_TL_XH_3000_10000_V201 = {
                'valid_range': (1, 100), 'desc': 'Charge power rate when Battery First mode (1-100%)'},
         3048: {'name': 'batt_first_charge_stopped_soc',   'scale': 1, 'unit': '%', 'access': 'RW',
                'valid_range': (0, 100), 'desc': 'SOC to stop charging when Battery First mode is active (0-100%)'},
+        30475: {'name': 'vpp_offgrid_discharge_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+                'valid_range': (10, 100),
+                'desc': 'Off-grid discharge stop SOC (VPP V2.01; hardware-confirmed after firmware update, #400)'},
+        3066: {'name': 'tl_xh_discharge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100),
+               'desc': 'Battery discharge power rate (hardware-confirmed after firmware update, #400)'},
         3067: {'name': 'grid_first_discharge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
                'valid_range': (1, 100), 'desc': 'SOC to stop discharging when Grid First mode is active (V1.39: US model / firmware ZACA-08+)'},
 

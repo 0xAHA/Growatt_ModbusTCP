@@ -229,6 +229,11 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
             or friendly_overrides.get(control_name)
             or control_name.replace('_', ' ').title()
         )
+        if (
+            control_name == 'grid_first_discharge_stopped_soc'
+            and config_entry.data.get(CONF_REGISTER_MAP) == 'MIN_TL_XH_3000_10000_V201'
+        ):
+            friendly_name = 'On-Grid Discharge Stop SOC'
         self._attr_name = friendly_name
 
         # Set icon

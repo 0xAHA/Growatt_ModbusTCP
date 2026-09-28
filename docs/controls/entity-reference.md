@@ -579,13 +579,16 @@ the grid while solar charged the battery).
 | Priority Mode | Select | 3018 | Load First (0), Battery First (2), Grid First (3) | Note the encoding: 1 is not used, unlike the 0/1/2 scheme on SPH/MOD/MID |
 | Charge Power Rate | Number | 3047 | 1–100 % | Battery charge power limit when Battery First is active |
 | Charge Stopped SOC | Number | 3048 | 0–100 % | SOC at which charging stops when Battery First is active |
-| Discharge Stopped SOC | Number | 3067 | 1–100 % | SOC at which discharging stops when Grid First is active |
+| Discharge Power Rate | Number | 3066 | 0–100 % | Battery discharge power limit. Requires firmware that permits writes to this register |
+| On-Grid Discharge Stop SOC | Number | 3067 | 1–100 % | SOC at which on-grid battery discharge stops |
+| Off-Grid Discharge Stop SOC | Number | 30475 | 10–100 % | SOC at which off-grid battery discharge stops (VPP V2.01) |
 
-!!! warning "3048 and 3067 can silently refuse a write near the current SOC, and this is confirmed at the inverter, not the integration"
-    On at least one DTC 5100 unit (MIN 4600TL-XH with an APX battery), writing a value close
-    to the register's current one is accepted with no Modbus exception and simply does not
-    take — read back immediately, over both FC06 and FC16, the register still holds its old
-    value.
+!!! warning "Battery-setting writes on DTC 5100 depend on the inverter firmware build"
+    A MIN 4600TL-XH with build `ALBA130101` silently refused SOC-limit writes: the request
+    returned no Modbus exception but an immediate read still held the old value, over both
+    FC06 and FC16. Growatt upgraded the same inverter to `ALBA18010122`; registers 3048 and
+    3067 then accepted SOC changes, while 3066 and 30475 both answered and accepted
+    same-value verification writes.
 
     **This is not a Modbus-only symptom.** The same change made in ShinePhone — explicitly
     submitted, then confirmed with the app's own **Read** action — reverted the same way:
