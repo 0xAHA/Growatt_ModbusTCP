@@ -123,6 +123,20 @@ Reported in [#367](https://github.com/0xAHA/Growatt_ModbusTCP/issues/367). Repea
 
 ## Diagnosing your own gateway
 
+**Does nothing answer at all?** If every read times out, on every unit ID, from the
+integration and from a standalone client alike, with no Modbus *exception* ever coming back,
+nothing on that wire is answering. A wrong unit ID or unsupported register still gets a
+reply, just a refusal. Look at the inverter's own side before the gateway:
+
+- **Baud rate.** Growatt documents the RS485 port as 9600 *or* 38400 baud (VPP register
+  30113). A gateway at the wrong speed produces exactly this silence.
+- **Communication address**, on the inverter's display. It can be anything up to 247, not
+  only 1.
+
+A MID 30KTL3-XH on a correctly configured Waveshare, wired to COM pins 3/4, answered nothing
+until both the gateway's baud rate and the inverter's address were changed to match
+([#459](https://github.com/0xAHA/Growatt_ModbusTCP/issues/459)).
+
 **Is it replaying stale frames?** Look for `Short/misaligned read` warnings. Note whether the count returned is *larger* than requested — a reply longer than the request cannot be a truncation, and points at a replayed earlier response.
 
 **Are the transaction IDs exactly one behind?** A log full of

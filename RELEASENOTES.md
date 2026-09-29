@@ -16,6 +16,12 @@ Issues: #400, #449, #458
   82-87; nothing is shown where those don't hold a complete build string. Decoding worked out
   by @l4m4re.
 
+  **Correction (2026-09-30):** the SOC-limit half of that overstates it. VPP support does
+  depend on the build: an older MIN TL-XH build refuses the VPP registers outright. But an
+  even older build than the one that dropped low SOC-limit writes has since been seen to
+  accept one (3048 = 55 %), so the build alone doesn't explain those writes. That question
+  is still open on [#400](https://github.com/0xAHA/Growatt_ModbusTCP/issues/400).
+
 ---
 
 ## v2.0.5-b12
