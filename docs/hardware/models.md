@@ -287,11 +287,11 @@ If auto-detection fails (or you want to override), choose based on:
 
 ### Inverter Connector Pinout
 
-| Connector | RS485+ (A) | RS485− (B) |
-| --- | --- | --- |
-| 16-pin DRM/COM | Pin 3 | Pin 4 |
-| 4-pin COM | Pin 1 | Pin 2 |
-| RJ45 (485-3) | Pin 5 | Pin 1 |
+| Connector | RS485+ (A) | RS485− (B) | Notes |
+| --- | --- | --- | --- |
+| 16-pin DRM/COM | Pin 3 | Pin 4 | Confirmed on a MID 30KTL3-XH, top row counted from the left ([#459](https://github.com/0xAHA/Growatt_ModbusTCP/issues/459)) |
+| 4-pin COM | Pin 1 | Pin 2 | |
+| RJ45 (485-3) | Pin 5 | Pin 1 | |
 
 > If values look garbled or the connection is unstable, try swapping the A and B wires — adapter labelling is not always consistent with the inverter's convention.
 

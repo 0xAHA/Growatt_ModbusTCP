@@ -310,7 +310,7 @@ read_register:
 
 set_battery_mode:
   name: Set Battery Mode (VPP)
-  description: "Set battery charge/discharge/hold mode via VPP protocol registers (30xxx). Available on any model whose profile carries the VPP control registers 30100, 30407 and 30409 - WIT and WIS, and MOD/MID XH three-phase hybrids. CHARGE: Forces battery charging from grid+PV. DISCHARGE: Forces battery discharging to load. HOLD: Uses a TOU +1% workaround to bring the battery close to idle (simply disabling remote control returns to self-consumption, where the battery discharges). It is not an exact zero: at night with no PV, a MOD 10KTL3-XH (DTC 5400) settled at about 140 W charging. HOLD was designed for WIT/WIS; the action refuses any model whose profile lacks those three registers."
+  description: "Set battery charge/discharge/hold mode via VPP protocol registers (30xxx). Available on any model whose profile carries the VPP control registers 30100, 30407 and 30409 - WIT and WIS, and MOD/MID XH three-phase hybrids. CHARGE: Forces battery charging from grid+PV. DISCHARGE: Forces battery discharging to load. HOLD: Uses a TOU +1% workaround to bring the battery close to idle (simply disabling remote control returns to self-consumption, where the battery discharges). It is not an exact zero: at night with no PV, a MOD 10KTL3-XH (DTC 5400) settled at about 140 W charging. HOLD was designed for WIT/WIS; the action refuses any model whose profile lacks those three registers. RELEASE: hands control back to the inverter's own mode by clearing remote power control, the TOU schedule count and VPP control authority (30100). The other modes leave authority enabled, and authority with no active command can hold the inverter in standby instead of its selected mode. RELEASE needs only register 30100, so it also works on MIN TL-XH."
   fields:
     device_id:
       name: Device
@@ -332,6 +332,8 @@ set_battery_mode:
               value: "discharge"
             - label: "Hold (near idle)"
               value: "hold"
+            - label: "Release (return control to the inverter)"
+              value: "release"
     power_percent:
       name: Power Percentage
       description: Charge/discharge power as percentage of rated power (1-100%)

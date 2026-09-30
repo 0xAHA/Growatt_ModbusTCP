@@ -3,7 +3,7 @@
 The Set Battery Mode and Sync TOU Schedule descriptions called the +1% roster workaround
 "true standby". Measured on hardware it is close to idle, not zero: a MOD 10KTL3-XH
 (DTC 5400) under the integration's own HOLD sequence settled at about +140 W at night with
-no PV (@KevlarD-67), and a MIN 4600TL-XH (DTC 5100) charged at roughly 270-310 W under the
+no PV (@KevlarD-67), and a MIN 4200TL-XH (DTC 5100) charged at roughly 270-310 W under the
 same roster +1% with AC charge on (@GoncaloRibeiro11). services.yaml is what Home Assistant
 shows in the action UI, so the claim reached users directly.
 """

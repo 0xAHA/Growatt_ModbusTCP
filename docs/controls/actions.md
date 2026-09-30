@@ -17,7 +17,7 @@ Assistant fills in the ID for you.
 | [`write_registers`](#write-several-registers-at-once) | Write consecutive registers atomically |
 | [`export_register_dump`](#scan-every-register) | Full register scan to CSV |
 | [`detect_grid_orientation`](#detect-grid-ct-orientation) | Work out the grid CT sign convention |
-| [`set_battery_mode`](#set-battery-mode-vpp) | VPP charge/discharge/hold (WIT, MOD) |
+| [`set_battery_mode`](#set-battery-mode-vpp) | VPP charge/discharge/hold (WIT, MOD), and release back to the inverter's own mode |
 | [`sync_tou_schedule`](#write-a-time-of-use-schedule) | Push a full TOU schedule to the inverter |
 
 ---
@@ -265,9 +265,18 @@ WIT and MOD models with VPP support. See the [WIT Inverter Guide](wit-guide.md).
 action: growatt_modbus.set_battery_mode
 data:
   device_id: 1a2b3c4d5e6f7890abcdef1234567890
-  mode: charge        # charge | discharge | hold
+  mode: charge        # charge | discharge | hold | release
   power_percent: 50
 ```
+
+**Use `release` when you are done.** Charge, discharge and hold all switch on VPP control
+authority (register 30100) and leave it on. Authority with no active command does not
+return the inverter to normal: on a MIN TL-XH it held the inverter in VPP standby with
+Load First selected, so the battery barely discharged and the grid carried the house.
+`release` clears the remote-power and schedule registers and then the authority, handing
+control back to the inverter's own mode
+([#460](https://github.com/0xAHA/Growatt_ModbusTCP/pull/460)). It needs only register
+30100, so unlike the other modes it also works on MIN TL-XH.
 
 ## Write a time-of-use schedule
 

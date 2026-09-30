@@ -512,7 +512,7 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
     zero on either non-WIT family tested. A MOD 10KTL3-XH (DTC 5400) under this exact HOLD
     sequence, at night with no PV, settled at about +140 W (charging) for four minutes; the
     direct branch at 30409 = 0 with 30410 = 0 sat at about -140 W instead - the same offset
-    on the opposite side. A MIN 4600TL-XH (DTC 5100) charged at roughly 270-310 W under
+    on the opposite side. A MIN 4200TL-XH (DTC 5100) charged at roughly 270-310 W under
     roster +1% with AC charge on. HOLD writes 30410 = 1 on every entry, which is what puts
     it on the charging side. No metered WIT result has been posted to compare against.
 

@@ -16,6 +16,13 @@ Issues: #400, #449, #458
   82-87; nothing is shown where those don't hold a complete build string. Decoding worked out
   by @l4m4re.
 
+  **Update (2026-09-30):** both halves now hold, with a narrower meaning for the SOC one.
+  VPP support depends on the build: an older MIN TL-XH build refuses the VPP registers
+  outright. On SOC limits, the inverter that dropped low writes on **ALBA13** accepts them
+  after Growatt updated it to **ALBA18**, with the same unit and the same battery. An even
+  older build (ALba10) has also accepted one, so this points at ALBA13 specifically rather
+  than old firmware in general ([#400](https://github.com/0xAHA/Growatt_ModbusTCP/issues/400)).
+
 ---
 
 ## v2.0.5-b12
