@@ -4,6 +4,26 @@
 
 ---
 
+## v2.0.5-b14
+
+Issues: #400, #460
+
+- **Set Battery Mode has a new `release` mode that hands control back to the inverter's own
+  mode.** Charge, Discharge and Hold switch on VPP control authority and leave it on, and
+  authority with no active command is not a return to normal: on a MIN TL-XH it held the
+  inverter in standby with Load First selected, so the battery barely discharged while the
+  grid carried the house. `release` clears the remote-power and schedule registers, then the
+  authority. It needs only register 30100, so it also works on MIN TL-XH, where the other
+  modes don't. Measured by @GoncaloRibeiro11.
+
+- **MIN TL-XH: new Off-Grid Discharge Stop SOC control (register 30475, 10–100 %)**, and the
+  existing register 3067 control is now labelled **On-Grid Discharge Stop SOC** there.
+  Confirmed read and write on firmware ALBA18. On the older ALBA13 build, SOC-limit writes
+  were refused by the inverter itself, so they may not stick if you're on it. Your build is
+  shown on the inverter's device page. Contributed by @GoncaloRibeiro11 (PR #460).
+
+---
+
 ## v2.0.5-b13
 
 Issues: #400, #449, #458
