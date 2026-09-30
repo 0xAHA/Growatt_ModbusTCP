@@ -936,6 +936,16 @@ WRITABLE_REGISTERS = {
         'desc': 'SOC at which off-grid battery discharge stops. Defined by VPP V2.01 '
                 'and read/write confirmed on MIN TL-XH after a Growatt firmware update (#400).'
     },
+    'vpp_ongrid_discharge_soc': {
+        'register': 30405,
+        'label': 'On-Grid Discharge Stop SOC',
+        'scale': 1,
+        'valid_range': (10, 100),
+        'unit': '%',
+        'only_profiles': ['MIN_TL_XH2_3000_10000_V201'],
+        'desc': 'SOC at which on-grid battery discharge stops. Defined by VPP V2.01 and '
+                'read/write validated on MIN TL-XH2 (#461).'
+    },
     # Grid-charge stop SOC, MOD TL3-XH (#372). Separate from 3048 above: that one is the
     # general charge stop, this one caps charging from the grid specifically. On the
     # reporting system it sat at 55 while the general stop was 100 and silently limited
@@ -1150,6 +1160,9 @@ SENSOR_DEVICE_MAP = {
         'peak_shaving_reserve_soc', 'ac_charge_max_power',
         # WIT: Battery SOH and BMS voltage
         'battery_soh', 'battery_voltage_bms',
+        # Battery pack description (VPP 31225-31228, #460)
+        'battery_cluster_sum', 'battery_module_number',
+        'battery_module_rated_voltage', 'battery_module_rated_capacity',
         # SPF Off-Grid AC charge/discharge energy
         'ac_charge_energy_today', 'ac_charge_energy_total',
         'ac_discharge_energy_today', 'ac_discharge_energy_total',
@@ -1683,6 +1696,12 @@ PROFILE_STATUS_MAP: dict[str, str] = {
     # uwSysWorkMode) — the actual hybrid status register. Accidental, but correct.
     # Do not "tidy" this without re-checking that fallback.
     'SPA_3000_6000_TL_BL': 'hybrid',
+    # MIN TL-XH2 — no register 0 at all (the base range answers Illegal Function), so
+    # data.status falls through to min_addr, which here is 31000: the VPP working state,
+    # documented with exactly the hybrid table (protocol-vpp.md, row 31000). Unlike the
+    # first-generation TL-XH above, this is not a reg-0 reading. A MIN 3000TL-XH2 with a
+    # battery on-grid read 6, which the standard table has no entry for (#461).
+    'MIN_TL_XH2_3000_10000_V201': 'hybrid',
     # Off-grid — SPF codes.  SPE inherits SPF's input_registers wholesale (see spe.py:47),
     # including `inverter_status` at reg 0 with SPF semantics, so it must use the SPF table.
     'SPF_3000_6000_ES_PLUS': 'spf',

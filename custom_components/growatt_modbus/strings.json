@@ -339,6 +339,18 @@
       "battery_soh": {
         "name": "Battery State of Health (VPP)"
       },
+      "battery_cluster_sum": {
+        "name": "Battery Clusters"
+      },
+      "battery_module_number": {
+        "name": "Battery Modules per Cluster"
+      },
+      "battery_module_rated_voltage": {
+        "name": "Battery Module Rated Voltage"
+      },
+      "battery_module_rated_capacity": {
+        "name": "Battery Module Rated Capacity"
+      },
       "battery_temp": {
         "name": "Battery Temperature"
       },

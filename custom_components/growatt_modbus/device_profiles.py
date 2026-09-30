@@ -325,6 +325,15 @@ MOD_PEAK_SHAVING_SENSORS: Set[str] = {
     "ac_charge_max_power",
 }
 
+# Battery pack description, VPP input 31225-31228. Validated on MIN TL-XH only (#460); MOD
+# maps the registers too but nobody has read them there, so it does not get the sensors.
+BATTERY_PACK_SENSORS: Set[str] = {
+    "battery_cluster_sum",
+    "battery_module_number",
+    "battery_module_rated_voltage",
+    "battery_module_rated_capacity",
+}
+
 MOD_VPP_STATE_SENSORS: Set[str] = {
     "control_authority",
     "remote_power_control_enable",
@@ -606,6 +615,7 @@ INVERTER_PROFILES = {
             PV_DC_ENERGY_SENSORS |
             ENERGY_BREAKDOWN_SENSORS |
             BATTERY_SENSORS |
+            BATTERY_PACK_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS |
             BACKUP_BOX_SENSORS

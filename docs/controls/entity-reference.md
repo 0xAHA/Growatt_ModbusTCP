@@ -630,6 +630,44 @@ If your inverter uses VPP 2.03 rather than 2.01, this button does not appear —
 (2.03's wake value) is silently normalised back to `1` on 2.01 firmware, so the two are not
 interchangeable, and only the 2.01 behaviour has been confirmed on hardware so far.
 
+### Battery pack sensors (MIN TL-XH)
+
+Four diagnostic sensors describe the pack from VPP input registers 31225-31228: **Battery
+Clusters**, **Battery Modules per Cluster**, **Battery Module Rated Voltage** and **Battery
+Module Rated Capacity**. A MIN 4200TL-XH with two APX modules read one cluster of two
+modules, each rated 51.2 V and 100.0 Ah
+([#460](https://github.com/0xAHA/Growatt_ModbusTCP/pull/460)). The protocol has no register
+for the battery's brand, so the integration cannot tell an APX from an ARK.
+
+---
+
+## MIN TL-XH2 Hybrid (VPP only)
+
+**Applies to:** MIN TL-XH2 3000-10000, DTC 5100. Select the **MIN TL-XH2** profile by hand:
+the XH2 shares DTC 5100 with the first-generation TL-XH but answers only the VPP registers.
+
+**Control method:** VPP V2.01 registers. Validated on a MIN 3000TL-XH2 with an APX 5.0M-B3,
+each by a real change, a read-back and the inverter acting on it
+([#461](https://github.com/0xAHA/Growatt_ModbusTCP/issues/461)).
+
+| Entity | Type | Register | Options / Range | Description |
+|--------|------|----------|-----------------|--------------|
+| On-Grid Discharge Stop SOC | Number | 30405 | 10–100 % | SOC at which on-grid battery discharge stops |
+| Remote Power Control Enable | Select | 30407 | Disabled / Enabled | Starts or stops a remote charge/discharge command. Disabled by default |
+| Remote Power Control Charging Time | Number | 30408 | 0–1440 min | Duration of the command. Disabled by default |
+| Remote Charge And Discharge Power | Number | 30409 | -100 to 100 % | Positive charges, negative discharges. Disabled by default |
+| VPP AC Charge Enable | Select | 30410 | Disabled / PV priority / AC priority | Allows charging from the grid. Disabled by default |
+
+With these mapped, the **Set Battery Mode** action is available on the XH2, but it has not
+been run on one yet: the validation above was done with direct register writes. `charge`,
+`discharge` and `release` use those same registers. `hold` also writes the VPP time-of-use
+registers (30411 onward), which have not been tested on this model. See [Actions](actions.md#set-battery-mode-vpp). A remote command also needs
+Control Authority (30100), and should be stopped by hand rather than left to its timer. Run
+`release` afterwards, for the same reason as on MIN TL-XH above.
+
+**Charge cut-off SOC (30404) is not offered.** A write of 95 held for six minutes and then
+read 100 again, with nothing else writing to it.
+
 ---
 
 ## MIC Micro Inverters
@@ -650,6 +688,7 @@ interchangeable, and only the 2.01 behaviour has been confirmed on hardware so f
 | **MOD / MID** TL3-XH | Yes | Persistent writes | Allow Grid Charge, Time Period Priority/Enable (×9) | Charge Rate, Charge Stop SOC, Grid Charge Stop SOC, Discharge Rate, Discharge Stop SOC, Time Period Start/End (×9) |
 | **MIN** (no battery) | No | — | — | — |
 | **MIN TL-XH** (with battery) | Yes | Persistent writes | Priority Mode | Charge Rate, Charge Stop SOC, Discharge Stop SOC |
+| **MIN TL-XH2** | Yes (timed) | VPP overrides | Remote Power Control Enable, VPP AC Charge Enable | On-Grid Discharge Stop SOC, Remote Power Control Charging Time, Remote Charge And Discharge Power |
 | **MIC** | No | — | — | — |
 
 ---
@@ -755,6 +794,11 @@ two-digit write is accepted, briefly shown, and then reverted on its own, while 
 four-digit year is accepted and held. The button and the action already write whichever
 form your profile needs; there is nothing to choose
 ([#443](https://github.com/0xAHA/Growatt_ModbusTCP/issues/443)).
+
+**MIN TL-XH2** gets the sensor but not the button. It has no registers 45-50, so its clock
+is read from VPP holding 30104-30109, which a MIN 3000TL-XH2 showed matching its own time
+([#461](https://github.com/0xAHA/Growatt_ModbusTCP/issues/461)). There the year reads back
+as `26`, and the form a write needs has not been tested, so set the clock from ShinePhone.
 
 The state is formatted wall-clock text rather than a Home Assistant timestamp, because a
 timestamp sensor renders as relative time ("12 seconds ago", ticking) and is unreadable as

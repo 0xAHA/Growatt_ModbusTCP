@@ -591,6 +591,13 @@ class GrowattData:
     batt_first_charge_stopped_soc: int = 0     # SOC % to stop charging in Battery First mode (register 3048)
     grid_first_discharge_stopped_soc: int = 0  # SOC % to stop discharging in Grid First mode (register 3067)
     vpp_offgrid_discharge_soc: int = 10        # SOC % to stop discharging off-grid (register 30475)
+    vpp_ongrid_discharge_soc: int = 10         # SOC % to stop discharging on-grid (register 30405)
+
+    # Battery pack description (VPP input 31225-31228, #460)
+    battery_cluster_sum: float = 0.0            # Number of battery clusters
+    battery_module_number: float = 0.0          # Modules per cluster
+    battery_module_rated_voltage: float = 0.0   # V, per module
+    battery_module_rated_capacity: float = 0.0  # Ah, per module
 
     # MOD TL3-XH peak shaving / demand management (holding 3307-3312, #372).
     # Undocumented in any public protocol; mapped from portal round-trips. See mod.py.
@@ -3837,6 +3844,13 @@ class GrowattModbus:
             # Backup Box Data (Growatt SYN backup box, regs 3281-3342)
             self._read_backup_box_data(data)
 
+            # Battery pack description (VPP 31225-31228, #460)
+            for _pack_field in ('battery_cluster_sum', 'battery_module_number',
+                                'battery_module_rated_voltage', 'battery_module_rated_capacity'):
+                _pack_addr = self._find_register_by_name(_pack_field)
+                if _pack_addr:
+                    self._set_from_register(data, _pack_field, _pack_addr)
+
             # Temperatures
             inverter_temp_addr = self._find_register_by_name('inverter_temp')
             ipm_temp_addr = self._find_register_by_name('ipm_temp')
@@ -4471,6 +4485,17 @@ class GrowattModbus:
     CLOCK_WRITE_BUDGET = 6.0
 
     @property
+    def clock_register_start(self) -> int:
+        """First register of this profile's clock block.
+
+        45 everywhere except a VPP-only profile, which names 30104 with 'clock_register'.
+        The MIN TL-XH2 answers Illegal Function across 0-124, so a read of 45 there always
+        failed and the Inverter Clock sensor sat unavailable, while 30104-30109 held the
+        right time: a reporter read 26/9/30/20/13/33 against his own clock (#461).
+        """
+        return self.register_map.get('clock_register', self.CLOCK_REGISTER_START)
+
+    @property
     def is_clock_readable(self) -> bool:
         """Whether this profile's clock can be decoded.
 
@@ -4489,18 +4514,24 @@ class GrowattModbus:
         SPF 3000-6000 ES PLUS with a controlled single-register test (#443), and it takes
         the opposite form from V1.39: the full year, not an offset. See the note above
         CLOCK_REGISTER_START, and write_inverter_time() for where the two forms diverge.
+
+        Not on a profile that reads its clock from the VPP block. The year form 30104
+        accepts on a write has not been tested - it reads back as 26, not 2026 (#461) -
+        and a guessed year is how a MIN TL-X once landed in 2000.
         """
-        return True
+        return self.clock_register_start == self.CLOCK_REGISTER_START
 
     def read_inverter_time(self) -> Optional[datetime]:
         """Read the inverter's real-time clock, or None if it cannot be decoded."""
         if not self.is_clock_readable:
             return None
 
-        regs = self.read_holding_registers(self.CLOCK_REGISTER_START, self.CLOCK_REGISTER_COUNT)
+        start = self.clock_register_start
+        # 45-51 on V1.39. The VPP block has only the six fields; 30110 is a reserved UINT32.
+        count = self.CLOCK_REGISTER_COUNT if start == self.CLOCK_REGISTER_START else 6
+        regs = self.read_holding_registers(start, count)
         if not regs or len(regs) < 6:
-            logger.debug("[CLOCK] Could not read registers %d-%d",
-                         self.CLOCK_REGISTER_START, self.CLOCK_REGISTER_START + 5)
+            logger.debug("[CLOCK] Could not read registers %d-%d", start, start + 5)
             return None
 
         year, month, day, hour, minute, second = (int(v) for v in regs[:6])
@@ -4519,7 +4550,7 @@ class GrowattModbus:
             # Returning None rather than raising lets the caller still set the clock.
             logger.debug(
                 "[CLOCK] Registers %d-%d do not form a valid date (%s): %s",
-                self.CLOCK_REGISTER_START, self.CLOCK_REGISTER_START + 5, list(regs[:6]), err,
+                start, start + 5, list(regs[:6]), err,
             )
             return None
 
@@ -6210,6 +6241,20 @@ class GrowattModbus:
                     )
             except Exception as e:
                 logger.debug(f"Could not read vpp_offgrid_discharge_soc register 30475: {e}")
+
+        # VPP V2.01 on-grid discharge floor (register 30405). A missed read is reported as
+        # unread, not as the dataclass default: 10 % is a plausible setting to show.
+        if 30405 in holding_map:
+            ongrid_soc_regs = None
+            try:
+                ongrid_soc_regs = self.read_holding_registers(30405, 1)
+            except Exception as e:
+                logger.debug(f"Could not read vpp_ongrid_discharge_soc register 30405: {e}")
+            if ongrid_soc_regs is not None and len(ongrid_soc_regs) >= 1:
+                data.vpp_ongrid_discharge_soc = int(ongrid_soc_regs[0])
+                logger.debug("[VPP CTRL] vpp_ongrid_discharge_soc=%s%%", data.vpp_ongrid_discharge_soc)
+            else:
+                data.unread_fields.add('vpp_ongrid_discharge_soc')
 
         # MOD TL3-XH peak shaving / demand management (3307-3312, #372).
         #

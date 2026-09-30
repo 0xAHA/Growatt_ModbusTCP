@@ -933,6 +933,39 @@ SENSOR_DEFINITIONS = {
         "condition": lambda data: hasattr(data, 'battery_soh'),
         "description": "Battery state of health as reported by the inverter's own register (not the BMS). 100% = new battery, lower values indicate capacity degradation. May differ from BMS State of Health if both are present.",
     },
+    # Battery pack description, VPP 31225-31228 (#460). Static ratings, so no state_class:
+    # they are not measurements to keep statistics for.
+    "battery_cluster_sum": {
+        "name": "Battery Clusters",
+        "icon": "mdi:battery-outline",
+        "attr": "battery_cluster_sum",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "description": "Number of battery clusters the inverter reports.",
+    },
+    "battery_module_number": {
+        "name": "Battery Modules per Cluster",
+        "icon": "mdi:battery-plus-outline",
+        "attr": "battery_module_number",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "description": "Number of battery modules in each cluster.",
+    },
+    "battery_module_rated_voltage": {
+        "name": "Battery Module Rated Voltage",
+        "icon": "mdi:battery-outline",
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "unit": UnitOfElectricPotential.VOLT,
+        "attr": "battery_module_rated_voltage",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "description": "Rated voltage of one battery module.",
+    },
+    "battery_module_rated_capacity": {
+        "name": "Battery Module Rated Capacity",
+        "icon": "mdi:battery-outline",
+        "unit": "Ah",
+        "attr": "battery_module_rated_capacity",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "description": "Rated capacity of one battery module.",
+    },
     "battery_voltage_bms": {
         "name": "Battery Voltage BMS",
         "icon": "mdi:battery-charging",

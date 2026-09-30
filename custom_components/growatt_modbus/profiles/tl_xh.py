@@ -451,6 +451,15 @@ MIN_TL_XH_3000_10000_V201 = {
         # Battery power (calculated from charge/discharge)
         31220: {'name': 'battery_power', 'scale': 1, 'unit': 'W', 'desc': 'Battery power (positive=discharge, negative=charge)', 'signed': True},
 
+        # Battery pack description (VPP V2.01). Read on a MIN 4200TL-XH with two APX modules
+        # as 1 / 2 / 512 / 1000 - one cluster of two modules, 51.2 V and 100.0 Ah each at the
+        # documented 0.1 scaling (#460). Describes the pack, not the brand: nothing in the
+        # protocol names the battery maker.
+        31225: {'name': 'battery_cluster_sum', 'scale': 1, 'unit': '', 'desc': 'Number of battery clusters'},
+        31226: {'name': 'battery_module_number', 'scale': 1, 'unit': '', 'desc': 'Battery modules per cluster'},
+        31227: {'name': 'battery_module_rated_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Module rated voltage'},
+        31228: {'name': 'battery_module_rated_capacity', 'scale': 0.1, 'unit': 'Ah', 'desc': 'Module rated capacity'},
+
         # Battery Cluster 2 — VPP_V201_BATTERY2 (31300–31303, 31314–31322)
         **VPP_V201_BATTERY2,
 
@@ -554,6 +563,8 @@ MIN_TL_XH2_3000_10000_V201 = {
         'VPP_V201_PV2_INPUT and is defined inline. Verified against the Growatt portal '
         'on a MIN 4200TL-XH2 (Issue #361).'
     ),
+    # The clock lives only at 30104-30109 here - 45-51 is in the dead base range (#461).
+    'clock_register': 30104,
     'input_registers': {
         # === Status (31000-31004) ===
         **VPP_V201_STATUS,
@@ -669,6 +680,33 @@ MIN_TL_XH2_3000_10000_V201 = {
     },
     'holding_registers': {
         **VPP_V201_HOLDING_1P,
+
+        # Validated on a MIN 3000TL-XH2 with an APX 5.0M-B3 (#461), each by a real change,
+        # a read-back and the inverter acting on it - with ShineWiFi connected and seen to
+        # write nothing during the tests.
+        #
+        # 30405: 10 -> 20, still 20 twenty minutes later; back to 10, held.
+        #
+        # 30404 (charge cut-off SOC) is deliberately absent. 100 -> 95 held for six minutes
+        # and then read 100 again, with nothing else writing to it. A write that reverts
+        # itself is worse than no control, so it stays out until that is understood.
+        30405: {'name': 'vpp_ongrid_discharge_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+                'valid_range': (10, 100),
+                'desc': 'On-grid discharge cut-off SOC (VPP 30405; validated on MIN TL-XH2, #461)'},
+
+        # Remote power control. 30408 = 5, 30409 = 20, 30410 = 1, then 30100 = 1 and
+        # 30407 = 1: the battery charged from the grid, visible on battery charge power and
+        # grid import. 30407 = 0 and 30100 = 0 stopped it (#461). Mapping these is also what
+        # lets the Set Battery Mode action run on this model.
+        30407: {'name': 'remote_power_control_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+                'desc': 'Remote power control enable (0=off, 1=on). Not stored'},
+        30408: {'name': 'remote_power_control_charging_time', 'scale': 1, 'unit': 'min',
+                'access': 'RW', 'desc': 'Remote control duration (0=unlimited, 1-1440 min). Not stored'},
+        30409: {'name': 'remote_charge_and_discharge_power', 'scale': 1, 'unit': '%',
+                'access': 'RW', 'signed': True,
+                'desc': 'Remote charge/discharge power (-100..100, positive=charge). Not stored'},
+        30410: {'name': 'vpp_ac_charge_enable', 'scale': 1, 'unit': '', 'access': 'RW',
+                'desc': 'AC charging enable (0=off, 1=PV first, 2=AC first)'},
     },
 }
 

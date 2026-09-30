@@ -17,7 +17,7 @@ Assistant fills in the ID for you.
 | [`write_registers`](#write-several-registers-at-once) | Write consecutive registers atomically |
 | [`export_register_dump`](#scan-every-register) | Full register scan to CSV |
 | [`detect_grid_orientation`](#detect-grid-ct-orientation) | Work out the grid CT sign convention |
-| [`set_battery_mode`](#set-battery-mode-vpp) | VPP charge/discharge/hold (WIT, MOD), and release back to the inverter's own mode |
+| [`set_battery_mode`](#set-battery-mode-vpp) | VPP charge/discharge/hold (WIT, MOD, MIN TL-XH2), and release back to the inverter's own mode |
 | [`sync_tou_schedule`](#write-a-time-of-use-schedule) | Push a full TOU schedule to the inverter |
 
 ---
@@ -259,7 +259,10 @@ data:
 
 ## Set battery mode (VPP)
 
-WIT and MOD models with VPP support. See the [WIT Inverter Guide](wit-guide.md).
+WIT and MOD models with VPP support. Also available on MIN TL-XH2, where the registers it
+uses were validated by direct writes but the action itself has not yet been run
+([#461](https://github.com/0xAHA/Growatt_ModbusTCP/issues/461)). See the
+[WIT Inverter Guide](wit-guide.md).
 
 ```yaml
 action: growatt_modbus.set_battery_mode
