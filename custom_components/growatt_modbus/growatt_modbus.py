@@ -590,6 +590,7 @@ class GrowattData:
     tl_xh_priority_mode: int = 3               # MIN TL-XH priority mode: 0=Load First, 2=Battery First, 3=Grid First (register 3018)
     batt_first_charge_stopped_soc: int = 0     # SOC % to stop charging in Battery First mode (register 3048)
     grid_first_discharge_stopped_soc: int = 0  # SOC % to stop discharging in Grid First mode (register 3067)
+    vpp_offgrid_discharge_soc: int = 10        # SOC % to stop discharging off-grid (register 30475)
 
     # MOD TL3-XH peak shaving / demand management (holding 3307-3312, #372).
     # Undocumented in any public protocol; mapped from portal round-trips. See mod.py.
@@ -6196,6 +6197,19 @@ class GrowattModbus:
                     logger.debug("[TL-XH CTRL] grid_first_discharge_stopped_soc=%s%%", data.grid_first_discharge_stopped_soc)
             except Exception as e:
                 logger.debug(f"Could not read grid_first_discharge_stopped_soc register 3067: {e}")
+
+        # VPP V2.01 off-grid discharge floor (register 30475).
+        if 30475 in holding_map:
+            try:
+                offgrid_soc_regs = self.read_holding_registers(30475, 1)
+                if offgrid_soc_regs is not None and len(offgrid_soc_regs) >= 1:
+                    data.vpp_offgrid_discharge_soc = int(offgrid_soc_regs[0])
+                    logger.debug(
+                        "[TL-XH CTRL] vpp_offgrid_discharge_soc=%s%%",
+                        data.vpp_offgrid_discharge_soc,
+                    )
+            except Exception as e:
+                logger.debug(f"Could not read vpp_offgrid_discharge_soc register 30475: {e}")
 
         # MOD TL3-XH peak shaving / demand management (3307-3312, #372).
         #

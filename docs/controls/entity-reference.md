@@ -579,28 +579,37 @@ the grid while solar charged the battery).
 | Priority Mode | Select | 3018 | Load First (0), Battery First (2), Grid First (3) | Note the encoding: 1 is not used, unlike the 0/1/2 scheme on SPH/MOD/MID |
 | Charge Power Rate | Number | 3047 | 1–100 % | Battery charge power limit when Battery First is active |
 | Charge Stopped SOC | Number | 3048 | 0–100 % | SOC at which charging stops when Battery First is active |
-| Discharge Stopped SOC | Number | 3067 | 1–100 % | SOC at which discharging stops when Grid First is active |
+| On-Grid Discharge Stop SOC | Number | 3067 | 1–100 % | SOC at which on-grid battery discharge stops |
+| Off-Grid Discharge Stop SOC | Number | 30475 | 10–100 % | SOC at which off-grid battery discharge stops (VPP V2.01) |
 
-!!! warning "3048 and 3067 can silently refuse a write near the current SOC, and this is confirmed at the inverter, not the integration"
-    On at least one DTC 5100 unit (MIN 4200TL-XH with an APX battery), writing a value close
-    to the register's current one is accepted with no Modbus exception and simply does not
-    take — read back immediately, over both FC06 and FC16, the register still holds its old
-    value.
+!!! warning "SOC-limit writes on DTC 5100 depend on the firmware build"
+    On a MIN 4200TL-XH with an APX battery, firmware build **ALBA13** silently refused
+    SOC-limit writes. There was no Modbus exception, but an immediate read-back over both
+    FC06 and FC16 still held the old value, and the same change made in ShinePhone reverted
+    too. Growatt then updated **the same inverter** to `ALBA18010122`, and registers 3048 and
+    3067 accepted changes. Register 30475 takes changes on that build as well: 16 → 20 → 16,
+    each still in place five minutes later
+    ([#400](https://github.com/0xAHA/Growatt_ModbusTCP/issues/400),
+    [#460](https://github.com/0xAHA/Growatt_ModbusTCP/pull/460)).
 
-    **This is not a Modbus-only symptom.** The same change made in ShinePhone — explicitly
-    submitted, then confirmed with the app's own **Read** action — reverted the same way:
-    the app briefly showed the new value, then read back the old one. A full register sweep
-    of the V1.39 holding range and the VPP 30400-30524 range found the submitted value
-    nowhere. The inverter's own official app cannot make this write persist either, which
-    places this squarely at the inverter/firmware, not at anything reading or writing the
-    register incorrectly.
+    If a write will not stick on your unit, check the firmware build first. It is shown in
+    brackets after the firmware version on the inverter's device page. It is not simply old
+    firmware: a unit on the older ALba10 build accepted a 3048 write.
 
-    A separate DTC 5400 (MOD) unit shows no such floor down to 10% with the same register
-    layout, so this is firmware-family specific rather than universal — see the equivalent
-    warning under MOD/MID above for that comparison. If you hit this, the practical
-    workaround is the same one already documented for the 3067 revert on MOD: there is
-    currently no way to move these values from outside the inverter's own menu, if the menu
-    can move them at all on your firmware.
+    **The app's "Discharge Power" setting has no confirmed register.** Holding 3066 read 0
+    while the app showed 100 %, and writes to 3066 were rejected over both FC06 and FC16.
+    30474 is the last remote power command, not a persistent limit.
+
+!!! warning "Do not leave VPP Control Authority enabled without an active command"
+    On the measured MIN 4200TL-XH, `30100 = 1`, `30407 = 0` and `30411 = 0` left the
+    inverter in VPP standby: Load First was selected, but the grid supplied most of the
+    house and the battery discharged only about 102 W. Clearing Control Authority
+    (`30100 = 0`) restored Load First immediately, and battery discharge rose to about
+    1,348 W.
+
+    To clear it, run **Set Battery Mode** with mode `release`, which needs only register
+    30100 and so works on MIN TL-XH, or enable the **Control Authority** select (disabled by
+    default) and set it to *Disabled*. See [Actions](actions.md#set-battery-mode-vpp).
 
 ### Waking a sleeping APX battery (MIN TL-XH, VPP 2.01 only)
 

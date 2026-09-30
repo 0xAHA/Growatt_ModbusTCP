@@ -340,3 +340,19 @@ def test_mod_still_creates_the_controls_it_should():
     for expected in ("batt_first_charge_power_rate", "batt_first_charge_stopped_soc",
                      "grid_first_discharge_stopped_soc", "grid_charge_stopped_soc"):
         assert expected in created, f"MOD-XH lost the {expected} control"
+
+
+def test_min_tl_xh_exposes_the_firmware_confirmed_soc_controls():
+    """The SOC controls were confirmed on a live DTC-5100 after a firmware update."""
+    map_key = "MIN_TL_XH_3000_10000_V201"
+    holding = _holding(map_key)
+    writable = {
+        "grid_first_discharge_stopped_soc": 3067,
+        "vpp_offgrid_discharge_soc": 30475,
+    }
+
+    for name, address in writable.items():
+        assert holding[address]["name"] == name
+        assert str(holding[address].get("access", "")).upper() == "RW"
+        assert WRITABLE_REGISTERS[name]["register"] == address
+        assert name in _controls_created_for(map_key)

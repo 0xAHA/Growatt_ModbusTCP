@@ -926,6 +926,16 @@ WRITABLE_REGISTERS = {
                 'as Grid First mode (#362). Note your firmware may enforce a higher minimum '
                 'than 1% and silently ignore lower values (V1.39: US model / firmware ZACA-08+)'
     },
+    'vpp_offgrid_discharge_soc': {
+        'register': 30475,
+        'label': 'Off-Grid Discharge Stop SOC',
+        'scale': 1,
+        'valid_range': (10, 100),
+        'unit': '%',
+        'only_profiles': ['MIN_TL_XH_3000_10000_V201'],
+        'desc': 'SOC at which off-grid battery discharge stops. Defined by VPP V2.01 '
+                'and read/write confirmed on MIN TL-XH after a Growatt firmware update (#400).'
+    },
     # Grid-charge stop SOC, MOD TL3-XH (#372). Separate from 3048 above: that one is the
     # general charge stop, this one caps charging from the grid specifically. On the
     # reporting system it sat at 55 while the general stop was 100 and silently limited
