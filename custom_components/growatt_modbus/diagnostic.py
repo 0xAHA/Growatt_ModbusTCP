@@ -240,10 +240,36 @@ SERVICE_READ_REGISTER_SCHEMA = vol.Schema(
 SERVICE_SET_BATTERY_MODE_SCHEMA = vol.Schema(
     {
         vol.Required("device_id"): cv.string,
-        vol.Required("mode"): vol.In(["charge", "discharge", "hold"]),
+        vol.Required("mode"): vol.In(["charge", "discharge", "hold", "release"]),
         vol.Optional("power_percent", default=100): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
     }
 )
+
+def release_vpp_control(client, holding: dict) -> list[int]:
+    """Hand battery control back to the inverter's own mode. Returns the registers written.
+
+    Every other mode leaves control authority (30100) at 1, and authority with no active
+    command is not "back to normal": on a MIN TL-XH, 30100 = 1 with 30407 = 0 and 30411 = 0
+    held the inverter in VPP standby with Load First selected - the battery gave ~102 W and
+    the grid carried the house. Clearing 30100 restored Load First immediately, the battery
+    rising to ~1,348 W (@GoncaloRibeiro11, #460).
+
+    The direct branch (30407) and the roster count (30411) are cleared first where the
+    profile maps them, so nothing is left armed behind the authority, which goes last.
+    Each write is one step of a single command, so the 30 s control cooldown is bypassed.
+    """
+    written = []
+    for register in (30407, 30411, 30100):
+        if register not in holding:
+            continue
+        if not client.write_register(register, 0, True):
+            raise HomeAssistantError(
+                f"Could not clear register {register} while releasing VPP control. "
+                f"Registers cleared so far: {written or 'none'}."
+            )
+        written.append(register)
+    return written
+
 
 SERVICE_SYNC_TOU_SCHEDULE_SCHEMA = vol.Schema(
     {
@@ -1309,6 +1335,27 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         # on every model regardless, with the WIT scope stated only in its description
         # (#400).
         holding = client.register_map.get('holding_registers', {})
+
+        # Release needs only the authority register: it exists to undo what the other modes
+        # leave behind, and on MIN TL-XH (which maps 30100 but not 30407/30409) clearing
+        # 30100 is exactly the step measured to restore local control (#460).
+        if mode == "release":
+            if 30100 not in holding:
+                raise HomeAssistantError(
+                    f"Nothing to release: this model's profile "
+                    f"({client.register_map.get('name', 'unknown')}) has no VPP control "
+                    f"authority register (30100)."
+                )
+            try:
+                written = await hass.async_add_executor_job(release_vpp_control, client, holding)
+            except HomeAssistantError:
+                raise
+            except Exception as e:
+                raise HomeAssistantError(f"Failed to release VPP control: {e}") from e
+            _LOGGER.info("Released VPP control - cleared registers %s", written)
+            await coordinator.async_request_refresh()
+            return
+
         missing = [r for r in (30100, 30407, 30409) if r not in holding]
         if missing:
             raise HomeAssistantError(
