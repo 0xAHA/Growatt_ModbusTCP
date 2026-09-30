@@ -4,6 +4,38 @@
 
 ---
 
+## v2.0.5-b15
+
+Issues: #460, #461
+
+- **MIN TL-XH2: new controls validated on hardware.** On-Grid Discharge Stop SOC (register
+  30405), plus the VPP remote power controls (30407-30410), which are disabled by default.
+  With those mapped, Set Battery Mode is available on the XH2. The registers were tested
+  with direct writes; the action itself hasn't been run on an XH2 yet. The charge cut-off
+  SOC (30404) is not offered, because a changed value reverted on its own after six
+  minutes. Tested by @GersomSoldaat.
+
+- **MIN TL-XH2: Status shows the inverter's state.** The XH2 reports it at register 31000,
+  which uses the hybrid table (e.g. *Bat On-Grid*), not the grid-tied one, which has no entry
+  for most of its values.
+
+- **MIN TL-XH2: Inverter Clock now reads.** It comes from VPP registers 30104-30109, since
+  the XH2 has no registers 45-50. The clock sync button isn't offered on the XH2, because
+  the write format there is untested.
+
+- **MIN TL-XH2: no more "wrong profile" notice.** DTC 5100 is shared with the
+  first-generation TL-XH, and the integration used to tell XH2 owners to switch to a
+  profile that can't read their inverter. An existing notice clears itself.
+
+- **MIN TL-XH: four new diagnostic battery sensors**: Battery Clusters, Battery Modules per
+  Cluster, Battery Module Rated Voltage and Battery Module Rated Capacity (VPP 31225-31228).
+  Confirmed on a MIN 4200TL-XH with two APX modules by @GoncaloRibeiro11.
+
+- **The backup box device is now named "Backup Box (SYN)"**, as the protocol calls it. It
+  was labelled as an ARK battery. Only the label changes; no entities move.
+
+---
+
 ## v2.0.5-b14
 
 Issues: #400, #460
