@@ -92,9 +92,11 @@ Usually the Growatt cloud overwriting your change. If a **ShineWiFi or ShineLink
 Say which control, what you set it to, and what it reverted to — and your **firmware
 build**. From v2.0.5-b13 it appears in brackets after the firmware version on the inverter's
 device page (for example `AL1.0 (ALBA18010122)`); the Growatt portal's *Version* shows its
-first ten characters. Features can differ between builds of the same model: on MIN TL-XH, the
-VPP registers are missing entirely on an older build and present on a newer one
-([#458](https://github.com/0xAHA/Growatt_ModbusTCP/issues/458)).
+first ten characters. Behaviour can differ between builds of the same model. On MIN TL-XH,
+the VPP registers are missing entirely on an older build
+([#458](https://github.com/0xAHA/Growatt_ModbusTCP/issues/458)). One inverter dropped
+SOC-limit writes on ALBA13 and accepted them after Growatt updated it to ALBA18
+([#400](https://github.com/0xAHA/Growatt_ModbusTCP/issues/400)).
 
 ### Your inverter model isn't supported, or auto-detection picks the wrong profile
 
