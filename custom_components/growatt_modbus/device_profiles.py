@@ -292,7 +292,7 @@ WIT_EXTRA_SENSORS: Set[str] = {
 }
 
 BACKUP_BOX_SENSORS: Set[str] = {
-    # Growatt ARK transfer switch, connected via RS485 to TL-X/TL-XH inverters.
+    # Growatt SYN backup box, connected via RS485 to TL-X/TL-XH inverters.
     # Sensors gated on box_connect_flag==1 (reg 3320); box_connect_flag itself is always shown.
     "box_connect_flag",
     "box_bypass_status",

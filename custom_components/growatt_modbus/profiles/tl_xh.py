@@ -103,7 +103,7 @@ TL_XH_3000_10000 = {
         105: {'name': 'fault_code', 'scale': 1, 'unit': ''},
         112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
 
-        # Backup Box (Growatt ARK transfer switch, RS485 at regs 3250-3374)
+        # Backup Box (Growatt SYN backup box, RS485 at regs 3250-3374)
         # Gate: reg 3320 (box_connect_flag) = 1 means backup box is present and communicating.
         3281: {'name': 'box_bypass_status', 'scale': 1,   'unit': '',   'desc': '0=Off, 1=On'},
         3282: {'name': 'box_work_mode',     'scale': 1,   'unit': '',   'desc': '0=Offgrid, 1=Ongrid, 2=Generator'},
@@ -454,7 +454,7 @@ MIN_TL_XH_3000_10000_V201 = {
         # Battery Cluster 2 — VPP_V201_BATTERY2 (31300–31303, 31314–31322)
         **VPP_V201_BATTERY2,
 
-        # Backup Box (Growatt ARK transfer switch, RS485 at regs 3250-3374)
+        # Backup Box (Growatt SYN backup box, RS485 at regs 3250-3374)
         # Gate: reg 3320 (box_connect_flag) = 1 means backup box is present and communicating.
         3281: {'name': 'box_bypass_status', 'scale': 1,   'unit': '',   'desc': '0=Off, 1=On'},
         3282: {'name': 'box_work_mode',     'scale': 1,   'unit': '',   'desc': '0=Offgrid, 1=Ongrid, 2=Generator'},

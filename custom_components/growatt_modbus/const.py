@@ -1170,7 +1170,7 @@ SENSOR_DEVICE_MAP = {
         )),
     },
 
-    # Backup Box device — Growatt ARK transfer switch (TL-X/TL-XH only, regs 3281-3342)
+    # Backup Box device — Growatt SYN backup box (TL-X/TL-XH only, regs 3281-3342)
     DEVICE_TYPE_BACKUPBOX: {
         'box_connect_flag',
         'box_bypass_status',

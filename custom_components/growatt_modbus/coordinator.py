@@ -2534,7 +2534,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 "identifiers": {(DOMAIN, f"{entry_id}_backup_box")},
                 "name": f"{base_name} Backup Box",
                 "manufacturer": "Growatt",
-                "model": "ARK Backup Box",
+                # V1.39 calls 3250-3342 the "Backup box"; VPP 30115 names it "SYN". It
+                # said ARK, which is a Growatt battery line, so APX owners saw their
+                # transfer switch labelled as someone else's battery (#460).
+                "model": "Backup Box (SYN)",
                 **via_device,
             }
 

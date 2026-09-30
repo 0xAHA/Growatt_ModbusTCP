@@ -468,7 +468,7 @@ class GrowattData:
     extra_energy_today: float = 0.0   # kWh
     extra_energy_total: float = 0.0   # kWh
 
-    # Backup Box (Growatt ARK transfer switch, RS485 via TL-X/TL-XH inverter, input regs 3281-3342)
+    # Backup Box (Growatt SYN backup box, RS485 via TL-X/TL-XH inverter, input regs 3281-3342)
     box_connect_flag: int = 0          # 0=Abnormal/absent, 1=Normal/connected (reg 3320)
     box_bypass_status: int = 0         # 0=Off, 1=On (reg 3281)
     box_work_mode: int = 0             # 0=Offgrid, 1=Ongrid, 2=Generator (reg 3282)
@@ -3834,7 +3834,7 @@ class GrowattModbus:
             # Battery Data (if available - storage/hybrid models)
             self._read_battery_data(data)
 
-            # Backup Box Data (Growatt ARK transfer switch, regs 3281-3342)
+            # Backup Box Data (Growatt SYN backup box, regs 3281-3342)
             self._read_backup_box_data(data)
 
             # Temperatures
@@ -5618,7 +5618,7 @@ class GrowattModbus:
             logger.debug(f"Could not read peak shaving registers 3307-3312: {e}")
 
     def _read_backup_box_data(self, data: GrowattData) -> None:
-        """Populate backup box (Growatt ARK) fields from cached 3000-range registers."""
+        """Populate backup box (Growatt SYN) fields from cached 3000-range registers."""
         try:
             # Connection flag — must be read first so sensors.py deferred mechanism
             # can gate the remaining 8 conditional sensors on box_connect_flag == 1.

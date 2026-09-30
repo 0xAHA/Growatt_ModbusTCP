@@ -257,7 +257,7 @@ MOD_6000_15000TL3_XH = {
         3180: {'name': 'charge_power_high', 'scale': 1, 'unit': '', 'pair': 3181, 'desc': 'Battery charge power HIGH (unsigned)'},
         3181: {'name': 'charge_power_low', 'scale': 1, 'unit': '', 'pair': 3180, 'combined_scale': 0.1, 'combined_unit': 'W', 'desc': 'Battery charge power (unsigned, positive=charging)'},
 
-        # === BACKUP BOX (Growatt ARK transfer switch, RS485 at regs 3281-3342) ===
+        # === BACKUP BOX (Growatt SYN backup box, RS485 at regs 3281-3342) ===
         # Confirmed active on MOD 10KTL3-XH-BP via ledermueller scan (Issue #336):
         # reg 3282=1 (On-Grid), 3286=33°C, 3287=2340 (234.0V), 3297/3298=10898 (1089.8W), 3320=1 (connected)
         # Same register layout as TL-XH profile.

@@ -1378,7 +1378,7 @@ SENSOR_DEFINITIONS = {
         "condition": lambda data: hasattr(data, 'inverter_fan_speed'),
     },
 
-    # Backup Box Sensors (Growatt ARK transfer switch, TL-X/TL-XH only, regs 3281-3342)
+    # Backup Box Sensors (Growatt SYN backup box, TL-X/TL-XH only, regs 3281-3342)
     "box_connect_flag": {
         "name": "Backup Box Status",
         "icon": "mdi:transfer-right",
