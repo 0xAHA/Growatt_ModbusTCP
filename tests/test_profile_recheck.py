@@ -124,9 +124,9 @@ def test_both_equivalence_branches_flag_the_issue_for_clearing():
     knows whether an issue was actually raised (that would need a flag surviving a
     restart, which is the bug), so both simply always flag it."""
     body = _method("_recheck_profile_against_dtc")
-    assert body.count("self._pending_profile_issue_clear = True") == 2, (
-        "expected exactly one clear-flag in the name-match branch and one in the "
-        "behavioural-equivalence branch"
+    assert body.count("self._pending_profile_issue_clear = True") == 3, (
+        "expected exactly one clear-flag in each 'nothing to gain' branch: name match, "
+        "a recognised alternative for a shared DTC (#461), and behavioural equivalence"
     )
 
 

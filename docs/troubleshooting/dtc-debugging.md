@@ -149,6 +149,14 @@ These statuses live in `DTC_REGISTRY` in `auto_detection.py`, which is the singl
 | 5200 | MIC 600-3300TL-X/X2/X2(Pro); MIN 2500-6000TL-X/X2/X2(Pro)/X2(Pro.E) | min_3000_6000_tl_x_v201 | ⚠️ Unconfirmed — refined at runtime by per-MPPT energy check |
 | 5201 | MIN 7-10KTL-X/X2/X2(E) | min_7000_10000_tl_x_v201 | ✅ Confirmed (MIN 10000TL-X, DTC from legacy holding 43) |
 
+**5100 is shared, and the XH2 needs its own profile.** The second-generation TL-XH2 answers
+**only** the VPP ranges (30000+ / 31000+); every legacy range, including the 3000 block the
+default profile reads, is silent. Detection cannot tell the generations apart, so on an XH2
+choose **MIN TL-XH2 3000-10000** by hand. The profile check recognises it and MIN TL-XH
+3000-10000 as correct for 5100, and will not tell you to switch
+([#361](https://github.com/0xAHA/Growatt_ModbusTCP/issues/361),
+[#461](https://github.com/0xAHA/Growatt_ModbusTCP/issues/461)).
+
 ### MOD / MID / MAC Series — Three-Phase Hybrid / Grid-Tied
 
 | DTC Code | Model Series | Profile | Status |

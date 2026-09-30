@@ -424,6 +424,20 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             self._pending_profile_issue_clear = True
             return
 
+        # A DTC shared by hardware generations that need different profiles. 5100 covers
+        # MIN TL-XH and TL-XH2, and the XH2 answers only the VPP ranges - so the default
+        # profile's 3000 block is silent there, and "move to the default" was advice that
+        # would break a working install (#461).
+        _entry = DTC_REGISTRY.get(dtc)
+        if _entry and configured in _entry.alternatives:
+            _LOGGER.debug(
+                "Profile re-check: DTC %s covers several generations and '%s' is one of "
+                "its recognised profiles - staying quiet", dtc, configured,
+            )
+            self._profile_recheck_done = True
+            self._pending_profile_issue_clear = True
+            return
+
         # Say nothing when the two profiles would behave identically.
         #
         # A DTC can cover several model families. 5400 is 'MOD 3-10KTL3-XH/BP; MID

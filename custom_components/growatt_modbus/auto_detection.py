@@ -454,6 +454,13 @@ class DtcEntry(NamedTuple):
     evidence: str
     """Where the confirmation came from, or what is missing without it."""
 
+    alternatives: tuple[str, ...] = ()
+    """Other profiles that are correct for some hardware sharing this DTC.
+
+    Detection has to pick one, but an owner who selected one of these by hand is not on
+    the wrong profile, and the profile re-check must not tell them they are. Each needs a
+    real device on this DTC running it, the same bar as CONFIRMED."""
+
 
 # Official DTC codes from Growatt VPP 2.03 Protocol documentation Table 3-1.
 # Note: some legacy models expose the DTC register without supporting full V2.01.
@@ -576,6 +583,11 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
     5100: DtcEntry(
         'MIN 2500-6000TL-XH/XH2/XHE/XA', 'tl_xh_3000_10000_v201',
         CONFIRMED, 'MIN 6000 TL-XH + APX battery + backup box, issue #71',
+        # Two generations share 5100 and detection cannot tell them apart. XH2 serves only
+        # the VPP ranges - the 3000 block the default profile reads is silent - confirmed on
+        # two units by register scan (#361, #461). The MIN TL-XH profile is in use on a
+        # MIN 4200TL-XH on this DTC (#400, #460).
+        alternatives=('min_tl_xh2_3000_10000_v201', 'min_tl_xh_3000_10000_v201'),
     ),
 
     # -- MIC/MIN-X series --
