@@ -4,6 +4,26 @@
 
 ---
 
+## v2.0.5-b17
+
+Issues: #461
+
+- **MIN TL-XH2: new Charge Stop SOC control (register 30404)**, which held a change for over
+  an hour. Set Battery Mode `charge` and `release` are now confirmed on the XH2. Tested by
+  @GersomSoldaat.
+
+- **MIN TL-XH2: Battery State of Health** (register 31218) is now shown.
+
+- **MIN TL-XH2: sensors with no source on this model are removed**, including AC charge
+  energy, Priority Mode, the fault and warning codes and the safety diagnostics. They came
+  from register ranges the XH2 doesn't have and showed a constant 0. The entities disappear
+  on upgrade.
+
+- **Actions now show their actual error message** instead of "Unknown error", e.g. when
+  clock sync isn't available on a model.
+
+---
+
 ## v2.0.5-b16
 
 Issues: #400, #460
