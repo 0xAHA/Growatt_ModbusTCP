@@ -592,6 +592,7 @@ class GrowattData:
     grid_first_discharge_stopped_soc: int = 0  # SOC % to stop discharging in Grid First mode (register 3067)
     vpp_offgrid_discharge_soc: int = 10        # SOC % to stop discharging off-grid (register 30475)
     vpp_ongrid_discharge_soc: int = 10         # SOC % to stop discharging on-grid (register 30405)
+    vpp_charge_stop_soc: int = 100             # SOC % to stop charging (register 30404)
 
     # Battery working status (VPP input 31001, #460): 0 standby, 1 disconnected, 2 charging,
     # 3 discharging, 4 fault, 5 upgrade
@@ -6247,19 +6248,23 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read vpp_offgrid_discharge_soc register 30475: {e}")
 
-        # VPP V2.01 on-grid discharge floor (register 30405). A missed read is reported as
-        # unread, not as the dataclass default: 10 % is a plausible setting to show.
-        if 30405 in holding_map:
-            ongrid_soc_regs = None
+        # VPP V2.01 SOC limits: charge cut-off (30404) and on-grid discharge floor (30405).
+        # A missed read is reported as unread, not as the dataclass default: 100 % and 10 %
+        # are both plausible settings to show.
+        for _soc_addr, _soc_field in ((30404, 'vpp_charge_stop_soc'),
+                                      (30405, 'vpp_ongrid_discharge_soc')):
+            if _soc_addr not in holding_map:
+                continue
+            soc_regs = None
             try:
-                ongrid_soc_regs = self.read_holding_registers(30405, 1)
+                soc_regs = self.read_holding_registers(_soc_addr, 1)
             except Exception as e:
-                logger.debug(f"Could not read vpp_ongrid_discharge_soc register 30405: {e}")
-            if ongrid_soc_regs is not None and len(ongrid_soc_regs) >= 1:
-                data.vpp_ongrid_discharge_soc = int(ongrid_soc_regs[0])
-                logger.debug("[VPP CTRL] vpp_ongrid_discharge_soc=%s%%", data.vpp_ongrid_discharge_soc)
+                logger.debug(f"Could not read {_soc_field} register {_soc_addr}: {e}")
+            if soc_regs is not None and len(soc_regs) >= 1:
+                setattr(data, _soc_field, int(soc_regs[0]))
+                logger.debug("[VPP CTRL] %s=%s%%", _soc_field, soc_regs[0])
             else:
-                data.unread_fields.add('vpp_ongrid_discharge_soc')
+                data.unread_fields.add(_soc_field)
 
         # MOD TL3-XH peak shaving / demand management (3307-3312, #372).
         #

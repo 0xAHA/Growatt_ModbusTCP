@@ -671,21 +671,24 @@ each by a real change, a read-back and the inverter acting on it
 
 | Entity | Type | Register | Options / Range | Description |
 |--------|------|----------|-----------------|--------------|
+| Charge Stop SOC | Number | 30404 | 10–100 % | SOC at which battery charging stops |
 | On-Grid Discharge Stop SOC | Number | 30405 | 10–100 % | SOC at which on-grid battery discharge stops |
 | Remote Power Control Enable | Select | 30407 | Disabled / Enabled | Starts or stops a remote charge/discharge command. Disabled by default |
 | Remote Power Control Charging Time | Number | 30408 | 0–1440 min | Duration of the command. Disabled by default |
 | Remote Charge And Discharge Power | Number | 30409 | -100 to 100 % | Positive charges, negative discharges. Disabled by default |
 | VPP AC Charge Enable | Select | 30410 | Disabled / PV priority / AC priority | Allows charging from the grid. Disabled by default |
 
-With these mapped, the **Set Battery Mode** action is available on the XH2, but it has not
-been run on one yet: the validation above was done with direct register writes. `charge`,
-`discharge` and `release` use those same registers. `hold` also writes the VPP time-of-use
-registers (30411 onward), which have not been tested on this model. See [Actions](actions.md#set-battery-mode-vpp). A remote command also needs
-Control Authority (30100), and should be stopped by hand rather than left to its timer. Run
-`release` afterwards, for the same reason as on MIN TL-XH above.
+With these mapped, the **Set Battery Mode** action works on the XH2. `charge` at 25 % charged
+at about 600 W, a quarter of the 2.5 kW the battery reports as its maximum, and `release`
+returned the inverter to its own mode. `discharge` has not been tried yet, and `hold` writes
+the VPP time-of-use registers (30411 onward), which have not been tested on this model. See
+[Actions](actions.md#set-battery-mode-vpp). Run `release` when you are done, for the same
+reason as on MIN TL-XH above.
 
-**Charge cut-off SOC (30404) is not offered.** A write of 95 held for six minutes and then
-read 100 again, with nothing else writing to it.
+**Sensors the XH2 has no register for are not created.** AC charge energy, the V1.39 fault
+and warning codes, the safety diagnostics, Priority Mode and similar sensors all come from
+ranges the XH2 does not implement. On earlier versions they showed a constant 0; from
+v2.0.5-b17 they are removed.
 
 ---
 

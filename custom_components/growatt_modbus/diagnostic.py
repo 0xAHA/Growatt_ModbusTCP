@@ -657,21 +657,21 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         if not device_entry:
             _LOGGER.error("Device %s not found", device_id)
-            raise ValueError(f"Device {device_id} not found")
+            raise HomeAssistantError(f"Device {device_id} not found")
 
         # Find the config entry for this device
         config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
         if not config_entry_id:
             _LOGGER.error("No config entry found for device %s", device_id)
-            raise ValueError(f"No config entry found for device {device_id}")
+            raise HomeAssistantError(f"No config entry found for device {device_id}")
 
         # Get the coordinator
         coordinator = _coordinator_for_entry(hass, config_entry_id)
 
         if not coordinator:
             _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
-            raise ValueError(f"Coordinator not found for device {device_id}")
+            raise HomeAssistantError(f"Coordinator not found for device {device_id}")
 
         # Write the register using the coordinator's client
         # write_register() raises ModbusWriteError on failure, returns False
@@ -732,21 +732,21 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         if not device_entry:
             _LOGGER.error("Device %s not found", device_id)
-            raise ValueError(f"Device {device_id} not found")
+            raise HomeAssistantError(f"Device {device_id} not found")
 
         # Find the config entry for this device
         config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
         if not config_entry_id:
             _LOGGER.error("No config entry found for device %s", device_id)
-            raise ValueError(f"No config entry found for device {device_id}")
+            raise HomeAssistantError(f"No config entry found for device {device_id}")
 
         # Get the coordinator
         coordinator = _coordinator_for_entry(hass, config_entry_id)
 
         if not coordinator:
             _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
-            raise ValueError(f"Coordinator not found for device {device_id}")
+            raise HomeAssistantError(f"Coordinator not found for device {device_id}")
 
         # Write the registers using the coordinator's client
         # write_registers() always raises ModbusWriteError on failure
@@ -799,21 +799,22 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         device_reg = dr.async_get(hass)
         device_entry = device_reg.async_get(device_id)
         if not device_entry:
-            raise ValueError(f"Device {device_id} not found")
+            raise HomeAssistantError(f"Device {device_id} not found")
 
         config_entry_id = _config_entry_id_for_device(hass, device_entry)
         if not config_entry_id:
-            raise ValueError(f"No config entry found for device {device_id}")
+            raise HomeAssistantError(f"No config entry found for device {device_id}")
 
         coordinator = _coordinator_for_entry(hass, config_entry_id)
         client = coordinator.modbus_client
 
-        # Off-grid clock writes are confirmed working (#443) — this is no longer reachable
-        # under current logic, but is_clock_writable stays the single source of truth in
-        # case a future model genuinely cannot write its clock.
+        # Reached on MIN TL-XH2, whose clock is at VPP 30104-30109 and whose write form is
+        # untested (#461). Raised as HomeAssistantError so the reason reaches the user: a
+        # ValueError crosses HA's service boundary as "Unknown error", which is all one
+        # reporter saw.
         if not client.is_clock_writable:
-            raise ValueError(
-                "Setting the clock is not available on this model. Reading the clock "
+            raise HomeAssistantError(
+                "Setting the clock is not available on this model yet. Reading the clock "
                 "still works - set it from ShinePhone or the front panel instead."
             )
 
@@ -883,19 +884,19 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             device_reg = dr.async_get(hass)
             device_entry = device_reg.async_get(device_id)
             if not device_entry:
-                raise ValueError(f"Device {device_id} not found")
+                raise HomeAssistantError(f"Device {device_id} not found")
 
             config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
             if not config_entry_id:
-                raise ValueError(f"No config entry found for device {device_id}")
+                raise HomeAssistantError(f"No config entry found for device {device_id}")
 
             coordinator = _coordinator_for_entry(hass, config_entry_id)
         else:
             # Use first available coordinator
             coordinator = next((c for _, c in _all_coordinators(hass)), None)
             if not coordinator:
-                raise ValueError("No Growatt Modbus integrations found")
+                raise HomeAssistantError("No Growatt Modbus integrations found")
 
         # Check if inverter is online and producing
         if not coordinator.data:
@@ -1118,21 +1119,21 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         if not device_entry:
             _LOGGER.error("Device %s not found", device_id)
-            raise ValueError(f"Device {device_id} not found")
+            raise HomeAssistantError(f"Device {device_id} not found")
 
         # Find the config entry for this device
         config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
         if not config_entry_id:
             _LOGGER.error("No config entry found for device %s", device_id)
-            raise ValueError(f"No config entry found for device {device_id}")
+            raise HomeAssistantError(f"No config entry found for device {device_id}")
 
         # Get the coordinator
         coordinator = _coordinator_for_entry(hass, config_entry_id)
 
         if not coordinator:
             _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
-            raise ValueError(f"Coordinator not found for device {device_id}")
+            raise HomeAssistantError(f"Coordinator not found for device {device_id}")
 
         # Read the register using the coordinator's client
         read_result = await hass.async_add_executor_job(
@@ -1312,18 +1313,18 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         if not device_entry:
             _LOGGER.error("Device %s not found", device_id)
-            raise ValueError(f"Device {device_id} not found")
+            raise HomeAssistantError(f"Device {device_id} not found")
 
         # Find the config entry for this device
         config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
         if not config_entry_id:
-            raise ValueError(f"No config entry found for device {device_id}")
+            raise HomeAssistantError(f"No config entry found for device {device_id}")
 
         coordinator = _coordinator_for_entry(hass, config_entry_id)
         if not coordinator:
             _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
-            raise ValueError(f"Coordinator not found for device {device_id}")
+            raise HomeAssistantError(f"Coordinator not found for device {device_id}")
 
         client = coordinator._client
 
@@ -1512,18 +1513,18 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         if not device_entry:
             _LOGGER.error("Device %s not found", device_id)
-            raise ValueError(f"Device {device_id} not found")
+            raise HomeAssistantError(f"Device {device_id} not found")
 
         # Find the config entry for this device
         config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
         if not config_entry_id:
-            raise ValueError(f"No config entry found for device {device_id}")
+            raise HomeAssistantError(f"No config entry found for device {device_id}")
 
         coordinator = _coordinator_for_entry(hass, config_entry_id)
         if not coordinator:
             _LOGGER.error("Coordinator not found for config entry %s", config_entry_id)
-            raise ValueError(f"Coordinator not found for device {device_id}")
+            raise HomeAssistantError(f"Coordinator not found for device {device_id}")
 
         client = coordinator._client
 
@@ -1559,7 +1560,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                      device_id, len(periods), default_mode)
 
         if len(periods) > 20:
-            raise ValueError("Maximum 20 TOU periods supported")
+            raise HomeAssistantError("Maximum 20 TOU periods supported")
 
         # Validate periods don't overlap
         sorted_periods = sorted(periods, key=lambda p: p["start"])
@@ -1567,7 +1568,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             current_end = sorted_periods[i]["end"]
             next_start = sorted_periods[i + 1]["start"]
             if current_end >= next_start:
-                raise ValueError(
+                raise HomeAssistantError(
                     f"TOU periods CANNOT overlap! Period {i+1} ends at {current_end} "
                     f"but period {i+2} starts at {next_start}. "
                     f"Use XX:59 end times (e.g., 359 for 05:59) with XX:00 start times."
@@ -1578,16 +1579,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         device_entry = device_reg.async_get(device_id)
 
         if not device_entry:
-            raise ValueError(f"Device {device_id} not found")
+            raise HomeAssistantError(f"Device {device_id} not found")
 
         config_entry_id = _config_entry_id_for_device(hass, device_entry)
 
         if not config_entry_id:
-            raise ValueError(f"No config entry found for device {device_id}")
+            raise HomeAssistantError(f"No config entry found for device {device_id}")
 
         coordinator = _coordinator_for_entry(hass, config_entry_id)
         if not coordinator:
-            raise ValueError(f"Coordinator not found for device {device_id}")
+            raise HomeAssistantError(f"Coordinator not found for device {device_id}")
 
         client = coordinator._client
 

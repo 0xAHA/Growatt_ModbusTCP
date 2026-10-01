@@ -259,8 +259,8 @@ data:
 
 ## Set battery mode (VPP)
 
-WIT and MOD models with VPP support. Also available on MIN TL-XH2, where the registers it
-uses were validated by direct writes but the action itself has not yet been run
+WIT and MOD models with VPP support, and MIN TL-XH2, where `charge` and `release` are
+confirmed and `discharge` and `hold` are not yet tested
 ([#461](https://github.com/0xAHA/Growatt_ModbusTCP/issues/461)). See the
 [WIT Inverter Guide](wit-guide.md).
 

@@ -701,6 +701,8 @@ MIN_TL_XH2_3000_10000_V201 = {
                 'desc': 'Battery current (INT32; positive=charging)'},
         31217: {'name': 'battery_soc', 'scale': 1, 'unit': '%',
                 'desc': 'Battery SOC (verified against app, Issue #361)'},
+        # VPP 31218, UINT8 %. Read 100 on a MIN 3000TL-XH2 with a new APX pack (#461).
+        31218: {'name': 'battery_soh', 'scale': 1, 'unit': '%', 'desc': 'Battery state of health'},
         # Spec puts battery temperature at 31223, not 31222 — 31222 is the low word of the
         # reserved UINT32 at 31221 and reads 0. NOTE: 31223 also reads 0 on the MIN
         # 4200TL-XH2, while 31224 ("reserved for maximum battery temperature") reads 365
@@ -716,10 +718,11 @@ MIN_TL_XH2_3000_10000_V201 = {
         # write nothing during the tests.
         #
         # 30405: 10 -> 20, still 20 twenty minutes later; back to 10, held.
-        #
-        # 30404 (charge cut-off SOC) is deliberately absent. 100 -> 95 held for six minutes
-        # and then read 100 again, with nothing else writing to it. A write that reverts
-        # itself is worse than no control, so it stays out until that is understood.
+        # 30404: 100 -> 95, still 95 more than an hour later. (A first report read as a
+        # revert after six minutes; the reporter had set it back himself.)
+        30404: {'name': 'vpp_charge_stop_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+                'valid_range': (10, 100),
+                'desc': 'Charge cut-off SOC (VPP 30404; validated on MIN TL-XH2, #461)'},
         30405: {'name': 'vpp_ongrid_discharge_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
                 'valid_range': (10, 100),
                 'desc': 'On-grid discharge cut-off SOC (VPP 30405; validated on MIN TL-XH2, #461)'},

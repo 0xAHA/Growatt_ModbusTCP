@@ -325,6 +325,20 @@ MOD_PEAK_SHAVING_SENSORS: Set[str] = {
     "ac_charge_max_power",
 }
 
+# Sensors the shared groups give the MIN TL-XH2 that it has no register for. It answers only
+# the VPP ranges, so every one of these sat at its dataclass default - 0, "Load First",
+# 0.0 kWh - looking like a reading (#461). Removing them from the set is the only filter
+# that works (CLAUDE.md rule 6); __init__.py then clears the registered entities.
+XH2_UNSOURCED_SENSORS: Set[str] = {
+    "ac_charge_energy_today", "ac_charge_energy_total",
+    "battery_voltage_bms", "bms_gauge_fcc", "bms_gauge_rm",
+    "pv3_energy_today", "pv3_energy_total",
+    "priority_mode",
+    "derating_mode", "dry_contact_state", "enable_spec_set", "fast_mppt_enable",
+    "fault_code", "warning_code", "gfci", "dci_r", "pv_iso",
+    "nonstd_vac_enable", "ntognd_detect",
+}
+
 # Battery pack description, VPP input 31225-31228. Validated on MIN TL-XH only (#460); MOD
 # maps the registers too but nobody has read them there, so it does not get the sensors.
 BATTERY_PACK_SENSORS: Set[str] = {
@@ -593,7 +607,7 @@ INVERTER_PROFILES = {
             # it, which is the correct handling of a sensor with no source and the reason
             # this model never showed a phantom 0.0 degC.
             {"inverter_temp"}
-        ),
+        ) - XH2_UNSOURCED_SENSORS,
     },
 
     "min_tl_xh_3000_10000_v201": {

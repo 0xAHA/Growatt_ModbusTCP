@@ -16,10 +16,12 @@ own values, rather than reading the source for the change.
 from __future__ import annotations
 
 import importlib
+from pathlib import Path
 
 _gm = importlib.import_module("growatt_under_test.growatt_modbus")
 _const = importlib.import_module("growatt_under_test.const")
 _profiles = importlib.import_module("growatt_under_test.profiles")
+_dp = importlib.import_module("growatt_under_test.device_profiles")
 
 XH2 = "MIN_TL_XH2_3000_10000_V201"
 MIN_TL_XH = "MIN_TL_XH_3000_10000_V201"
@@ -110,9 +112,45 @@ def test_xh2_maps_the_controls_validated_on_hardware():
         assert _const.WRITABLE_REGISTERS[name]["register"] == address
 
 
-def test_xh2_leaves_out_the_charge_cutoff_that_reverted_itself():
-    """30404: 100 -> 95 held six minutes, then read 100 again with nothing writing it."""
-    assert 30404 not in _profiles.REGISTER_MAPS[XH2]["holding_registers"]
+def test_xh2_maps_the_charge_cutoff_once_it_held():
+    """30404: 100 -> 95, still 95 more than an hour later. The first report's "revert"
+    was the reporter setting it back himself."""
+    holding = _profiles.REGISTER_MAPS[XH2]["holding_registers"]
+    assert holding[30404]["name"] == "vpp_charge_stop_soc"
+    assert _const.WRITABLE_REGISTERS["vpp_charge_stop_soc"]["register"] == 30404
+
+
+def test_charge_stop_soc_is_read_and_a_miss_is_unknown():
+    data = _client(XH2, XH2_INPUT, {**XH2_CLOCK, 30404: 95}).read_all_data()
+    assert data.vpp_charge_stop_soc == 95
+    assert "vpp_charge_stop_soc" not in data.unread_fields
+
+    missed = _client(XH2, XH2_INPUT, {}).read_all_data()
+    assert "vpp_charge_stop_soc" in missed.unread_fields
+
+
+def test_xh2_reads_battery_soh_from_31218():
+    data = _client(XH2, {**XH2_INPUT, 31200: 0, 31218: 100}, {}).read_all_data()
+    assert data.battery_soh == 100
+
+
+def test_xh2_sensor_set_drops_sensors_it_has_no_register_for():
+    """Each of these published its dataclass default on a VPP-only inverter (#461)."""
+    sensors = _dp.INVERTER_PROFILES["min_tl_xh2_3000_10000_v201"]["sensors"]
+    for key in ("ac_charge_energy_today", "ac_charge_energy_total", "priority_mode",
+                "fault_code", "warning_code", "pv3_energy_total"):
+        assert key not in sensors, key
+    # Still offered: these do have a source on the XH2.
+    for key in ("battery_soc", "battery_soh", "inverter_temp", "status"):
+        assert key in sensors, key
+
+
+def test_service_errors_reach_the_user():
+    """A ValueError crosses HA's service boundary as "Unknown error" - all the reporter saw
+    when the clock sync was refused (#461). Only HomeAssistantError carries its message."""
+    source = (Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
+              / "diagnostic.py").read_text(encoding="utf-8")
+    assert "raise ValueError(" not in source
 
 
 def test_set_battery_mode_prerequisites_are_present_on_xh2():
