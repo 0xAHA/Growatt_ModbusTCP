@@ -58,10 +58,13 @@ async def async_setup_entry(
 
     # MOD TL3-XH TOU time pickers (4 start + 4 end = 8 entities)
     if 3038 in holding_registers:
+        tou_off = REGISTER_MAPS.get(register_map_name, {}).get('tou_disabled_by_default', False)
         for period_def in MOD_TOU_PERIODS:
-            p = period_def["period"]
-            entities.append(GrowattModTouTime(coordinator, config_entry, period_def, is_start=True))
-            entities.append(GrowattModTouTime(coordinator, config_entry, period_def, is_start=False))
+            for is_start in (True, False):
+                entity = GrowattModTouTime(coordinator, config_entry, period_def, is_start=is_start)
+                if tou_off:
+                    entity._attr_entity_registry_enabled_default = False
+                entities.append(entity)
         _LOGGER.info("MOD TOU time controls enabled (%d time entities for %d periods)",
                      len(MOD_TOU_PERIODS) * 2, len(MOD_TOU_PERIODS))
 

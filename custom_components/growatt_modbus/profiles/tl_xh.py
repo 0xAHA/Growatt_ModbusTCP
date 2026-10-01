@@ -257,6 +257,8 @@ MIN_TL_XH_3000_10000_V201 = {
     'name': 'MIN TL-XH 3000-10000 (V2.01)',
     'description': 'MIN series TL-XH hybrid with battery (3-10kW) using 3000+ and 31000+ ranges',
     'notes': 'Uses MIN 3000+ range for base sensors and VPP 31200+ range for battery. 3-6kW models have 2 PV strings, 7-10kW models have 3 PV strings. Found in MIN 6000/10000 TL-XH models with DTC 5100.',
+    # TOU entities exist but start disabled until a Modbus write is confirmed (#400).
+    'tou_disabled_by_default': True,
     'input_registers': {
         # === MIN SERIES BASE RANGE (3000+) ===
         # System Status
@@ -505,6 +507,34 @@ MIN_TL_XH_3000_10000_V201 = {
         3018: {'name': 'tl_xh_priority_mode', 'maps_to': 'priority_mode',
                'scale': 1, 'unit': '', 'access': 'RW',
                'desc': 'Priority mode (0=Load First, 2=Battery First, 3=Grid First — hardware confirmed MIN TL-XH)'},
+        # TOU periods 1-9 - V1.39 "Time 1-9 (xh)", 3038-3045 and 3050-3059. Same packing as
+        # MOD TL3-XH: start = bit15 enable, bits13-14 priority (0 Load, 1 Battery, 2 Grid),
+        # bits8-12 hour, bits0-7 minute; end = hour << 8 | minute.
+        #
+        # Decoding confirmed on a MIN 4200TL-XH (#400): period 1 set in ShinePhone as Battery
+        # First 00:00-07:00 read 3038 = 40960 (0xA000) and 3039 = 1792 (0x0700), and moving
+        # the end to 07:01 and 07:02 read back 1793 and 1794. Writes over Modbus have not
+        # been tested yet, so the entities are created disabled (tou_disabled_by_default).
+        # 3049 is not mapped: on MOD it gates TOU persistence, here it is unconfirmed.
+        3038: {'name': 'mod_tou_1_start', 'scale': 1, 'unit': '', 'access': 'RW'},
+        3039: {'name': 'mod_tou_1_end',   'scale': 1, 'unit': '', 'access': 'RW'},
+        3040: {'name': 'mod_tou_2_start', 'scale': 1, 'unit': '', 'access': 'RW'},
+        3041: {'name': 'mod_tou_2_end',   'scale': 1, 'unit': '', 'access': 'RW'},
+        3042: {'name': 'mod_tou_3_start', 'scale': 1, 'unit': '', 'access': 'RW'},
+        3043: {'name': 'mod_tou_3_end',   'scale': 1, 'unit': '', 'access': 'RW'},
+        3044: {'name': 'mod_tou_4_start', 'scale': 1, 'unit': '', 'access': 'RW'},
+        3045: {'name': 'mod_tou_4_end',   'scale': 1, 'unit': '', 'access': 'RW'},
+        3050: {'name': 'mod_tou_5_start', 'scale': 1, 'unit': '', 'access': 'RW'},
+        3051: {'name': 'mod_tou_5_end',   'scale': 1, 'unit': '', 'access': 'RW'},
+        3052: {'name': 'mod_tou_6_start', 'scale': 1, 'unit': '', 'access': 'RW'},
+        3053: {'name': 'mod_tou_6_end',   'scale': 1, 'unit': '', 'access': 'RW'},
+        3054: {'name': 'mod_tou_7_start', 'scale': 1, 'unit': '', 'access': 'RW'},
+        3055: {'name': 'mod_tou_7_end',   'scale': 1, 'unit': '', 'access': 'RW'},
+        3056: {'name': 'mod_tou_8_start', 'scale': 1, 'unit': '', 'access': 'RW'},
+        3057: {'name': 'mod_tou_8_end',   'scale': 1, 'unit': '', 'access': 'RW'},
+        3058: {'name': 'mod_tou_9_start', 'scale': 1, 'unit': '', 'access': 'RW'},
+        3059: {'name': 'mod_tou_9_end',   'scale': 1, 'unit': '', 'access': 'RW'},
+
         3047: {'name': 'batt_first_charge_power_rate',    'scale': 1, 'unit': '%', 'access': 'RW',
                'valid_range': (1, 100), 'desc': 'Charge power rate when Battery First mode (1-100%)'},
         3048: {'name': 'batt_first_charge_stopped_soc',   'scale': 1, 'unit': '%', 'access': 'RW',

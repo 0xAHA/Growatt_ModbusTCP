@@ -466,7 +466,7 @@ MOD_6000_15000TL3_XH = {
 
         # Status
         31000: {'name': 'equipment_status', 'scale': 1, 'unit': '', 'desc': 'Equipment running status'},
-        31001: {'name': 'battery_working_status', 'scale': 1, 'unit': '', 'desc': '0=Idle, 1=Charge, 2=Discharge, 3=Fault, 4=Standby, 5=Shutdown'},
+        31001: {'name': 'battery_working_status', 'scale': 1, 'unit': '', 'desc': '0=Standby, 1=Disconnected, 2=Charging, 3=Discharging, 4=Fault, 5=Upgrade (VPP V2.01)'},
     },
     'holding_registers': {
         # Basic control

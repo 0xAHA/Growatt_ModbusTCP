@@ -630,6 +630,25 @@ If your inverter uses VPP 2.03 rather than 2.01, this button does not appear —
 (2.03's wake value) is silently normalised back to `1` on 2.01 firmware, so the two are not
 interchangeable, and only the 2.01 behaviour has been confirmed on hardware so far.
 
+### Time-of-use periods (MIN TL-XH)
+
+Nine TOU periods, each with **Start**, **End**, **Priority** (Load / Battery / Grid) and
+**Enable** entities: registers 3038-3045 and 3050-3059, the "Time 1-9 (xh)" block of
+Protocol V1.39, packed the same way as on MOD TL3-XH. A MIN 4200TL-XH read period 1 exactly
+as ShinePhone had set it, including end-time changes of one minute
+([#400](https://github.com/0xAHA/Growatt_ModbusTCP/issues/400)).
+
+**Disabled by default.** Reading is confirmed; writing from Home Assistant has not been
+tested on this model yet. Enable the entities you need on the device page. If a change
+doesn't stick, report it on #400.
+
+### Battery Working Status (MIN TL-XH)
+
+VPP input register 31001: *Standby*, *Disconnected*, *Charging*, *Discharging*, *Fault* or
+*Upgrade*. An APX battery that has gone to sleep shows **Disconnected**, which makes this
+the sensor to watch for the sleep described above
+([#460](https://github.com/0xAHA/Growatt_ModbusTCP/pull/460)).
+
 ### Battery pack sensors (MIN TL-XH)
 
 Four diagnostic sensors describe the pack from VPP input registers 31225-31228: **Battery
@@ -687,7 +706,7 @@ read 100 again, with nothing else writing to it.
 | **WIT** (4–15kW) | Yes (timed) | VPP overrides | Work Mode, Control Authority, VPP Export Limit Enable, Remote Power Control | Active Power Rate, Export Limit, VPP Export Rate, Remote Duration, Remote Power |
 | **MOD / MID** TL3-XH | Yes | Persistent writes | Allow Grid Charge, Time Period Priority/Enable (×9) | Charge Rate, Charge Stop SOC, Grid Charge Stop SOC, Discharge Rate, Discharge Stop SOC, Time Period Start/End (×9) |
 | **MIN** (no battery) | No | — | — | — |
-| **MIN TL-XH** (with battery) | Yes | Persistent writes | Priority Mode | Charge Rate, Charge Stop SOC, Discharge Stop SOC |
+| **MIN TL-XH** (with battery) | Yes | Persistent writes | Priority Mode, TOU Priority/Enable (×9, disabled by default) | Charge Rate, Charge Stop SOC, Discharge Stop SOC (plus TOU Start/End times ×9) |
 | **MIN TL-XH2** | Yes (timed) | VPP overrides | Remote Power Control Enable, VPP AC Charge Enable | On-Grid Discharge Stop SOC, Remote Power Control Charging Time, Remote Charge And Discharge Power |
 | **MIC** | No | — | — | — |
 

@@ -933,6 +933,16 @@ SENSOR_DEFINITIONS = {
         "condition": lambda data: hasattr(data, 'battery_soh'),
         "description": "Battery state of health as reported by the inverter's own register (not the BMS). 100% = new battery, lower values indicate capacity degradation. May differ from BMS State of Health if both are present.",
     },
+    # VPP 31001 (#460). Values from the protocol's own table; 1-3 seen on a MIN 4200TL-XH.
+    "battery_working_status": {
+        "name": "Battery Working Status",
+        "icon": "mdi:battery-sync",
+        "attr": "battery_working_status",
+        "value_map": {0: "Standby", 1: "Disconnected", 2: "Charging", 3: "Discharging",
+                      4: "Fault", 5: "Upgrade"},
+        "description": "What the inverter reports the battery is doing. Disconnected is also "
+                       "what an APX battery reports while asleep.",
+    },
     # Battery pack description, VPP 31225-31228 (#460). Static ratings, so no state_class:
     # they are not measurements to keep statistics for.
     "battery_cluster_sum": {

@@ -1160,7 +1160,8 @@ SENSOR_DEVICE_MAP = {
         'peak_shaving_reserve_soc', 'ac_charge_max_power',
         # WIT: Battery SOH and BMS voltage
         'battery_soh', 'battery_voltage_bms',
-        # Battery pack description (VPP 31225-31228, #460)
+        # Battery working status (VPP 31001) and pack description (31225-31228), #460
+        'battery_working_status',
         'battery_cluster_sum', 'battery_module_number',
         'battery_module_rated_voltage', 'battery_module_rated_capacity',
         # SPF Off-Grid AC charge/discharge energy

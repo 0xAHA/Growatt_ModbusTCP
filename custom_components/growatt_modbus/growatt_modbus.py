@@ -593,6 +593,10 @@ class GrowattData:
     vpp_offgrid_discharge_soc: int = 10        # SOC % to stop discharging off-grid (register 30475)
     vpp_ongrid_discharge_soc: int = 10         # SOC % to stop discharging on-grid (register 30405)
 
+    # Battery working status (VPP input 31001, #460): 0 standby, 1 disconnected, 2 charging,
+    # 3 discharging, 4 fault, 5 upgrade
+    battery_working_status: int = 0
+
     # Battery pack description (VPP input 31225-31228, #460)
     battery_cluster_sum: float = 0.0            # Number of battery clusters
     battery_module_number: float = 0.0          # Modules per cluster
@@ -3844,8 +3848,9 @@ class GrowattModbus:
             # Backup Box Data (Growatt SYN backup box, regs 3281-3342)
             self._read_backup_box_data(data)
 
-            # Battery pack description (VPP 31225-31228, #460)
-            for _pack_field in ('battery_cluster_sum', 'battery_module_number',
+            # Battery working status (VPP 31001) and pack description (31225-31228), #460
+            for _pack_field in ('battery_working_status',
+                                'battery_cluster_sum', 'battery_module_number',
                                 'battery_module_rated_voltage', 'battery_module_rated_capacity'):
                 _pack_addr = self._find_register_by_name(_pack_field)
                 if _pack_addr:

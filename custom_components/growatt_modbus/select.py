@@ -135,9 +135,14 @@ async def async_setup_entry(
 
     # MOD TL3-XH TOU priority and enable selects (9 periods × 2 = 18 entities)
     if 3038 in holding_registers:
+        # A profile whose TOU writes are unconfirmed creates these disabled (#400).
+        tou_off = REGISTER_MAPS.get(register_map_name, {}).get('tou_disabled_by_default', False)
         for period_def in MOD_TOU_PERIODS:
-            entities.append(GrowattModTouPriority(coordinator, config_entry, period_def))
-            entities.append(GrowattModTouEnable(coordinator, config_entry, period_def))
+            for cls in (GrowattModTouPriority, GrowattModTouEnable):
+                entity = cls(coordinator, config_entry, period_def)
+                if tou_off:
+                    entity._attr_entity_registry_enabled_default = False
+                entities.append(entity)
         _LOGGER.info("MOD TOU priority/enable controls enabled (%d select entities for %d periods)",
                      len(MOD_TOU_PERIODS) * 2, len(MOD_TOU_PERIODS))
 

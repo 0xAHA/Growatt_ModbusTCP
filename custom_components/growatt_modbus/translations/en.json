@@ -342,6 +342,9 @@
       "battery_cluster_sum": {
         "name": "Battery Clusters"
       },
+      "battery_working_status": {
+        "name": "Battery Working Status"
+      },
       "battery_module_number": {
         "name": "Battery Modules per Cluster"
       },

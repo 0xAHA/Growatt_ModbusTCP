@@ -44,7 +44,10 @@ Battery cluster 1 (31200–31222): SPH and TL-XH interpret registers 31202–312
 
 VPP_V201_STATUS = {
     31000: {'name': 'equipment_status',   'scale': 1, 'unit': '', 'desc': 'Equipment running status'},
-    31001: {'name': 'system_fault_word0', 'scale': 1, 'unit': '', 'desc': 'System fault word 0'},
+    # VPP V2.01 row 31001 is the battery working status, not a fault word. A MIN 4200TL-XH
+    # read 3 discharging, 2 charging and 1 with the battery asleep (#460).
+    31001: {'name': 'battery_working_status', 'scale': 1, 'unit': '',
+            'desc': '0=Standby, 1=Disconnected, 2=Charging, 3=Discharging, 4=Fault, 5=Upgrade'},
     31002: {'name': 'system_fault_word1', 'scale': 1, 'unit': '', 'desc': 'System fault word 1'},
     31003: {'name': 'system_fault_word2', 'scale': 1, 'unit': '', 'desc': 'System fault word 2'},
     31004: {'name': 'grid_first_connected', 'scale': 1, 'unit': '', 'desc': 'Grid first connected status'},
