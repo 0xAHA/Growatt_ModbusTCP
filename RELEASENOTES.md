@@ -4,6 +4,21 @@
 
 ---
 
+## v2.0.5-b16
+
+Issues: #400, #460
+
+- **MIN TL-XH: time-of-use periods 1-9** (Start, End, Priority and Enable for each),
+  registers 3038-3045 and 3050-3059. Reading is confirmed against ShinePhone on a MIN
+  4200TL-XH; writing from Home Assistant isn't yet, so the entities are **disabled by
+  default**. Enable the ones you need on the device page. Decoded by @GoncaloRibeiro11.
+
+- **MIN TL-XH: new Battery Working Status sensor** (register 31001): Standby, Disconnected,
+  Charging, Discharging, Fault or Upgrade. A sleeping APX battery shows *Disconnected*.
+  Confirmed by @GoncaloRibeiro11.
+
+---
+
 ## v2.0.5-b15
 
 Issues: #460, #461
