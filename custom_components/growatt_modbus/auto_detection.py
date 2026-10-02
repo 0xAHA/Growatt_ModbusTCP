@@ -504,6 +504,14 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
         'SPH/SPM 8000-10000TL-HU', 'sph_8000_10000_hu',
         CONFIRMED, 'register scan #303, firmware UL2.21',
     ),
+    # Not in any protocol table. Neighbour of 21100/21303, same UL firmware line, and the
+    # profile's PV, grid, battery and SOC readings matched ShinePhone within a few percent
+    # on the reporter's unit. Before this it was "unknown" and range detection fell
+    # through to MIN TL-XH.
+    21304: DtcEntry(
+        'SPM 6000TL-HU', 'sph_8000_10000_hu',
+        CONFIRMED, 'SPM 6000TL-HU, firmware UL2.61, compared against ShinePhone, issue #463',
+    ),
 
     # -- SPA series — AC-coupled storage, NO solar DC inputs --
     #

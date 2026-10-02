@@ -134,6 +134,7 @@ These statuses live in `DTC_REGISTRY` in `auto_detection.py`, which is the singl
 | 3735 | SPA 3000TL BL-UP | sph_3000_6000_v201 | ⚠️ Unconfirmed — SPH profile on SPA hardware |
 | 21100 | SPH/SPM 8000-10000TL-HU (US) | sph_8000_10000_hu | ✅ Confirmed (SPH-10000-US UL2.21, PR #418) |
 | 21303 | SPH/SPM 8000-10000TL-HU | sph_8000_10000_hu | ✅ Confirmed (scan #303) |
+| 21304 | SPM 6000TL-HU | sph_8000_10000_hu | ✅ Confirmed (SPM 6000TL-HU UL2.61, #463) |
 
 ### SPE Series — Single-Phase Hybrid (SPF protocol, 8-12 kW)
 

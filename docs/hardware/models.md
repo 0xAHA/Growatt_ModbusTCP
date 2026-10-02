@@ -37,7 +37,7 @@ When you add the integration, it attempts to identify your inverter automaticall
 | **SPE 8000-12000 ES** | 8–12 kW | 2 | VPP-like | Model name | ✅ | Peak shaving, parallel operation |
 | **SPH 3000-6000** | 3–6 kW | 2 | VPP + Legacy | Model name | ✅ | |
 | **SPH 7000-10000** | 7–10 kW | 2 | VPP + Legacy | Model name | ✅ | |
-| **SPH/SPM 8000-10000 HU** | 8–10 kW | 3 | VPP + Legacy | DTC | ⚠️ | BMS monitoring (SOH, cell voltages) |
+| **SPH/SPM 8000-10000 HU** | 8–10 kW | 3 | VPP + Legacy | DTC | ⚠️ | BMS monitoring (SOH, cell voltages). Also used for the SPM 6000TL-HU (DTC 21304) |
 
 ### Single-Phase Off-Grid
 
