@@ -687,7 +687,8 @@ reason as on MIN TL-XH above.
 
 **Sensors the XH2 has no register for are not created.** AC charge energy, the V1.39 fault
 and warning codes, the safety diagnostics, Priority Mode and similar sensors all come from
-ranges the XH2 does not implement. On earlier versions they showed a constant 0; from
+ranges the XH2 does not implement. Battery Temperature is also left out: its documented
+register (31223) reads 0 on every XH2 seen so far. On earlier versions they showed a constant 0; from
 v2.0.5-b17 they are removed.
 
 ---
@@ -817,10 +818,12 @@ four-digit year is accepted and held. The button and the action already write wh
 form your profile needs; there is nothing to choose
 ([#443](https://github.com/0xAHA/Growatt_ModbusTCP/issues/443)).
 
-**MIN TL-XH2** gets the sensor but not the button. It has no registers 45-50, so its clock
-is read from VPP holding 30104-30109, which a MIN 3000TL-XH2 showed matching its own time
-([#461](https://github.com/0xAHA/Growatt_ModbusTCP/issues/461)). There the year reads back
-as `26`, and the form a write needs has not been tested, so set the clock from ShinePhone.
+**MIN TL-XH2** has no registers 45-50, so its clock is read from VPP holding 30104-30109,
+and the sync writes all six of those in one transaction, with the year as two digits. On a
+MIN 3000TL-XH2, writes to a single clock register there were acknowledged and then ignored,
+while one six-register write set the clock
+([#461](https://github.com/0xAHA/Growatt_ModbusTCP/issues/461)). If you write those registers
+yourself, use `write_registers` with all six values, not `write_register`.
 
 The state is formatted wall-clock text rather than a Home Assistant timestamp, because a
 timestamp sensor renders as relative time ("12 seconds ago", ticking) and is unreadable as

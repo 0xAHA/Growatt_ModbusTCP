@@ -4521,11 +4521,10 @@ class GrowattModbus:
         the opposite form from V1.39: the full year, not an offset. See the note above
         CLOCK_REGISTER_START, and write_inverter_time() for where the two forms diverge.
 
-        Not on a profile that reads its clock from the VPP block. The year form 30104
-        accepts on a write has not been tested - it reads back as 26, not 2026 (#461) -
-        and a guessed year is how a MIN TL-X once landed in 2000.
+        The VPP clock block (MIN TL-XH2) is writable too, in a different way: see
+        write_inverter_time() for the single FC16 transaction it needs (#461).
         """
-        return self.clock_register_start == self.CLOCK_REGISTER_START
+        return True
 
     def read_inverter_time(self) -> Optional[datetime]:
         """Read the inverter's real-time clock, or None if it cannot be decoded."""
@@ -4628,6 +4627,23 @@ class GrowattModbus:
             when.strftime("%Y-%m-%d %H:%M:%S"), year_value,
             "off-grid" if is_offgrid else "offset",
         )
+
+        # The VPP clock block (30104-30109, MIN TL-XH2) takes all six fields as ONE FC16
+        # write. Measured on a MIN 3000TL-XH2 (#461): single-register writes into the block
+        # were acknowledged and silently discarded, while one six-register write with the
+        # year as 27 set the clock and read back 27/10/2/15/34/22. A single transaction also
+        # needs no seconds compensation and cannot leave the clock part-written.
+        start = self.clock_register_start
+        if start != self.CLOCK_REGISTER_START:
+            values = [year_value, when.month, when.day, when.hour, when.minute, when.second]
+            if not self.write_registers(start, values):
+                raise ModbusWriteError(
+                    start, values,
+                    f"the inverter refused the clock write to registers {start}-{start + 5}. "
+                    f"Nothing was written, so the clock is exactly as it was.",
+                )
+            self._verify_clock_write(when)
+            return True
 
         started = time.monotonic()
 

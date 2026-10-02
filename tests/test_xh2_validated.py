@@ -66,9 +66,44 @@ def test_xh2_reads_its_clock_from_the_vpp_block():
     )
 
 
-def test_xh2_does_not_offer_a_clock_write_it_has_never_tested():
-    """30104 reads back 26, not 2026, so the year form for a write is unknown."""
-    assert _client(XH2, XH2_INPUT, XH2_CLOCK).is_clock_writable is False
+def test_xh2_sets_its_clock_with_one_six_register_write():
+    """Single writes into 30104-30109 were acknowledged and discarded; one FC16 write of
+    all six, year as two digits, set the clock (#461)."""
+    from datetime import datetime
+
+    client = _client(XH2, XH2_INPUT, XH2_CLOCK)
+    multi, single = [], []
+    client.write_registers = lambda reg, values: multi.append((reg, list(values))) or True
+    client.write_single_register_any_fc = lambda reg, value: single.append((reg, value)) or True
+    client._verify_clock_write = lambda when: None
+
+    assert client.is_clock_writable is True
+    assert client.write_inverter_time(datetime(2026, 10, 2, 15, 34, 22)) is True
+    assert multi == [(30104, [26, 10, 2, 15, 34, 22])]
+    assert single == [], "single-register writes are ignored by the XH2"
+
+
+def test_v139_profiles_still_write_the_clock_field_by_field():
+    from datetime import datetime
+
+    client = _client("MIN_3000_6000TL_X", {}, {})
+    multi, single = [], []
+    client.write_registers = lambda reg, values: multi.append(reg) or True
+    client.write_single_register_any_fc = lambda reg, value: single.append(reg) or True
+    client._verify_clock_write = lambda when: None
+    import growatt_under_test.growatt_modbus as gm
+    gm.time.sleep, _sleep = (lambda s: None), gm.time.sleep
+    try:
+        client.write_inverter_time(datetime(2026, 10, 2, 15, 34, 22))
+    finally:
+        gm.time.sleep = _sleep
+    assert multi == []
+    assert single == [45, 46, 47, 48, 49, 50]
+
+
+def test_xh2_has_no_battery_temperature_sensor():
+    """31223 reads 0 on both XH2 units seen; 31224 matched nothing in ShinePhone."""
+    assert "battery_temp" not in _dp.INVERTER_PROFILES["min_tl_xh2_3000_10000_v201"]["sensors"]
 
 
 def test_legacy_profiles_keep_the_v139_clock():

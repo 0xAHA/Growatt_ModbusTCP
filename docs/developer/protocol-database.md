@@ -58,3 +58,16 @@ which registers your inverter actually responds to. This is the quickest way to
 verify protocol support and collect data for a new model.
 
 See [Diagnostic Actions](../troubleshooting/diagnostic-service.md) for usage instructions.
+
+---
+
+## Firmware builds
+
+The build string on the inverter's device page (e.g. `AL1.0 (ALBA18010122)`, from V1.39
+holding registers 82-87) names more than one firmware. A MIN TL-XH update package holds two
+images for two processors: **ALBA** for the power-control processor and **ZABA** for the
+communication processor, flashed in that order. That is why ShinePhone shows those updates as
+two stages. @l4m4re's
+[firmware analysis](https://github.com/l4m4re/growatt-inverter-info/blob/main/docs/GROWATT_FIRMWARE_ACQUISITION_AND_ANALYSIS.md)
+has the details. It is background only: this integration does not use anything from the
+firmware, and none of it is a reason to flash an inverter.

@@ -337,6 +337,9 @@ XH2_UNSOURCED_SENSORS: Set[str] = {
     "derating_mode", "dry_contact_state", "enable_spec_set", "fast_mppt_enable",
     "fault_code", "warning_code", "gfci", "dci_r", "pv_iso",
     "nonstd_vac_enable", "ntognd_detect",
+    # 31223, the documented battery environment temperature, reads 0 on both XH2 units
+    # seen, and 31224 matched none of the temperatures ShinePhone shows (#461).
+    "battery_temp",
 }
 
 # Battery pack description, VPP input 31225-31228. Validated on MIN TL-XH only (#460); MOD
