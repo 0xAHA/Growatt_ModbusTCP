@@ -4,6 +4,22 @@
 
 ---
 
+## v2.0.5-b18
+
+Issues: #461, #463
+
+- **MIN TL-XH2: the Inverter Clock Sync button and `sync_inverter_time` action now work.**
+  The XH2 only accepts its clock as one write of all six fields; single-register writes are
+  acknowledged and ignored. Tested by @GersomSoldaat.
+
+- **MIN TL-XH2: Battery Temperature is removed.** Its documented register reads 0 on every
+  XH2 seen so far, so it only ever showed 0 °C.
+
+- **SPM 6000TL-HU (DTC 21304) is now detected** and set up with the SPH/SPM HU profile,
+  instead of MIN TL-XH. Reported by @guhdias.
+
+---
+
 ## v2.0.5-b17
 
 Issues: #461
