@@ -79,9 +79,16 @@ TL3_S_3000_15000 = {
         53: {'name': 'energy_today_low', 'scale': 0.1, 'unit': 'kWh', 'desc': 'AC energy today (standalone 16-bit)'},
         55: {'name': 'energy_total_low', 'scale': 0.1, 'unit': 'kWh', 'desc': 'AC energy total (standalone 16-bit)'},
 
-        # Diagnostics
-        105: {'name': 'fault_code', 'scale': 1, 'unit': ''},
-        112: {'name': 'warning_code', 'scale': 1, 'unit': ''},
+        # Diagnostics - V3.14 input 40 "Fault code" and 64 "WarningCode".
+        #
+        # These were 105 and 112, which in V3.14 sit inside the grid fault history (90-114,
+        # five records of code / year|month / day|hour / min|sec / value). A TL3-S showed
+        # "Fault Code 30" and "Warning Code 1042" permanently (#432): 105 is record 4's code
+        # (30 = "AC V Outrange", value 2530 = 253.0 V) and 112 is record 5's day|hour
+        # (0x0412 = day 4, 18:00), from 2022. Three scans read 40 = 0 and 64 = 0.
+        40: {'name': 'fault_code', 'scale': 1, 'unit': '',
+             'desc': 'Inverter fault code (V3.14 table &*1; 30 = AC V Outrange)'},
+        64: {'name': 'warning_code', 'scale': 1, 'unit': '', 'desc': 'Warning code (V3.14)'},
     },
     'holding_registers': {
         # Legacy protocol V3.14: two settings in one register. 0x0101 (257) is the documented
