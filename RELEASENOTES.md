@@ -4,6 +4,23 @@
 
 ---
 
+## v2.0.5-b19
+
+Issues: #432, #446
+
+- **TL3-S: Fault Code and Warning Code now show the inverter's live codes.** They were
+  reading entries from its stored grid-fault history, which is why they stayed at 30 and
+  1042. Expect both to read 0 unless the inverter reports a fault. Reported by @JHPHendriks.
+
+- **Inverter Power switch: shows on while the inverter reports Normal**, on grid-tied models
+  where the switch can't read its state back (TL3-S, for example). It no longer starts blank
+  after a restart while the inverter is running. Suggested by @JHPHendriks.
+
+- **The firmware build now also shows when one of its six registers is empty**, as on an
+  SPH-TL3 that shows `YA1.0 (YBAA030308)`. Found by @acsel91.
+
+---
+
 ## v2.0.5-b18
 
 Issues: #461, #463
