@@ -230,3 +230,45 @@ def test_both_switch_names_exist_in_both_string_files():
         switches = json.loads((COMPONENT / rel).read_text(encoding="utf-8"))["entity"]["switch"]
         assert switches["inverter_power"]["name"] == "Inverter Power", rel
         assert switches["ac_output"]["name"] == "AC Output", rel
+
+
+# ---------------------------------------------------------------------------
+# Status shows a non-readback switch as on (#432)
+# ---------------------------------------------------------------------------
+
+def _tl3s_control():
+    control = pc.resolve_power_control(REGISTER_MAPS["TL3_S_3000_15000"])
+    assert control is not None and not control.readback
+    return control
+
+
+def test_a_grid_tied_inverter_reporting_normal_is_shown_on():
+    """TL3-S: Normal while running, Waiting when switched off - the switch was blank
+    after every restart because it only knew the last command (@JHPHendriks)."""
+    assert pc.running_from_status(_tl3s_control(), "grid_tied", True, 1) is True
+
+
+@pytest.mark.parametrize("status", [0, 3, None])
+def test_waiting_or_fault_proves_nothing(status):
+    """Waiting is also what a TL3-S reads at night, switched on."""
+    assert pc.running_from_status(_tl3s_control(), "grid_tied", True, status) is False
+
+
+def test_an_offline_inverter_proves_nothing():
+    assert pc.running_from_status(_tl3s_control(), "grid_tied", False, 1) is False
+
+
+@pytest.mark.parametrize("family", ["hybrid", "spf"])
+def test_other_status_tables_do_not_read_1_as_normal(family):
+    """1 is Self-Test on the hybrid table and No Use on the off-grid one."""
+    assert pc.running_from_status(_tl3s_control(), family, True, 1) is False
+
+
+def test_the_off_grid_ac_output_switch_is_never_inferred():
+    control = pc.PowerControl(register=0, encoding=pc.ENCODING_OFFGRID_OUTPUT)
+    assert pc.running_from_status(control, "grid_tied", True, 1) is False
+
+
+def test_the_switch_consults_the_status_rule():
+    source = (COMPONENT / "switch.py").read_text(encoding="utf-8")
+    assert "running_from_status(" in source

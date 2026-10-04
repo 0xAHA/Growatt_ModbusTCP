@@ -13,13 +13,14 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DEVICE_TYPE_INVERTER
+from .const import DEVICE_TYPE_INVERTER, PROFILE_STATUS_MAP
 from .entity import GrowattEntity
 from .power_control import (
     PowerControl,
     PowerControlError,
     decode,
     resolve_power_control,
+    running_from_status,
     set_power,
 )
 
@@ -84,6 +85,15 @@ class GrowattPowerSwitch(GrowattEntity, SwitchEntity):
     def is_on(self) -> bool | None:
         if self._control.readback:
             return decode(self._control, self.coordinator.onoff_raw)
+        client = self.coordinator.modbus_client
+        data = self.coordinator.data
+        if running_from_status(
+            self._control,
+            PROFILE_STATUS_MAP.get(getattr(client, "register_map_name", "") or "", "grid_tied"),
+            bool(self.coordinator.last_update_success and self.coordinator.is_online),
+            getattr(data, "status", None) if data is not None else None,
+        ):
+            return True
         return self._attr_is_on
 
     async def async_turn_on(self, **kwargs) -> None:

@@ -733,8 +733,12 @@ on, so a change made from ShinePhone or the front panel shows here too.
 
 **Everywhere else it shows the last command sent**, not a reading, and offers both actions
 rather than a toggle. Growatt documents the register as write-only on most families, so a
-read is only trusted once a real unit has been seen to read back both states. It starts as
-unknown after every restart until you use it.
+read is only trusted once a real unit has been seen to read back both states.
+
+On grid-tied models it also shows **on** whenever the inverter reports **Normal**, since a
+running inverter must be switched on. It cannot infer *off* the same way: *Waiting* is what
+an inverter reports both when switched off and at night. Otherwise it starts as unknown after
+a restart until you use it.
 
 Each protocol family encodes on/off differently, and the integration picks the right one
 from your profile:
@@ -749,9 +753,11 @@ from your profile:
 On the two read-first families, if the register cannot be read nothing is written; guessing
 the other byte is the mistake the read exists to avoid.
 
-!!! warning "Confirmed on hardware for MIN TL-X only"
-    The encodings above come from Growatt's protocol documents. So far only a MIN TL-X has
-    been switched off and back on through this switch, reading `0` and `1` as expected. On
+!!! warning "Confirmed on hardware for MIN TL-X and TL3-S only"
+    The encodings above come from Growatt's protocol documents. So far a MIN TL-X has been
+    switched off and back on through this switch, reading `0` and `1` as expected, and a
+    TL3-S went to *Waiting* when switched off and ran its start-up sequence when switched
+    back on. On
     MIN TL-XH2 in particular, other VPP controls are known to need control authority (30100)
     before they act; the switch does not grant it, so 30101 may be ignored there. If you test
     another model, please report what register 0 (or 30101) reads while off and while on

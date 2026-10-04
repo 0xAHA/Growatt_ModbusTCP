@@ -22,9 +22,16 @@ def test_l4m4res_captured_words_decode_to_the_portal_version():
     assert decode(words) == "ALBA18010122"
 
 
+def test_an_absent_trailing_component_is_dropped_not_fatal():
+    """87 is the M3 build; an SPH-TL3 with none reads 0 there (#446, @acsel91)."""
+    assert decode([22850, 16705, 12339, 12339, 12344, 0]) == "YBAA030308"
+
+
 @pytest.mark.parametrize("words", [
     [100, 0, 0, 0, 0, 0],                               # TL3-S: settings, not a string
-    [0x414C, 0x4241, 0x3138, 0x3031, 0x3031, 0x0000],   # trailing NULs: a fragment
+    [0x414C, 0x4241, 0, 0, 0, 0],                       # model letters only, no build
+    [0x414C, 0x0000, 0x3138, 0x3031, 0x3031, 0x3232],   # NUL mid-string: a fragment
+    [0x414C, 0x4241, 0x3100, 0x3031, 0x3031, 0x3232],   # half-empty register
     [0x414C, 0x4241, 0x3138],                           # short read
     None,                                               # no answer
 ])

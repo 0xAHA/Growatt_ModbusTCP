@@ -1804,13 +1804,24 @@ def combine_registers(high: int, low: int) -> int:
 def decode_firmware_build(registers) -> str | None:
     """V1.39 holding 82-87, "FW Build No.", as the string the Growatt portal shows.
 
-    None unless all twelve bytes are printable ASCII: on other protocol families those
-    addresses hold settings (a TL3-S reads 100, 0, 0, 0, 0, 0 there), and a partial decode
-    would present a meaningless fragment as a version.
+    Each register is one component: 82/83 the model letters, then the DSP1, DSP2/M0,
+    CPLD/AFCI and M3 builds. A unit without one of the trailing processors reports 0 for
+    it - an SPH-TL3 reads 87 = 0 and its other five spell YBAA030308 (#446) - so trailing
+    all-zero registers are dropped rather than failing the whole decode.
+
+    Otherwise None unless every byte is printable ASCII: on other protocol families those
+    addresses hold settings (a TL3-S reads 100, 0, 0, 0, 0, 0 there), and a decode with a
+    NUL in the middle would present a meaningless fragment as a version. At least the
+    model letters and the DSP1 build (82-84) must be present.
     """
     if not registers or len(registers) != 6:
         return None
-    raw = b"".join(int(r).to_bytes(2, "big") for r in registers)
+    words = [int(r) for r in registers]
+    while words and words[-1] == 0:
+        words.pop()
+    if len(words) < 3:
+        return None
+    raw = b"".join(w.to_bytes(2, "big") for w in words)
     if not all(0x20 <= b <= 0x7E for b in raw):
         return None
     return raw.decode("ascii").strip() or None

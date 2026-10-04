@@ -97,6 +97,24 @@ def decode(control: PowerControl, raw: int | None) -> bool | None:
     return None
 
 
+def running_from_status(control: PowerControl, status_family: str, online: bool,
+                        status: int | None) -> bool:
+    """Whether the inverter's own status proves it is switched on.
+
+    Used where register 0 is not read back, so the switch would otherwise show only the last
+    command - which is nothing at all after a restart (#432). One direction only: a
+    grid-tied inverter reporting Normal (1) is running, so it is on. Waiting proves nothing,
+    because a TL3-S reads Waiting both when switched off and at night, so every other
+    status leaves the last command in charge.
+
+    Grid-tied status table only. The hybrid and off-grid tables give 1 other meanings
+    (Self-Test, No Use), and the AC-output switch on off-grid models is a different control.
+    """
+    if control.is_ac_output or status_family != "grid_tied" or not online:
+        return False
+    return status == 1
+
+
 def encode(control: PowerControl, on: bool, current: int | None = None) -> int:
     """The value to write for on/off, preserving the other byte where there is one."""
     if control.encoding in (ENCODING_PLAIN, ENCODING_VPP):
