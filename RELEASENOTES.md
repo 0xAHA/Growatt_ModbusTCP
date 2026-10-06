@@ -4,6 +4,19 @@
 
 ---
 
+## v2.0.6-b1
+
+Issues: #464
+
+- **Daily energy sensors could stay unknown from mid-afternoon until midnight** on larger
+  systems. After a Home Assistant restart or integration reload, or after a counter
+  briefly read 0, the first reading above 20 kWh was treated as a glitch, and so was every
+  reading after it. The reading is now held back for one poll and accepted once the next
+  poll agrees. Affects Energy Today, the PV string Energy Today sensors, and any other
+  daily counter that passes 20 kWh. Reported by @Rocko84.
+
+---
+
 ## v2.0.5
 
 Promoted to stable from the pre-release line below (b1 through b19). Every change in that
