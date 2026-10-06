@@ -4,6 +4,24 @@
 
 ---
 
+## v2.0.5
+
+Promoted to stable from the pre-release line below (b1 through b19). Every change in that
+line is included. See each `v2.0.5-bN` section for the individual reports and hardware
+confirmations behind it, or the [GitHub release](https://github.com/0xAHA/Growatt_ModbusTCP/releases/tag/v2.0.5)
+for a summary grouped by area.
+
+What you may notice on upgrading from v2.0.4:
+
+- **SPH-TL3:** House Consumption reads about 10 % lower. It now comes from the AC side, so
+  it no longer includes the inverter's conversion loss.
+- **MIN TL-XH2:** about 20 sensors the model has no register for are removed. They only ever
+  showed 0.
+- **TL3-S:** Fault Code and Warning Code read 0 unless there is a live fault.
+- **New controls are disabled by default.** Enable them on the device page if you want them.
+
+---
+
 ## v2.0.5-b19
 
 Issues: #432, #446
