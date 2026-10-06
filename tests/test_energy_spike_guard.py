@@ -103,6 +103,7 @@ class _Coordinator:
         self._register_map_key = "spf_3000_6000_es_plus"
         self._spike_warned: set[str] = set()
         self._backward_step_warned: set[str] = set()
+        self._daily_first_candidates: dict[str, float] = {}
 
 
 class _Data:

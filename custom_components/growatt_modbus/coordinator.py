@@ -58,6 +58,12 @@ _WRITE_CHECK_EXPIRY_S = 240
 # zero or drops far, to be handled as the real event it is (#417).
 _BACKWARD_STEP_TOLERANCE_KWH = 0.5
 
+# A daily counter at or above this has a non-zero high word (65536 x 0.1 kWh). No single
+# inverter's day reaches it - a 50 kW unit at full power for 24 h is 1,200 kWh - but the
+# word-tear garbage the spike guard exists for lands there, so a first reading of this size
+# is never confirmed, however often it repeats (#412 repeated one every poll).
+_DAILY_FIRST_READING_CEILING_KWH = 6553.6
+
 def test_connection(config: dict) -> dict:
     """Test the connection to the Growatt inverter (TCP or Serial)."""
     try:
@@ -228,6 +234,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # Energy total retention — prevents total_increasing spikes from dormant-inverter zeros
         self._retained_lifetime_totals: dict[str, float] = {}
         self._retained_daily_totals: dict[str, float] = {}
+        # A large first reading with no retained baseline, waiting for the next poll to
+        # agree with it before it is believed (#464).
+        self._daily_first_candidates: dict[str, float] = {}
         _store_key = f"{DOMAIN}.{entry.entry_id}_energy_totals"
         self._energy_store: Store = Store(hass, version=1, key=_store_key)
 
@@ -935,6 +944,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
         # Clear daily total retention so new day starts fresh
         self._retained_daily_totals = {}
+        self._daily_first_candidates = {}
 
         # A new day may hit the spike guard for new reasons, and one line per day is worth
         # having. Without this the first session-warning is the only one ever logged (#412).
@@ -1116,6 +1126,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             if value > 0:
                 # Spike guard — reject implausible jumps
                 _spike = False
+                _awaiting_confirmation = False
                 if retained is None:
                     # First reading after midnight clear (or inverter just came online).
                     #
@@ -1162,14 +1173,54 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         )
                         setattr(data, attr, 0)
                         continue  # Do not update retention
-                    # Grace expired — normal spike guard: morning readings should be near 0.
+                    # Grace expired. With no baseline, a large reading is either a glitch
+                    # or a real mid-day total - and there is nothing to compare it against.
+                    #
+                    # This used to reject it outright, which is right for a glitch and
+                    # wrong for everything else: retention is lost on every restart or
+                    # reload, and whenever a counter reads a single 0, so on a 25 kW MID the
+                    # next genuine reading (22 kWh at 14:00) was rejected, and so was every
+                    # one after it, leaving Energy Today or a PV string unknown until
+                    # midnight (#464).
+                    #
+                    # A glitch does not repeat; a real counter does, or grows a little. So
+                    # the reading is withheld once and believed when the next poll agrees
+                    # with it - unless it is beyond any day's possible total, which no
+                    # amount of repetition makes real.
                     if value > _SPIKE_THRESHOLD_KWH:
-                        _spike = True
+                        _candidate = self._daily_first_candidates.get(attr)
+                        if (
+                            value < _DAILY_FIRST_READING_CEILING_KWH
+                            and _candidate is not None
+                            and _candidate - _BACKWARD_STEP_TOLERANCE_KWH
+                            <= value
+                            <= _candidate + _SPIKE_THRESHOLD_KWH
+                        ):
+                            _LOGGER.debug(
+                                "[ENERGY_GUARD] %s: %.3f kWh confirmed by a second poll "
+                                "(previous %.3f kWh) - accepting as today's total",
+                                attr, value, _candidate,
+                            )
+                        else:
+                            self._daily_first_candidates[attr] = value
+                            _spike = True
+                            _awaiting_confirmation = value < _DAILY_FIRST_READING_CEILING_KWH
                 elif value - retained > _SPIKE_THRESHOLD_KWH:
                     # Value jumped far more than any real system can accumulate in one poll.
                     _spike = True
 
-                if _spike:
+                if _spike and _awaiting_confirmation:
+                    # Not a glitch yet, just unconfirmed - nothing to warn about. One poll
+                    # of unknown, then the next decides.
+                    _LOGGER.debug(
+                        "[ENERGY_GUARD] %s: first reading %.3f kWh has no baseline - "
+                        "withholding until the next poll confirms it",
+                        attr, value,
+                    )
+                    _unread = getattr(data, 'unread_fields', None)
+                    if _unread is not None:
+                        _unread.add(attr)
+                elif _spike:
                     # Warn once per attribute per session, then drop to debug. The
                     # condition is not always transient: a register the model never
                     # populates, or a daily counter this inverter clears late, repeats on
@@ -1249,6 +1300,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                             value - (retained if retained is not None else 0.0),
                         )
                         self._retained_daily_totals[attr] = value
+                        self._daily_first_candidates.pop(attr, None)
                         _updated = True
             elif retained is not None and retained > 0:
                 if _device_reporting:
@@ -1361,6 +1413,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     self._current_date = current_date
                     # Clear daily retention for new day
                     self._retained_daily_totals = {}
+                    self._daily_first_candidates = {}
 
                 # Return existing data (sensors will apply offline behavior via get_sensor_value)
                 return self.data
