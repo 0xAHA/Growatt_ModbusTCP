@@ -8,6 +8,9 @@ On a MIN 4200TL-XH, period 1 set in ShinePhone as Battery First 00:00-07:00 read
 Reads are confirmed; Modbus writes are not. The entities are therefore created disabled,
 which the profile asks for with `tou_disabled_by_default`.
 
+ShinePhone's Allow Grid Charge setting showed Enabled while holding register 3049 read 1.
+That confirms the read mapping; its control is disabled by default pending a write test.
+
 31001 is the VPP "Battery working status", which the shared status block had labelled a
 fault word. The same inverter read 3 discharging, 2 charging and 1 asleep.
 """
@@ -49,12 +52,18 @@ def _client(inputs: dict, holding: dict):
     return client
 
 
-def test_all_nine_xh_periods_are_mapped_and_3049_is_not():
+def test_all_nine_xh_periods_and_grid_charge_are_mapped():
     holding = _profiles.REGISTER_MAPS[MAP]["holding_registers"]
     for period, start in enumerate(TOU_STARTS, start=1):
         assert holding[start]["name"] == f"mod_tou_{period}_start"
         assert holding[start + 1]["name"] == f"mod_tou_{period}_end"
-    assert 3049 not in holding, "3049 is unconfirmed on MIN TL-XH"
+    assert holding[3049]["name"] == "allow_grid_charge"
+    assert holding[3049]["access"] == "RW"
+
+
+def test_reported_allow_grid_charge_value_is_read_from_3049():
+    data = _client(LIVE, {3049: 1}).read_all_data()
+    assert data.allow_grid_charge == 1
 
 
 def test_reported_period_1_decodes_as_battery_first_00_00_to_07_00():
@@ -76,6 +85,10 @@ def test_end_minute_steps_read_back(raw, minute):
 def test_min_tl_xh_asks_for_tou_entities_disabled_and_mod_does_not():
     assert _profiles.REGISTER_MAPS[MAP].get("tou_disabled_by_default") is True
     assert not _profiles.REGISTER_MAPS["MOD_6000_15000TL3_XH"].get("tou_disabled_by_default")
+
+
+def test_unconfirmed_min_grid_charge_control_starts_disabled():
+    assert _profiles.REGISTER_MAPS[MAP].get("allow_grid_charge_disabled_by_default") is True
 
 
 @pytest.mark.parametrize("platform", ["time.py", "select.py"])

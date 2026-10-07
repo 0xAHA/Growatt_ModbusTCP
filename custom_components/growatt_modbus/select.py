@@ -112,7 +112,7 @@ async def async_setup_entry(
         if _not and register_map_name in _not:
             continue
 
-        # allow_grid_charge is handled by GrowattModAllowGridChargeSelect below
+        # allow_grid_charge is handled by GrowattAllowGridChargeSelect below
         if control_name == 'allow_grid_charge':
             continue
 
@@ -146,10 +146,16 @@ async def async_setup_entry(
         _LOGGER.info("MOD TOU priority/enable controls enabled (%d select entities for %d periods)",
                      len(MOD_TOU_PERIODS) * 2, len(MOD_TOU_PERIODS))
 
-    # MOD GEN4 Allow Grid Charge gate (register 3049) — prerequisite for TOU persistence
+    # Allow Grid Charge (register 3049). On MOD this gates TOU persistence; MIN TL-XH
+    # exposes the same address only after its app setting matched a direct read (#400).
     if 3049 in holding_registers:
-        entities.append(GrowattModAllowGridChargeSelect(coordinator, config_entry))
-        _LOGGER.info("MOD Allow Grid Charge control enabled (register 3049)")
+        entity = GrowattAllowGridChargeSelect(coordinator, config_entry)
+        if REGISTER_MAPS.get(register_map_name, {}).get(
+            'allow_grid_charge_disabled_by_default', False
+        ):
+            entity._attr_entity_registry_enabled_default = False
+        entities.append(entity)
+        _LOGGER.info("Allow Grid Charge control enabled (register 3049)")
 
     if entities:
         entry_name = config_entry.data.get("name", config_entry.title)
@@ -977,11 +983,11 @@ class GrowattModTouEnable(GrowattEntity, SelectEntity):
             await self.coordinator.async_request_refresh()
 
 
-class GrowattModAllowGridChargeSelect(GrowattEntity, SelectEntity):
-    """Select entity for the MOD GEN4 'Allow Grid Charge' gate (register 3049).
+class GrowattAllowGridChargeSelect(GrowattEntity, SelectEntity):
+    """Select entity for 'Allow Grid Charge' (register 3049).
 
-    This register must be set to Enabled (1) before TOU time slot registers
-    (3038-3059) will persist on GEN4 hardware.  Plain 0/1 register — no bit masking.
+    On MOD GEN4 this must be Enabled before TOU slots persist. On MIN TL-XH it
+    corresponds to ShinePhone's grid-charge permission. Plain 0/1 register.
     """
 
     _REGISTER = 3049
