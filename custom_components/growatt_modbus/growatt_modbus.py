@@ -1529,6 +1529,7 @@ class GrowattModbus:
         # Warn-once: the PVISO sentinel is reported on every poll for the whole life of
         # an affected device, so one line a session is enough (#404).
         self._pv_iso_sentinel_logged: bool = False
+        self._ac_charge_impossible_logged: bool = False
         # Warn-once for the orphan-socket check; see _check_for_orphan_client_socket (#426).
         self._orphan_socket_warned: bool = False
 
@@ -2604,6 +2605,51 @@ class GrowattModbus:
     # as impossible. Matches the margin the SPF sign correction uses for the same kind of
     # power-balance reasoning (#345), so the two agree about what counts as significant.
     PV_ZERO_BALANCE_MARGIN = 200.0
+
+    # Headroom for the AC-charge check below. AC charge is metered on the grid side and
+    # battery charge on the battery side, so conversion loss lets the first run a little
+    # ahead of the second - never by a quarter, and never by a whole kilowatt-hour.
+    AC_CHARGE_HEADROOM_FACTOR = 1.25
+    AC_CHARGE_HEADROOM_KWH = 1.0
+
+    def _withhold_impossible_ac_charge(self, data: "GrowattData") -> None:
+        """Withhold an AC charge counter that exceeds the battery's own charge counter.
+
+        Energy charged from the grid into the battery is part of all energy charged into it,
+        so AC charge can never meaningfully exceed battery charge. Protocol V1.39 gives input
+        112-115 two meanings, and SPH reads them as AC charge energy, confirmed on an SPH
+        3000-6000 (#390). An SPM 6000TL-HU uses the other meaning: 114 holds the inverter's
+        60 s start delay, so AC Charge Energy Total decoded as 393,216 kWh against a battery
+        charge total of 1.2 kWh, on a system that never charges from the grid (#463).
+
+        A test of the reading rather than of the model, so the units where 112-115 really
+        are the counter keep it, and nobody has to guess which side of the protocol's column
+        a given firmware falls on.
+        """
+        unread = data.unread_fields
+        for ac_attr, battery_attr in (
+            ("ac_charge_energy_today", "charge_energy_today"),
+            ("ac_charge_energy_total", "charge_energy_total"),
+        ):
+            if ac_attr in unread or battery_attr in unread:
+                continue
+            ac_value = getattr(data, ac_attr, 0) or 0
+            battery_value = getattr(data, battery_attr, 0) or 0
+            if battery_value <= 0:
+                continue  # nothing to compare against
+            limit = battery_value * self.AC_CHARGE_HEADROOM_FACTOR + self.AC_CHARGE_HEADROOM_KWH
+            if ac_value > limit:
+                unread.add(ac_attr)
+                if not self._ac_charge_impossible_logged:
+                    self._ac_charge_impossible_logged = True
+                    logger.info(
+                        "[%s] %s reads %.1f kWh, more than the battery has been charged in "
+                        "total (%s = %.1f kWh). The registers behind it do not hold AC charge "
+                        "energy on this inverter, so it is reported as unknown (#463). Not "
+                        "logged again this session.",
+                        self.register_map.get('name', '?'), ac_attr, ac_value,
+                        battery_attr, battery_value,
+                    )
 
     def _suppress_impossible_pv_zero(self, data: "GrowattData") -> None:
         """Withhold a PV reading of zero the inverter's own registers contradict (#384).
@@ -3938,6 +3984,7 @@ class GrowattModbus:
                 data.dry_contact_state = int(self._get_register_value(dry_contact_state_addr) or 0)
 
             self._suppress_impossible_pv_zero(data)
+            self._withhold_impossible_ac_charge(data)
 
             logger.debug(f"Read data: PV={data.pv_total_power}W, AC={data.ac_power}W, Battery={getattr(data, 'battery_soc', 'N/A')}%, Temp={data.inverter_temp}°C")
             
