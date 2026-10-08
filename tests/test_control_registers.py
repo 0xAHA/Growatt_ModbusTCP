@@ -356,3 +356,14 @@ def test_min_tl_xh_exposes_the_firmware_confirmed_soc_controls():
         assert str(holding[address].get("access", "")).upper() == "RW"
         assert WRITABLE_REGISTERS[name]["register"] == address
         assert name in _controls_created_for(map_key)
+
+
+def test_min_tl_xh_offers_the_grid_charge_control_for_hardware_validation():
+    """3049 matched ShinePhone's Allow Grid Charge state; writes remain opt-in."""
+    map_key = "MIN_TL_XH_3000_10000_V201"
+    register = _holding(map_key)[3049]
+
+    assert register["name"] == "allow_grid_charge"
+    assert str(register.get("access", "")).upper() == "RW"
+    assert "allow_grid_charge" in _controls_created_for(map_key)
+    assert REGISTER_MAPS[map_key]["allow_grid_charge_disabled_by_default"] is True

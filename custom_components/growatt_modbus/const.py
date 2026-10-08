@@ -977,7 +977,9 @@ WRITABLE_REGISTERS = {
                 'Charge Stopped SOC (3048), which applies to charging from any source (#372)'
     },
 
-    # MOD GEN4 grid-charge prerequisite gate (must be Enabled for TOU writes to persist)
+    # Grid-charge permission. On MOD GEN4 it is also the prerequisite gate that must be
+    # Enabled for TOU writes to persist; on MIN TL-XH it matches ShinePhone's Allow Grid
+    # Charge setting, confirmed by consecutive Disabled=0 and Enabled=1 reads (#400).
     'allow_grid_charge': {
         'register': 3049,
         'scale': 1,
@@ -986,7 +988,7 @@ WRITABLE_REGISTERS = {
             0: 'Disabled',
             1: 'Enabled'
         },
-        'desc': 'Allow Grid Charge — prerequisite gate for TOU persistence (MOD GEN4)',
+        'desc': 'Allow charging from the grid; also required for TOU persistence on MOD GEN4',
     },
 }
 

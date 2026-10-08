@@ -577,6 +577,7 @@ the grid while solar charged the battery).
 | Entity | Type | Register | Options / Range | Description |
 |--------|------|----------|-----------------|--------------|
 | Priority Mode | Select | 3018 | Load First (0), Battery First (2), Grid First (3) | Note the encoding: 1 is not used, unlike the 0/1/2 scheme on SPH/MOD/MID |
+| Allow Grid Charge | Select | 3049 | Disabled (0), Enabled (1) | Permits charging from the grid; disabled by default pending write confirmation |
 | Charge Power Rate | Number | 3047 | 1–100 % | Battery charge power limit when Battery First is active |
 | Charge Stopped SOC | Number | 3048 | 0–100 % | SOC at which charging stops when Battery First is active |
 | On-Grid Discharge Stop SOC | Number | 3067 | 1–100 % | SOC at which on-grid battery discharge stops |
@@ -641,6 +642,11 @@ as ShinePhone had set it, including end-time changes of one minute
 **Disabled by default.** Reading is confirmed; writing from Home Assistant has not been
 tested on this model yet. Enable the entities you need on the device page. If a change
 doesn't stick, report it on #400.
+
+**Allow Grid Charge** (holding 3049) is also disabled by default while its write is being
+validated. Its read mapping is confirmed against consecutive ShinePhone changes: *Disabled*
+returned `3049 = 0`, then *Enabled* returned `3049 = 1`. This is a separate holding-register
+address from input registers 3049/3050, which carry today's energy.
 
 ### Battery Working Status (MIN TL-XH)
 
@@ -710,7 +716,7 @@ v2.0.5-b17 they are removed.
 | **WIT** (4–15kW) | Yes (timed) | VPP overrides | Work Mode, Control Authority, VPP Export Limit Enable, Remote Power Control | Active Power Rate, Export Limit, VPP Export Rate, Remote Duration, Remote Power |
 | **MOD / MID** TL3-XH | Yes | Persistent writes | Allow Grid Charge, Time Period Priority/Enable (×9) | Charge Rate, Charge Stop SOC, Grid Charge Stop SOC, Discharge Rate, Discharge Stop SOC, Time Period Start/End (×9) |
 | **MIN** (no battery) | No | — | — | — |
-| **MIN TL-XH** (with battery) | Yes | Persistent writes | Priority Mode, TOU Priority/Enable (×9, disabled by default) | Charge Rate, Charge Stop SOC, Discharge Stop SOC (plus TOU Start/End times ×9) |
+| **MIN TL-XH** (with battery) | Yes | Persistent writes | Priority Mode, Allow Grid Charge and TOU Priority/Enable (grid charge and TOU disabled by default) | Charge Rate, Charge Stop SOC, Discharge Stop SOC (plus TOU Start/End times ×9) |
 | **MIN TL-XH2** | Yes (timed) | VPP overrides | Remote Power Control Enable, VPP AC Charge Enable | On-Grid Discharge Stop SOC, Remote Power Control Charging Time, Remote Charge And Discharge Power |
 | **MIC** | No | — | — | — |
 

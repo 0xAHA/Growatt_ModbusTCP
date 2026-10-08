@@ -259,6 +259,10 @@ MIN_TL_XH_3000_10000_V201 = {
     'notes': 'Uses MIN 3000+ range for base sensors and VPP 31200+ range for battery. 3-6kW models have 2 PV strings, 7-10kW models have 3 PV strings. Found in MIN 6000/10000 TL-XH models with DTC 5100.',
     # TOU entities exist but start disabled until a Modbus write is confirmed (#400).
     'tou_disabled_by_default': True,
+    # ShinePhone "Allow Grid Charge" followed holding 3049 in both states (Disabled=0,
+    # Enabled=1), but a Modbus write has not yet been confirmed. Expose the control for
+    # validation without enabling an untested write path for every MIN TL-XH install (#400).
+    'allow_grid_charge_disabled_by_default': True,
     'input_registers': {
         # === MIN SERIES BASE RANGE (3000+) ===
         # System Status
@@ -515,7 +519,6 @@ MIN_TL_XH_3000_10000_V201 = {
         # First 00:00-07:00 read 3038 = 40960 (0xA000) and 3039 = 1792 (0x0700), and moving
         # the end to 07:01 and 07:02 read back 1793 and 1794. Writes over Modbus have not
         # been tested yet, so the entities are created disabled (tou_disabled_by_default).
-        # 3049 is not mapped: on MOD it gates TOU persistence, here it is unconfirmed.
         3038: {'name': 'mod_tou_1_start', 'scale': 1, 'unit': '', 'access': 'RW'},
         3039: {'name': 'mod_tou_1_end',   'scale': 1, 'unit': '', 'access': 'RW'},
         3040: {'name': 'mod_tou_2_start', 'scale': 1, 'unit': '', 'access': 'RW'},
@@ -524,6 +527,10 @@ MIN_TL_XH_3000_10000_V201 = {
         3043: {'name': 'mod_tou_3_end',   'scale': 1, 'unit': '', 'access': 'RW'},
         3044: {'name': 'mod_tou_4_start', 'scale': 1, 'unit': '', 'access': 'RW'},
         3045: {'name': 'mod_tou_4_end',   'scale': 1, 'unit': '', 'access': 'RW'},
+        # ShinePhone Allow Grid Charge tracked direct holding reads on this MIN TL-XH:
+        # Disabled returned 0 and Enabled returned 1. Writing still needs a round-trip (#400).
+        3049: {'name': 'allow_grid_charge', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Allow charging from the grid (read mapping confirmed on MIN TL-XH; write pending)'},
         3050: {'name': 'mod_tou_5_start', 'scale': 1, 'unit': '', 'access': 'RW'},
         3051: {'name': 'mod_tou_5_end',   'scale': 1, 'unit': '', 'access': 'RW'},
         3052: {'name': 'mod_tou_6_start', 'scale': 1, 'unit': '', 'access': 'RW'},
