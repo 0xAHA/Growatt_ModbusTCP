@@ -4,6 +4,24 @@
 
 ---
 
+## v2.0.6-b2
+
+Issues: #463, #466, #467
+
+- **MIN TL-XH: new Allow Grid Charge control (holding 3049)**, **disabled by default**. It
+  matches ShinePhone's setting in both states, but writing to it from Home Assistant hasn't
+  been tested yet. Contributed by @GoncaloRibeiro11 (PR #466).
+
+- **AC Charge Energy is reported as unknown when it exceeds the battery's own charge
+  energy**, which no real reading can. On an SPM 6000TL-HU, AC Charge Energy Total showed
+  393,216 kWh this way. Units where the reading is genuine keep it. Reported by @guhdias.
+
+- **SPH-TL3 / SPA-TL3: the Modbus warning every five minutes is gone, and so is the Dry
+  Contact State sensor.** That sensor read a register these models don't have, so it only
+  ever showed Off. Reported by @feinerer.
+
+---
+
 ## v2.0.6-b1
 
 Issues: #464
