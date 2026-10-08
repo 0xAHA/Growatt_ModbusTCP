@@ -300,8 +300,10 @@ SPH_TL3_3000_10000 = {
         1062: {'name': 'load_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1063},
         1063: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1062, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
-        # Dry Contact State (V1.39 input register — 0=Off, 1=On)
-        3119: {'name': 'dry_contact_state', 'scale': 1, 'unit': '', 'desc': 'Dry contact relay current state: 0=Off, 1=On'},
+        # NOT 3119 (Dry Contact State). It is in the 3000 input range, which SPH-TL3 does
+        # not implement: an SPH 8000TL3 BH-UP answers Illegal Function there on every poll
+        # (#467) and a DTC 3601 scan shows the whole 3000-3124 range silent, 3119 included
+        # (#210). Mapping it made every poll request 3000-3119 to fetch one register.
     },
     'holding_registers': {
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},

@@ -143,6 +143,11 @@ NO_BOOST_OR_IPM_TEMP: Set[str] = {"boost_temp", "ipm_temp"}
 # because it does not read the VPP range, so on that profile the three sensors can only ever
 # publish their 0.0 default. Mapping the V1.39 addresses instead is not an option: input
 # 50-52 read 0.0 on two SPH 10000 TL3 BH-UP units with a live three-phase grid (#442, #447).
+# SPH-TL3 / SPA-TL3: Dry Contact State lives at input 3119, in a range these models do not
+# implement (#467, #210). Without a register the field keeps its 0 default and the sensor
+# would read Off whatever the relay is doing.
+NO_DRY_CONTACT_STATE: Set[str] = {"dry_contact_state"}
+
 NO_LINE_VOLTAGES: Set[str] = {"ac_voltage_rs", "ac_voltage_st", "ac_voltage_tr"}
 
 # dcdc_temp is NOT in TEMPERATURE_SENSORS, and must not be put back there.
@@ -804,7 +809,10 @@ INVERTER_PROFILES = {
         # AC Power: the map now has a genuine total (Pac, 35/36) rather than an alias of
         # phase R, confirmed on two SPH 10000 TL3 BH-UP units (#447).
         # The V2.01 variant below keeps the line voltages; it has a source for them.
-        "sensors": (HYBRID_3P_SENSORS | BMS_SENSORS | AC_POWER_TOTAL_SENSOR) - NO_LINE_VOLTAGES,
+        "sensors": (
+            (HYBRID_3P_SENSORS | BMS_SENSORS | AC_POWER_TOTAL_SENSOR)
+            - NO_LINE_VOLTAGES - NO_DRY_CONTACT_STATE
+        ),
     },
 
     # SPH-TL3 V2.01 VPP Protocol
@@ -818,7 +826,9 @@ INVERTER_PROFILES = {
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
         "house_load_from_ac_output": True,  # see sph_tl3_3000_10000 (#447)
-        "sensors": HYBRID_3P_SENSORS | BMS_SENSORS | AC_POWER_TOTAL_SENSOR,
+        "sensors": (
+            (HYBRID_3P_SENSORS | BMS_SENSORS | AC_POWER_TOTAL_SENSOR) - NO_DRY_CONTACT_STATE
+        ),
     },
 
     # ========================================================================
@@ -907,7 +917,7 @@ INVERTER_PROFILES = {
             BMS_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
-        ),
+        ) - NO_DRY_CONTACT_STATE,
     },
 
     # ========================================================================

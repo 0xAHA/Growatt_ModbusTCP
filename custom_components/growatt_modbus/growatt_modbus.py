@@ -3269,7 +3269,7 @@ class GrowattModbus:
                             for chunk_start in range(min_addr_block, max_addr_block + 1, 125):
                                 chunk_count = min(125, max_addr_block - chunk_start + 1)
                                 logger.debug(f"Reading 3000 sub-chunk ({chunk_start}-{chunk_start+chunk_count-1}, {chunk_count} registers)")
-                                registers = self.read_input_registers(chunk_start, chunk_count)
+                                registers = self.read_input_registers(chunk_start, chunk_count, log_errors=_3000_is_primary)
                                 if registers is None:
                                     _3000_any_fail = True
                                     logger.debug(f"3000 sub-chunk failed ({chunk_start}-{chunk_start+chunk_count-1})")
@@ -3279,7 +3279,7 @@ class GrowattModbus:
                                         self._register_cache[chunk_start + i] = value
                         else:
                             logger.debug(f"Reading 3000 sub-range ({min_addr_block}-{max_addr_block}, {count_block} registers)")
-                            registers = self.read_input_registers(min_addr_block, count_block)
+                            registers = self.read_input_registers(min_addr_block, count_block, log_errors=_3000_is_primary)
                             if registers is None:
                                 _3000_any_fail = True
                                 logger.debug(f"3000 sub-range failed ({min_addr_block}-{max_addr_block})")
@@ -3293,7 +3293,11 @@ class GrowattModbus:
                 else:
                     # Single read is sufficient
                     logger.debug(f"Reading 3000 range (3000-{max_3000_addr}, {count_3000} registers)")
-                    registers = self.read_input_registers(3000, count_3000)
+                    # An optional block reports its own failure once, then retries every
+                    # _3000_RETRY_S at debug. The per-request warning inside
+                    # read_input_registers fired on every one of those retries, so a model
+                    # without the range logged it every five minutes indefinitely (#467).
+                    registers = self.read_input_registers(3000, count_3000, log_errors=_3000_is_primary)
                     if registers is None:
                         _3000_any_fail = True
                     else:
