@@ -91,6 +91,17 @@ def test_unconfirmed_min_grid_charge_control_starts_disabled():
     assert _profiles.REGISTER_MAPS[MAP].get("allow_grid_charge_disabled_by_default") is True
 
 
+def test_select_honours_grid_charge_disabled_flag():
+    """Keep the opt-in flag wired to the entity if select setup is reworked."""
+    source = (COMPONENT / "select.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    setup = next(n for n in ast.walk(tree)
+                 if isinstance(n, ast.AsyncFunctionDef) and n.name == "async_setup_entry")
+    body = ast.get_source_segment(source, setup)
+    assert "allow_grid_charge_disabled_by_default" in body
+    assert "entity._attr_entity_registry_enabled_default = False" in body
+
+
 @pytest.mark.parametrize("platform", ["time.py", "select.py"])
 def test_both_tou_platforms_honour_the_disabled_flag(platform):
     """The flag is consulted, and it switches entity_registry_enabled_default off.

@@ -530,7 +530,7 @@ MIN_TL_XH_3000_10000_V201 = {
         # ShinePhone showed Allow Grid Charge enabled while a direct holding read returned
         # 3049 = 1 on this MIN TL-XH. Writing still needs a hardware round-trip (#400).
         3049: {'name': 'allow_grid_charge', 'scale': 1, 'unit': '', 'access': 'RW',
-               'desc': 'Allow charging from the grid (read mapping confirmed on MIN TL-XH; write pending)'},
+               'desc': 'Allow charging from the grid (matched ShinePhone in one MIN TL-XH reading; validation pending)'},
         3050: {'name': 'mod_tou_5_start', 'scale': 1, 'unit': '', 'access': 'RW'},
         3051: {'name': 'mod_tou_5_end',   'scale': 1, 'unit': '', 'access': 'RW'},
         3052: {'name': 'mod_tou_6_start', 'scale': 1, 'unit': '', 'access': 'RW'},
