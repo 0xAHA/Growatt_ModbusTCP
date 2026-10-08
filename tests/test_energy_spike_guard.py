@@ -104,6 +104,7 @@ class _Coordinator:
         self._spike_warned: set[str] = set()
         self._backward_step_warned: set[str] = set()
         self._daily_first_candidates: dict[str, float] = {}
+        self._daily_zero_streak: dict[str, int] = {}
 
 
 class _Data:

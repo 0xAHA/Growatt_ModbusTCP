@@ -55,29 +55,56 @@ def _silent(**daily):
     return _Data(**daily)
 
 
+def _zero_polls(coordinator, guard, polls):
+    """Publish `polls` consecutive zero readings; return what each one published."""
+    published = []
+    for _ in range(polls):
+        data = _awake(**{AC_DISCHARGE: 0.0})
+        guard(coordinator, data)
+        published.append(getattr(data, AC_DISCHARGE))
+    return published
+
+
 def test_a_working_inverter_reporting_zero_is_believed():
     """THE #410 regression. Register 65 read 0 all day on a quiet day; the sensor showed
-    2.90 kWh because retention decided the inverter must be dormant."""
-    logger = _Logger()
-    guard = _load_guard(logger)
-    data = _awake(**{AC_DISCHARGE: 0.0})
+    2.90 kWh because retention decided the inverter must be dormant.
 
-    guard(_Coordinator(retained_daily={AC_DISCHARGE: YESTERDAY_KWH}), data)
+    Believed on the third consecutive zero rather than the first: a single torn 0 read
+    mid-day would otherwise be published, and Home Assistant counts that as a meter reset
+    (#464). Two polls of hold is a minute or two - not the whole day #410 was about."""
+    guard = _load_guard(_Logger())
+    coordinator = _Coordinator(retained_daily={AC_DISCHARGE: YESTERDAY_KWH})
 
-    assert getattr(data, AC_DISCHARGE) == 0.0, (
+    published = _zero_polls(coordinator, guard, 3)
+
+    assert published[-1] == 0.0, (
         "yesterday's total was re-published over a real zero from a working inverter"
     )
 
 
-def test_retention_is_dropped_once_a_real_zero_arrives():
+def test_retention_is_dropped_once_a_real_zero_is_confirmed():
     """Otherwise the same substitution returns on the next poll and the next."""
-    logger = _Logger()
-    guard = _load_guard(logger)
+    guard = _load_guard(_Logger())
     coordinator = _Coordinator(retained_daily={AC_DISCHARGE: YESTERDAY_KWH})
 
-    guard(coordinator, _awake(**{AC_DISCHARGE: 0.0}))
+    _zero_polls(coordinator, guard, 3)
 
     assert AC_DISCHARGE not in coordinator._retained_daily_totals
+
+
+def test_a_single_zero_mid_day_is_not_published():
+    """#464: Battery Discharge Today dipped to 0 for one poll at 7.1 kWh, and the Energy
+    Dashboard reported 22.2 kWh for a 15.2 kWh day - the dip read as a meter reset."""
+    guard = _load_guard(_Logger())
+    coordinator = _Coordinator(retained_daily={"discharge_energy_today": 7.1})
+
+    published = []
+    for value in (0.0, 7.1, 7.2):
+        data = _awake(discharge_energy_today=value)
+        guard(coordinator, data)
+        published.append(data.discharge_energy_today)
+
+    assert published == [7.1, 7.1, 7.2], f"a drop reached Home Assistant: {published}"
 
 
 def test_a_dormant_inverter_still_gets_retention():

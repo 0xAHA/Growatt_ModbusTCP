@@ -98,17 +98,18 @@ def test_garbage_beyond_any_days_total_never_confirms():
 
 
 def test_a_single_zero_read_no_longer_costs_the_rest_of_the_day():
-    """A real 0 drops retention; the next real reading then has no baseline."""
+    """A one-poll 0 is now held rather than accepted (#464), so retention survives it and
+    the next real reading is believed straight away instead of losing the afternoon."""
     guard = _load_guard(_Logger())
     coordinator = _Coordinator(retained_daily={ATTR: 21.9})
     reporting = {"energy_total": 38173.8}
 
-    _poll(guard, coordinator, 0.0, **reporting)
-    assert ATTR not in coordinator._retained_daily_totals
+    held = _poll(guard, coordinator, 0.0, **reporting)
+    assert held.pv1_energy_today == 21.9
+    assert coordinator._retained_daily_totals[ATTR] == 21.9
 
-    _poll(guard, coordinator, 22.0, **reporting)
-    recovered = _poll(guard, coordinator, 22.1, **reporting)
-    assert _is_published(recovered, ATTR) and recovered.pv1_energy_today == 22.1
+    recovered = _poll(guard, coordinator, 22.0, **reporting)
+    assert _is_published(recovered, ATTR) and recovered.pv1_energy_today == 22.0
 
 
 def test_awaiting_confirmation_is_not_reported_as_a_glitch():

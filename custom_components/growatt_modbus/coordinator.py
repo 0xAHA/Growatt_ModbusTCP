@@ -64,6 +64,14 @@ _BACKWARD_STEP_TOLERANCE_KWH = 0.5
 # is never confirmed, however often it repeats (#412 repeated one every poll).
 _DAILY_FIRST_READING_CEILING_KWH = 6553.6
 
+# A daily counter that drops to 0 from a non-zero value is believed on the Nth consecutive
+# zero poll, not the first. Home Assistant reads any decrease in a total_increasing sensor
+# as a meter reset, so a single torn 0 read published mid-day makes the Energy Dashboard
+# count the whole day so far twice: a MID 25KTL3-XH's Battery Discharge Today dipped to 0
+# for one poll at 7.1 kWh and the dashboard showed 22.2 kWh for a 15.2 kWh day (#464).
+# A counter that really is 0 still reads 0 within a couple of polls (#410).
+_DAILY_ZERO_CONFIRM_POLLS = 3
+
 def test_connection(config: dict) -> dict:
     """Test the connection to the Growatt inverter (TCP or Serial)."""
     try:
@@ -237,6 +245,8 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # A large first reading with no retained baseline, waiting for the next poll to
         # agree with it before it is believed (#464).
         self._daily_first_candidates: dict[str, float] = {}
+        # Consecutive zero polls per daily counter that was non-zero (#464).
+        self._daily_zero_streak: dict[str, int] = {}
         _store_key = f"{DOMAIN}.{entry.entry_id}_energy_totals"
         self._energy_store: Store = Store(hass, version=1, key=_store_key)
 
@@ -945,6 +955,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # Clear daily total retention so new day starts fresh
         self._retained_daily_totals = {}
         self._daily_first_candidates = {}
+        self._daily_zero_streak = {}
 
         # A new day may hit the spike guard for new reasons, and one line per day is worth
         # having. Without this the first session-warning is the only one ever logged (#412).
@@ -1124,6 +1135,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             retained = self._retained_daily_totals.get(attr)
 
             if value > 0:
+                self._daily_zero_streak.pop(attr, None)
                 # Spike guard — reject implausible jumps
                 _spike = False
                 _awaiting_confirmation = False
@@ -1303,11 +1315,24 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         self._daily_first_candidates.pop(attr, None)
                         _updated = True
             elif retained is not None and retained > 0:
-                if _device_reporting:
+                _zero_streak = self._daily_zero_streak.get(attr, 0) + 1
+                if _device_reporting and _zero_streak < _DAILY_ZERO_CONFIRM_POLLS:
+                    # A drop to 0 from a counter that read non-zero: hold the last value
+                    # until the zero repeats. One torn read published here becomes a meter
+                    # reset in Home Assistant and double-counts the day (#464).
+                    self._daily_zero_streak[attr] = _zero_streak
+                    _LOGGER.debug(
+                        "[ENERGY_GUARD] %s read 0 after %.3f kWh (zero poll %d of %d) - "
+                        "holding the previous value until the zero is confirmed",
+                        attr, retained, _zero_streak, _DAILY_ZERO_CONFIRM_POLLS,
+                    )
+                    setattr(data, attr, retained)
+                elif _device_reporting:
                     # A real zero from a working inverter: no activity of this kind today.
                     # Substituting here is what kept a reporter's AC Discharge Energy Today
                     # showing yesterday's 2.90 kWh for a whole day while the register read
-                    # 0 on every poll (#410).
+                    # 0 on every poll (#410). Confirmed above over a few polls first (#464).
+                    self._daily_zero_streak.pop(attr, None)
                     _LOGGER.debug(
                         "[ENERGY_GUARD] %s: hardware reported 0 and the inverter is "
                         "reporting (lifetime totals non-zero) — accepting the zero and "
@@ -1414,6 +1439,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     # Clear daily retention for new day
                     self._retained_daily_totals = {}
                     self._daily_first_candidates = {}
+                    self._daily_zero_streak = {}
 
                 # Return existing data (sensors will apply offline behavior via get_sensor_value)
                 return self.data
