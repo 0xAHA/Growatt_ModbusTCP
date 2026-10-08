@@ -979,7 +979,7 @@ WRITABLE_REGISTERS = {
 
     # Grid-charge permission. On MOD GEN4 it is also the prerequisite gate that must be
     # Enabled for TOU writes to persist; on MIN TL-XH it matches ShinePhone's Allow Grid
-    # Charge setting, pending a two-state hardware confirmation (#400).
+    # Charge setting, confirmed by consecutive Disabled=0 and Enabled=1 reads (#400).
     'allow_grid_charge': {
         'register': 3049,
         'scale': 1,

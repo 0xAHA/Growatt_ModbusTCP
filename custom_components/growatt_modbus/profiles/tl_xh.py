@@ -259,9 +259,9 @@ MIN_TL_XH_3000_10000_V201 = {
     'notes': 'Uses MIN 3000+ range for base sensors and VPP 31200+ range for battery. 3-6kW models have 2 PV strings, 7-10kW models have 3 PV strings. Found in MIN 6000/10000 TL-XH models with DTC 5100.',
     # TOU entities exist but start disabled until a Modbus write is confirmed (#400).
     'tou_disabled_by_default': True,
-    # ShinePhone "Allow Grid Charge" matched holding 3049 on this hardware, but a
-    # Modbus write has not yet been confirmed. Expose the control for validation without
-    # enabling an untested write path for every MIN TL-XH installation (#400).
+    # ShinePhone "Allow Grid Charge" followed holding 3049 in both states (Disabled=0,
+    # Enabled=1), but a Modbus write has not yet been confirmed. Expose the control for
+    # validation without enabling an untested write path for every MIN TL-XH install (#400).
     'allow_grid_charge_disabled_by_default': True,
     'input_registers': {
         # === MIN SERIES BASE RANGE (3000+) ===
@@ -527,10 +527,10 @@ MIN_TL_XH_3000_10000_V201 = {
         3043: {'name': 'mod_tou_3_end',   'scale': 1, 'unit': '', 'access': 'RW'},
         3044: {'name': 'mod_tou_4_start', 'scale': 1, 'unit': '', 'access': 'RW'},
         3045: {'name': 'mod_tou_4_end',   'scale': 1, 'unit': '', 'access': 'RW'},
-        # ShinePhone showed Allow Grid Charge enabled while a direct holding read returned
-        # 3049 = 1 on this MIN TL-XH. Writing still needs a hardware round-trip (#400).
+        # ShinePhone Allow Grid Charge tracked direct holding reads on this MIN TL-XH:
+        # Disabled returned 0 and Enabled returned 1. Writing still needs a round-trip (#400).
         3049: {'name': 'allow_grid_charge', 'scale': 1, 'unit': '', 'access': 'RW',
-               'desc': 'Allow charging from the grid (matched ShinePhone in one MIN TL-XH reading; validation pending)'},
+               'desc': 'Allow charging from the grid (read mapping confirmed on MIN TL-XH; write pending)'},
         3050: {'name': 'mod_tou_5_start', 'scale': 1, 'unit': '', 'access': 'RW'},
         3051: {'name': 'mod_tou_5_end',   'scale': 1, 'unit': '', 'access': 'RW'},
         3052: {'name': 'mod_tou_6_start', 'scale': 1, 'unit': '', 'access': 'RW'},

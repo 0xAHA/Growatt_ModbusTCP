@@ -8,8 +8,8 @@ On a MIN 4200TL-XH, period 1 set in ShinePhone as Battery First 00:00-07:00 read
 Reads are confirmed; Modbus writes are not. The entities are therefore created disabled,
 which the profile asks for with `tou_disabled_by_default`.
 
-ShinePhone's Allow Grid Charge setting showed Enabled while holding register 3049 read 1.
-That confirms the read mapping; its control is disabled by default pending a write test.
+ShinePhone's Allow Grid Charge setting tracked holding register 3049 in both states:
+Disabled read 0 and Enabled read 1. The control stays disabled by default pending a write test.
 
 31001 is the VPP "Battery working status", which the shared status block had labelled a
 fault word. The same inverter read 3 discharging, 2 charging and 1 asleep.

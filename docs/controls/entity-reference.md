@@ -644,10 +644,9 @@ tested on this model yet. Enable the entities you need on the device page. If a 
 doesn't stick, report it on #400.
 
 **Allow Grid Charge** (holding 3049) is also disabled by default while its write is being
-validated. It matched ShinePhone in one reading: the app showed *Enabled* and the inverter
-returned `3049 = 1` in the same test. A second reading with the app set to *Disabled* is
-still needed to confirm that the register follows the setting. This is a separate holding-
-register address from input registers 3049/3050, which carry today's energy.
+validated. Its read mapping is confirmed against consecutive ShinePhone changes: *Disabled*
+returned `3049 = 0`, then *Enabled* returned `3049 = 1`. This is a separate holding-register
+address from input registers 3049/3050, which carry today's energy.
 
 ### Battery Working Status (MIN TL-XH)
 
