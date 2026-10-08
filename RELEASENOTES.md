@@ -4,6 +4,18 @@
 
 ---
 
+## v2.0.6-b3
+
+Issues: #464
+
+- **The Energy Dashboard could count part of a day twice.** When a daily energy counter
+  read 0 for a single poll mid-day, that 0 was published, and Home Assistant treats any
+  drop as a meter reset, so it counted the day so far again. A 15.2 kWh day of battery
+  discharge showed as 22.2 kWh. A drop to 0 is now held for two polls and accepted only if
+  the zero persists. Days already recorded are not changed. Reported by @Rocko84.
+
+---
+
 ## v2.0.6-b2
 
 Issues: #463, #466, #467
