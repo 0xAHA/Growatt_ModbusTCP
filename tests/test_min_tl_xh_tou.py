@@ -92,14 +92,23 @@ def test_unconfirmed_min_grid_charge_control_starts_disabled():
 
 
 def test_select_honours_grid_charge_disabled_flag():
-    """Keep the opt-in flag wired to the entity if select setup is reworked."""
+    """Keep the opt-in flag wired to the entity if select setup is reworked.
+
+    Scoped to the `if 3049 in holding_registers:` block. The same assignment also appears in
+    the TOU block of this function, so a whole-function search passed with the grid-charge
+    line deleted.
+    """
     source = (COMPONENT / "select.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     setup = next(n for n in ast.walk(tree)
                  if isinstance(n, ast.AsyncFunctionDef) and n.name == "async_setup_entry")
-    body = ast.get_source_segment(source, setup)
+    block = next(
+        n for n in ast.walk(setup)
+        if isinstance(n, ast.If) and "3049 in holding_registers" in ast.get_source_segment(source, n.test)
+    )
+    body = ast.get_source_segment(source, block)
     assert "allow_grid_charge_disabled_by_default" in body
-    assert "entity._attr_entity_registry_enabled_default = False" in body
+    assert "_attr_entity_registry_enabled_default = False" in body
 
 
 @pytest.mark.parametrize("platform", ["time.py", "select.py"])
