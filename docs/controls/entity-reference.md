@@ -307,7 +307,9 @@ battery type.** These are the only controls in this integration where a wrong va
 hardware rather than a reading: the inverter rejects anything outside 48.0-58.4 V, but an
 in-range value that is wrong for your battery chemistry will be accepted and applied. They
 are created disabled so enabling them is a deliberate step - **Settings > Devices & Services
-> Growatt Modbus > entities**, then enable the one you want.
+> Growatt Modbus > entities**, then enable the one you want. They are on the **Battery**
+device with the other charge settings (up to v2.0.6-b3 they were on the **Inverter** device)
+([#468](https://github.com/0xAHA/Growatt_ModbusTCP/issues/468)).
 
 Both correspond to LCD Programs 19 and 20, which the manual marks as settable only when
 Program 5 (battery type) is a self-defined option. The entities are therefore unavailable on

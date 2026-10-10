@@ -1282,6 +1282,9 @@ def get_device_type_for_control(control_name: str) -> str:
         'ac_charge_power_rate', 'eod_voltage',
         # SPF off-grid battery controls
         'charge_config', 'charge_current', 'bat_low', 'ac_to_bat',
+        # SPF bulk / float charging voltage (LCD Programs 19/20). Were on the Inverter
+        # device, so an owner looking beside Max Charge Current never found them (#468).
+        'charge_voltage',
         # SPH hybrid battery controls
         'priority_mode', 'time_period', 'ac_charge_enable',
         # MOD GEN4 battery charging gate
