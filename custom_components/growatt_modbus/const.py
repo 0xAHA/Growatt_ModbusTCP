@@ -185,6 +185,23 @@ SENSOR_TYPES = {
 
 # WRITABLE REGISTERS - Control Entities
 WRITABLE_REGISTERS = {
+    # PV startup (connect) voltage — reg 17, x0.1 V. Scoped to the MIC MIN-range
+    # profile: reg 17 was field-confirmed writable on a MIC 2000TL-X (DTC 5200,
+    # firmware "PV 200"), reading 500 (=50.0 V) at factory default and accepting an
+    # FC06 write. Raising it delays grid-connect until the string can sustain voltage,
+    # which stops dawn/dusk on/off hunting on a single high-voltage panel. Its meaning
+    # is not verified on other families, so it is not exposed generally. Range
+    # 50.0–72.0 V keeps it a sane startup threshold and below a typical panel's Voc.
+    'pv_start_voltage': {
+        'register': 17,
+        'scale': 0.1,                     # raw 500 -> 50.0 V
+        'valid_range': (500, 720),        # 50.0–72.0 V (raw, clamped on write)
+        'unit': 'V',
+        'label': 'PV Startup Voltage',
+        'only_profiles': ['MIC_2500_6000TL_X_MIN_RANGE'],
+        'desc': 'PV startup/connect voltage. Raise to stop dawn/dusk on/off hunting; keep below panel Voc.',
+    },
+
     # Grid-Tied Inverter Controls
     'export_limit_mode': {
         'register': 122,
