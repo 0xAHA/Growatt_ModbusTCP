@@ -143,10 +143,13 @@ NO_BOOST_OR_IPM_TEMP: Set[str] = {"boost_temp", "ipm_temp"}
 # because it does not read the VPP range, so on that profile the three sensors can only ever
 # publish their 0.0 default. Mapping the V1.39 addresses instead is not an option: input
 # 50-52 read 0.0 on two SPH 10000 TL3 BH-UP units with a live three-phase grid (#442, #447).
-# SPH-TL3 / SPA-TL3: Dry Contact State lives at input 3119, in a range these models do not
-# implement (#467, #210). Without a register the field keeps its 0 default and the sensor
-# would read Off whatever the relay is doing.
-NO_DRY_CONTACT_STATE: Set[str] = {"dry_contact_state"}
+# Dry contact relay state, input 3119 (V1.39, TL-X/TL-XH group). Offered only on the profiles
+# whose map defines the register. It was in STATUS_SENSORS, which put it on every profile -
+# and dry_contact_state is a dataclass field, so 24 profiles with no register showed a
+# permanent "Off" that was never read (#470). SPH-TL3 and SPH V2.01 also mapped 3119 but do
+# not implement that range: Illegal Function on #467, and zeros or one value repeated across
+# 3071-3119 on three DTC 3501 scans (#470).
+DRY_CONTACT_SENSORS: Set[str] = {"dry_contact_state"}
 
 NO_LINE_VOLTAGES: Set[str] = {"ac_voltage_rs", "ac_voltage_st", "ac_voltage_tr"}
 
@@ -184,8 +187,6 @@ TEMPERATURE_SENSORS: Set[str] = {
 
 STATUS_SENSORS: Set[str] = {
     "status", "grid_connection_status", "last_update", "derating_mode", "fault_code", "warning_code",
-    # Dry contact relay state (read-only, SPH/MIN TL-X/TL-XH)
-    "dry_contact_state",
     # WIT debug/safety registers (read-only, disabled by default)
     "ntognd_detect", "nonstd_vac_enable", "enable_spec_set", "fast_mppt_enable",
     # Insulation/leakage diagnostics (ISO/DCI/GFCI — reg 3087-3091, disabled by default)
@@ -497,7 +498,7 @@ INVERTER_PROFILES = {
         "has_battery": False,
         "max_power_kw": 6.0,
         "protocol_version": "v1.39",
-        "sensors": GRID_TIED_1P_SENSORS,
+        "sensors": GRID_TIED_1P_SENSORS | DRY_CONTACT_SENSORS,
     },
 
     "min_7000_10000_tl_x": {
@@ -509,7 +510,7 @@ INVERTER_PROFILES = {
         "has_battery": False,
         "max_power_kw": 10.0,
         "protocol_version": "v1.39",
-        "sensors": GRID_TIED_1P_SENSORS | PV3_SENSORS | SYSTEM_OUTPUT_SENSORS,
+        "sensors": GRID_TIED_1P_SENSORS | PV3_SENSORS | SYSTEM_OUTPUT_SENSORS | DRY_CONTACT_SENSORS,
     },
 
     # MIN Series VPP Protocol V2.01 (adds 30000 range for DTC)
@@ -522,7 +523,7 @@ INVERTER_PROFILES = {
         "has_battery": False,
         "max_power_kw": 6.0,
         "protocol_version": "v2.01",
-        "sensors": GRID_TIED_1P_SENSORS,
+        "sensors": GRID_TIED_1P_SENSORS | DRY_CONTACT_SENSORS,
     },
 
     "min_7000_10000_tl_x_v201": {
@@ -534,7 +535,7 @@ INVERTER_PROFILES = {
         "has_battery": False,
         "max_power_kw": 10.0,
         "protocol_version": "v2.01",
-        "sensors": GRID_TIED_1P_SENSORS | PV3_SENSORS | SYSTEM_OUTPUT_SENSORS,
+        "sensors": GRID_TIED_1P_SENSORS | PV3_SENSORS | SYSTEM_OUTPUT_SENSORS | DRY_CONTACT_SENSORS,
     },
 
     # ========================================================================
@@ -811,7 +812,7 @@ INVERTER_PROFILES = {
         # The V2.01 variant below keeps the line voltages; it has a source for them.
         "sensors": (
             (HYBRID_3P_SENSORS | BMS_SENSORS | AC_POWER_TOTAL_SENSOR)
-            - NO_LINE_VOLTAGES - NO_DRY_CONTACT_STATE
+            - NO_LINE_VOLTAGES
         ),
     },
 
@@ -827,7 +828,7 @@ INVERTER_PROFILES = {
         "protocol_version": "v2.01",
         "house_load_from_ac_output": True,  # see sph_tl3_3000_10000 (#447)
         "sensors": (
-            (HYBRID_3P_SENSORS | BMS_SENSORS | AC_POWER_TOTAL_SENSOR) - NO_DRY_CONTACT_STATE
+            HYBRID_3P_SENSORS | BMS_SENSORS | AC_POWER_TOTAL_SENSOR
         ),
     },
 
@@ -917,7 +918,7 @@ INVERTER_PROFILES = {
             BMS_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
-        ) - NO_DRY_CONTACT_STATE,
+        ),
     },
 
     # ========================================================================

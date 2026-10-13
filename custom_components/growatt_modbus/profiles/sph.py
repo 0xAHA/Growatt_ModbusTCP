@@ -969,21 +969,13 @@ SPH_3000_6000_V201 = {
         1062: {'name': 'load_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1063},
         1063: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1062, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
-        # === MIN/MOD RANGE REGISTERS (3000-3124) ===
-        # Grid Energy (to grid / export)
-        3071: {'name': 'energy_to_grid_today_high_mod', 'scale': 1, 'unit': '', 'pair': 3072, 'maps_to': 'energy_to_grid_today'},
-        3072: {'name': 'energy_to_grid_today_low_mod', 'scale': 1, 'unit': '', 'pair': 3071, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3073: {'name': 'energy_to_grid_total_high_mod', 'scale': 1, 'unit': '', 'pair': 3074, 'maps_to': 'energy_to_grid_total'},
-        3074: {'name': 'energy_to_grid_total_low_mod', 'scale': 1, 'unit': '', 'pair': 3073, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-
-        # Load Energy
-        3075: {'name': 'load_energy_today_high_mod', 'scale': 1, 'unit': '', 'pair': 3076, 'maps_to': 'load_energy_today'},
-        3076: {'name': 'load_energy_today_low_mod', 'scale': 1, 'unit': '', 'pair': 3075, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3077: {'name': 'load_energy_total_high_mod', 'scale': 1, 'unit': '', 'pair': 3078, 'maps_to': 'load_energy_total'},
-        3078: {'name': 'load_energy_total_low_mod', 'scale': 1, 'unit': '', 'pair': 3077, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-
-        # Dry Contact State (V1.39 input register — 0=Off, 1=On)
-        3119: {'name': 'dry_contact_state', 'scale': 1, 'unit': '', 'desc': 'Dry contact relay current state: 0=Off, 1=On'},
+        # NO 3000-range input registers. 3071-3078 (grid / load energy) and 3119 (dry contact)
+        # were mapped here, but the storage range above already supplies those energy
+        # counters (1049/1051/1061/1063 are found first by name), so they were never used for
+        # a value - and on three DTC 3501 units the 3000 range held only zeros or one value
+        # repeated (3293 at 3071-3073 and 3119). Their only effect was a 3000-3119 read, which
+        # one SPH6000 bridge answered with a truncated 89-register frame on every retry
+        # (#470).
 
         # === V2.01 REGISTERS (31000+ range) ===
         **VPP_V201_STATUS,
@@ -1145,21 +1137,13 @@ SPH_7000_10000_V201 = {
         1062: {'name': 'load_energy_total_high', 'scale': 1, 'unit': '', 'pair': 1063},
         1063: {'name': 'load_energy_total_low', 'scale': 1, 'unit': '', 'pair': 1062, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
-        # === MIN/MOD RANGE REGISTERS (3000-3124) ===
-        # Grid Energy (to grid / export)
-        3071: {'name': 'energy_to_grid_today_high_mod', 'scale': 1, 'unit': '', 'pair': 3072, 'maps_to': 'energy_to_grid_today'},
-        3072: {'name': 'energy_to_grid_today_low_mod', 'scale': 1, 'unit': '', 'pair': 3071, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3073: {'name': 'energy_to_grid_total_high_mod', 'scale': 1, 'unit': '', 'pair': 3074, 'maps_to': 'energy_to_grid_total'},
-        3074: {'name': 'energy_to_grid_total_low_mod', 'scale': 1, 'unit': '', 'pair': 3073, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-
-        # Load Energy
-        3075: {'name': 'load_energy_today_high_mod', 'scale': 1, 'unit': '', 'pair': 3076, 'maps_to': 'load_energy_today'},
-        3076: {'name': 'load_energy_today_low_mod', 'scale': 1, 'unit': '', 'pair': 3075, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-        3077: {'name': 'load_energy_total_high_mod', 'scale': 1, 'unit': '', 'pair': 3078, 'maps_to': 'load_energy_total'},
-        3078: {'name': 'load_energy_total_low_mod', 'scale': 1, 'unit': '', 'pair': 3077, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
-
-        # Dry Contact State (V1.39 input register — 0=Off, 1=On)
-        3119: {'name': 'dry_contact_state', 'scale': 1, 'unit': '', 'desc': 'Dry contact relay current state: 0=Off, 1=On'},
+        # NO 3000-range input registers. 3071-3078 (grid / load energy) and 3119 (dry contact)
+        # were mapped here, but the storage range above already supplies those energy
+        # counters (1049/1051/1061/1063 are found first by name), so they were never used for
+        # a value - and on three DTC 3501 units the 3000 range held only zeros or one value
+        # repeated (3293 at 3071-3073 and 3119). Their only effect was a 3000-3119 read, which
+        # one SPH6000 bridge answered with a truncated 89-register frame on every retry
+        # (#470).
 
         # === V2.01 REGISTERS (31000+ range) ===
         **VPP_V201_STATUS,

@@ -293,6 +293,7 @@ If auto-detection fails (or you want to override), choose based on:
 | 16-pin DRM/COM | Pin 3 | Pin 4 | Confirmed on a MID 30KTL3-XH, top row counted from the left ([#459](https://github.com/0xAHA/Growatt_ModbusTCP/issues/459)) |
 | 4-pin COM | Pin 1 | Pin 2 | |
 | RJ45 (485-3) | Pin 5 | Pin 1 | |
+| RJ45 (older SPH 3000-6000) | Pin 5 | Pin 4 | GND on pin 2. Confirmed on an SPH6000, DTC 3501 ([#470](https://github.com/0xAHA/Growatt_ModbusTCP/issues/470)) |
 
 > If values look garbled or the connection is unstable, try swapping the A and B wires — adapter labelling is not always consistent with the inverter's convention.
 
