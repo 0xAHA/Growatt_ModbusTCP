@@ -5896,6 +5896,23 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read active_power_rate register: {e}")
 
+        # --- PV Startup Voltage (holding 17, MIC MIN-range) --- Read if present in profile
+        # Confirmed on a MIC 2000TL-X: reg 17 holds the PV connect voltage as x0.1 V.
+        # Left undeclared on GrowattData (like max_output_power_rate) so it reads
+        # 'unknown' until a poll populates it, rather than a misleading 0.
+        if 17 in holding_map:
+            try:
+                start_v_regs = self.read_holding_registers(17, 1)
+                if start_v_regs is not None and len(start_v_regs) >= 1:
+                    data.pv_start_voltage = int(start_v_regs[0])
+                    logger.debug("[PV START] Read pv_start_voltage: raw=%d (%.1f V)",
+                                 data.pv_start_voltage, data.pv_start_voltage * 0.1)
+                else:
+                    data.unread_fields.add('pv_start_voltage')
+            except Exception as e:
+                data.unread_fields.add('pv_start_voltage')
+                logger.debug(f"Could not read pv_start_voltage register 17: {e}")
+
         # --- WIT Export Limit W (holding 203) ---
         if 203 in holding_map:
             try:

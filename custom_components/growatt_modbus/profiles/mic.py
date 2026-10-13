@@ -306,6 +306,11 @@ MIC_2500_6000TL_X_MIN_RANGE = {
     'holding_registers': {
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On'},
         3: {'name': 'active_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW', 'desc': 'Max output power %'},
+        # PV startup (connect) voltage. Confirmed on a MIC 2000TL-X (DTC 5200, FW "PV 200"):
+        # reg 17 reads 500 (=50.0 V) at factory default and accepts FC06 writes. Raising it
+        # delays grid-connect until the string can sustain voltage, which stops dawn/dusk
+        # on/off hunting on a single high-voltage panel. Keep below panel Voc.
+        17: {'name': 'pv_start_voltage', 'scale': 0.1, 'unit': 'V', 'access': 'RW', 'desc': 'PV startup voltage (x0.1V)'},
         30: {'name': 'modbus_address', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': 'Modbus address 1-254'},
 
         # Safety/compliance diagnostic registers (read-only, Issue #282)
