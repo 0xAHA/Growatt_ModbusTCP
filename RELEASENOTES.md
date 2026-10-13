@@ -4,6 +4,21 @@
 
 ---
 
+## v2.0.6-b5
+
+Issues: #469, #470
+
+- **MIC (MIN-range profile): new PV Startup Voltage control (holding 17, 50-550 V).**
+  Raising it stops an inverter on a single high-voltage panel connecting at dawn before
+  the panel can hold the load, dropping out and reconnecting over and over. Keep it below
+  your panel's open-circuit voltage. Contributed by @AguiMr (PR #469), tested on a MIC
+  2000TL-X.
+
+- **SPH 3000-6000TL BL (DTC 3501) is now a confirmed mapping**, checked against the Growatt
+  portal on an SPH6000 by @kabadisha.
+
+---
+
 ## v2.0.6-b4
 
 Issues: #468, #470
