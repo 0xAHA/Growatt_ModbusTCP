@@ -336,6 +336,14 @@ and why, instead of appearing to succeed.
 Equal values are allowed. To move both, change them in the order that keeps the pair valid:
 raising both means raising Bulk first, lowering both means lowering Float first.
 
+**Battery to Utility Switchover cannot be set above Utility to Battery Switchover**, and the
+two controls enforce that on each other in the same way. The inverter switches back to the
+battery at a higher level than the one at which it switched to the grid, and silently reverts
+a write that would reverse them: an SPF 6000 ES Plus took 21-25 % for Battery to Utility only
+after Utility to Battery had been raised above it
+([#471](https://github.com/0xAHA/Growatt_ModbusTCP/issues/471)). To raise both, raise
+Utility to Battery first; to lower both, lower Battery to Utility first.
+
 **Max Charge Current is unavailable when Battery Type is Lithium.** The inverter does not
 allow it to be set in that mode — the BMS takes over charge current control — so the entity
 is withheld rather than offered and ignored. Range and behaviour are confirmed on an

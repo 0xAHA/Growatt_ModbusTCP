@@ -528,6 +528,11 @@ WRITABLE_REGISTERS = {
         'label': 'Battery to Utility Switchover',
         'scale': 0.1,
         'valid_range': (0, 1000),  # Full range: Lithium 0-100%, Non-Lithium 20.0-64.0V
+        # Cannot exceed Utility to Battery Switchover (95). An SPF 6000 ES Plus (firmware
+        # 100.06) acknowledged 21-25 % here and reverted to 20 % while 95 stood at 20 %, and
+        # accepted the same values once 95 was raised first (#471). Same silent refusal as
+        # Bulk/Float (#387). Confirmed in SOC mode; the ordering is the same in volts.
+        'not_above': 'ac_to_bat_volt',
         'unit': 'V/%',  # Unit depends on battery_type
         'desc': 'Battery to Grid: SOC level to switch from battery to utility',
         'battery_dependent': True
@@ -537,6 +542,7 @@ WRITABLE_REGISTERS = {
         'label': 'Utility to Battery Switchover',  # see bat_low_to_uti above
         'scale': 0.1,
         'valid_range': (0, 1000),  # Full range: Lithium 0-100%, Non-Lithium 20.0-64.0V
+        'not_below': 'bat_low_to_uti',  # see bat_low_to_uti (#471)
         'unit': 'V/%',  # Unit depends on battery_type
         'desc': 'Grid to Battery: SOC level to switch back from utility to battery mode',
         'battery_dependent': True

@@ -447,7 +447,13 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
             return None
 
         value = round(float(raw_value) * other.get('scale', 1), 2)
-        if not (self._attr_native_min_value <= value <= self._attr_native_max_value):
+        # The range this control has right now. A battery-dependent pair is % on Lithium and
+        # V otherwise, so its partner has to be judged against that, not the static range.
+        if self._is_battery_dependent:
+            lo, hi = self._battery_dependent_bounds()[:2]
+        else:
+            lo, hi = self._attr_native_min_value, self._attr_native_max_value
+        if not (lo <= value <= hi):
             return None
         return value
 
@@ -459,7 +465,8 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
             if paired is not None and value < paired:
                 raise HomeAssistantError(
                     f"{self._attr_name or self._control_name} cannot be set below "
-                    f"{paired} V, the current {self._friendly(floor_from)}. The inverter "
+                    f"{paired} {self.native_unit_of_measurement}, the current "
+                    f"{self._friendly(floor_from)}. The inverter "
                     f"refuses this combination, and the write would appear to succeed and "
                     f"then revert."
                 )
@@ -470,7 +477,8 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
             if paired is not None and value > paired:
                 raise HomeAssistantError(
                     f"{self._attr_name or self._control_name} cannot be set above "
-                    f"{paired} V, the current {self._friendly(ceiling_from)}. The inverter "
+                    f"{paired} {self.native_unit_of_measurement}, the current "
+                    f"{self._friendly(ceiling_from)}. The inverter "
                     f"refuses this combination, and the write would appear to succeed and "
                     f"then revert."
                 )
@@ -482,27 +490,32 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
 
     @property
     def native_min_value(self) -> float:
-        """Static minimum, raised to the paired control's value where one is declared."""
-        if self._is_battery_dependent:
-            return self._battery_dependent_bounds()[0]
+        """Minimum, raised to the paired control's value where one is declared.
+
+        The pair applies to battery-dependent controls too. They used to return their range
+        before the pair was considered, which was harmless while only Bulk/Float had one -
+        and would have made the SPF switchover pair (#471) decorative.
+        """
+        lo = (self._battery_dependent_bounds()[0] if self._is_battery_dependent
+              else self._attr_native_min_value)
         floor_from = self._control_config.get('not_below')
         if floor_from:
             paired = self._paired_bound(floor_from)
             if paired is not None:
-                return max(self._attr_native_min_value, paired)
-        return self._attr_native_min_value
+                return max(lo, paired)
+        return lo
 
     @property
     def native_max_value(self) -> float:
-        """Static maximum, lowered to the paired control's value where one is declared."""
-        if self._is_battery_dependent:
-            return self._battery_dependent_bounds()[1]
+        """Maximum, lowered to the paired control's value where one is declared."""
+        hi = (self._battery_dependent_bounds()[1] if self._is_battery_dependent
+              else self._attr_native_max_value)
         ceiling_from = self._control_config.get('not_above')
         if ceiling_from:
             paired = self._paired_bound(ceiling_from)
             if paired is not None:
-                return min(self._attr_native_max_value, paired)
-        return self._attr_native_max_value
+                return min(hi, paired)
+        return hi
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""

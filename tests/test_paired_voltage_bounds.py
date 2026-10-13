@@ -48,7 +48,9 @@ def _load_methods():
               "native_min_value", "native_max_value",
               # The bound properties consult these too, since #428 made unit and range
               # follow battery_type at runtime.
-              "_battery_dependent_bounds", "_is_battery_dependent"}
+              "_battery_dependent_bounds", "_is_battery_dependent",
+              # The refusal message names the live unit, % or V (#471).
+              "native_unit_of_measurement"}
     found = {}
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name in wanted:
@@ -62,7 +64,7 @@ def _load_methods():
     body = [found[name] for name in
             ("_paired_bound", "_check_paired_constraint", "_friendly",
              "_battery_dependent_bounds", "_is_battery_dependent",
-             "native_min_value", "native_max_value")]
+             "native_min_value", "native_max_value", "native_unit_of_measurement")]
     # Decorators are re-applied explicitly on the stub below.
     for node in body:
         node.decorator_list = []
@@ -92,6 +94,7 @@ class _Entity:
         self._attr_name = control_name.replace("_", " ").title()
         self._attr_native_min_value = STATIC_MIN
         self._attr_native_max_value = STATIC_MAX
+        self._attr_native_unit_of_measurement = "V"
         self.coordinator = types.SimpleNamespace(data=data)
 
     _LITHIUM_BATTERY_TYPE = 3
@@ -103,6 +106,7 @@ class _Entity:
     _is_battery_dependent = property(M._is_battery_dependent)
     min_value = property(M.native_min_value)
     max_value = property(M.native_max_value)
+    native_unit_of_measurement = property(M.native_unit_of_measurement)
 
 
 # Raw register values: scale 0.1, so 540 is 54.0 V.
@@ -184,11 +188,69 @@ def test_no_coordinator_data_falls_back_to_the_static_range():
     assert entity.max_value == STATIC_MAX
 
 
+PAIRED = ("bulk_charge_voltage", "float_charge_voltage",   # #387
+          "bat_low_to_uti", "ac_to_bat_volt")                # #471
+
+
 def test_controls_without_a_declared_pair_are_untouched():
-    """Only this pair is constrained. Every other number control must behave as before."""
+    """Only pairs with hardware evidence are constrained. Every other number control must
+    behave as before."""
     for name, config in CONST.WRITABLE_REGISTERS.items():
-        if name in ("bulk_charge_voltage", "float_charge_voltage"):
+        if name in PAIRED:
             continue
         assert "not_below" not in config and "not_above" not in config, (
             f"{name} has gained a paired constraint with no evidence behind it"
         )
+
+
+# ---------------------------------------------------------------------------
+# SPF switchover pair (#471)
+# ---------------------------------------------------------------------------
+#
+# An SPF 6000 ES Plus (firmware 100.06) acknowledged Battery to Utility = 21-25 % and
+# reverted it to 20 % while Utility to Battery stood at 20 %; once Utility to Battery was
+# raised first, the same values held. Both controls are battery-dependent (% on Lithium,
+# V otherwise), and before #471 a battery-dependent control returned its range before any
+# pair was considered.
+
+LITHIUM = 3
+
+
+def test_the_switchover_pair_is_declared_both_ways():
+    assert CONST.WRITABLE_REGISTERS["bat_low_to_uti"]["not_above"] == "ac_to_bat_volt"
+    assert CONST.WRITABLE_REGISTERS["ac_to_bat_volt"]["not_below"] == "bat_low_to_uti"
+
+
+def test_battery_to_utility_cannot_exceed_utility_to_battery_on_lithium():
+    """THE #471 case: Utility to Battery at 20 %, so Battery to Utility tops out at 20 %."""
+    entity = _Entity("bat_low_to_uti", _Data(battery_type=LITHIUM, ac_to_bat_volt=200))
+
+    assert entity.max_value == 20.0
+    assert entity.min_value == 0.0
+    with pytest.raises(_HomeAssistantError) as raised:
+        entity._check_paired_constraint(25.0)
+    assert "20.0 %" in str(raised.value), "the limit should be stated in the control's unit"
+
+
+def test_raising_utility_to_battery_first_lets_it_through():
+    entity = _Entity("bat_low_to_uti", _Data(battery_type=LITHIUM, ac_to_bat_volt=500))
+
+    assert entity.max_value == 50.0
+    entity._check_paired_constraint(25.0)
+
+
+def test_utility_to_battery_cannot_go_below_battery_to_utility():
+    entity = _Entity("ac_to_bat_volt", _Data(battery_type=LITHIUM, bat_low_to_uti=200))
+
+    assert entity.min_value == 20.0
+    assert entity.max_value == 100.0
+
+
+def test_the_pair_works_in_volts_as_well():
+    """Lead-acid: the same ordering, in the 20.0-64.0 V range."""
+    entity = _Entity("bat_low_to_uti", _Data(battery_type=0, ac_to_bat_volt=520))
+
+    assert entity.max_value == 52.0
+    with pytest.raises(_HomeAssistantError) as raised:
+        entity._check_paired_constraint(53.0)
+    assert "52.0 V" in str(raised.value)
