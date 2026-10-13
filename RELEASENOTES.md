@@ -4,6 +4,24 @@
 
 ---
 
+## v2.0.6-b4
+
+Issues: #468, #470
+
+- **SPH 3000-10000 (VPP V2.01 profiles): the "Short/misaligned read at 3000" warning is
+  gone.** These profiles read a register range that these inverters don't fill, and one
+  bridge answered it with a truncated reply on every retry. No values change; the energy
+  figures come from the inverter's storage registers as before. Reported by @kabadisha.
+
+- **Dry Contact State is now offered only on MIN TL-X**, the only profiles that map its
+  register. On every other model it showed a permanent "Off" that was never read. It was
+  disabled by default, so most installs won't notice it go.
+
+- **SPF: Bulk and Float Charge Voltage are now on the Battery device**, next to the other
+  charge settings, instead of the Inverter device. Reported by @horiace.
+
+---
+
 ## v2.0.6-b3
 
 Issues: #464
