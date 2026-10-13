@@ -52,7 +52,7 @@ that model has, for most entries, never been verified against hardware. See
 
 | DTC | Model | Profile to select | Mapping |
 | --- | --- | --- | --- |
-| 3501 | SPH 3000-6000TL BL | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
+| 3501 | SPH 3000-6000TL BL | SPH (3-6kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
 | 3502 | SPH 3000-6000TL BL-UP | SPH (3-6kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |
 | 3503 | SPH 3000-6000TL HU | SPH (3-6kW) | :material-help-circle:{ .dtc-unknown }&nbsp;Unconfirmed |
 | 3504 | SPH 3000-6000TL HUB | SPH (3-6kW) | :material-check-circle:{ .dtc-ok }&nbsp;Confirmed |

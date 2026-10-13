@@ -122,7 +122,7 @@ These statuses live in `DTC_REGISTRY` in `auto_detection.py`, which is the singl
 
 | DTC Code | Model Series | Profile | Status |
 |----------|-------------|---------|--------|
-| 3501 | SPH 3000-6000TL BL | sph_3000_6000_v201 | ⚠️ Unconfirmed |
+| 3501 | SPH 3000-6000TL BL | sph_3000_6000_v201 | ✅ Confirmed (SPH6000, #470) |
 | 3502 | SPH 3000-6000TL BL-UP | sph_3000_6000_v201 | ✅ Confirmed (#337) |
 | 3503 | SPH 3000-6000TL HU | sph_3000_6000_v201 | ⚠️ Unconfirmed |
 | 3504 | SPH 3000-6000TL HUB | sph_3000_6000_v201 | ✅ Confirmed (#286) |

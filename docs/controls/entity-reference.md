@@ -712,7 +712,7 @@ inverter setting is exposed, on the MIC MIN-range profile (`MIC_2500_6000TL_X_MI
 
 | Entity | Register | Range | Description |
 |---|---|---|---|
-| **PV Startup Voltage** | Holding 17 (×0.1 V) | 50.0–550.0 V | PV voltage the inverter waits for before connecting to the grid. Factory default is 50.0 V |
+| **PV Startup Voltage** | Holding 17 (×0.1 V) | 50.0–550.0 V | PV voltage the inverter waits for before connecting to the grid. Factory default depends on the model: 50.0 V on a MIC 2000TL-X; Growatt datasheets give 80 V for the MIC 2500-3300TL-X |
 
 **What it's for:** with a single high-voltage panel, the inverter can connect at dawn
 before the panel can carry the load. It then drops out, recovers and reconnects, over and

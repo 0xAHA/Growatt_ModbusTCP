@@ -478,7 +478,8 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
     # -- SPH series --
     3501: DtcEntry(
         'SPH 3000-6000TL BL', 'sph_3000_6000_v201',
-        ASSUMED, 'no device report; sibling 3502 is confirmed and shares this map',
+        CONFIRMED, 'SPH6000, issue #470 - PV total, grid export total, load energy and '
+                   'SOC matched the Growatt portal',
     ),
     3502: DtcEntry(
         'SPH 3000-6000TL BL-UP', 'sph_3000_6000_v201',
