@@ -705,7 +705,21 @@ v2.0.5-b17 they are removed.
 
 **Applies to:** MIC 600-3300TL-X
 
-**Control:** None. MIC is a grid-tied micro inverter with no battery or control registers beyond basic inverter status.
+MIC is a grid-tied micro inverter with no battery, so there is no battery control. One
+inverter setting is exposed, on the MIC MIN-range profile (`MIC_2500_6000TL_X_MIN_RANGE`) only.
+
+### Number Entities
+
+| Entity | Register | Range | Description |
+|---|---|---|---|
+| **PV Startup Voltage** | Holding 17 (×0.1 V) | 50.0–550.0 V | PV voltage the inverter waits for before connecting to the grid. Factory default is 50.0 V |
+
+**What it's for:** with a single high-voltage panel, the inverter can connect at dawn
+before the panel can carry the load. It then drops out, recovers and reconnects, over and
+over, until the light is strong enough. The same happens at dusk. Raising the startup
+voltage makes it wait until the panel can hold the connection. Keep it comfortably below
+your panel's (or string's) open-circuit voltage (Voc), or the inverter will never start.
+The range is the inverter's MPPT window; the right value for you depends on your panels.
 
 ---
 
@@ -720,7 +734,7 @@ v2.0.5-b17 they are removed.
 | **MIN** (no battery) | No | — | — | — |
 | **MIN TL-XH** (with battery) | Yes | Persistent writes | Priority Mode, Allow Grid Charge and TOU Priority/Enable (grid charge and TOU disabled by default) | Charge Rate, Charge Stop SOC, Discharge Stop SOC (plus TOU Start/End times ×9) |
 | **MIN TL-XH2** | Yes (timed) | VPP overrides | Remote Power Control Enable, VPP AC Charge Enable | On-Grid Discharge Stop SOC, Remote Power Control Charging Time, Remote Charge And Discharge Power |
-| **MIC** | No | — | — | — |
+| **MIC** | No | Persistent writes | — | PV Startup Voltage (MIC MIN-range profile) |
 
 ---
 
