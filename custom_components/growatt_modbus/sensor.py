@@ -31,7 +31,9 @@ from .const import (
     CONF_INVERT_GRID_POWER,
     get_device_type_for_sensor,
     get_entity_category,
+    hybrid_grid_connection_status,
     offgrid_grid_connection_status,
+    PROFILE_STATUS_MAP,
 )
 from .coordinator import GrowattModbusCoordinator
 from .entity import GrowattEntity
@@ -2222,12 +2224,14 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
                 # from "register not in this profile" — both yield equipment_status=0 otherwise.
                 if data.equipment_status_valid:
                     # V2.01 equipment_status (reg 31000): 5/6=On-grid, 7/8=Off-grid/EPS
-                    status = data.equipment_status
-                    if status in (5, 6):
-                        return "On-grid"
-                    if status in (7, 8):
-                        return "Off-grid"
-                    return "Unknown"
+                    return hybrid_grid_connection_status(data.equipment_status)
+                elif PROFILE_STATUS_MAP.get(
+                    getattr(self.coordinator.modbus_client, "register_map_name", "") or "",
+                    "grid_tied",
+                ) == "hybrid":
+                    # Hybrid profiles report the same working-state table in their own
+                    # status register (#474) - not the grid-tied 0/1 reading below.
+                    return hybrid_grid_connection_status(data.status)
                 elif inverter_series.startswith(("spf_", "spe_")):
                     # Off-grid reads the SAME register 0 with a completely different code
                     # set, so the grid-tied interpretation below is wrong here (#443). The

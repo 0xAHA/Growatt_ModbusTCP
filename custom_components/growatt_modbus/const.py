@@ -1556,6 +1556,28 @@ def battery_power_scale_into_payload(payload: dict, scale, profile_key: str,
     return payload
 
 
+# Hybrid status table (HYBRID_STATUS_CODES): the same codes as VPP 31000 working state.
+# 5 PV On-Grid and 6 Bat On-Grid are on-grid; 7 PV+Bat Off-Grid and 8 Bat Off-Grid are off.
+# Waiting, Self-Test, Fault, Updating and Bypass do not settle it either way.
+HYBRID_STATUS_ON_GRID = frozenset({5, 6})
+HYBRID_STATUS_OFF_GRID = frozenset({7, 8})
+
+
+def hybrid_grid_connection_status(status: int) -> str:
+    """Grid Connection Status from a hybrid working-state code.
+
+    Used for VPP register 31000 and for the hybrid profiles' own status register alike - the
+    two share one table. The fallback for hybrids without 31000 used to apply the grid-tied
+    reading ("0 = Waiting, 1 = Normal" -> On-grid), so an SPH reported Unknown through the
+    whole of PV On-Grid and Bat On-Grid and On-grid only while Waiting (#474).
+    """
+    if status in HYBRID_STATUS_ON_GRID:
+        return "On-grid"
+    if status in HYBRID_STATUS_OFF_GRID:
+        return "Off-grid"
+    return "Unknown"
+
+
 def offgrid_grid_connection_status(
     status: int,
     grid_voltage: float,
