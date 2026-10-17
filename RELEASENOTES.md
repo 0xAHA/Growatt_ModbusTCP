@@ -4,6 +4,26 @@
 
 ---
 
+## v2.0.6-b6
+
+Issues: #451, #471, #474
+
+- **SPH, SPH-TL3, SPA and MIN TL-XH2: Grid Connection Status shows On-grid in normal
+  running.** On models without the VPP status register it read the wrong status table, so it
+  showed Unknown through PV On-Grid and Bat On-Grid, and On-grid only while Waiting.
+  Reported by @Vict20.
+
+- **SPF: Battery to Utility Switchover can no longer be set above Utility to Battery
+  Switchover**, and the other way round. The inverter silently reverts a value that breaks
+  that order; the controls now stop there, and a script asking for one gets an error saying
+  why. To raise both, raise Utility to Battery first. Found by @takisbg.
+
+- **MOD/MID with two battery packs: new Battery 1 Charge/Discharge Today/Total sensors**,
+  pack 1's own counters, disabled by default. The main battery counters cover both packs
+  together. Requested by @Rocko84.
+
+---
+
 ## v2.0.6-b5
 
 Issues: #469, #470
