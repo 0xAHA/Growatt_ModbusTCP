@@ -222,6 +222,11 @@ Confirmed on a MID 25kTL3-XH with a 10 kWh and a 20 kWh APX pack
 recovered the second pack, which had been read from the inverter and discarded before this
 was wired up.
 
+**The main Battery Charge/Discharge Today/Total counters cover all packs together.** On that
+MID they equal pack 1 + pack 2 to the decimal, which is what the Energy dashboard needs. For
+pack 1 on its own, MOD/MID multi-pack systems also get four **Battery 1** sensors (Charge /
+Discharge Today / Total), disabled by default and created only when a second pack is present.
+
 ---
 
 !!! warning "SPH-TL3: AC Voltage R/S/T are line-to-line, not phase voltages"

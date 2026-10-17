@@ -219,6 +219,18 @@
       "ac_voltage_tr": {
         "name": "AC Voltage TR"
       },
+      "battery1_charge_energy_today": {
+        "name": "Battery 1 Charge Today"
+      },
+      "battery1_charge_energy_total": {
+        "name": "Battery 1 Charge Total"
+      },
+      "battery1_discharge_energy_today": {
+        "name": "Battery 1 Discharge Today"
+      },
+      "battery1_discharge_energy_total": {
+        "name": "Battery 1 Discharge Total"
+      },
       "battery2_charge_energy_today": {
         "name": "Battery 2 Charge Today"
       },

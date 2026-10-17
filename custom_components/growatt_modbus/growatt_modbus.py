@@ -5616,6 +5616,22 @@ class GrowattModbus:
                     f"P={getattr(data, f'{_pfx}_power', 0):.0f}W"
                 )
 
+            # Battery 1's own energy counters (VPP 31202-31209, mapped as *_vpp_*), published
+            # only when a second pack is present. The main Battery Charge/Discharge counters
+            # are inverter-wide - on a MID 25KTL3-XH with two APX packs they equal pack 1 +
+            # pack 2 exactly, on all four - so with two packs there was no per-pack figure for
+            # pack 1 (#451). With one pack these would only duplicate the main counters.
+            if hasattr(data, 'battery2_voltage'):
+                for _field in ('charge_energy_today', 'charge_energy_total',
+                               'discharge_energy_today', 'discharge_energy_total'):
+                    _addr = self._find_register_by_name(f"{_field}_vpp_low")
+                    if _addr is None:
+                        continue
+                    _value = self._get_register_value(_addr)
+                    if _value is None:
+                        data.unread_fields.add(f"battery1_{_field}")
+                    setattr(data, f"battery1_{_field}", _value or 0.0)
+
             # BMS Information (SPH HU and other models with BMS monitoring)
             # Registers 1082-1120 contain detailed battery management system data
             bms_attrs = [

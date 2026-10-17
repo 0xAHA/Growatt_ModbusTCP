@@ -102,6 +102,12 @@ _EXTRA_BATTERY_FIELDS = (
 )
 
 BATTERY2_SENSORS: Set[str] = {f"battery2_{f}" for f in _EXTRA_BATTERY_FIELDS}
+# Pack 1's own energy counters (VPP 31202-31209) on multi-pack MOD/MID. Only the maps that
+# define them as *_vpp_* registers get these (#451).
+BATTERY1_ENERGY_SENSORS: Set[str] = {
+    "battery1_charge_energy_today", "battery1_charge_energy_total",
+    "battery1_discharge_energy_today", "battery1_discharge_energy_total",
+}
 BATTERY3_SENSORS: Set[str] = {f"battery3_{f}" for f in _EXTRA_BATTERY_FIELDS}
 BATTERY4_SENSORS: Set[str] = {f"battery4_{f}" for f in _EXTRA_BATTERY_FIELDS}
 
@@ -1027,7 +1033,7 @@ INVERTER_PROFILES = {
         # test_profile_aliases_stay_equivalent holds it from here.
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
                      | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
-                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS)
+                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS | BATTERY1_ENERGY_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 
@@ -1047,7 +1053,7 @@ INVERTER_PROFILES = {
         # one - reading it, then discarding it because nothing offered the entity (#451).
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
                      | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
-                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS)
+                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS | BATTERY1_ENERGY_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 
@@ -1070,7 +1076,7 @@ INVERTER_PROFILES = {
         # register map this profile shares (#451).
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
                      | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
-                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS)
+                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS | BATTERY1_ENERGY_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 

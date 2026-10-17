@@ -1031,6 +1031,52 @@ SENSOR_DEFINITIONS = {
         )
     },
 
+    # ---- Battery 1's own energy counters (VPP 31202-31209), multi-pack systems only ----
+    # The main Battery Charge/Discharge counters cover all packs together (#451). These
+    # exist only when a second pack does: battery2_voltage is set dynamically, so the
+    # condition is a real gate rather than a dataclass default (CLAUDE.md rule 6). Written
+    # out rather than generated so validate_sensors.py and the integrity tests can see them.
+    "battery1_charge_energy_today": {
+        "name": "Battery 1 Charge Today",
+        "icon": "mdi:battery-plus",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "battery1_charge_energy_today",
+        "condition": lambda data: hasattr(data, "battery2_voltage"),
+        "disabled_by_default": True,
+    },
+    "battery1_charge_energy_total": {
+        "name": "Battery 1 Charge Total",
+        "icon": "mdi:battery-plus",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "battery1_charge_energy_total",
+        "condition": lambda data: hasattr(data, "battery2_voltage"),
+        "disabled_by_default": True,
+    },
+    "battery1_discharge_energy_today": {
+        "name": "Battery 1 Discharge Today",
+        "icon": "mdi:battery-minus",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "battery1_discharge_energy_today",
+        "condition": lambda data: hasattr(data, "battery2_voltage"),
+        "disabled_by_default": True,
+    },
+    "battery1_discharge_energy_total": {
+        "name": "Battery 1 Discharge Total",
+        "icon": "mdi:battery-minus",
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfEnergy.KILO_WATT_HOUR,
+        "attr": "battery1_discharge_energy_total",
+        "condition": lambda data: hasattr(data, "battery2_voltage"),
+        "disabled_by_default": True,
+    },
+
     "ac_charge_energy_today": {
         "name": "AC Charge Energy Today",
         "icon": "mdi:battery-charging-50",
