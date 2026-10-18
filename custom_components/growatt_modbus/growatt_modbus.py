@@ -3899,6 +3899,17 @@ class GrowattModbus:
             # Backup Box Data (Growatt SYN backup box, regs 3281-3342)
             self._read_backup_box_data(data)
 
+            # Live priority mode, where the profile maps an input register for it (MOD/MID-XH
+            # input 3144: 0 Load, 1 Battery, 2 Grid). Mapped since the profile was written and
+            # never read, so Priority Mode fell back to a holding register instead (#475).
+            _pm_addr = self._find_register_by_name('priority_mode')
+            if _pm_addr is not None:
+                _pm = self._get_register_value(_pm_addr)
+                if _pm is None:
+                    data.unread_fields.add('priority_mode')
+                else:
+                    data.priority_mode = int(_pm)
+
             # Battery working status (VPP 31001) and pack description (31225-31228), #460
             for _pack_field in ('battery_working_status',
                                 'battery_cluster_sum', 'battery_module_number',
@@ -6062,7 +6073,15 @@ class GrowattModbus:
 
         # --- SPH/SPM Battery Control registers (1000+ range) ---
         # Priority Mode (1044 for SPH/SPH-TL3, 30476 for WIT)
+        #
+        # Only where the profile has no live input register for it. MOD/MID-XH maps both
+        # input 3144 (the mode in force) and holding 30476, which there is the VPP *default*
+        # mode and read 0 on a MID 25KTL3-XH in Load, Grid and Battery First alike. Read
+        # here, it overwrote 3144 on every poll and Priority Mode never left Load First
+        # (#475).
         priority_addr = 1044 if 1044 in holding_map else (30476 if 30476 in holding_map else None)
+        if self._find_register_by_name('priority_mode') is not None:
+            priority_addr = None
         if priority_addr:
             try:
                 priority_regs = self.read_holding_registers(priority_addr, 1)
