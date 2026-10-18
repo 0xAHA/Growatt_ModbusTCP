@@ -4,6 +4,16 @@
 
 ---
 
+## v2.0.6-b7
+
+Issues: #475
+
+- **MOD/MID-XH: Priority Mode now shows the mode the inverter is actually in.** It read a
+  default-mode register that stays at 0, so it showed Load First whatever was set. It now
+  reads the live mode register. Reported by @robintheander.
+
+---
+
 ## v2.0.6-b6
 
 Issues: #451, #471, #474
