@@ -11,6 +11,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.exceptions import HomeAssistantError
 
+from .tou_packing import (
+    current_pair as tou_current_pair,
+    publish as tou_publish,
+    with_enable as tou_with_enable,
+    with_priority as tou_with_priority,
+)
 from .const import (
     DOMAIN,
     WRITABLE_REGISTERS,
@@ -902,10 +908,16 @@ class GrowattModTouPriority(GrowattEntity, SelectEntity):
         priority = self._PRIORITY_REVERSE.get(option)
         if priority is None:
             return
-        data = self.coordinator.data
-        current_raw = getattr(data, self._start_field, 0) if data else 0
-        new_raw = (int(current_raw) & 0x9FFF) | (priority << 13)
-        current_end = int(getattr(data, self._end_field, 0) if data else 0)
+        # Read the pair fresh: the last poll may predate a write made seconds ago to this
+        # same start word (time, priority and enable share it), and rebuilding from that
+        # copy would undo it (#475).
+        fresh = await self.hass.async_add_executor_job(
+            self.coordinator.modbus_client.read_holding_registers, self._start_reg, 2
+        )
+        current_raw, current_end, _ = tou_current_pair(
+            fresh, self.coordinator.data, self._start_field, self._end_field
+        )
+        new_raw = tou_with_priority(current_raw, priority)
         try:
             success = await self.hass.async_add_executor_job(
                 self.coordinator.modbus_client.write_registers,
@@ -919,6 +931,10 @@ class GrowattModTouPriority(GrowattEntity, SelectEntity):
             _LOGGER.info("Set MOD TOU period %d priority to %s (start=0x%04X, end=0x%04X, atomic FC16)", self._period, option, new_raw, current_end)
             self.coordinator.track_write(self._start_reg, new_raw, self._start_field)
             self.coordinator.track_write(self._end_reg, current_end, self._end_field)
+            # Show it on every entity of this period now, not after the next poll (#475).
+            tou_publish(self.coordinator.data, self._start_field, self._end_field,
+                        new_raw, current_end)
+            self.coordinator.async_update_listeners()
             await self.coordinator.async_request_refresh()
 
 
@@ -963,10 +979,16 @@ class GrowattModTouEnable(GrowattEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Write new enable state atomically — always write start+end together as a single FC16 transaction."""
         enable = 1 if option == "Enabled" else 0
-        data = self.coordinator.data
-        current_raw = getattr(data, self._start_field, 0) if data else 0
-        new_raw = (int(current_raw) & 0x7FFF) | (enable << 15)
-        current_end = int(getattr(data, self._end_field, 0) if data else 0)
+        # Read the pair fresh: the last poll may predate a write made seconds ago to this
+        # same start word (time, priority and enable share it), and rebuilding from that
+        # copy would undo it (#475).
+        fresh = await self.hass.async_add_executor_job(
+            self.coordinator.modbus_client.read_holding_registers, self._start_reg, 2
+        )
+        current_raw, current_end, _ = tou_current_pair(
+            fresh, self.coordinator.data, self._start_field, self._end_field
+        )
+        new_raw = tou_with_enable(current_raw, bool(enable))
         try:
             success = await self.hass.async_add_executor_job(
                 self.coordinator.modbus_client.write_registers,
@@ -980,6 +1002,10 @@ class GrowattModTouEnable(GrowattEntity, SelectEntity):
             _LOGGER.info("Set MOD TOU period %d enable to %s (start=0x%04X, end=0x%04X, atomic FC16)", self._period, option, new_raw, current_end)
             self.coordinator.track_write(self._start_reg, new_raw, self._start_field)
             self.coordinator.track_write(self._end_reg, current_end, self._end_field)
+            # Show it on every entity of this period now, not after the next poll (#475).
+            tou_publish(self.coordinator.data, self._start_field, self._end_field,
+                        new_raw, current_end)
+            self.coordinator.async_update_listeners()
             await self.coordinator.async_request_refresh()
 
 

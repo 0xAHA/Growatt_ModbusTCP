@@ -10,6 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import EntityCategory
 
+from .tou_packing import publish as tou_publish
 from .const import DOMAIN, WRITABLE_REGISTERS, CONF_REGISTER_MAP, get_device_type_for_control, DEVICE_TYPE_BATTERY, MOD_TOU_PERIODS
 from .coordinator import GrowattModbusCoordinator
 from .entity import GrowattEntity
@@ -474,6 +475,10 @@ class GrowattModTouTime(GrowattEntity, TimeEntity):
             )
             self.coordinator.track_write(period["start_reg"], new_start, period["start_field"])
             self.coordinator.track_write(period["end_reg"], new_end, period["end_field"])
+            # Show it on every entity of this period now, not after the next poll (#475).
+            tou_publish(self.coordinator.data, period["start_field"], period["end_field"],
+                        new_start, new_end)
+            self.coordinator.async_update_listeners()
             await self.coordinator.async_request_refresh()
         else:
             _LOGGER.warning(
