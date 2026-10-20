@@ -4,6 +4,23 @@
 
 ---
 
+## v2.0.6-b8
+
+Issues: #475, #478, #479
+
+- **Fix: Grid Connection Status stopped updating in v2.0.6-b6 and b7** on SPH, SPH-TL3, SPA
+  and MIN TL-XH2 without the VPP status register, and logged an error on every poll. It
+  updates normally again. Found and diagnosed by @Vict20.
+
+- **TOU periods (MOD, MID, MIN TL-XH): changing several settings of one period in quick
+  succession no longer undoes the earlier change**, and the change shows straight away
+  instead of after the next poll. Reported by @robintheander.
+
+- **The integration now ships its own icon and logo**, shown by Home Assistant 2026.3 and
+  newer. Contributed by @frenck (PR #478).
+
+---
+
 ## v2.0.6-b7
 
 Issues: #475
