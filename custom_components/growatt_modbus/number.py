@@ -441,7 +441,6 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         if raw_value is None or other_control in getattr(data, 'unread_fields', ()):
             return None
 
-        from .const import WRITABLE_REGISTERS
         other = WRITABLE_REGISTERS.get(other_control)
         if not other:
             return None

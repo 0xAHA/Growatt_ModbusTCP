@@ -1412,7 +1412,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                         "Inverter unreachable at startup — integration loading with empty state. "
                         "Sensors will be unavailable until the inverter responds."
                     )
-                    from .growatt_modbus import GrowattData
+                    # GrowattData is imported at module level. A local import here made it
+                    # local to the whole method, so the startup-failure path further down,
+                    # which also builds a placeholder, raised UnboundLocalError (#479).
                     self.data = GrowattData()
 
                 _LOGGER.debug("Inverter offline - applying smart offline behavior")

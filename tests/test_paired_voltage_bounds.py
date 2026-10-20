@@ -69,8 +69,8 @@ def _load_methods():
     for node in body:
         node.decorator_list = []
     src = ast.unparse(ast.Module(body=body, type_ignores=[]))
-    src = src.replace("from .const import WRITABLE_REGISTERS",
-                      "from growatt_under_test.const import WRITABLE_REGISTERS")
+    # number.py takes WRITABLE_REGISTERS from its module-level import (#479).
+    module.__dict__["WRITABLE_REGISTERS"] = CONST.WRITABLE_REGISTERS
     exec(compile(src, "<paired>", "exec"), module.__dict__)
     return module
 

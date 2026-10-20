@@ -2338,7 +2338,10 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
         
         # Special handling for status sensor
         if self._sensor_key == "status":
-            from .const import STATUS_CODES, HYBRID_STATUS_CODES, SPF_STATUS_CODES, PROFILE_STATUS_MAP
+            # PROFILE_STATUS_MAP comes from the module-level import. Importing it here as
+            # well made it local to the whole of native_value, and the grid connection
+            # branch above, which runs first, raised UnboundLocalError on every poll (#479).
+            from .const import STATUS_CODES, HYBRID_STATUS_CODES, SPF_STATUS_CODES
 
             if not self.coordinator.is_online:
                 return "Offline"
