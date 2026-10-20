@@ -753,6 +753,8 @@ write succeeded but value reverted (possible cloud override)
     ([#349](https://github.com/0xAHA/Growatt_ModbusTCP/issues/349)): FC06 on the slot *end*
     words 3041, 3055 and 3059 returned `exception 2` (Illegal Data Address) on every attempt,
     while FC16 on the pair was accepted on all nine slots. The start word 3050 did accept FC06.
+    A *changed* value written by FC16 then read back on slots 2 and 5-9, including the pair
+    containing 3055, which refuses FC06.
 
     So an FC06 refusal there is **not** evidence that the slot is broken or unsupported - it
     can refuse while the control that uses it works normally. Use the plural action to test.
