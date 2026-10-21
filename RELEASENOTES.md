@@ -4,6 +4,24 @@
 
 ---
 
+## v2.0.6-b9
+
+Issues: #481
+
+- **Fix (WIT): Charge Cutoff SOC and Discharge Cutoff SOC now show the inverter's
+  values.** They showed fixed defaults (100 % and 10 %) until written from Home Assistant,
+  so a limit set in ShinePhone was never visible. The discharge control is renamed
+  **On-Grid Discharge Cutoff SOC** (register 30405); the off-grid floor is separate (30475).
+  Reported by @Wojak129.
+
+- **WIT: new VPP Last Setpoint sensor** (register 30474, diagnostic, disabled by default).
+
+- **Docs: Remote Control Duration (30408) is a countdown, not a maximum.** Per VPP V2.05,
+  any value from 1 to 1440 expires and the inverter returns to self-consumption while the
+  controls still read as set. Use 0 for control that runs until you stop it.
+
+---
+
 ## v2.0.6-b8
 
 Issues: #475, #478, #479

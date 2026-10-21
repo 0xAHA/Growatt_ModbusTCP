@@ -905,6 +905,20 @@ class GrowattWitActivePowerRateNumber(GrowattEntity, NumberEntity):
 # WIT VPP-specific Number Entities (30xxx registers)
 # =============================================================================
 
+def _polled_soc(data, field: str) -> float | None:
+    """A WIT VPP SOC limit as last polled, or None when it was not read.
+
+    The cut-off numbers used to show a copy kept by the entity itself, which started at a
+    fixed default (100 / 10) and only changed when written from Home Assistant. A limit set
+    in ShinePhone, or before a restart, never reached it: a WIT showed 10 % while 30405
+    held 30 % (#481).
+    """
+    if data is None or field in getattr(data, 'unread_fields', ()):
+        return None
+    value = getattr(data, field, None)
+    return None if value is None else float(value)
+
+
 class GrowattWitVppPowerPercentNumber(GrowattEntity, NumberEntity):
     """WIT VPP: Power percentage for charge/discharge operations.
 
@@ -976,7 +990,7 @@ class GrowattWitVppChargeCutoffSocNumber(GrowattEntity, NumberEntity):
 
     @property
     def native_value(self) -> float | None:
-        return float(getattr(self.coordinator, "wit_vpp_charge_cutoff_soc", 100))
+        return _polled_soc(self.coordinator.data, "vpp_charge_stop_soc")
 
     async def async_set_native_value(self, value: float) -> None:
         raw_value = int(value)
@@ -990,7 +1004,9 @@ class GrowattWitVppChargeCutoffSocNumber(GrowattEntity, NumberEntity):
             )
 
             if success:
-                setattr(self.coordinator, "wit_vpp_charge_cutoff_soc", raw_value)
+                if self.coordinator.data is not None:
+                    self.coordinator.data.vpp_charge_stop_soc = raw_value
+                    self.coordinator.async_update_listeners()
                 _LOGGER.info("[WIT-VPP] Successfully set charge cutoff SOC to %d%%", raw_value)
                 await self.coordinator.async_request_refresh()
             else:
@@ -1001,7 +1017,7 @@ class GrowattWitVppChargeCutoffSocNumber(GrowattEntity, NumberEntity):
 
 
 class GrowattWitVppDischargeCutoffSocNumber(GrowattEntity, NumberEntity):
-    """WIT VPP: Discharge cutoff SOC (30405) - stop discharging when SOC drops to this %."""
+    """WIT VPP: On-grid discharge cutoff SOC (30405) - stop discharging when SOC drops to this %."""
 
     # Box rather than slider - see GrowattGenericNumber (#402).
     _attr_mode = NumberMode.BOX
@@ -1025,12 +1041,13 @@ class GrowattWitVppDischargeCutoffSocNumber(GrowattEntity, NumberEntity):
             "vpp_discharge_cutoff_soc",
             get_device_type_for_control("work_mode"),
         )
-        self._attr_name = "Discharge Cutoff SOC"
+        # 30405 is the on-grid floor; off-grid has its own (30475), so say which (#481).
+        self._attr_name = "On-Grid Discharge Cutoff SOC"
 
 
     @property
     def native_value(self) -> float | None:
-        return float(getattr(self.coordinator, "wit_vpp_discharge_cutoff_soc", 10))
+        return _polled_soc(self.coordinator.data, "vpp_ongrid_discharge_soc")
 
     async def async_set_native_value(self, value: float) -> None:
         raw_value = int(value)
@@ -1044,7 +1061,9 @@ class GrowattWitVppDischargeCutoffSocNumber(GrowattEntity, NumberEntity):
             )
 
             if success:
-                setattr(self.coordinator, "wit_vpp_discharge_cutoff_soc", raw_value)
+                if self.coordinator.data is not None:
+                    self.coordinator.data.vpp_ongrid_discharge_soc = raw_value
+                    self.coordinator.async_update_listeners()
                 _LOGGER.info("[WIT-VPP] Successfully set discharge cutoff SOC to %d%%", raw_value)
                 await self.coordinator.async_request_refresh()
             else:

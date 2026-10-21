@@ -303,6 +303,14 @@ WIT_EXTRA_SENSORS: Set[str] = {
     "extra_energy_today", "extra_energy_total",
 }
 
+# Holding 30474, mapped by both WIT register maps and already polled; it had no entity
+# (#481). V2.05 calls it the actual charge/discharge power, but the diagram only writes it
+# inside the remote-control and time-segment branches, and on a MOD it kept the last
+# command for hours after control ended (#373) - so it is labelled as the last setpoint.
+WIT_VPP_STATE_SENSORS: Set[str] = {
+    "vpp_last_setpoint",
+}
+
 BACKUP_BOX_SENSORS: Set[str] = {
     # Growatt SYN backup box, connected via RS485 to TL-X/TL-XH inverters.
     # Sensors gated on box_connect_flag==1 (reg 3320); box_connect_flag itself is always shown.
@@ -1109,6 +1117,7 @@ INVERTER_PROFILES = {
             BATTERY_SENSORS |
             BATTERY2_SENSORS |
             WIT_EXTRA_SENSORS |
+            WIT_VPP_STATE_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
         ),
@@ -1142,6 +1151,7 @@ INVERTER_PROFILES = {
             BATTERY2_SENSORS |
             BATTERY3_SENSORS |
             WIT_EXTRA_SENSORS |
+            WIT_VPP_STATE_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
         ),

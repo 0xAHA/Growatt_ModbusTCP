@@ -10,6 +10,13 @@
 
     If a distributor hands you "V2.03" documentation, it is the same document we work from.
 
+    **V2.05** (2026-05-29, reported by `30099 = 205`) has been seen on a WIT 4-15K-HU and a
+    MOD 12KTL3-HU ([#480](https://github.com/0xAHA/Growatt_ModbusTCP/issues/480),
+    [#481](https://github.com/0xAHA/Growatt_ModbusTCP/issues/481)). Its changes over V2.03
+    that touch this page are marked "V2.05" in the tables: per-period priorities at
+    30380-30399, the clearing rule on 30477, and the remote-control logic diagram, which
+    shows that a 30408 window of 1-1440 minutes expires to self-consumption.
+
 > **Source documents:** Growatt VPP Communication Protocol of Inverter V2.03, with V2.01
 > for comparison
 > (`GI-BK-E060_GROWATT.VPP.COMMUNICATION.PROTOCOL.OF.INVERTER_V2.03.xlsx`,
@@ -198,7 +205,8 @@ that model has, for most entries, never been verified against hardware. See
 | 30303 | Demand management import power limitation (V2.03) | RW | UINT16 | 0.1kW | 1 | [0, rated power], Default: no limit |
 | 30304 | Peak-shaving backup power SOC (V2.03) | RW | UINT16 | % | 1 | [0,100], Default: 50 |
 | 30305 | Peak-shaving enable (V2.03) | RW | UINT16 | - | 1 | 0: not enabled, 1: enable, Default: 0 |
-| 30306 | Reserve | RW | UINT16 | - | 94 | - |
+| 30306 | Reserve | RW | UINT16 | - | 94 | - (V2.05: 74, ending at 30379) |
+| 30380 | Time period priority, periods 1-20 (V2.05) | RW | UINT16 | - | 20 | 0: Load first, 1/2: battery/grid first from the sign of the period's power, 3: PV-only storage, 4: idle charging, 6: idle, 5/7: reserved. Default: 1 |
 | 30400 | Reserve (Battery max charging power) | RW | UINT32 | 0.1W | 2 | Not used |
 | 30402 | Reserve (Battery max discharging power) | RW | UINT32 | 0.1W | 2 | Not used |
 | 30404 | Charging cut off SOC | RW | UINT8 | % | 1 | [10,100], Default: 100 |
@@ -207,13 +215,13 @@ that model has, for most entries, never been verified against hardware. See
 | 30407 | Remote power control enable | RW | UINT8 | - | 1 | 0: not enabled, 1: Enable, Default: 0, Not storage |
 | 30408 | Remote power control charging time | RW | UINT16 | min | 1 | 0: unlimited, 1~1440min, Default: 0, Not storage |
 | 30409 | Remote charge and discharge power | RW | INT16 | - | 1 | [-100,100], Positive=charging, Negative=discharge, Default: 0, Not storage |
-| 30410 | AC charging enable | RW | UINT8 | - | 1 | 0: not enabled, 1: Enable AC charge (PV charging first), 2: Enable AC charge (AC charging first) (V2.03), Default: 0 |
+| 30410 | AC charging enable | RW | UINT8 | - | 1 | 0: not enabled, 1: Enable AC charge (PV charging first), 2: Enable AC charge (AC charging first) (V2.03; V2.05 words it as grid charging only), Default: 0 |
 | 30411 | Charging and discharging in different periods (20 sections) | RW | UINT16 | - | 61 | See Table 3-2, 30412~30471 default: 0 |
 | 30472 | Reserve | RO | UINT16 | - | 2 | - |
 | 30474 | Actual control value of charging and discharging power | RO | UINT16 | - | 1 | [-100,100], Positive=charging, Negative=discharge |
 | 30475 | Offline discharge cut off SOC | RW | UINT16 | % | 1 | [10,100], Default: 10 |
 | 30476 | TOU default mode (V2.03) | RW | UINT8 | - | 1 | Mode outside configured TOU periods: 0: load first, 1: battery first, 2: grid first, Default: 0 |
-| 30477 | TOU reset enable (V2.03) | RW | UINT8 | - | 1 | [0,1] — when enabled, all existing TOU period data is cleared on next period write, Default: 0 |
+| 30477 | TOU reset enable (V2.03) | RW | UINT8 | - | 1 | [0,1] — when enabled, all existing TOU period data is cleared on next period write, Default: 0. V2.05: the next write to 30411 clears 30380-30399 and 30412-30471 |
 | 30478 | Reserve | RW | UINT16 | - | 18 | - |
 | 30496 | Battery charge stop voltage | RW | UINT16 | 0.1V | 1 | Lead-acid only, [0,15000] |
 | 30497 | Battery discharge stop voltage | RW | UINT16 | 0.1V | 1 | Lead-acid only, [0,15000] |

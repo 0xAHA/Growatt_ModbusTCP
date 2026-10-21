@@ -399,9 +399,23 @@ Voltage** ([#443](https://github.com/0xAHA/Growatt_ModbusTCP/issues/443)).
 | VPP Export Limit Enable | Select | 30200 | Disabled (0), Enabled (1) | Enable VPP export limitation |
 | VPP Export Limit Rate | Number | 30201 | -100–+100 % | Export power rate (positive=export, 0=zero export) |
 | Remote Power Control | Select | 30407 | Disabled (0), Enabled (1) | Enable timed charge/discharge override |
-| Remote Control Duration | Number | 30408 | 0–1440 min | Duration for remote power control override |
+| Remote Control Duration | Number | 30408 | 0–1440 min | **0 = no time limit.** 1–1440 is a window that expires — see the note below |
 | Remote Charge/Discharge Power | Number | 30409 | -100–+100 % | Power level (negative=discharge, positive=charge) |
-| VPP AC Charge Enable | Select | 30410 | Disabled (0), PV priority (1), AC priority (2) | Whether the battery may charge from the grid, and what takes priority |
+| VPP AC Charge Enable | Select | 30410 | Disabled (0), PV priority (1), AC priority (2) | Whether the battery may charge from the grid. V2.05 defines 2 as grid charging only |
+| Charge Cutoff SOC | Number | 30404 | 10–100 % | SOC at which battery charging stops |
+| On-Grid Discharge Cutoff SOC | Number | 30405 | 10–100 % | SOC at which discharge stops while on-grid. The off-grid floor is a separate register (30475) |
+
+**Sensor:** VPP Last Setpoint (30474, diagnostic, disabled by default). V2.05 calls it the
+actual charge/discharge power, but it is only updated while remote or time-segment control
+is running and keeps its last value afterwards, so it cannot tell you that control has
+ended.
+
+**30408 is a countdown, not a maximum.** Per VPP V2.05 (appendix 3.3.3), once the window
+runs out the inverter drops to self-consumption — Load First unless 30476 says otherwise —
+while Control Authority, Remote Power Control and the setpoint all still read as set, with
+no fault or warning. 1440 means exactly 24 hours, not "always". For control that should
+last until you end it, write **0** and stop it yourself with 30407 = 0
+([#481](https://github.com/0xAHA/Growatt_ModbusTCP/issues/481)).
 
 **The seven VPP controls (30100, 30200-30201, 30407-30410) go unavailable when their
 register block does not answer a poll.** Those blocks are read best-effort, because not
@@ -413,7 +427,7 @@ neither case is a "Disabled" or 0 shown that the inverter did not report
 [#409](https://github.com/0xAHA/Growatt_ModbusTCP/pull/409)).
 
 **Important notes:**
-- WIT uses a **time-limited override** model. Commands via registers 30407–30409 expire after the configured duration or when HA restarts. The inverter then returns to its TOU schedule default.
+- WIT uses a **time-limited override** model. Commands via registers 30407–30409 expire after the configured duration (never, if 30408 = 0) and are cleared when the inverter restarts, as they are not stored. The inverter then returns to self-consumption in the mode set by 30476.
 - Register 30476 (`priority_mode`) on WIT shows the base TOU mode. Writability **varies by model** - it was documented as read-only, but has been written successfully for months on a WIT 8000TL3-HU ([#353](https://github.com/0xAHA/Growatt_ModbusTCP/issues/353)). The TOU Default Mode control writes it; if your model rejects the write, use the inverter display or Growatt app instead.
 - Rate limiting is built in to prevent command flooding.
 - Conflict detection prevents simultaneous charge + discharge commands.

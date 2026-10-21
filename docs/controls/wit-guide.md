@@ -101,6 +101,14 @@ model rejects the write, use the inverter display panel or the manufacturer app 
 - 1–1440 = control active for this many minutes, then reverts
 - Timer starts when register 30407 is set to 1
 
+!!! warning "1440 is not \"always\""
+    1440 is exactly 24 hours. When the window runs out the inverter falls back to
+    self-consumption (Load First unless 30476 says otherwise) while 30100, 30407 and 30409
+    all still read as set, and no fault or warning is raised — VPP V2.05, appendix 3.3.3.
+    An automation that arms once with 1440 will look armed and silently stop being
+    obeyed a day later. Use **0** for open-ended control
+    ([#481](https://github.com/0xAHA/Growatt_ModbusTCP/issues/481)).
+
 #### Register 30409: Charge/Discharge Power
 
 - Range: -100 to +100 (signed integer, percentage of rated power)
@@ -403,7 +411,7 @@ The inverter enforces its own SOC limits (registers 30404/30405). Your automatio
 variables:
   soc: "{{ states('sensor.INVERTER_battery_soc') | int(0) }}"
   charge_cutoff: "{{ states('number.INVERTER_vpp_charge_cutoff_soc') | int(100) }}"
-  discharge_cutoff: "{{ states('number.INVERTER_vpp_discharge_cutoff_soc') | int(20) }}"
+  discharge_cutoff: "{{ states('number.INVERTER_vpp_discharge_cutoff_soc') | int(10) }}"
 condition:
   - condition: template
     value_template: >
