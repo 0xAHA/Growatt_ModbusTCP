@@ -342,7 +342,9 @@ MOD_6000_15000TL3_XH = {
 
         # Battery Capacity
         31219: {'name': 'battery_fcc_high', 'scale': 1, 'unit': '', 'pair': 31220},
-        31220: {'name': 'battery_fcc_low', 'scale': 1, 'unit': '', 'pair': 31219, 'combined_scale': 1, 'combined_unit': 'Ah'},
+        # 0.1 Ah (VPP V2.05). A MID 25KTL3-XH cluster of four 104.0 Ah modules (31228 = 1040)
+        # read 4160, and 3120 / 2080 / 1040 as modules went to sleep (#482).
+        31220: {'name': 'battery_fcc_low', 'scale': 1, 'unit': '', 'pair': 31219, 'combined_scale': 0.1, 'combined_unit': 'Ah'},
 
         # Battery Temperature (VPP range)
         31223: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temp (VPP range, may not respond on XH variants)'},

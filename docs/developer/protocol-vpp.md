@@ -420,7 +420,7 @@ to 100 on its own has since failed to reproduce and should not be relied on.
 | 31215 | Battery current | RO | INT32 | 0.1A | 2 | Positive:charging, Negative:discharge |
 | 31217 | SOC | RO | UINT8 | - | 1 | [0,100] |
 | 31218 | SOH | RO | UINT8 | - | 1 | [0,100] |
-| 31219 | Battery capacity rating (FCC) | RO | UINT32 | AH | 2 | - |
+| 31219 | Battery capacity rating (FCC) | RO | UINT32 | 0.1AH | 2 | V2.05 unit; confirmed by a MID 25KTL3-XH cluster reading 4160 for four 104.0 Ah modules, dropping 1040 per module put to sleep ([#482](https://github.com/0xAHA/Growatt_ModbusTCP/issues/482)) |
 | 31221 | Reserved | RO | UINT32 | AH | 2 | Reserved for Battery remaining capacity (RM) |
 | 31223 | Battery environmental temperature | RO | INT16 | 0.1℃ | 1 | [-400,1250] |
 | 31224 | Reserved | RO | INT16 | 0.1℃ | 1 | Reserved for Maximum battery temperature |

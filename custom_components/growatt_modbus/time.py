@@ -9,12 +9,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import EntityCategory
+from homeassistant.exceptions import HomeAssistantError
 
 from .tou_packing import publish as tou_publish
 from .const import DOMAIN, WRITABLE_REGISTERS, CONF_REGISTER_MAP, get_device_type_for_control, DEVICE_TYPE_BATTERY, MOD_TOU_PERIODS
 from .coordinator import GrowattModbusCoordinator
 from .entity import GrowattEntity
-from .growatt_modbus import ModbusWriteError
+from .growatt_modbus import ModbusWriteError, RATE_LIMITED_MESSAGE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -320,6 +321,8 @@ class GrowattGenericTime(GrowattEntity, TimeEntity):
         except ModbusWriteError:
             _LOGGER.error("Failed to write %s (register %d)", self._control_name, register)
             return
+        if not write_ok:
+            raise HomeAssistantError(RATE_LIMITED_MESSAGE.format(name=self._control_name))
         if write_ok:
             if verified:
                 _LOGGER.info(

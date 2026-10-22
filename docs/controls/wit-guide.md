@@ -505,6 +505,11 @@ To prevent oscillation and instability, v0.4.6 introduces **30-second rate limit
 - Integration tracks last write time for each WIT control register
 - If you try to write within 30 seconds of previous write, request is blocked
 - Warning logged: "Rate limit: WIT control writes must be 30s apart"
+- **The action fails with an error**, so an automation knows the value was not sent. Before
+  v2.0.6-b10 it returned normally and the entity showed the new value
+  ([#481](https://github.com/0xAHA/Growatt_ModbusTCP/issues/481))
+- **Releasing control is never blocked.** Setting Control Authority (30100) or Remote Power
+  Control (30407) back to Disabled goes through at once, however recently it was enabled
 
 **Impact**:
 - ✅ Prevents rapid automation loops

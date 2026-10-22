@@ -138,6 +138,19 @@ def _peer_closed_the_connection(exc: Exception) -> bool:
 # Custom Exceptions for better error reporting
 # =============================================================================
 
+# Registers whose 0 hands control back to the inverter: VPP control authority and remote
+# power control. Writing 0 to either is exempt from the WIT control cooldown (#481).
+VPP_RELEASE_REGISTERS = (30100, 30407)
+
+# Raised to Home Assistant when the cooldown refused a control write, so an automation
+# sees the failure instead of a service call that returned normally (#481).
+RATE_LIMITED_MESSAGE = (
+    "{name} was not written: WIT control registers accept one write every 30 seconds, "
+    "and this one was written less than 30 seconds ago. Nothing was sent to the "
+    "inverter. Try again shortly."
+)
+
+
 class ModbusWriteError(Exception):
     """Raised for a failed Modbus operation - not only writes.
 
@@ -4178,7 +4191,14 @@ class GrowattModbus:
             # Only ever pass this for a write whose absence is worse than its cost. The
             # timestamp below is still updated on success, so a bypassed write does not
             # blind the limiter afterwards.
-            if register in self._wit_control_registers and not bypass_rate_limit:
+            # A release - control authority or remote control set back to 0 - is never held
+            # back. The limiter stops a control being driven back and forth; refusing the
+            # "off" half of that leaves the inverter under remote command, which is the
+            # state the user was trying to leave. A WIT owner's disarm 22 s after arming was
+            # refused, 30100 stayed 1, and the inverter sat in VPP self-consumption while
+            # every automation believed it had been released (#481).
+            is_release = register in VPP_RELEASE_REGISTERS and value == 0
+            if register in self._wit_control_registers and not bypass_rate_limit and not is_release:
                 # NO local `import time` here. It would bind `time` as a local name for the
                 # whole function, and this branch is skipped when the write bypasses the
                 # limiter - leaving the stamp further down raising UnboundLocalError AFTER
@@ -4344,10 +4364,12 @@ class GrowattModbus:
         #
         # So the read-back is now purely diagnostic: write once, then poll the register
         # with a growing delay until it either matches or the budget runs out.
-        try:
-            self.write_register(register, value)
-        except ModbusWriteError:
-            raise
+        # write_register returns False for exactly one reason: the WIT control cooldown
+        # refused it, and nothing was sent. Verifying that would read back the old value and
+        # report it as a reversion - which is what happened, and the coordinator then raised
+        # a write-reversion notice blaming the cloud for a write that never left (#481).
+        if not self.write_register(register, value):
+            return (False, False)
 
         expected = value & 0xFFFF
         delay = WRITE_VERIFY_DELAY

@@ -30,7 +30,7 @@ from .const import (
 )
 from .coordinator import GrowattModbusCoordinator
 from .entity import GrowattEntity
-from .growatt_modbus import ModbusWriteError
+from .growatt_modbus import ModbusWriteError, RATE_LIMITED_MESSAGE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -381,6 +381,9 @@ class GrowattGenericSelect(GrowattEntity, SelectEntity):
         except ModbusWriteError:
             _LOGGER.error("Failed to write %s (register %d)", self._control_name, register_addr)
             return
+
+        if not write_ok:
+            raise HomeAssistantError(RATE_LIMITED_MESSAGE.format(name=self._control_name))
 
         if write_ok:
             if verified:
@@ -1053,6 +1056,8 @@ class GrowattAllowGridChargeSelect(GrowattEntity, SelectEntity):
         except ModbusWriteError:
             _LOGGER.error("Failed to write allow_grid_charge (register %d)", self._REGISTER)
             return
+        if not write_ok:
+            raise HomeAssistantError(RATE_LIMITED_MESSAGE.format(name='allow_grid_charge'))
         if write_ok:
             if verified:
                 _LOGGER.info("Set allow_grid_charge to %s (value=%d, verified)", option, value)

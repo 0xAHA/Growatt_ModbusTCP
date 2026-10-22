@@ -4,6 +4,32 @@
 
 ---
 
+## v2.0.6-b10
+
+Issues: #481, #482
+
+- **Fix (WIT): a control write refused by the 30-second cooldown no longer reports a
+  "write reversion".** Nothing had been sent, but the integration verified it anyway and
+  raised a notice blaming the cloud. The action now fails with an error, so an automation
+  can see the value was not written. Reported by @Wojak129.
+
+- **WIT: releasing VPP control is never held back by the cooldown.** Setting Control
+  Authority or Remote Power Control to Disabled now goes through at once, however recently
+  it was enabled.
+
+- **WIT: Remote Control Duration (30408) and Remote Charge/Discharge Power (30409) are always
+  written**, even when the value has not changed. They are commands rather than stored
+  settings, so a repeated write is no longer skipped.
+
+- **Auto-detection follows Growatt's latest model table (VPP V2.05).** New, unconfirmed:
+  SPM-HU regional variants (DTC 21305, 21308, 21309), WIT 4-25K-XHU (5605) and WIS 125K-AM
+  (5604). If you own one of these, a register scan would confirm the mapping.
+
+- Register labels on some VPP addresses now match the protocol (grid energy counters at
+  31118-31123, battery full-charge capacity scale). No sensor values change.
+
+---
+
 ## v2.0.6-b9
 
 Issues: #481

@@ -542,7 +542,10 @@ data:
 
 The integration enforces a **30-second minimum interval** between WIT control writes.
 This prevents oscillation from rapid automation triggers. If you write within 30 seconds
-of a previous write the request is silently dropped and a warning is logged:
+of a previous write the request is not sent, the action fails with an error, and a warning
+is logged. Disabling Control Authority (30100) or Remote Power Control (30407) is exempt, so
+releasing control always goes through
+([#481](https://github.com/0xAHA/Growatt_ModbusTCP/issues/481)):
 
 ```
 [WIT CTRL] Rate limit: WIT control writes must be 30s apart

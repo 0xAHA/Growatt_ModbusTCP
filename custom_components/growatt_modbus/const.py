@@ -343,6 +343,8 @@ WRITABLE_REGISTERS = {
         # never happened rather than as any error (#373).
         'disabled_by_default': True,
         'register': 30408,
+        # "Not stored" in VPP V2.05: always written, never skipped as a no-op (#481).
+        'not_stored': True,
         'scale': 1,
         'valid_range': (0, 1440),
         'unit': 'min',
@@ -354,6 +356,7 @@ WRITABLE_REGISTERS = {
         # never happened rather than as any error (#373).
         'disabled_by_default': True,
         'register': 30409,
+        'not_stored': True,
         'scale': 1,
         'valid_range': (-100, 100),
         'unit': '%',

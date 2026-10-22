@@ -217,11 +217,13 @@ def _writable_client():
 
 def test_a_second_write_inside_the_cooldown_is_refused():
     """The limiter still does its job - this is the behaviour being worked around, and it
-    must keep working for everything that is not a mode change."""
+    must keep working for everything that is not a mode change.
+
+    An arming write (1): a release (0) is exempt from the cooldown since #481."""
     client = _writable_client()
     client._wit_control_last_write[VPP_REMOTE_POWER_ENABLE] = time.time()
 
-    assert client.write_register(VPP_REMOTE_POWER_ENABLE, 0) is False
+    assert client.write_register(VPP_REMOTE_POWER_ENABLE, 1) is False
     assert client.client.writes == [], "the refused write still reached the inverter"
 
 
@@ -304,11 +306,12 @@ def test_the_shared_path_stamps_the_limiter_after_a_bypassed_write():
 
 
 def test_the_shared_path_still_honours_the_cooldown():
-    """The limiter must keep working on this path too, for writes that do not bypass."""
+    """The limiter must keep working on this path too, for writes that do not bypass.
+    An arming write, as above: releases are exempt (#481)."""
     client = _shared_client()
     client._wit_control_last_write[VPP_REMOTE_POWER_ENABLE] = time.time()
 
-    assert client.write_register(VPP_REMOTE_POWER_ENABLE, 0) is False
+    assert client.write_register(VPP_REMOTE_POWER_ENABLE, 1) is False
     assert client._shared_conn.writes == []
 
 
