@@ -10,8 +10,7 @@ Grep index — all register keys defined here:
   VPP_V201_PV2_INPUT:         31010–31017  (PV string 1 and 2)
   VPP_V201_PV2_TOTAL:         31018–31019  (total PV power, 2-string profiles)
   VPP_V201_PV3_AND_TOTAL:     31018–31023  (PV string 3 + total, 3-string profiles)
-  VPP_V201_ENERGY_1P:         31120–31123  (single-phase energy today/total)
-  VPP_V201_TEMPERATURE_1P:    31130–31132  (single-phase temperatures)
+  VPP_V201_ENERGY_1P:         31120–31123  (energy to user total, energy to grid today)
   VPP_V201_BATTERY2:          31300–31309, 31314–31318, 31323  (battery cluster 2)
   VPP_V201_BATTERY3:          31400–31409, 31414–31418, 31423  (battery cluster 3)
   VPP_V201_BATTERY4:          31500–31509, 31514–31518, 31523  (battery cluster 4)
@@ -102,34 +101,29 @@ VPP_V201_PV3_AND_TOTAL = {
 }
 
 # ---------------------------------------------------------------------------
-# Energy today / total — single-phase V2.01 profiles (SPH, MIN, TL-XH)
-# NOT used by SPH-TL3 or MID: those profiles map different quantities to
-# 31120–31123 (grid-energy counters, not inverter output energy).
+# Grid-side energy counters — single-phase V2.01 profiles (SPH, MIN, TL-XH)
+#
+# V2.01-V2.05 define 31120 as total energy to user (imported) and 31122 as energy to
+# the grid today. These were labelled energy_today / energy_total with a maps_to, which
+# is inverter output energy - a different quantity. No reading ever came from them (the
+# native registers resolve first on every profile), so the fix is the label, made to
+# match the names MID, MOD and SPH-TL3 already use for the same addresses.
+#
+# The temperature block that used to follow (31130-31132) is gone: no protocol version
+# defines temperatures there. V2.01-V2.03 reserve the range, and V2.04 puts EPS off-grid
+# power at 31130 and intelligent-load power at 31132 - a WIT on V2.04 read 31131 = 8168,
+# which that block would have shown as 816.8 °C (#481).
 # ---------------------------------------------------------------------------
 
 VPP_V201_ENERGY_1P = {
-    31120: {'name': 'energy_today_high_vpp', 'scale': 1, 'unit': '', 'pair': 31121,
-            'maps_to': 'energy_today'},
-    31121: {'name': 'energy_today_low_vpp',  'scale': 1, 'unit': '', 'pair': 31120,
-            'combined_scale': 0.1, 'combined_unit': 'kWh'},
-    31122: {'name': 'energy_total_high_vpp', 'scale': 1, 'unit': '', 'pair': 31123,
-            'maps_to': 'energy_total'},
-    31123: {'name': 'energy_total_low_vpp',  'scale': 1, 'unit': '', 'pair': 31122,
-            'combined_scale': 0.1, 'combined_unit': 'kWh'},
-}
-
-# ---------------------------------------------------------------------------
-# Temperatures — single-phase V2.01 profiles (SPH, MIN, TL-XH)
-# NOT used by SPH-TL3 (has only 31130) or MID (different temp layout).
-# ---------------------------------------------------------------------------
-
-VPP_V201_TEMPERATURE_1P = {
-    31130: {'name': 'inverter_temp_vpp', 'scale': 0.1, 'unit': '°C',
-            'maps_to': 'inverter_temp', 'signed': True},
-    31131: {'name': 'ipm_temp_vpp',     'scale': 0.1, 'unit': '°C',
-            'maps_to': 'ipm_temp',      'signed': True},
-    31132: {'name': 'boost_temp_vpp',   'scale': 0.1, 'unit': '°C',
-            'maps_to': 'boost_temp',    'signed': True},
+    31120: {'name': 'energy_to_user_total_vpp_high', 'scale': 1, 'unit': '', 'pair': 31121,
+            'desc': 'Total power to user HIGH (VPP, 0.1 kWh)'},
+    31121: {'name': 'energy_to_user_total_vpp_low',  'scale': 1, 'unit': '', 'pair': 31120,
+            'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Total power to user LOW'},
+    31122: {'name': 'energy_to_grid_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31123,
+            'desc': 'Power to grid daily HIGH (VPP, 0.1 kWh)'},
+    31123: {'name': 'energy_to_grid_today_vpp_low',  'scale': 1, 'unit': '', 'pair': 31122,
+            'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Power to grid daily LOW'},
 }
 
 # ---------------------------------------------------------------------------

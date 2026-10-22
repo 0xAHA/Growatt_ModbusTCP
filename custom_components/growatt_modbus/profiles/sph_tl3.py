@@ -4,7 +4,7 @@
 
 from .vpp_v201 import (
     VPP_V201_STATUS, VPP_V201_PV2_INPUT, VPP_V201_PV2_TOTAL,
-    VPP_V201_TEMPERATURE_1P, VPP_V201_BATTERY2, VPP_V201_HOLDING_1P,
+    VPP_V201_BATTERY2, VPP_V201_HOLDING_1P,
 )
 from .sph import STORAGE_AC_CHARGE_ENERGY
 
@@ -144,8 +144,8 @@ SPH_TL3_3000_10000 = {
         # device read 94 = 200 (20.0 °C) and 95 = 333 (33.3 °C) alongside 93 = 378
         # (37.8 °C), all three plausible and independent.
         #
-        # The VPP copies at 31130-31132 are mapped further down and read zero on that
-        # device, so the fallback was never going to populate these either.
+        # 31130-31132 were once mapped as VPP copies of these and read zero on that device;
+        # no protocol defines temperatures there, and they are no longer mapped.
         93: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
         94: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
              'desc': 'IPM (power module) temperature (confirmed #360 scan)'},
@@ -574,10 +574,6 @@ SPH_TL3_3000_10000_V201 = {
         31123: {'name': 'energy_to_grid_today_vpp_low', 'scale': 1, 'unit': '', 'pair': 31122, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Power to grid daily LOW'},
         31124: {'name': 'energy_to_grid_total_vpp_high', 'scale': 1, 'unit': '', 'pair': 31125, 'desc': 'Total power to grid HIGH (VPP, 0.1 kWh)'},
         31125: {'name': 'energy_to_grid_total_vpp_low', 'scale': 1, 'unit': '', 'pair': 31124, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Total power to grid LOW'},
-
-        # Temperatures — VPP_V201_TEMPERATURE_1P (31130–31132)
-        # Confirmed responding on SPH-TL3 in scans 251_1 and 251_2.
-        **VPP_V201_TEMPERATURE_1P,
 
         # Battery Cluster 1 State (31200-31223)
         # Per VPP Protocol V2.01: 31200-31201 is signed battery power (positive=charge, negative=discharge)

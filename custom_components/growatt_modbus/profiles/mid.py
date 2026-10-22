@@ -1,6 +1,6 @@
 from .vpp_v201 import (
     VPP_V201_STATUS, VPP_V201_PV2_INPUT, VPP_V201_PV3_AND_TOTAL,
-    VPP_V201_TEMPERATURE_1P, VPP_V201_HOLDING_1P,
+    VPP_V201_HOLDING_1P,
 )
 
 # MID-15000-25000TL3-X (Three-phase, 15-25kW)
@@ -248,9 +248,6 @@ MID_15000_25000TL3_X_V201 = {
                 'combined_scale': 0.1, 'combined_unit': 'kWh',
                 'maps_to': 'energy_to_grid_total_low',
                 'desc': 'Grid export energy total LOW (VPP 2.01 item 63)'},
-
-        # Temperatures — VPP_V201_TEMPERATURE_1P (31130–31132)
-        **VPP_V201_TEMPERATURE_1P,
 
         # === BATTERY (VPP 31200+ range) — confirmed responding in issue #240 scan ===
         # Named without _vpp suffix so coordinator's fallback lookup finds them directly

@@ -1,6 +1,6 @@
 from .vpp_v201 import (
     VPP_V201_STATUS, VPP_V201_PV2_INPUT, VPP_V201_PV2_TOTAL,
-    VPP_V201_PV3_AND_TOTAL, VPP_V201_ENERGY_1P, VPP_V201_TEMPERATURE_1P,
+    VPP_V201_PV3_AND_TOTAL, VPP_V201_ENERGY_1P,
     VPP_V201_BATTERY2, VPP_V201_HOLDING_1P,
 )
 
@@ -996,12 +996,11 @@ SPH_3000_6000_V201 = {
         31112: {'name': 'meter_power_high', 'scale': 1, 'unit': '', 'pair': 31113, 'desc': 'Grid power (same as backup power)'},
         31113: {'name': 'meter_power_low', 'scale': 1, 'unit': '', 'pair': 31112, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
-        # Load Power — maps_to 'load_power' (SPH name; MIN/TL-XH use 'power_to_load').
-        31118: {'name': 'load_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31119, 'maps_to': 'load_power'},
-        31119: {'name': 'load_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Energy to user today (V2.01-V2.05). Was labelled load power; see vpp_v201.py.
+        31118: {'name': 'energy_to_user_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31119},
+        31119: {'name': 'energy_to_user_today_vpp_low',  'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         **VPP_V201_ENERGY_1P,
-        **VPP_V201_TEMPERATURE_1P,
 
         # Battery Cluster 1 State (31200–31222) — SPH-specific register layout.
         # Registers 31202–31209 are energy counters here (charge today, charge total,
@@ -1163,12 +1162,11 @@ SPH_7000_10000_V201 = {
         31112: {'name': 'meter_power_high', 'scale': 1, 'unit': '', 'pair': 31113},
         31113: {'name': 'meter_power_low', 'scale': 1, 'unit': '', 'pair': 31112, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
-        # Load Power
-        31118: {'name': 'load_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31119, 'maps_to': 'load_power'},
-        31119: {'name': 'load_power_low_vpp', 'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Energy to user today (V2.01-V2.05). Was labelled load power; see vpp_v201.py.
+        31118: {'name': 'energy_to_user_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31119},
+        31119: {'name': 'energy_to_user_today_vpp_low',  'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         **VPP_V201_ENERGY_1P,
-        **VPP_V201_TEMPERATURE_1P,
 
         # Battery Cluster 1 State — SPH energy-counter layout (see SPH_3000_6000_V201)
         # VPP V2.01 protocol: 31202=charge today, 31204=charge total,

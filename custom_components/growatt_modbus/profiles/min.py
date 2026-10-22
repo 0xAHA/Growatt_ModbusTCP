@@ -1,6 +1,6 @@
 from .vpp_v201 import (
     VPP_V201_STATUS, VPP_V201_PV2_INPUT, VPP_V201_PV2_TOTAL,
-    VPP_V201_PV3_AND_TOTAL, VPP_V201_ENERGY_1P, VPP_V201_TEMPERATURE_1P,
+    VPP_V201_PV3_AND_TOTAL, VPP_V201_ENERGY_1P,
     VPP_V201_HOLDING_1P,
 )
 
@@ -443,12 +443,11 @@ MIN_3000_6000TL_X_V201 = {
         31112: {'name': 'meter_power_high', 'scale': 1, 'unit': '', 'pair': 31113, 'maps_to': 'power_to_grid'},
         31113: {'name': 'meter_power_low',  'scale': 1, 'unit': '', 'pair': 31112, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
-        # Load Power (same as PtoLoad - 3045/3046)
-        31118: {'name': 'load_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31119, 'maps_to': 'power_to_load'},
-        31119: {'name': 'load_power_low_vpp',  'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Energy to user today (V2.01-V2.05). Was labelled load power; see vpp_v201.py.
+        31118: {'name': 'energy_to_user_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31119},
+        31119: {'name': 'energy_to_user_today_vpp_low',  'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         **VPP_V201_ENERGY_1P,
-        **VPP_V201_TEMPERATURE_1P,
     },
     'holding_registers': {
         # === V1.39 REGISTERS ===
@@ -492,12 +491,11 @@ MIN_7000_10000TL_X_V201 = {
         31112: {'name': 'meter_power_high', 'scale': 1, 'unit': '', 'pair': 31113, 'maps_to': 'power_to_grid'},
         31113: {'name': 'meter_power_low',  'scale': 1, 'unit': '', 'pair': 31112, 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
 
-        # Load Power
-        31118: {'name': 'load_power_high_vpp', 'scale': 1, 'unit': '', 'pair': 31119, 'maps_to': 'power_to_load'},
-        31119: {'name': 'load_power_low_vpp',  'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Energy to user today (V2.01-V2.05). Was labelled load power; see vpp_v201.py.
+        31118: {'name': 'energy_to_user_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31119},
+        31119: {'name': 'energy_to_user_today_vpp_low',  'scale': 1, 'unit': '', 'pair': 31118, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         **VPP_V201_ENERGY_1P,
-        **VPP_V201_TEMPERATURE_1P,
     },
     'holding_registers': {
         # === V1.39 REGISTERS ===

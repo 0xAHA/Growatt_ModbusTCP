@@ -51,24 +51,9 @@ If DTC and model name unavailable, probes different register ranges to identify 
 
 ## 📋 Official DTC Code Table
 
-Based on **Growatt VPP Protocol V2.01 - Table 3-1**:
+The DTC-to-profile table lives in one place, [DTC Debugging → Valid DTC Codes](../troubleshooting/dtc-debugging.md#valid-dtc-codes), generated from the same registry the integration uses and checked against it by the test suite. It follows Growatt VPP Protocol Table 3-1 as of V2.05, and marks which mappings have been confirmed on hardware.
 
-| Model Series | DTC Code | Protocol | Battery | Legacy Registers | Notes |
-|--------------|----------|----------|---------|------------------|-------|
-| **SPH 3000-6000TL BL (legacy)** | 3501 | Legacy | Yes | 0-124, 1000-1124 | Pre-UP model, reg 30099 = 0 |
-| **SPH 3000-6000TL BL -UP** | 3502 | V2.01 | Yes | 0-124, 1000-1124, 30000+, 31000+ | Upgraded model, reg 30099 = 201 |
-| **SPF 3000-6000 ES PLUS** | 3400-3403, 20105 | V2.01 | Yes | 0-124, 31200+ | Off-grid with battery. 20105 is the SPF 5000 ES, read from holding 43 |
-| **SPA 3000-6000TL BL** | 3735 | V2.01 | Yes | 0-124 | SPA variant of SPH |
-| **SPH 4000-10000TL3 BH-UP** | 3601 | V2.01 | Yes | 0-124, 1000-1124 | Three-phase hybrid |
-| **SPA 4000-10000TL3 BH-UP** | 3725 | V2.01 | Yes | 0-124 | SPA variant |
-| **TL-XH 3000-10000** | 5100 | V2.01 | Yes | 0-124, 31200+ | Standard TL-XH (0-124 range) |
-| **MIN TL-XH 3000-10000** | 5100 | V2.01 | Yes | 3000-3124, 31200+ | MIN series TL-XH (3000+ range) |
-| **MIC/MIN 2500-6000TL-X/X2** | 5200 | V2.01 | No | 0-179 (MIC)<br>3000-3124 (MIN) | Shared code |
-| **MIN 7000-10000TL-X/X2** | 5201 | V2.01 | No | 3000-3124 | Grid-tied, 3 PV strings |
-| **MOD-XH / MID-XH** | 5400 | V2.01 | MOD: Yes<br>MID: No | 0-124, 3000+ (MOD)<br>0-124 (MID) | Shared code |
-| **WIT 4000-15000TL3** | 5603 | V2.03 | Yes | 0-124, 8000+, 31000+ | Three-phase hybrid with advanced storage — DTC confirmed via hardware register read (Issue #335) |
-| **WIT 100KTL3-H** | 5601 | V2.01 | No | Uses MID profile | Large commercial |
-| **WIS 215KTL3** | 5800 | V2.01 | No | Uses MID profile | Large commercial |
+Some legacy and off-grid models carry their DTC at holding register 43 rather than 30000; they are listed there too.
 
 ---
 

@@ -74,7 +74,7 @@ that means the DTC mapping is wrong for your model, which is worth knowing.
 
 DTC codes are read from holding register 30000 (VPP models) or register 43 (legacy models). Each code maps to a specific profile.
 
-Model names below follow Growatt VPP 2.03 protocol documentation, Table 3-1.
+Model names below follow Growatt VPP protocol documentation, Table 3-1, as of V2.05.
 
 ### Reading the Status column
 
@@ -134,7 +134,10 @@ These statuses live in `DTC_REGISTRY` in `auto_detection.py`, which is the singl
 | 3735 | SPA 3000TL BL-UP | sph_3000_6000_v201 | ⚠️ Unconfirmed — SPH profile on SPA hardware |
 | 21100 | SPH/SPM 8000-10000TL-HU (US) | sph_8000_10000_hu | ✅ Confirmed (SPH-10000-US UL2.21, PR #418) |
 | 21303 | SPH/SPM 8000-10000TL-HU | sph_8000_10000_hu | ✅ Confirmed (scan #303) |
-| 21304 | SPM 6000TL-HU | sph_8000_10000_hu | ✅ Confirmed (SPM 6000TL-HU UL2.61, #463) |
+| 21304 | SPM 3000-6000TL-HU | sph_8000_10000_hu | ✅ Confirmed (SPM 6000TL-HU UL2.61, #463) |
+| 21305 | SPM 3000-6000TL-HU(BR) | sph_8000_10000_hu | ⚠️ Unconfirmed — regional variant of 21304 |
+| 21308 | SPM 3000-6000TL-HU(IT) | sph_8000_10000_hu | ⚠️ Unconfirmed — regional variant of 21304 |
+| 21309 | SPM 2500-6000TL-HU(EU) | sph_8000_10000_hu | ⚠️ Unconfirmed — regional variant of 21304 |
 
 ### SPE Series — Single-Phase Hybrid (SPF protocol, 8-12 kW)
 
@@ -185,9 +188,11 @@ choose **MIN TL-XH2 3000-10000** by hand. The profile check recognises it and MI
 |----------|-------------|---------|--------|
 | 5601 | WIT 29.9-50K-XHU | wit_29900_50000tl3_xhu | ✅ Confirmed (scan #338) |
 | 5600 | WIS 100K-AM; WIT 50-100K-H/HE/HU/A/AE/AU (incl. -US); WIT 28-55K-H/HE/HU/A/AE/AU-US L2 | wit_29900_50000tl3_xhu | ⚠️ Unconfirmed — interim; VPP 31200+ not available on 100K-HU ([#349](https://github.com/0xAHA/Growatt_ModbusTCP/issues/349)) |
-| 5603 | WIT 4-15kW | wit_4000_15000tl3 | ✅ Confirmed (#335) |
-| 5800 | WIS 210K | mid_15000_25000tl3_x_v201 | ⚠️ Unconfirmed — uses MID profile |
-| 5801 | WIS 215K-AM | mid_15000_25000tl3_x_v201 | ⚠️ Unconfirmed — uses MID profile |
+| 5603 | WIT 4-15K-HU; WIT 17-25K-HU | wit_4000_15000tl3 | ✅ Confirmed (#335, #481) — 17-25K-HU not yet seen |
+| 5605 | WIT 4-25K-XHU | wit_4000_15000tl3 | ⚠️ Unconfirmed — grouped with 5603 in Table 3-1 |
+| 5604 | WIS 125K-AM | wit_29900_50000tl3_xhu | ⚠️ Unconfirmed — mapped like WIS 100K-AM (5600) |
+| 5800 | WIS 210K | mid_15000_25000tl3_x_v201 | ⚠️ Unconfirmed — uses MID profile; no longer in Table 3-1 |
+| 5801 | WIS 200-215K-AMA | mid_15000_25000tl3_x_v201 | ⚠️ Unconfirmed — uses MID profile |
 
 ## How to View Logs in Home Assistant
 

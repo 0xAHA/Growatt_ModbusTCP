@@ -462,7 +462,7 @@ class DtcEntry(NamedTuple):
     real device on this DTC running it, the same bar as CONFIRMED."""
 
 
-# Official DTC codes from Growatt VPP 2.03 Protocol documentation Table 3-1.
+# Official DTC codes from Growatt VPP Protocol Table 3-1, current to V2.05 (2026-05-29, #481).
 # Note: some legacy models expose the DTC register without supporting full V2.01.
 DTC_REGISTRY: dict[int, DtcEntry] = {
     # -- Legacy protocol models — DTC at holding register 43, no VPP support --
@@ -505,13 +505,30 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
         'SPH/SPM 8000-10000TL-HU', 'sph_8000_10000_hu',
         CONFIRMED, 'register scan #303, firmware UL2.21',
     ),
-    # Not in any protocol table. Neighbour of 21100/21303, same UL firmware line, and the
-    # profile's PV, grid, battery and SOC readings matched ShinePhone within a few percent
-    # on the reporter's unit. Before this it was "unknown" and range detection fell
-    # through to MIN TL-XH.
+    # Confirmed before any protocol listed it: neighbour of 21100/21303, same UL firmware
+    # line, and the profile's PV, grid, battery and SOC readings matched ShinePhone within
+    # a few percent on the reporter's unit. Before this it was "unknown" and range
+    # detection fell through to MIN TL-XH. V2.05 Table 3-1 now lists it with three
+    # regional variants (below).
     21304: DtcEntry(
-        'SPM 6000TL-HU', 'sph_8000_10000_hu',
+        'SPM 3000-6000TL-HU', 'sph_8000_10000_hu',
         CONFIRMED, 'SPM 6000TL-HU, firmware UL2.61, compared against ShinePhone, issue #463',
+    ),
+    # Regional variants of 21304, listed beside it in V2.05 Table 3-1 and given the same
+    # treatment there (31132 "independent intelligent load" is defined for 21304-21305 and
+    # 21308-21309 together). Without an entry they fall through to range detection, which
+    # sent 21304 to MIN TL-XH before it was mapped.
+    21305: DtcEntry(
+        'SPM 3000-6000TL-HU(BR)', 'sph_8000_10000_hu',
+        ASSUMED, 'no device report; regional variant of 21304, which is confirmed on this profile',
+    ),
+    21308: DtcEntry(
+        'SPM 3000-6000TL-HU(IT)', 'sph_8000_10000_hu',
+        ASSUMED, 'no device report; regional variant of 21304, which is confirmed on this profile',
+    ),
+    21309: DtcEntry(
+        'SPM 2500-6000TL-HU(EU)', 'sph_8000_10000_hu',
+        ASSUMED, 'no device report; regional variant of 21304, which is confirmed on this profile',
     ),
 
     # -- SPA series — AC-coupled storage, NO solar DC inputs --
@@ -690,8 +707,16 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
 
     # -- WIT/WIS series — register 988 can distinguish: 0=WIT, 1=WIS --
     5603: DtcEntry(
-        'WIT 4-15kW Hybrid', 'wit_4000_15000tl3',
-        CONFIRMED, 'hardware, issue #335 (residential three-phase hybrid, Protocol V2.03)',
+        'WIT 4-15K-HU; WIT 17-25K-HU', 'wit_4000_15000tl3',
+        CONFIRMED, 'WIT 15KTL3, issue #335 (Protocol V2.03); WIT 4-15K-HU on V2.04, issue #481. '
+                   'The 17-25K-HU shares the code from V2.05 and is unseen',
+    ),
+    # V2.05 Table 3-1 groups it with 5603 under "Residential backup ES inverter", not with
+    # the commercial 29.9-50K-XHU (5601) despite the shared suffix, and its 4-25K range is
+    # the 5603 range. Range detection is the alternative, and it has no WIT branch.
+    5605: DtcEntry(
+        'WIT 4-25K-XHU', 'wit_4000_15000tl3',
+        ASSUMED, 'no device report; grouped with 5603 in V2.05 Table 3-1',
     ),
     5600: DtcEntry(
         'WIS 100K-AM; WIT 50-100K-H/HE/HU/A/AE/AU (incl. -US); '
@@ -703,13 +728,22 @@ DTC_REGISTRY: dict[int, DtcEntry] = {
         'WIT 29.9-50K-XHU', 'wit_29900_50000tl3_xhu',
         CONFIRMED, 'WIT 30K register scan, issue #338 (4 MPPT, 3 battery channels)',
     ),
+    # Listed up to V2.03, absent from V2.05 Table 3-1. Kept: an installed unit still
+    # reports it.
     5800: DtcEntry(
         'WIS 210K', 'mid_15000_25000tl3_x_v201',
-        ASSUMED, 'no device report; WIS mapped to a MID profile',
+        ASSUMED, 'no device report; WIS mapped to a MID profile; not in V2.05 Table 3-1',
     ),
     5801: DtcEntry(
-        'WIS 215K-AM', 'mid_15000_25000tl3_x_v201',
+        'WIS 200-215K-AMA', 'mid_15000_25000tl3_x_v201',
         ASSUMED, 'no device report; WIS mapped to a MID profile',
+    ),
+    # New in V2.05. Mapped like WIS 100K-AM (5600), the other WIS "-AM" model and the same
+    # commercial ES group, rather than like 5800/5801: the MID profile is a grid-tied PV
+    # map with no battery, and a WIS is a storage inverter.
+    5604: DtcEntry(
+        'WIS 125K-AM', 'wit_29900_50000tl3_xhu',
+        ASSUMED, 'no device report; mapped like WIS 100K-AM (5600)',
     ),
 }
 

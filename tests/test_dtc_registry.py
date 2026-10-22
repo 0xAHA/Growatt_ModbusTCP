@@ -79,17 +79,23 @@ def test_model_name_is_present(dtc):
 # Coverage of the official table
 # ---------------------------------------------------------------------------
 
-# Growatt VPP 2.03 protocol, Table 3-1 "DTC code description". Transcribed from the
-# document rather than from our own code, so this fails if a family is dropped or was
-# never added — the MAX/MAX-X block (5000, 5500, 5501, 5502) was missing entirely
-# until this test was written.
+# Growatt VPP protocol, Table 3-1 "Description of DTC codes", as of V2.05 (2026-05-29,
+# #481). Transcribed from the document rather than from our own code, so this fails if a
+# family is dropped or was never added — the MAX/MAX-X block (5000, 5500, 5501, 5502) was
+# missing entirely until this test was written.
+#
+# V2.03 -> V2.05: added 21304-21305, 21308-21309 (SPM-HU), 5603 and 5605 (residential
+# WIT), 5604 (WIS 125K-AM); dropped 5800, which stays in the registry for units that
+# still report it.
 TABLE_3_1 = {
     3501, 3502, 3503, 3504,          # SPH
     3701, 3735, 3715, 3716, 3725,    # SPA
     3601,                            # SPH TL3
+    21304, 21305, 21308, 21309,      # SPM-HU
     5100,                            # MIN-XH
     5400, 5401,                      # MOD-XH / MID-XH / HU
-    5600, 5601, 5800, 5801,          # WIT / WIS
+    5603, 5605,                      # residential WIT
+    5600, 5601, 5801, 5604,          # commercial WIT / WIS
     5200, 5201,                      # MIC / MIN-X
     5001, 5002, 5003,                # MOD / MID / MAC-X
     5000, 5500, 5501, 5502,          # MAX / MAX-X
@@ -99,7 +105,7 @@ TABLE_3_1 = {
 @pytest.mark.parametrize("dtc", sorted(TABLE_3_1))
 def test_official_table_code_is_mapped(dtc):
     assert dtc in DTC_REGISTRY, (
-        f"DTC {dtc} appears in Growatt VPP 2.03 Table 3-1 but has no registry entry — "
+        f"DTC {dtc} appears in Growatt VPP Table 3-1 but has no registry entry — "
         f"devices reporting it fall through to heuristic detection"
     )
 
@@ -195,13 +201,13 @@ def _vpp_page_dtcs() -> set[int]:
     """
     text = VPP_PAGE.read_text(encoding="utf-8")
     rows = {int(m) for m in re.findall(r"^\|\s*(\d{3,5})\s*\|", text, re.M)}
-    return rows & (TABLE_3_1 | {5603})
+    return rows & (TABLE_3_1 | {5800})
 
 
 @pytest.mark.parametrize("dtc", sorted(TABLE_3_1))
 def test_vpp_page_documents_every_table_3_1_code(dtc):
     assert dtc in _vpp_page_dtcs(), (
-        f"DTC {dtc} is in VPP 2.03 Table 3-1 but missing from {VPP_PAGE.name}"
+        f"DTC {dtc} is in VPP Table 3-1 but missing from {VPP_PAGE.name}"
     )
 
 

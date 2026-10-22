@@ -3,7 +3,7 @@
 
 from .vpp_v201 import (
     VPP_V201_STATUS, VPP_V201_PV2_INPUT, VPP_V201_PV3_AND_TOTAL,
-    VPP_V201_ENERGY_1P, VPP_V201_TEMPERATURE_1P,
+    VPP_V201_ENERGY_1P,
     VPP_V201_BATTERY2, VPP_V201_HOLDING_1P,
 )
 
@@ -181,16 +181,13 @@ TL_XH_3000_10000_V201 = {
                 'maps_to': 'power_to_grid'},
         31113: {'name': 'meter_power_low',     'scale': 1,    'unit': '',   'pair': 31112,
                 'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True},
-        31118: {'name': 'load_power_high_vpp', 'scale': 1,    'unit': '',   'pair': 31119,
-                'maps_to': 'power_to_load'},
-        31119: {'name': 'load_power_low_vpp',  'scale': 1,    'unit': '',   'pair': 31118,
-                'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Energy to user today (V2.01-V2.05). Was labelled load power; see vpp_v201.py.
+        31118: {'name': 'energy_to_user_today_vpp_high', 'scale': 1, 'unit': '', 'pair': 31119},
+        31119: {'name': 'energy_to_user_today_vpp_low',  'scale': 1, 'unit': '', 'pair': 31118,
+                'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
-        # Energy today / total — VPP_V201_ENERGY_1P (31120–31123)
+        # Energy to user total / to grid today — VPP_V201_ENERGY_1P (31120–31123)
         **VPP_V201_ENERGY_1P,
-
-        # Temperatures — VPP_V201_TEMPERATURE_1P (31130–31132)
-        **VPP_V201_TEMPERATURE_1P,
 
         # Battery Cluster 1 (31200–31222) — TL-XH specific power layout.
         # Unlike SPH (energy counters at 31202–31209), TL-XH uses charge/discharge power here.
