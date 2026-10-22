@@ -33,7 +33,7 @@ The supported families and their register characteristics:
 Check what protocol documentation covers your model:
 
 - **VPP V2.01 / V2.02 / V2.03** — WIT, SPH, MIN, MOD, MID, TL-XH models (newer firmware).
-  The `_V201` profile suffix is a compatibility name; the reference is current to V2.03.
+  The `_V201` profile suffix is a compatibility name; the reference is based on V2.03, with V2.04 and V2.05 changes marked.
   - See [VPP Protocol Reference](protocol-vpp.md)
   - Input registers start at 31000; holding registers start at 30000
 - **V1.39** — Covers WIT, SPH, SPA, MIN, MOD, MID, MAX, MAC
