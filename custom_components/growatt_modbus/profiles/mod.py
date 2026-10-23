@@ -344,7 +344,9 @@ MOD_6000_15000TL3_XH = {
         31219: {'name': 'battery_fcc_high', 'scale': 1, 'unit': '', 'pair': 31220},
         # 0.1 Ah (VPP V2.05). A MID 25KTL3-XH cluster of four 104.0 Ah modules (31228 = 1040)
         # read 4160, and 3120 / 2080 / 1040 as modules went to sleep (#482).
-        31220: {'name': 'battery_fcc_low', 'scale': 1, 'unit': '', 'pair': 31219, 'combined_scale': 0.1, 'combined_unit': 'Ah'},
+        # Named bms_gauge_fcc so the existing Battery Full Charge Capacity sensor (SPH-HU
+        # 1092) reads it here too, through the same BMS reader.
+        31220: {'name': 'bms_gauge_fcc', 'scale': 1, 'unit': '', 'pair': 31219, 'combined_scale': 0.1, 'combined_unit': 'Ah'},
 
         # Battery Temperature (VPP range)
         31223: {'name': 'battery_temp_vpp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temp (VPP range, may not respond on XH variants)'},
@@ -386,6 +388,10 @@ MOD_6000_15000TL3_XH = {
         31316: {'name': 'battery2_current_low', 'scale': 1, 'unit': '', 'pair': 31315, 'combined_scale': 0.1, 'combined_unit': 'A', 'signed': True},
         31317: {'name': 'battery2_soc', 'scale': 1, 'unit': '%'},
         31318: {'name': 'battery2_soh', 'scale': 1, 'unit': '%'},
+        # Full-charge capacity, 0.1 Ah - the same layout as 31219-31220 (#482).
+        31319: {'name': 'battery2_fcc_high', 'scale': 1, 'unit': '', 'pair': 31320},
+        31320: {'name': 'battery2_full_charge_capacity', 'scale': 1, 'unit': '', 'pair': 31319,
+                'combined_scale': 0.1, 'combined_unit': 'Ah'},
         31323: {'name': 'battery2_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
 
         # Battery clusters 3 and 4 (VPP V2.03 spec, gate: batteryN_voltage > 0)

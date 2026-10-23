@@ -1076,6 +1076,21 @@ SENSOR_DEFINITIONS = {
         "condition": lambda data: hasattr(data, "battery2_voltage"),
         "disabled_by_default": True,
     },
+    # Battery 2's full-charge capacity (31319-31320, #482); battery 1's is bms_gauge_fcc.
+    # It drops by one module's rated capacity for each module asleep or offline, and slowly
+    # with age - so it is not turned into a module count, which an aged stack would read
+    # as modules missing. Set dynamically by the cluster reader, so the gate is real
+    # (CLAUDE.md rule 6).
+    "battery2_full_charge_capacity": {
+        "name": "Battery 2 Full Charge Capacity",
+        "icon": "mdi:battery-high",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": "Ah",
+        "attr": "battery2_full_charge_capacity",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "condition": lambda data: hasattr(data, "battery2_full_charge_capacity"),
+        "disabled_by_default": True,
+    },
 
     "ac_charge_energy_today": {
         "name": "AC Charge Energy Today",

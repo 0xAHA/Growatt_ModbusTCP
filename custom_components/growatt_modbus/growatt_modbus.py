@@ -5639,6 +5639,7 @@ class GrowattModbus:
                     f"{_pfx}_charge_energy_total",
                     f"{_pfx}_discharge_energy_today",
                     f"{_pfx}_discharge_energy_total",
+                    f"{_pfx}_full_charge_capacity",
                 ):
                     _addr = self._find_register_by_name(_reg)
                     if _addr is not None:

@@ -227,6 +227,15 @@ MID they equal pack 1 + pack 2 to the decimal, which is what the Energy dashboar
 pack 1 on its own, MOD/MID multi-pack systems also get four **Battery 1** sensors (Charge /
 Discharge Today / Total), disabled by default and created only when a second pack is present.
 
+**Full Charge Capacity per pack (MOD/MID TL3-XH).** **Battery Full Charge Capacity** reads
+pack 1 (input 31219-31220) and **Battery 2 Full Charge Capacity** pack 2 (31319-31320), in
+Ah. It counts only the modules the BMS is using: on a MID 25KTL3-XH with four 104 Ah APX
+modules per pack it read 416 Ah, then 312, 208 and 104 as modules went to sleep, while a
+module in standby still counted. It also falls slowly as the pack ages, which is why the
+integration does not turn it into a module count. **Battery Modules per Cluster** is the
+installed number and does not change when a module sleeps
+([#482](https://github.com/0xAHA/Growatt_ModbusTCP/issues/482)).
+
 ---
 
 !!! warning "SPH-TL3: AC Voltage R/S/T are line-to-line, not phase voltages"
@@ -684,14 +693,16 @@ VPP input register 31001: *Standby*, *Disconnected*, *Charging*, *Discharging*, 
 the sensor to watch for the sleep described above
 ([#460](https://github.com/0xAHA/Growatt_ModbusTCP/pull/460)).
 
-### Battery pack sensors (MIN TL-XH)
+### Battery pack sensors (MIN TL-XH, MOD/MID TL3-XH)
 
 Four diagnostic sensors describe the pack from VPP input registers 31225-31228: **Battery
 Clusters**, **Battery Modules per Cluster**, **Battery Module Rated Voltage** and **Battery
 Module Rated Capacity**. A MIN 4200TL-XH with two APX modules read one cluster of two
 modules, each rated 51.2 V and 100.0 Ah
 ([#460](https://github.com/0xAHA/Growatt_ModbusTCP/pull/460)). The protocol has no register
-for the battery's brand, so the integration cannot tell an APX from an ARK.
+for the battery's brand, so the integration cannot tell an APX from an ARK. On MOD/MID
+TL3-XH they describe pack 1; a MID 25KTL3-XH with two APX stacks read two clusters of six
+51.2 V, 104.0 Ah modules ([#482](https://github.com/0xAHA/Growatt_ModbusTCP/issues/482)).
 
 ---
 

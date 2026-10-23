@@ -372,6 +372,14 @@ BATTERY_PACK_SENSORS: Set[str] = {
     "battery_module_rated_capacity",
 }
 
+# Full-charge capacity per cluster, VPP 31219-31220 / 31319-31320 (#482). The MOD TL3-XH
+# map names cluster 1's bms_gauge_fcc, so the existing sensor serves it. Only that map
+# defines these, so only its profiles take this group.
+BATTERY_FCC_SENSORS: Set[str] = {
+    "bms_gauge_fcc",
+    "battery2_full_charge_capacity",
+}
+
 MOD_VPP_STATE_SENSORS: Set[str] = {
     "control_authority",
     "remote_power_control_enable",
@@ -1041,7 +1049,8 @@ INVERTER_PROFILES = {
         # test_profile_aliases_stay_equivalent holds it from here.
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
                      | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
-                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS | BATTERY1_ENERGY_SENSORS)
+                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS | BATTERY1_ENERGY_SENSORS
+                     | BATTERY_PACK_SENSORS | BATTERY_FCC_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 
@@ -1061,7 +1070,8 @@ INVERTER_PROFILES = {
         # one - reading it, then discarding it because nothing offered the entity (#451).
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
                      | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
-                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS | BATTERY1_ENERGY_SENSORS)
+                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS | BATTERY1_ENERGY_SENSORS
+                     | BATTERY_PACK_SENSORS | BATTERY_FCC_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 
@@ -1084,7 +1094,8 @@ INVERTER_PROFILES = {
         # register map this profile shares (#451).
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
                      | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
-                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS | BATTERY1_ENERGY_SENSORS)
+                     | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS | BATTERY1_ENERGY_SENSORS
+                     | BATTERY_PACK_SENSORS | BATTERY_FCC_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 

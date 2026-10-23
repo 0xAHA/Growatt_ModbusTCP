@@ -1206,6 +1206,8 @@ SENSOR_DEVICE_MAP = {
         'battery_working_status',
         'battery_cluster_sum', 'battery_module_number',
         'battery_module_rated_voltage', 'battery_module_rated_capacity',
+        # Full-charge capacity per cluster (VPP 31219 / 31319), #482
+        'battery2_full_charge_capacity',
         # SPF Off-Grid AC charge/discharge energy
         'ac_charge_energy_today', 'ac_charge_energy_total',
         'ac_discharge_energy_today', 'ac_discharge_energy_total',
