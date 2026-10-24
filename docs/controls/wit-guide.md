@@ -116,6 +116,14 @@ model rejects the write, use the inverter display panel or the manufacturer app 
 - Positive values = Charge battery from grid/PV
 - 0 = Suspend forced cycle (passthrough)
 
+**The sign also sets the work priority.** Per VPP V2.05 (appendix 3.3.3), while remote control
+is running a positive 30409 runs the inverter in Battery First and a negative one in **Grid
+First**, whatever 30476 says. 30476 only applies once remote control ends. So a negative
+setpoint discharges toward the grid. There is no remote-control mode for "battery covers the
+house only": for that, leave remote control off and let 30476 = 0 (Load First) run. A WIT
+100K-HU showed 31002 = 1 at +10 % and Grid First when negative
+([#349](https://github.com/0xAHA/Growatt_ModbusTCP/issues/349)).
+
 ### Legacy VPP Registers (Registers 201-202)
 
 #### Register 201: Active Power Rate
@@ -452,6 +460,18 @@ When `control_authority` (register 30100) is enabled but `remote_power_control` 
 | **1** | **0** | **⚠️ VPP standby — inverter draws from grid, battery suspended** |
 
 Always ensure remote power control is enabled when control authority is on, or disable both together.
+
+### Off-grid on enabling Control Authority (WIT 100K-HU)
+
+On a WIT 100K-HU (VPP V2.03), enabling Control Authority also switched on EPS off-grid
+(30155 = 1). The inverter islanded: working state 31000 went from 5 to 7, the display showed
+warning 300 (no utility grid), the grid contactors opened, and AC output fell to 0 whatever
+30409 asked for. Writing **30155 = 0** with authority still on brought it back on-grid
+([#349](https://github.com/0xAHA/Growatt_ModbusTCP/issues/349)). The off-grid setting also
+stayed enabled after authority was turned off, so check it in ShineTools afterwards.
+
+If your WIT loses grid output as soon as authority is enabled, read holding 30155. Only
+one model has shown this so far.
 
 ---
 
