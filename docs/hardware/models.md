@@ -35,7 +35,7 @@ When you add the integration, it attempts to identify your inverter automaticall
 | **MIN TL-XH2 3000-10000** | 3–10 kW | 2–3 | VPP only | Manual (shares DTC 5100) | ✅ | Answers only the VPP ranges; select this profile by hand ([#461](https://github.com/0xAHA/Growatt_ModbusTCP/issues/461)) |
 | **SPA 3000-6000TL BL** | 3–6 kW | None | Legacy only | Auto | ✅ | AC-coupled storage only — no PV DC inputs |
 | **SPE 8000-12000 ES** | 8–12 kW | 2 | VPP-like | Model name | ✅ | Peak shaving, parallel operation |
-| **SPH 3000-6000** | 3–6 kW | 2 | VPP + Legacy | Model name | ✅ | |
+| **SPH 3000-6000** | 3–6 kW | 2 | VPP + Legacy | Model name | ✅ | Grid First export collapsing at dusk while status reads PV On-Grid was a firmware fault on RA1.0 (RAAA191904); Growatt's update to RAAa919486 fixed it. The update also adds the VPP registers (DTC 3501) ([#476](https://github.com/0xAHA/Growatt_ModbusTCP/issues/476)) |
 | **SPH 7000-10000** | 7–10 kW | 2 | VPP + Legacy | Model name | ✅ | |
 | **SPH/SPM 8000-10000 HU** | 8–10 kW | 3 | VPP + Legacy | DTC | ⚠️ | BMS monitoring (SOH, cell voltages). Also used for the SPM 3000-6000TL-HU (DTC 21304, confirmed) and its regional variants 21305, 21308, 21309 (unconfirmed) |
 
