@@ -3447,7 +3447,19 @@ class GrowattModbus:
                         _fail_count = (_prev[1] + 1) if _prev else 1
                         self._failed_optional_ranges[range_key] = (time.time(), _fail_count)
                         self._note_optional_failure_kind(('range', range_key))
-                        if _fail_count == 1:
+                        # Battery stacks 2-4 (31300-31599) are optional hardware. With a
+                        # single stack the block simply does not answer, every session, and a
+                        # warning that "battery sensors may be temporarily unavailable" sends
+                        # people looking for a fault on a healthy one-battery system (#483).
+                        # A missing second stack is visible anyway: its sensors never appear.
+                        extra_stack = 31300 <= min_addr_block < 31600
+                        if _fail_count == 1 and extra_stack:
+                            logger.debug(
+                                f"Battery stack range ({min_addr_block}-{max_addr_block}) did "
+                                f"not answer - expected with a single battery stack. "
+                                f"Will retry in {_OPTIONAL_RANGE_RETRY_SECONDS}s."
+                            )
+                        elif _fail_count == 1:
                             logger.warning(
                                 f"Optional VPP range ({min_addr_block}-{max_addr_block}) failed — "
                                 f"battery sensors may be temporarily unavailable. "
