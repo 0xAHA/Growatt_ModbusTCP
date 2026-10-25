@@ -4,6 +4,21 @@
 
 ---
 
+## v2.0.6-b11
+
+Issues: #482
+
+- **MOD/MID TL3-XH: full charge capacity for each battery stack.** **Battery Full Charge
+  Capacity** (stack 1) and **Battery 2 Full Charge Capacity** (stack 2, disabled by
+  default), in Ah. The figure drops by one module's capacity when the BMS puts a module to
+  sleep, and slowly as the battery ages. Thanks to @robintheander for the scans.
+
+- **MOD/MID TL3-XH: battery pack sensors.** Battery Clusters, Modules per Cluster, Module
+  Rated Voltage / Capacity and Battery Working Status, already on MIN TL-XH, now appear on
+  these profiles too. Modules per Cluster is the installed count.
+
+---
+
 ## v2.0.6-b10
 
 Issues: #481, #482
