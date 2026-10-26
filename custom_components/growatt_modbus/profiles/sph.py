@@ -311,27 +311,33 @@ SPH_3000_6000 = {
                    1: 'Enabled'
                }},
 
-        # Battery First extended time slots 4-6 (GEN3, registers 1017-1025)
-        1017: {'name': 'batt_first_time_period_4_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 4 start (hex-packed)'},
-        1018: {'name': 'batt_first_time_period_4_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 4 end (hex-packed)'},
-        1019: {'name': 'batt_first_time_period_4_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 4'},
-        1020: {'name': 'batt_first_time_period_5_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 5 start (hex-packed)'},
-        1021: {'name': 'batt_first_time_period_5_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 5 end (hex-packed)'},
-        1022: {'name': 'batt_first_time_period_5_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 5'},
-        1023: {'name': 'batt_first_time_period_6_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 6 start (hex-packed)'},
-        1024: {'name': 'batt_first_time_period_6_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 6 end (hex-packed)'},
-        1025: {'name': 'batt_first_time_period_6_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 6'},
+        # Slots 4-6 start at 1018, not the 1017 that Protocol V1.39 and the SPH-HUB manual
+        # print. Set in the app with marker times on an SPH3600 (firmware RAAa919486), each
+        # start/end landed one register later, and enabling Battery First 4 / Grid First 4
+        # changed only 1020 / 1029; 1017 stayed 0 (#484). The document's own table ends with
+        # a stray second 'Bat First Start Time 4' at 1035, the mark of a table numbered one
+        # off. Enables for slots 5 and 6 follow the pattern and are not individually tested.
+        # Battery First extended time slots 4-6 (GEN3, registers 1018-1026)
+        1018: {'name': 'batt_first_time_period_4_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 4 start (hex-packed)'},
+        1019: {'name': 'batt_first_time_period_4_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 4 end (hex-packed)'},
+        1020: {'name': 'batt_first_time_period_4_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 4'},
+        1021: {'name': 'batt_first_time_period_5_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 5 start (hex-packed)'},
+        1022: {'name': 'batt_first_time_period_5_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 5 end (hex-packed)'},
+        1023: {'name': 'batt_first_time_period_5_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 5'},
+        1024: {'name': 'batt_first_time_period_6_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 6 start (hex-packed)'},
+        1025: {'name': 'batt_first_time_period_6_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 6 end (hex-packed)'},
+        1026: {'name': 'batt_first_time_period_6_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 6'},
 
-        # Grid First extended time slots 4-6 (GEN3, registers 1026-1034)
-        1026: {'name': 'grid_first_time_period_4_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 4 start (hex-packed)'},
-        1027: {'name': 'grid_first_time_period_4_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 4 end (hex-packed)'},
-        1028: {'name': 'grid_first_time_period_4_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 4'},
-        1029: {'name': 'grid_first_time_period_5_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 5 start (hex-packed)'},
-        1030: {'name': 'grid_first_time_period_5_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 5 end (hex-packed)'},
-        1031: {'name': 'grid_first_time_period_5_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 5'},
-        1032: {'name': 'grid_first_time_period_6_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 6 start (hex-packed)'},
-        1033: {'name': 'grid_first_time_period_6_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 6 end (hex-packed)'},
-        1034: {'name': 'grid_first_time_period_6_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 6'},
+        # Grid First extended time slots 4-6 (GEN3, registers 1027-1035)
+        1027: {'name': 'grid_first_time_period_4_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 4 start (hex-packed)'},
+        1028: {'name': 'grid_first_time_period_4_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 4 end (hex-packed)'},
+        1029: {'name': 'grid_first_time_period_4_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 4'},
+        1030: {'name': 'grid_first_time_period_5_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 5 start (hex-packed)'},
+        1031: {'name': 'grid_first_time_period_5_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 5 end (hex-packed)'},
+        1032: {'name': 'grid_first_time_period_5_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 5'},
+        1033: {'name': 'grid_first_time_period_6_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 6 start (hex-packed)'},
+        1034: {'name': 'grid_first_time_period_6_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 6 end (hex-packed)'},
+        1035: {'name': 'grid_first_time_period_6_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 6'},
 
         # Grid First extended time slots 7-9 (GEN3, registers 1080-1088)
         1080: {'name': 'grid_first_time_period_7_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 7 start (hex-packed)'},
@@ -642,27 +648,33 @@ SPH_7000_10000 = {
                    1: 'Enabled'
                }},
 
-        # Battery First extended time slots 4-6 (GEN3, registers 1017-1025)
-        1017: {'name': 'batt_first_time_period_4_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 4 start (hex-packed)'},
-        1018: {'name': 'batt_first_time_period_4_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 4 end (hex-packed)'},
-        1019: {'name': 'batt_first_time_period_4_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 4'},
-        1020: {'name': 'batt_first_time_period_5_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 5 start (hex-packed)'},
-        1021: {'name': 'batt_first_time_period_5_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 5 end (hex-packed)'},
-        1022: {'name': 'batt_first_time_period_5_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 5'},
-        1023: {'name': 'batt_first_time_period_6_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 6 start (hex-packed)'},
-        1024: {'name': 'batt_first_time_period_6_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 6 end (hex-packed)'},
-        1025: {'name': 'batt_first_time_period_6_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 6'},
+        # Slots 4-6 start at 1018, not the 1017 that Protocol V1.39 and the SPH-HUB manual
+        # print. Set in the app with marker times on an SPH3600 (firmware RAAa919486), each
+        # start/end landed one register later, and enabling Battery First 4 / Grid First 4
+        # changed only 1020 / 1029; 1017 stayed 0 (#484). The document's own table ends with
+        # a stray second 'Bat First Start Time 4' at 1035, the mark of a table numbered one
+        # off. Enables for slots 5 and 6 follow the pattern and are not individually tested.
+        # Battery First extended time slots 4-6 (GEN3, registers 1018-1026)
+        1018: {'name': 'batt_first_time_period_4_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 4 start (hex-packed)'},
+        1019: {'name': 'batt_first_time_period_4_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 4 end (hex-packed)'},
+        1020: {'name': 'batt_first_time_period_4_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 4'},
+        1021: {'name': 'batt_first_time_period_5_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 5 start (hex-packed)'},
+        1022: {'name': 'batt_first_time_period_5_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 5 end (hex-packed)'},
+        1023: {'name': 'batt_first_time_period_5_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 5'},
+        1024: {'name': 'batt_first_time_period_6_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 6 start (hex-packed)'},
+        1025: {'name': 'batt_first_time_period_6_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 6 end (hex-packed)'},
+        1026: {'name': 'batt_first_time_period_6_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 6'},
 
-        # Grid First extended time slots 4-6 (GEN3, registers 1026-1034)
-        1026: {'name': 'grid_first_time_period_4_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 4 start (hex-packed)'},
-        1027: {'name': 'grid_first_time_period_4_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 4 end (hex-packed)'},
-        1028: {'name': 'grid_first_time_period_4_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 4'},
-        1029: {'name': 'grid_first_time_period_5_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 5 start (hex-packed)'},
-        1030: {'name': 'grid_first_time_period_5_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 5 end (hex-packed)'},
-        1031: {'name': 'grid_first_time_period_5_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 5'},
-        1032: {'name': 'grid_first_time_period_6_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 6 start (hex-packed)'},
-        1033: {'name': 'grid_first_time_period_6_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 6 end (hex-packed)'},
-        1034: {'name': 'grid_first_time_period_6_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 6'},
+        # Grid First extended time slots 4-6 (GEN3, registers 1027-1035)
+        1027: {'name': 'grid_first_time_period_4_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 4 start (hex-packed)'},
+        1028: {'name': 'grid_first_time_period_4_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 4 end (hex-packed)'},
+        1029: {'name': 'grid_first_time_period_4_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 4'},
+        1030: {'name': 'grid_first_time_period_5_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 5 start (hex-packed)'},
+        1031: {'name': 'grid_first_time_period_5_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 5 end (hex-packed)'},
+        1032: {'name': 'grid_first_time_period_5_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 5'},
+        1033: {'name': 'grid_first_time_period_6_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 6 start (hex-packed)'},
+        1034: {'name': 'grid_first_time_period_6_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 6 end (hex-packed)'},
+        1035: {'name': 'grid_first_time_period_6_enable', 'scale': 1, 'unit': '', 'access': 'RW', 'values': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 6'},
 
         # Grid First extended time slots 7-9 (GEN3, registers 1080-1088)
         1080: {'name': 'grid_first_time_period_7_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Grid First period 7 start (hex-packed)'},

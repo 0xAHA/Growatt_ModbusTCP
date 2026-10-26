@@ -835,27 +835,28 @@ WRITABLE_REGISTERS = {
         'label': 'Battery First Period 3 Enable', 'desc': 'Enable time period 3'
     },
 
-    # SPH GEN3 Battery First extended time slots 4-6 (registers 1017-1025)
-    'batt_first_time_period_4_start': {'register': 1017, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Battery First period 4 start (hex-packed: hours*256+minutes)'},
-    'batt_first_time_period_4_end':   {'register': 1018, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Battery First period 4 end (hex-packed: hours*256+minutes)'},
-    'batt_first_time_period_4_enable': {'register': 1019, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 4'},
-    'batt_first_time_period_5_start': {'register': 1020, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Battery First period 5 start (hex-packed: hours*256+minutes)'},
-    'batt_first_time_period_5_end':   {'register': 1021, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Battery First period 5 end (hex-packed: hours*256+minutes)'},
-    'batt_first_time_period_5_enable': {'register': 1022, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 5'},
-    'batt_first_time_period_6_start': {'register': 1023, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Battery First period 6 start (hex-packed: hours*256+minutes)'},
-    'batt_first_time_period_6_end':   {'register': 1024, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Battery First period 6 end (hex-packed: hours*256+minutes)'},
-    'batt_first_time_period_6_enable': {'register': 1025, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 6'},
+    # SPH GEN3 Battery First extended time slots 4-6 (registers 1018-1026; one later than
+    # Protocol V1.39 prints - set and read back on an SPH3600, #484)
+    'batt_first_time_period_4_start': {'register': 1018, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Battery First period 4 start (hex-packed: hours*256+minutes)'},
+    'batt_first_time_period_4_end':   {'register': 1019, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Battery First period 4 end (hex-packed: hours*256+minutes)'},
+    'batt_first_time_period_4_enable': {'register': 1020, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 4'},
+    'batt_first_time_period_5_start': {'register': 1021, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Battery First period 5 start (hex-packed: hours*256+minutes)'},
+    'batt_first_time_period_5_end':   {'register': 1022, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Battery First period 5 end (hex-packed: hours*256+minutes)'},
+    'batt_first_time_period_5_enable': {'register': 1023, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 5'},
+    'batt_first_time_period_6_start': {'register': 1024, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Battery First period 6 start (hex-packed: hours*256+minutes)'},
+    'batt_first_time_period_6_end':   {'register': 1025, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Battery First period 6 end (hex-packed: hours*256+minutes)'},
+    'batt_first_time_period_6_enable': {'register': 1026, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Battery First period 6'},
 
-    # SPH GEN3 Grid First extended time slots 4-6 (registers 1026-1034)
-    'grid_first_time_period_4_start': {'register': 1026, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 4 start (hex-packed: hours*256+minutes)'},
-    'grid_first_time_period_4_end':   {'register': 1027, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 4 end (hex-packed: hours*256+minutes)'},
-    'grid_first_time_period_4_enable': {'register': 1028, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 4'},
-    'grid_first_time_period_5_start': {'register': 1029, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 5 start (hex-packed: hours*256+minutes)'},
-    'grid_first_time_period_5_end':   {'register': 1030, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 5 end (hex-packed: hours*256+minutes)'},
-    'grid_first_time_period_5_enable': {'register': 1031, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 5'},
-    'grid_first_time_period_6_start': {'register': 1032, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 6 start (hex-packed: hours*256+minutes)'},
-    'grid_first_time_period_6_end':   {'register': 1033, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 6 end (hex-packed: hours*256+minutes)'},
-    'grid_first_time_period_6_enable': {'register': 1034, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 6'},
+    # SPH GEN3 Grid First extended time slots 4-6 (registers 1027-1035, #484)
+    'grid_first_time_period_4_start': {'register': 1027, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 4 start (hex-packed: hours*256+minutes)'},
+    'grid_first_time_period_4_end':   {'register': 1028, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 4 end (hex-packed: hours*256+minutes)'},
+    'grid_first_time_period_4_enable': {'register': 1029, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 4'},
+    'grid_first_time_period_5_start': {'register': 1030, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 5 start (hex-packed: hours*256+minutes)'},
+    'grid_first_time_period_5_end':   {'register': 1031, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 5 end (hex-packed: hours*256+minutes)'},
+    'grid_first_time_period_5_enable': {'register': 1032, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 5'},
+    'grid_first_time_period_6_start': {'register': 1033, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 6 start (hex-packed: hours*256+minutes)'},
+    'grid_first_time_period_6_end':   {'register': 1034, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'desc': 'Grid First period 6 end (hex-packed: hours*256+minutes)'},
+    'grid_first_time_period_6_enable': {'register': 1035, 'scale': 1, 'valid_range': (0, 1), 'options': {0: 'Disabled', 1: 'Enabled'}, 'desc': 'Enable Grid First period 6'},
 
     # SPH GEN3 Grid First extended time slots 7-9 (registers 1080-1088)
     'grid_first_time_period_7_start': {'register': 1080, 'scale': 1, 'valid_range': (0, 5947), 'unit': '', 'label': 'Grid First Period 1 Start', 'desc': 'Grid First period 1 start (hex-packed: hours*256+minutes)'},

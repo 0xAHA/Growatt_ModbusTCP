@@ -6238,41 +6238,23 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read time period control registers: {e}")
 
-        # SPH GEN3 Battery First extended slots 4-6 (registers 1017-1025)
-        if any(reg in holding_map for reg in range(1017, 1026)):
+        # SPH GEN3 Battery First / Grid First extended slots 4-6. 1018-1026 and 1027-1035:
+        # one register later than Protocol V1.39 prints, measured on an SPH3600 (#484).
+        for _base, _kind, _label in ((1018, 'batt', 'Battery'), (1027, 'grid', 'Grid')):
+            if not any(reg in holding_map for reg in range(_base, _base + 9)):
+                continue
             try:
-                bf_regs = self.read_holding_registers(1017, 9)
-                if bf_regs is not None and len(bf_regs) >= 9:
-                    if 1017 in holding_map: data.batt_first_time_period_4_start  = int(bf_regs[0])
-                    if 1018 in holding_map: data.batt_first_time_period_4_end    = int(bf_regs[1])
-                    if 1019 in holding_map: data.batt_first_time_period_4_enable = int(bf_regs[2])
-                    if 1020 in holding_map: data.batt_first_time_period_5_start  = int(bf_regs[3])
-                    if 1021 in holding_map: data.batt_first_time_period_5_end    = int(bf_regs[4])
-                    if 1022 in holding_map: data.batt_first_time_period_5_enable = int(bf_regs[5])
-                    if 1023 in holding_map: data.batt_first_time_period_6_start  = int(bf_regs[6])
-                    if 1024 in holding_map: data.batt_first_time_period_6_end    = int(bf_regs[7])
-                    if 1025 in holding_map: data.batt_first_time_period_6_enable = int(bf_regs[8])
-                    logger.debug("[SPH CTRL] Battery First periods 4-6 loaded")
+                _slot_regs = self.read_holding_registers(_base, 9)
+                if _slot_regs is not None and len(_slot_regs) >= 9:
+                    for _i, (_period, _part) in enumerate(
+                            (p, part) for p in (4, 5, 6) for part in ('start', 'end', 'enable')):
+                        if _base + _i in holding_map:
+                            setattr(data, f"{_kind}_first_time_period_{_period}_{_part}",
+                                    int(_slot_regs[_i]))
+                    logger.debug("[SPH CTRL] %s First periods 4-6 loaded", _label)
             except Exception as e:
-                logger.debug(f"Could not read Battery First extended time period registers 1017-1025: {e}")
-
-        # SPH GEN3 Grid First extended slots 4-6 (registers 1026-1034)
-        if any(reg in holding_map for reg in range(1026, 1035)):
-            try:
-                gf46_regs = self.read_holding_registers(1026, 9)
-                if gf46_regs is not None and len(gf46_regs) >= 9:
-                    if 1026 in holding_map: data.grid_first_time_period_4_start  = int(gf46_regs[0])
-                    if 1027 in holding_map: data.grid_first_time_period_4_end    = int(gf46_regs[1])
-                    if 1028 in holding_map: data.grid_first_time_period_4_enable = int(gf46_regs[2])
-                    if 1029 in holding_map: data.grid_first_time_period_5_start  = int(gf46_regs[3])
-                    if 1030 in holding_map: data.grid_first_time_period_5_end    = int(gf46_regs[4])
-                    if 1031 in holding_map: data.grid_first_time_period_5_enable = int(gf46_regs[5])
-                    if 1032 in holding_map: data.grid_first_time_period_6_start  = int(gf46_regs[6])
-                    if 1033 in holding_map: data.grid_first_time_period_6_end    = int(gf46_regs[7])
-                    if 1034 in holding_map: data.grid_first_time_period_6_enable = int(gf46_regs[8])
-                    logger.debug("[SPH CTRL] Grid First periods 4-6 loaded")
-            except Exception as e:
-                logger.debug(f"Could not read Grid First extended time period registers 1026-1034: {e}")
+                logger.debug(f"Could not read {_label} First extended time period registers "
+                             f"{_base}-{_base + 8}: {e}")
 
         # SPH GEN3 Grid First extended slots 7-9 (registers 1080-1088)
         if any(reg in holding_map for reg in range(1080, 1089)):

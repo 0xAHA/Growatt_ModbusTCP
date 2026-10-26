@@ -264,19 +264,19 @@ enable registers (not bit-packed like MOD).
 
 | Entity | Register | Purpose |
 |--------|----------|---------|
-| Batt First Time Period 4 Start / End | 1017, 1018 | Battery First window 4 |
-| Batt First Time Period 4 Enable | 1019 | Enable slot |
-| Batt First Time Period 5 Start / End | 1020, 1021 | Battery First window 5 |
-| Batt First Time Period 5 Enable | 1022 | Enable slot |
-| Batt First Time Period 6 Start / End | 1023, 1024 | Battery First window 6 |
-| Batt First Time Period 6 Enable | 1025 | Enable slot |
+| Batt First Time Period 4 Start / End | 1018, 1019 | Battery First window 4 |
+| Batt First Time Period 4 Enable | 1020 | Enable slot |
+| Batt First Time Period 5 Start / End | 1021, 1022 | Battery First window 5 |
+| Batt First Time Period 5 Enable | 1023 | Enable slot |
+| Batt First Time Period 6 Start / End | 1024, 1025 | Battery First window 6 |
+| Batt First Time Period 6 Enable | 1026 | Enable slot |
 
 #### Grid First Extended Slots 4–9 (new in v0.6.8)
 
 | Entity | Register | Purpose |
 |--------|----------|---------|
-| Grid First Period 4–6 Start/End | 1026–1033 | Grid First windows 4–6 |
-| Grid First Period 4–6 Enable | 1028, 1031, 1034 | Enable each slot |
+| Grid First Period 4–6 Start/End | 1027–1034 | Grid First windows 4–6 |
+| Grid First Period 4–6 Enable | 1029, 1032, 1035 | Enable each slot |
 | Grid First Period 1–3 Start/End | 1080–1087 | Grid First windows 1–3 |
 | Grid First Period 1–3 Enable | 1082, 1085, 1088 | Enable each slot |
 
@@ -294,7 +294,7 @@ enable registers (not bit-packed like MOD).
 > **SPH HU note:** The SPH 8000–10000 TL-HU uses a different holding register architecture.
 > Battery management registers (1044, 1070–1071, 1090–1108) return Modbus exceptions on HU
 > hardware — these settings must be made via the inverter LCD or ShinePhone app. The
-> extended time period registers (1017–1088) have not been validated on HU hardware.
+> extended time period registers (1018–1088) have not been validated on HU hardware.
 
 ### Setting Up Time Periods on SPH
 
@@ -738,7 +738,7 @@ write succeeded but value reverted (possible cloud override)
 
 1. Confirm you are on the correct profile (Settings → Devices & Services → Growatt → Configure)
 2. For **MOD GEN4** control entities: the profile must be MOD TL3-XH, and register 3038 must be present in holding registers (verified during auto-detection)
-3. For **SPH extended time periods**: registers 1017–1088 must be present in the profile's holding_registers definition — verify with the Universal Register Scanner
+3. For **SPH extended time periods**: registers 1018–1088 must be present in the profile's holding_registers definition — verify with the Universal Register Scanner
 4. Check HA logs for entity creation messages: `INFO — MOD TOU priority/enable controls enabled`
 
 ### Write silently fails (no error, value stays unchanged)

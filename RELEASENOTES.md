@@ -4,6 +4,23 @@
 
 ---
 
+## v2.0.6-b12
+
+Issues: #483, #484
+
+- **Fix (SPH, SPH-TL3): Battery First and Grid First periods 4-6 now use the right
+  registers.** They were one register early, so setting a period wrote its end time into
+  the start and its enable flag into the end. They now match what the inverter uses. If
+  you set periods 4-6 from Home Assistant before, check them in the Growatt app after
+  updating. Confirmed on an SPH3600 by @Vict20; enables for periods 5 and 6 follow the
+  same pattern.
+
+- **No more warning for a missing second battery stack.** On a single-battery system,
+  "Optional VPP range (31300-31323) failed" is no longer logged as a warning. It was
+  expected, not a fault. Reported by @feinerer.
+
+---
+
 ## v2.0.6-b11
 
 Issues: #482
