@@ -316,7 +316,8 @@ SPH_3000_6000 = {
         # start/end landed one register later, and enabling Battery First 4 / Grid First 4
         # changed only 1020 / 1029; 1017 stayed 0 (#484). The document's own table ends with
         # a stray second 'Bat First Start Time 4' at 1035, the mark of a table numbered one
-        # off. Enables for slots 5 and 6 follow the pattern and are not individually tested.
+        # off. Writing Battery First 5 and Grid First 6 from Home Assistant on b12 changed
+        # exactly their three registers each, read back in the app (#484).
         # Battery First extended time slots 4-6 (GEN3, registers 1018-1026)
         1018: {'name': 'batt_first_time_period_4_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 4 start (hex-packed)'},
         1019: {'name': 'batt_first_time_period_4_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 4 end (hex-packed)'},
@@ -653,7 +654,8 @@ SPH_7000_10000 = {
         # start/end landed one register later, and enabling Battery First 4 / Grid First 4
         # changed only 1020 / 1029; 1017 stayed 0 (#484). The document's own table ends with
         # a stray second 'Bat First Start Time 4' at 1035, the mark of a table numbered one
-        # off. Enables for slots 5 and 6 follow the pattern and are not individually tested.
+        # off. Writing Battery First 5 and Grid First 6 from Home Assistant on b12 changed
+        # exactly their three registers each, read back in the app (#484).
         # Battery First extended time slots 4-6 (GEN3, registers 1018-1026)
         1018: {'name': 'batt_first_time_period_4_start',  'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 4 start (hex-packed)'},
         1019: {'name': 'batt_first_time_period_4_end',    'scale': 1, 'unit': '', 'access': 'RW', 'valid_range': (0, 5947), 'desc': 'Battery First period 4 end (hex-packed)'},

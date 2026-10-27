@@ -397,7 +397,8 @@ SPH_TL3_3000_10000 = {
         # start/end landed one register later, and enabling Battery First 4 / Grid First 4
         # changed only 1020 / 1029; 1017 stayed 0 (#484). The document's own table ends with
         # a stray second 'Bat First Start Time 4' at 1035, the mark of a table numbered one
-        # off. Enables for slots 5 and 6 follow the pattern and are not individually tested.
+        # off. Writing Battery First 5 and Grid First 6 from Home Assistant on b12 changed
+        # exactly their three registers each, read back in the app (#484).
         # Note: these are HOLDING registers; input registers 1021/1022/1029/1030
         # (power_to_user_total / power_to_grid) are in a separate address space.
         # -----------------------------------------------------------------------
