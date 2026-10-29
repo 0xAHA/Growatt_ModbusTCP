@@ -4,6 +4,30 @@
 
 ---
 
+## v2.0.6
+
+Promoted to stable from the pre-release line below (b1 through b12). Every change in that
+line is included. See each `v2.0.6-bN` section for the individual reports and hardware
+confirmations behind it, or the [GitHub release](https://github.com/0xAHA/Growatt_ModbusTCP/releases/tag/v2.0.6)
+for a summary grouped by area.
+
+What you may notice on upgrading from v2.0.5:
+
+- **WIT:** a control write refused by the 30-second cooldown now fails with an error
+  instead of appearing to succeed. Releasing control (Control Authority or Remote Power
+  Control set to Disabled) is never refused. Automations that arm VPP control twice within
+  30 seconds should allow for the error.
+- **WIT:** Discharge Cutoff SOC is now **On-Grid Discharge Cutoff SOC**, and both cut-off
+  controls show the inverter's values rather than defaults.
+- **SPH / SPH-TL3:** Battery First and Grid First periods 4-6 moved to the registers the
+  inverter actually uses. If you set them from Home Assistant before, check them in the
+  Growatt app.
+- **Dry Contact State** is now only on MIN TL-X, the only profiles with its register.
+- **MOD/MID TL3-XH:** new battery pack and full charge capacity sensors appear (diagnostic).
+- **New controls are disabled by default.** Enable them on the device page if you want them.
+
+---
+
 ## v2.0.6-b12
 
 Issues: #483, #484
