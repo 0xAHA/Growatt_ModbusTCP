@@ -187,9 +187,13 @@ Two limits remain, and both matter when writing automations:
 
 - **A write can wait for a poll to finish.** On a slow gateway a poll can occupy most of the
   interval, so a mode change issued during one queues behind it rather than failing.
-- **Mode (VPP) reports the last command, not the inverter.** The select shows what was last
-  sent, not a read-back of the registers, so it will not reflect a change made outside Home
-  Assistant or one the inverter declined.
+- **Mode (VPP) follows the inverter's registers while remote control runs.** With Control
+  Authority and Remote Power Control both on, it shows Charge or Discharge from the sign of
+  30409, so it stays right across a restart or a change made outside Home Assistant. Otherwise
+  it shows the last mode chosen from Home Assistant, or unknown if there is none. Before
+  v2.0.7 it only remembered the last command and fell back to Hold after a restart, even with
+  a charge running ([#481](https://github.com/0xAHA/Growatt_ModbusTCP/issues/481)). For
+  automations, the sign of Remote Charge/Discharge Power (30409) is the direct check.
 
 ---
 

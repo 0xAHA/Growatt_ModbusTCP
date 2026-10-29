@@ -1075,6 +1075,31 @@ DAILY_TOTAL_ATTRS = [
 # reading that was not read.
 #
 # control name -> GrowattData flag that is set only when the block actually responded
+def vpp_mode_from_registers(data) -> "str | None":
+    """'Charge' or 'Discharge' when the polled VPP registers show remote control running.
+
+    Mode (VPP) used to show only the last mode chosen through it, held in memory and
+    defaulting to "Hold". A reload or restart therefore reset it to Hold mid-session while
+    the inverter went on charging or discharging at 9 kW, and an automation that asked the
+    entity "is a charge running?" was told no (#481). With control authority (30100) and
+    remote control (30407) both on, the sign of 30409 is the mode - V2.05 appendix 3.3.3.
+    None means the registers do not say, and the caller falls back to the last command.
+    """
+    if data is None:
+        return None
+    if not (getattr(data, 'vpp_control_authority_available', False)
+            and getattr(data, 'vpp_remote_power_available', False)):
+        return None
+    if getattr(data, 'control_authority', 0) != 1 or getattr(data, 'remote_power_control_enable', 0) != 1:
+        return None
+    setpoint = getattr(data, 'remote_charge_and_discharge_power', 0) or 0
+    if setpoint > 0:
+        return 'Charge'
+    if setpoint < 0:
+        return 'Discharge'
+    return None
+
+
 VPP_CONTROL_AVAILABILITY_FLAG = {
     'control_authority': 'vpp_control_authority_available',               # 30100
     'vpp_export_limit_enable': 'vpp_export_limit_available',              # 30200

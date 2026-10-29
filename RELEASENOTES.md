@@ -4,6 +4,19 @@
 
 ---
 
+## v2.0.7-b1
+
+Issues: #481
+
+- **Fix (WIT): Mode (VPP) now shows what the inverter is doing.** It only remembered the last
+  mode chosen in Home Assistant, so after a restart or reload it showed Hold while a charge
+  or discharge was still running. With Control Authority and Remote Power Control both on,
+  it now shows Charge or Discharge from the inverter's setpoint (30409). With no remote
+  control running and no mode chosen since the restart, it shows unknown instead of
+  assuming Hold. Reported by @Wojak129.
+
+---
+
 ## v2.0.6
 
 Promoted to stable from the pre-release line below (b1 through b12). Every change in that

@@ -27,6 +27,7 @@ from .const import (
     DEVICE_TYPE_BATTERY,
     MOD_TOU_PERIODS,
     VPP_CONTROL_AVAILABILITY_FLAG,
+    vpp_mode_from_registers,
 )
 from .coordinator import GrowattModbusCoordinator
 from .entity import GrowattEntity
@@ -567,11 +568,16 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
 
     @property
     def current_option(self) -> str | None:
-        # Use the last command we sent (VPP registers are write-only in some firmware)
+        # What the inverter's registers say first, then the last command sent from here.
+        # Never a default: "Hold" invented after a restart read as "no charge running"
+        # while 9 kW was flowing (#481).
+        derived = vpp_mode_from_registers(self.coordinator.data)
+        if derived is not None:
+            return derived
         last_mode = getattr(self.coordinator, "wit_vpp_last_mode", None)
         if last_mode in ("Hold", "Charge", "Discharge"):
             return last_mode
-        return "Hold"  # Default assumption
+        return None
 
     async def async_select_option(self, option: str) -> None:
         if option not in ("Hold", "Charge", "Discharge"):
