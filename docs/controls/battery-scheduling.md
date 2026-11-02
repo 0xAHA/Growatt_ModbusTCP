@@ -41,6 +41,15 @@ your hardware will save significant debugging time.
 
 **Applies to:** MOD 6000–15000 TL3-XH (three-phase hybrid with battery)
 
+!!! warning "Growatt firmware with weekday schedules (late 2026)"
+    After a Growatt firmware update that adds **weekday calendars** and **Idle / Idle Charge**
+    modes to each TOU slot in the app and web portal, writes to 3038-3059 from Home Assistant
+    are accepted and then **revert within seconds**. Changes made in the app still stick and
+    still read back correctly here. Seen on MOD 12KTL3-HU (VPP V2.05,
+    [#480](https://github.com/0xAHA/Growatt_ModbusTCP/issues/480)) and MID 10/25KTL3-XH
+    ([#485](https://github.com/0xAHA/Growatt_ModbusTCP/issues/485)). Until the new layout is
+    mapped, set TOU from the app.
+
 ### How TOU Works on MOD GEN4
 
 The MOD GEN4 inverter uses a 9-slot time-of-use schedule stored in holding registers
