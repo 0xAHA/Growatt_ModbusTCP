@@ -163,6 +163,16 @@ SPH_3000_6000 = {
         # battery_current had no register at all on these profiles before this, so the
         # entity published its default of 0.00 A permanently - the same shape as #395.
         1088: {'name': 'battery_current', 'scale': 0.01, 'unit': 'A', 'signed': True, 'desc': 'Battery current from BMS (confirmed vs clamp meter on this model, #397)'},
+
+        # BMS fuel gauge (#486). The ESS protocol gives these in 10 mAh, and that holds on the
+        # high-voltage ARK packs of SPH-TL3 (#403: 5250 -> 52.50 Ah on a 50 Ah stack). On this
+        # family's 48 V packs the unit is 0.1 Ah: an SPH 5000TL BL-UP with 3 x 5 kWh read FCC
+        # 3000, which is 300 Ah - the 15 kWh nameplate at ~50 V - where 0.01 would make it
+        # 1.5 kWh. Remaining read 2131 alongside it.
+        1091: {'name': 'bms_gauge_rm', 'scale': 0.1, 'unit': 'Ah',
+               'desc': 'BMS_GaugeRM - remaining capacity (0.1 Ah on 48 V packs, #486)'},
+        1092: {'name': 'bms_gauge_fcc', 'scale': 0.1, 'unit': 'Ah',
+               'desc': 'BMS_GaugeFCC - full charge capacity (0.1 Ah on 48 V packs, #486)'},
         1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge energy today HIGH (Edischarge1_today)'},
         1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge energy total HIGH (Edischarge1_total)'},

@@ -159,7 +159,8 @@ AC-side balance would leave that solar out.
 ### Battery capacity from the BMS fuel gauge
 
 Two sensors report what the battery's own gauge measures, rather than what the inverter
-infers. Available on **SPH-TL3** and **SPH 8000-10000 HU**, where the BMS block is mapped.
+infers. Available on **SPH-TL3**, **SPH 8000-10000 HU** and **SPH 3000-6000**, where the BMS
+block is mapped.
 
 | Sensor | Register | Measures |
 |---|---|---|
@@ -181,6 +182,11 @@ estimate.
     10 mAh, and is **confirmed on hardware**: an SPH-TL3 with 4x Growatt ARK 2.5H-A2 in
     series — 50.0 Ah at 204.8 V, 10.24 kWh nameplate — reports a Full Charge Capacity of
     52.50 Ah, or 105% of nameplate ([#403](https://github.com/0xAHA/Growatt_ModbusTCP/issues/403)).
+
+    **SPH 3000-6000 reports in 0.1 Ah instead.** On its 48 V packs the same registers read
+    ten times coarser: an SPH 5000TL BL-UP with 3 x 5 kWh reported a Full Charge Capacity
+    of 300.0 Ah, the 15 kWh nameplate at about 50 V
+    ([#486](https://github.com/0xAHA/Growatt_ModbusTCP/issues/486)).
 
     A gauge reading slightly **above** the nameplate is normal: modules are rated
     conservatively. Reading well below it is the signal that matters, and it is what
