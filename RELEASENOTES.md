@@ -4,6 +4,18 @@
 
 ---
 
+## v2.0.7-b2
+
+Issues: #486, #487
+
+- **SPH 3000-6000: Battery Remaining Capacity and Battery Full Charge Capacity**, from the
+  battery's own gauge, in Ah. Requested by @trickyau.
+
+- **MOD/MID TL3-XH: Grid First Discharge Power Rate can be set to 0 %**, as in the Growatt
+  app. It previously stopped at 1 %. Requested by @RubbeeDuck.
+
+---
+
 ## v2.0.7-b1
 
 Issues: #481
