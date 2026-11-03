@@ -902,12 +902,17 @@ WRITABLE_REGISTERS = {
 
     # MOD GEN4 power rate limits for priority modes
     # Scan #228 confirmed: 3036=100 (GridFirstDischargePowerRate), 3047=80 (BatFirstPowerRate)
+    #
+    # Floor 0, not the 1 that Protocol V1.39 prints for 3036 ("1-255"): the Growatt app sets
+    # 0 here, and an owner with a second battery uses it to stop this one discharging while
+    # the other charges (#487). The SPH equivalent, 1070, is documented 0-100. If a firmware
+    # refuses 0, the verified write reports that the value did not take.
     'grid_first_discharge_power_rate': {
         'register': 3036,
         'scale': 1,
-        'valid_range': (1, 100),
+        'valid_range': (0, 100),
         'unit': '%',
-        'desc': 'Discharge power rate when Grid First mode (1-100%)'
+        'desc': 'Discharge power rate when Grid First mode (0-100%)'
     },
     'tl_xh_priority_mode': {
         'register': 3018,
