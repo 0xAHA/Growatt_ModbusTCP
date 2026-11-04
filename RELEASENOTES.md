@@ -4,6 +4,16 @@
 
 ---
 
+## v2.0.7-b5
+
+Issues: #485
+
+- **Fix (MOD/MID TL3-XH and others): the serial number is found on models that keep it
+  in the 3000 range.** It was looked for only in a range these models leave blank, so the
+  device page and diagnostics showed none. Reported by @robintheander.
+
+---
+
 ## v2.0.7-b4
 
 Issues: #485, #486
