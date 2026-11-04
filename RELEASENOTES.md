@@ -4,6 +4,19 @@
 
 ---
 
+## v2.0.7-b3
+
+Issues: #488
+
+- **Fix (MIN TL-XH2): battery power could read ten times too high.** A check that
+  compares battery power against voltage × current could pick the wrong scale when the
+  battery current reading was off, and it remembered that choice across restarts. On this
+  model the scale is confirmed against the Growatt portal, so the check no longer
+  applies and any remembered scale is ignored. Battery Power, Charge Power and Discharge
+  Power correct themselves after updating. Reported by @Richardmarkink.
+
+---
+
 ## v2.0.7-b2
 
 Issues: #486, #487
