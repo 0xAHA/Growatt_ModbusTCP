@@ -4,6 +4,19 @@
 
 ---
 
+## v2.0.7-b6
+
+Issues: #486
+
+- **Fix: cell voltages now show to the millivolt.** BMS Max and Min Cell Voltage were
+  rounded to one decimal, so 3.307 V and 3.280 V both showed 3.3 V. BMS Constant Voltage
+  now shows two decimals.
+
+- **Battery firmware on the Battery device page** (VPP models), e.g. `QAAb-3010`, as the
+  Growatt portal shows it. Spotted by @trickyau.
+
+---
+
 ## v2.0.7-b5
 
 Issues: #485
