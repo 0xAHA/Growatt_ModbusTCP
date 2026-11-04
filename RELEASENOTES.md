@@ -4,6 +4,20 @@
 
 ---
 
+## v2.0.7-b4
+
+Issues: #485, #486
+
+- **Fix: the inverter's device page now shows its firmware and serial number.** They
+  were read but never written to the device, so the page could stay blank all session.
+  Reported by @robintheander.
+
+- **SPH 3000-6000: six more battery sensors** from the battery's own management system:
+  cycle count, state of health, charge voltage, highest and lowest cell voltage, and the
+  number of packs in parallel. Thanks to @trickyau for the scan.
+
+---
+
 ## v2.0.7-b3
 
 Issues: #488
