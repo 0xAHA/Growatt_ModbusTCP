@@ -2557,10 +2557,31 @@ class GrowattModbus:
             return self._battery_power_scale_override
         return None
 
+    def _battery_scale_detection_applies(self) -> bool:
+        """False when the profile's battery power scale is confirmed on hardware.
+
+        The V x I detector exists for WIT firmware that disagrees with the specification
+        (#75). It runs on whatever voltage and current the profile provides, and where the
+        current register is wrong it latches a wrong scale: a MIN 4200TL-XH2 read -90.9 A
+        at 397 V, and showed battery power ten times too high from then on (#488). Where
+        the documented scale has been checked against the hardware, nothing at runtime
+        should override it - and a scale persisted from an earlier session must not either.
+        """
+        register_map = getattr(self, 'register_map', None)
+        if not isinstance(register_map, dict):
+            return True
+        return not register_map.get('battery_power_scale_confirmed', False)
+
     def restore_battery_power_scale(self, scale: float) -> None:
         """Adopt a previously validated scale without treating detection as finished."""
         if scale not in (0.1, 1.0):
             logger.debug("[SCALE] Ignoring restored battery power scale %r", scale)
+            return
+        if not self._battery_scale_detection_applies():
+            logger.info(
+                "[SCALE] Ignoring a stored battery power scale of %sW: this profile's scale "
+                "is confirmed on hardware (#488).", scale,
+            )
             return
         self._battery_power_scale_override = scale
         self._battery_power_scale_restored = True
@@ -2988,7 +3009,9 @@ class GrowattModbus:
 
             # WIT Battery Power Scale Override (auto-detected if needed)
             reg_name = reg_info.get('name') or pair_info.get('name')
-            if reg_name in ('battery_power_low', 'battery_power') and self._battery_power_scale_override is not None:
+            if (reg_name in ('battery_power_low', 'battery_power')
+                    and self._battery_power_scale_override is not None
+                    and self._battery_scale_detection_applies()):
                 # Use detected scale instead of profile default
                 combined_scale = self._battery_power_scale_override
                 logger.debug(f"Applying detected battery power scale override: {combined_scale}W")
@@ -5414,7 +5437,8 @@ class GrowattModbus:
                     combined_raw = combined_raw - 0x100000000
 
                 # Attempt scale detection if we have V and I data
-                if data.battery_voltage > 0 and data.battery_current != 0:
+                if (data.battery_voltage > 0 and data.battery_current != 0
+                        and self._battery_scale_detection_applies()):
                     detected_scale = self._detect_battery_power_scale(
                         data.battery_voltage,
                         abs(data.battery_current),

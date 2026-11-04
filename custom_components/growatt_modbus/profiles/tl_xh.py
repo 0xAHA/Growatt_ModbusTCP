@@ -597,6 +597,12 @@ MIN_TL_XH2_3000_10000_V201 = {
         'VPP_V201_PV2_INPUT and is defined inline. Verified against the Growatt portal '
         'on a MIN 4200TL-XH2 (Issue #361).'
     ),
+    # Battery power (31200-31201) is 0.1 W, confirmed twice: against voltage x current on a
+    # 4200TL-XH2 (#361), and against the Growatt portal on another 4200TL-XH2 - -1473 W
+    # here, 1466 W discharging there (#488). That second unit's battery current register
+    # read -90.9 A at 397 V, so voltage x current is no basis for second-guessing the
+    # scale on this model, and the runtime detector latched 1.0 and showed 10x (#488).
+    'battery_power_scale_confirmed': True,
     # The clock lives only at 30104-30109 here - 45-51 is in the dead base range (#461).
     'clock_register': 30104,
     'input_registers': {
