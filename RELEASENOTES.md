@@ -4,6 +4,20 @@
 
 ---
 
+## v2.0.7-b7
+
+Issues: #480, #485
+
+- **MOD/MID: the TOU Period controls are no longer offered on Growatt firmware with weekday
+  schedules** (reports VPP protocol 2.05 or later; shown as *Protocol 2.05* on the device
+  page). On that firmware a change from Home Assistant reverts within seconds, and the new
+  Idle modes read back as the old ones, so the controls only appeared to work. Set the
+  schedule in the Growatt app or web portal. After updating, the controls may show as
+  unavailable until the next restart, then they are removed. Other firmware is unchanged.
+  Thanks to @robintheander, @craig785 and @w4iq3 for the testing.
+
+---
+
 ## v2.0.7-b6
 
 Issues: #486
