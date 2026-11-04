@@ -33,3 +33,36 @@ def test_the_reporters_readings(map_name):
 def test_sph_tl3_keeps_its_confirmed_scale():
     holding = _const.REGISTER_MAPS["SPH_TL3_3000_10000_V201"]["input_registers"]
     assert holding[1092]["scale"] == 0.01
+
+
+# ---------------------------------------------------------------------------
+# The rest of the checked BMS block (#486)
+# ---------------------------------------------------------------------------
+
+_profiles = importlib.import_module("growatt_under_test.device_profiles")
+
+SCAN = {1091: 1760, 1092: 2970, 1094: 29, 1095: 506, 1096: 99, 1097: 5740,
+        1108: 3307, 1109: 3280, 1110: 3, 1111: 3600, 1113: 65535, 1114: 23296}
+
+
+@pytest.mark.parametrize("map_name", ["SPH_3000_6000", "SPH_3000_6000_V201"])
+def test_the_bms_block_decodes_as_checked(map_name):
+    data = _poll(map_name, SCAN)
+    assert data.bms_cycle_count == 506
+    assert data.bms_soh == 99
+    assert data.bms_constant_volt == pytest.approx(57.40)        # not 574 V
+    assert (data.bms_max_cell_volt, data.bms_min_cell_volt) == (pytest.approx(3.307), pytest.approx(3.280))
+    assert data.bms_module_num == 3
+
+
+@pytest.mark.parametrize("map_name", ["SPH_3000_6000", "SPH_3000_6000_V201"])
+def test_the_garbled_ones_stay_out(map_name):
+    data = _poll(map_name, SCAN)
+    assert not hasattr(data, "bms_battery_count")                # 1111 read 3600
+
+
+@pytest.mark.parametrize("key", ["sph_3000_6000", "sph_3000_6000_v201"])
+def test_the_sensors_are_offered(key):
+    sensors = _profiles.INVERTER_PROFILES[key]["sensors"]
+    assert {"bms_cycle_count", "bms_soh", "bms_constant_volt", "bms_max_cell_volt",
+            "bms_min_cell_volt", "bms_module_num"} <= sensors

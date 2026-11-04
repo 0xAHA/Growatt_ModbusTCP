@@ -192,6 +192,14 @@ estimate.
     conservatively. Reading well below it is the signal that matters, and it is what
     degradation looks like.
 
+**SPH 3000-6000 also gets six BMS sensors** from the same block: BMS Cycle Count (1095),
+Battery State of Health (1096), BMS Constant Voltage (1097, the battery's charge voltage),
+BMS Max / Min Cell Voltage (1108 / 1109) and BMS Module Count (1110, packs in parallel). Each
+was checked against something else in a scan from a three-pack system: the cell-voltage gap
+matches the BMS's own delta, the pack count matches the install, and SOH agrees with the VPP
+copy. The rest of the block read as garbage on that hardware and is not mapped
+([#486](https://github.com/0xAHA/Growatt_ModbusTCP/issues/486)).
+
 **Note that these are input registers.** Holding 1091 and 1092 at the same addresses are AC
 Charge Stop SOC and AC Charge Enable — an overlap that runs through this whole protocol.
 

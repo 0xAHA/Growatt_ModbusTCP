@@ -173,6 +173,25 @@ SPH_3000_6000 = {
                'desc': 'BMS_GaugeRM - remaining capacity (0.1 Ah on 48 V packs, #486)'},
         1092: {'name': 'bms_gauge_fcc', 'scale': 0.1, 'unit': 'Ah',
                'desc': 'BMS_GaugeFCC - full charge capacity (0.1 Ah on 48 V packs, #486)'},
+
+        # More of the BMS block (#486), from a scan of the same SPH 5000TL BL-UP with three
+        # 48 V packs. Each checked against something else in the scan, not just "read OK":
+        #   1108/1109  3307/3280 -> 3.307/3.280 V; their gap (27 mV) matches 1094 (29 mV)
+        #   1110       3 -> three packs in parallel, as installed
+        #   1096       99 % SOH, the same as VPP 31218 at that moment
+        #   1095       506 cycles
+        #   1097       5740 -> 57.40 V, 3.59 V/cell on 16S LFP. 0.01 V on this family, where
+        #              the HU map's 0.1 would make it 574 V.
+        # Left out, because they did not decode to anything sane on this unit: 1090 (10000),
+        # 1111 (3600 "batteries"), 1112/1113 (0/65535), 1114/1115, 1119/1120, and the status
+        # and fault words 1083/1085/1099, whose zeros prove only that the register answers.
+        1095: {'name': 'bms_cycle_count', 'scale': 1, 'unit': '', 'desc': 'Cycle count from BMS'},
+        1096: {'name': 'bms_soh', 'scale': 1, 'unit': '%', 'desc': 'SOH from BMS'},
+        1097: {'name': 'bms_constant_volt', 'scale': 0.01, 'unit': 'V',
+               'desc': 'CV (charge) voltage from BMS - 0.01 V on 48 V packs (#486)'},
+        1108: {'name': 'bms_max_cell_volt', 'scale': 0.001, 'unit': 'V', 'desc': 'Maximum cell voltage'},
+        1109: {'name': 'bms_min_cell_volt', 'scale': 0.001, 'unit': 'V', 'desc': 'Minimum cell voltage'},
+        1110: {'name': 'bms_module_num', 'scale': 1, 'unit': '', 'desc': 'Battery packs in parallel'},
         1052: {'name': 'battery_discharge_today_high', 'scale': 1, 'unit': '', 'pair': 1053, 'desc': 'Battery discharge energy today HIGH (Edischarge1_today)'},
         1053: {'name': 'battery_discharge_today_low', 'scale': 1, 'unit': '', 'pair': 1052, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         1054: {'name': 'battery_discharge_total_high', 'scale': 1, 'unit': '', 'pair': 1055, 'desc': 'Battery discharge energy total HIGH (Edischarge1_total)'},

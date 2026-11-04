@@ -174,6 +174,13 @@ NO_LINE_VOLTAGES: Set[str] = {"ac_voltage_rs", "ac_voltage_st", "ac_voltage_tr"}
 # is invisible — nothing errors, an entity simply reports freezing forever.
 DCDC_TEMP_SENSOR: Set[str] = {"dcdc_temp"}
 
+# The part of the BMS block checked on SPH 3000-6000 with 48 V packs (#486). A subset of
+# BMS_SENSORS: the rest did not decode to anything sane on that hardware.
+SPH_LV_BMS_SENSORS: Set[str] = {
+    "bms_cycle_count", "bms_soh", "bms_constant_volt",
+    "bms_max_cell_volt", "bms_min_cell_volt", "bms_module_num",
+}
+
 BMS_SENSORS: Set[str] = {
     "bms_status", "bms_error", "bms_warn_info",
     "bms_max_current", "bms_cycle_count", "bms_soh",
@@ -750,7 +757,7 @@ INVERTER_PROFILES = {
         "has_pv3": False,
         "has_battery": True,
         "max_power_kw": 6.0,
-        "sensors": HYBRID_1P_SENSORS,
+        "sensors": HYBRID_1P_SENSORS | SPH_LV_BMS_SENSORS,
     },
     
     "sph_7000_10000": {
@@ -790,7 +797,7 @@ INVERTER_PROFILES = {
         "has_battery": True,
         "max_power_kw": 6.0,
         "protocol_version": "v2.01",
-        "sensors": HYBRID_1P_SENSORS,
+        "sensors": HYBRID_1P_SENSORS | SPH_LV_BMS_SENSORS,
     },
 
     "sph_7000_10000_v201": {
