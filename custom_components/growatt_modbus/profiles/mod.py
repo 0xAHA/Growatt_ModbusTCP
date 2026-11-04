@@ -2,6 +2,9 @@ from .vpp_v201 import VPP_V201_BATTERY3, VPP_V201_BATTERY4
 
 # MOD-6000-15000TL3-XH (Three-phase hybrid with battery, 6-15kW)
 MOD_6000_15000TL3_XH = {
+    # Legacy TOU (3038-3059) is not writable on firmware reporting VPP V2.05 (#480, #485).
+    # See tou_legacy_writes_locked() in const.py.
+    'tou_locked_from_vpp': 205,
     'name': 'MOD TL3-XH Series',
     'description': 'Modular three-phase hybrid inverter with battery (6-15kW)',
     'notes': 'Uses 0-124 base range + 3000+ battery range. Validated with real hardware 2025-10-26.',

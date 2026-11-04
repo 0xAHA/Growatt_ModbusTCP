@@ -512,6 +512,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     )
                     entity_registry.async_remove(stale_eid)
 
+    # MOD/MID TOU controls on firmware that rejects legacy TOU writes (#485). select.py and
+    # time.py no longer create them once 30099 is known, so remove the ones registered
+    # before that - otherwise they linger as unavailable. Uses the version persisted in the
+    # entry, so it does not depend on this session's first poll.
+    if coordinator.tou_legacy_locked:
+        from .const import MOD_TOU_PERIODS
+        for _period in MOD_TOU_PERIODS:
+            for _domain, _suffix in (("select", "priority"), ("select", "enable"),
+                                     ("time", "start"), ("time", "end")):
+                _eid = entity_registry.async_get_entity_id(
+                    _domain, DOMAIN, f"{entry.entry_id}_mod_tou_{_period['period']}_{_suffix}")
+                if _eid:
+                    _LOGGER.info("Removing %s: this firmware does not accept TOU changes "
+                                 "over Modbus (#485)", _eid)
+                    entity_registry.async_remove(_eid)
+
     # Per-entry state lives on the entry itself. hass.data[DOMAIN] is now reserved
     # solely for "_connections", the cross-entry shared-connection registry.
     entry.runtime_data = coordinator

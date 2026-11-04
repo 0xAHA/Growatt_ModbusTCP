@@ -12,7 +12,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.exceptions import HomeAssistantError
 
 from .tou_packing import publish as tou_publish
-from .const import DOMAIN, WRITABLE_REGISTERS, CONF_REGISTER_MAP, get_device_type_for_control, DEVICE_TYPE_BATTERY, MOD_TOU_PERIODS
+from .const import DOMAIN, WRITABLE_REGISTERS, CONF_REGISTER_MAP, get_device_type_for_control, DEVICE_TYPE_BATTERY, MOD_TOU_PERIODS, TOU_LOCKED_MESSAGE
 from .coordinator import GrowattModbusCoordinator
 from .entity import GrowattEntity
 from .growatt_modbus import ModbusWriteError, RATE_LIMITED_MESSAGE
@@ -58,8 +58,11 @@ async def async_setup_entry(
                 entities.append(GrowattWitVppTouTime(coordinator, config_entry, _period, is_start=True))
                 entities.append(GrowattWitVppTouTime(coordinator, config_entry, _period, is_start=False))
 
-    # MOD TL3-XH TOU time pickers (4 start + 4 end = 8 entities)
-    if 3038 in holding_registers:
+    # MOD TL3-XH TOU time pickers - not on firmware that rejects them (#485)
+    if 3038 in holding_registers and coordinator.tou_legacy_locked:
+        _LOGGER.info("MOD TOU time controls not created: firmware VPP %s (#485)",
+                     coordinator.vpp_protocol_label)
+    elif 3038 in holding_registers:
         tou_off = REGISTER_MAPS.get(register_map_name, {}).get('tou_disabled_by_default', False)
         for period_def in MOD_TOU_PERIODS:
             for is_start in (True, False):
@@ -382,6 +385,12 @@ class GrowattModTouTime(GrowattEntity, TimeEntity):
             self._attr_name = f"TOU Period {self._period} End"
 
     @property
+    def available(self) -> bool:
+        # Not on firmware that rejects legacy TOU writes (#485): the control would read
+        # the new modes wrongly and every change would revert.
+        return super().available and not self.coordinator.tou_legacy_locked
+
+    @property
     def native_value(self) -> dt_time | None:
         """Return the current time value decoded from the packed register."""
         data = self.coordinator.data
@@ -410,6 +419,9 @@ class GrowattModTouTime(GrowattEntity, TimeEntity):
         Writing both registers in one Modbus FC16 call prevents the inverter from ever seeing
         a partial update (start changed but end not yet written), which can cause TOU reversion.
         """
+        if self.coordinator.tou_legacy_locked:
+            raise HomeAssistantError(
+                TOU_LOCKED_MESSAGE.format(version=self.coordinator.vpp_protocol_label))
         period = self._period_def
 
         # Read the current [start, end] pair fresh from hardware rather than trusting

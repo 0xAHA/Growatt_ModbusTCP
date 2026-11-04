@@ -16,6 +16,7 @@ import homeassistant.util.dt as dt_util
 
 from .const import (
     battery_power_scale_from_store,
+    tou_legacy_writes_locked,
     decode_bcu_version,
     device_registry_changes,
     DEVICE_REGISTRY_FIELDS,
@@ -180,6 +181,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self._inverter_type = None
         self._model_name = None
         self._protocol_version = None  # VPP Protocol version (from register 30099)
+        # Raw 30099, persisted in the entry so the next setup knows it before the first poll
+        # (identification can come after the platforms load) - #485.
+        self._vpp_protocol_raw = entry.data.get("vpp_protocol_raw")
 
         # Handle register map key (might be dict or string due to old bug)
         raw_register_map = entry.data.get(CONF_REGISTER_MAP, 'MIN_7000_10000TL_X')
@@ -2192,6 +2196,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     if registers:
                         version_value = registers[0]
                         if version_value > 0:
+                            self._vpp_protocol_raw = int(version_value)
                             # Format as version string (e.g., 201 -> "Protocol 2.01", 202 -> "Protocol 2.02")
                             major = version_value // 100
                             minor = version_value % 100
@@ -2568,10 +2573,29 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
 
         return {"via_device_id": device_id}
 
+    @property
+    def tou_legacy_locked(self) -> bool:
+        """True when the legacy TOU controls cannot work on this firmware (#485)."""
+        return tou_legacy_writes_locked(
+            REGISTER_MAPS.get(self._register_map_key, {}), self._vpp_protocol_raw)
+
+    @property
+    def vpp_protocol_label(self) -> str:
+        raw = self._vpp_protocol_raw
+        return f"V{raw // 100}.{raw % 100:02d}" if isinstance(raw, int) else "unknown"
+
     @callback
     def _async_sync_device_registry(self) -> None:
         """Write what identification learned into the inverter's registry entry (#485)."""
         from homeassistant.helpers import device_registry as dr
+
+        # Persist 30099 so the next setup can leave out controls this firmware rejects.
+        if (isinstance(self._vpp_protocol_raw, int)
+                and self.config_entry.data.get("vpp_protocol_raw") != self._vpp_protocol_raw):
+            self.hass.config_entries.async_update_entry(
+                self.config_entry,
+                data={**self.config_entry.data, "vpp_protocol_raw": self._vpp_protocol_raw},
+            )
 
         try:
             registry = dr.async_get(self.hass)

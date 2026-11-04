@@ -47,8 +47,14 @@ your hardware will save significant debugging time.
     are accepted and then **revert within seconds**. Changes made in the app still stick and
     still read back correctly here. Seen on MOD 12KTL3-HU (VPP V2.05,
     [#480](https://github.com/0xAHA/Growatt_ModbusTCP/issues/480)) and MID 10/25KTL3-XH
-    ([#485](https://github.com/0xAHA/Growatt_ModbusTCP/issues/485)). Until the new layout is
-    mapped, set TOU from the app.
+    ([#485](https://github.com/0xAHA/Growatt_ModbusTCP/issues/485)). The new modes also read
+    back as the classic ones (Idle and Idle Charge both look like "enabled, Load First").
+
+    **From v2.0.7-b7 the integration no longer offers the TOU Period controls on firmware
+    that reports VPP V2.05 or later** (holding 30099 ≥ 205, shown as *Protocol 2.05* on the
+    device page). Set the schedule in the Growatt app or web portal. On the first start after
+    updating, the controls may show as unavailable until the inverter has been identified;
+    after the next restart they are removed.
 
 ### How TOU Works on MOD GEN4
 

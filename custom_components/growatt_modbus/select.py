@@ -27,6 +27,7 @@ from .const import (
     DEVICE_TYPE_BATTERY,
     MOD_TOU_PERIODS,
     VPP_CONTROL_AVAILABILITY_FLAG,
+    TOU_LOCKED_MESSAGE,
     vpp_mode_from_registers,
 )
 from .coordinator import GrowattModbusCoordinator
@@ -141,7 +142,12 @@ async def async_setup_entry(
         _LOGGER.info("%s control enabled (register %d found)", control_name, register_num)
 
     # MOD TL3-XH TOU priority and enable selects (9 periods × 2 = 18 entities)
-    if 3038 in holding_registers:
+    # Not offered at all on firmware that rejects legacy TOU writes, once that is known
+    # (#485). Unknown at first setup: the entities then go unavailable once identified.
+    if 3038 in holding_registers and coordinator.tou_legacy_locked:
+        _LOGGER.info("MOD TOU controls not created: this firmware (VPP %s) does not accept "
+                     "TOU changes over Modbus (#485)", coordinator.vpp_protocol_label)
+    elif 3038 in holding_registers:
         # A profile whose TOU writes are unconfirmed creates these disabled (#400).
         tou_off = REGISTER_MAPS.get(register_map_name, {}).get('tou_disabled_by_default', False)
         for period_def in MOD_TOU_PERIODS:
@@ -903,6 +909,12 @@ class GrowattModTouPriority(GrowattEntity, SelectEntity):
 
 
     @property
+    def available(self) -> bool:
+        # Not on firmware that rejects legacy TOU writes (#485): the control would read
+        # the new modes wrongly and every change would revert.
+        return super().available and not self.coordinator.tou_legacy_locked
+
+    @property
     def current_option(self) -> str | None:
         """Return current priority option."""
         data = self.coordinator.data
@@ -914,6 +926,9 @@ class GrowattModTouPriority(GrowattEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Write new priority atomically — always write start+end together as a single FC16 transaction."""
+        if self.coordinator.tou_legacy_locked:
+            raise HomeAssistantError(
+                TOU_LOCKED_MESSAGE.format(version=self.coordinator.vpp_protocol_label))
         priority = self._PRIORITY_REVERSE.get(option)
         if priority is None:
             return
@@ -976,6 +991,12 @@ class GrowattModTouEnable(GrowattEntity, SelectEntity):
 
 
     @property
+    def available(self) -> bool:
+        # Not on firmware that rejects legacy TOU writes (#485): the control would read
+        # the new modes wrongly and every change would revert.
+        return super().available and not self.coordinator.tou_legacy_locked
+
+    @property
     def current_option(self) -> str | None:
         """Return current enable state."""
         data = self.coordinator.data
@@ -987,6 +1008,9 @@ class GrowattModTouEnable(GrowattEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Write new enable state atomically — always write start+end together as a single FC16 transaction."""
+        if self.coordinator.tou_legacy_locked:
+            raise HomeAssistantError(
+                TOU_LOCKED_MESSAGE.format(version=self.coordinator.vpp_protocol_label))
         enable = 1 if option == "Enabled" else 0
         # Read the pair fresh: the last poll may predate a write made seconds ago to this
         # same start word (time, priority and enable share it), and rebuilding from that

@@ -511,6 +511,8 @@ See [WIT Control Guide](wit-guide.md) for full protocol documentation.
 | Time Period 1–9 Enable | Select | 3038–3058 | Disabled, Enabled | Enable each slot |
 | Time Period 1–9 Start / End | Time | 3038–3059 | 00:00–23:59 | Slot start and end times |
 
+The Time Period controls are not offered on firmware reporting VPP V2.05 or later, where Growatt's app owns the schedule and Modbus writes revert ([#485](https://github.com/0xAHA/Growatt_ModbusTCP/issues/485), see [Battery & Scheduling](battery-scheduling.md)).
+
 !!! warning "Two charge-stop settings, and they are not the same"
     **Charge Stopped SOC** (3048) applies to charging from any source. **Grid Charge
     Stopped SOC** (3312) applies only to charging from the grid, and the lower of the two

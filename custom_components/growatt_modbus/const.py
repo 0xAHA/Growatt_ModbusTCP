@@ -1549,6 +1549,31 @@ def profile_register_names(register_map) -> list:
     return sorted(names)
 
 
+def tou_legacy_writes_locked(register_map: dict, vpp_protocol_raw) -> bool:
+    """True when this inverter's legacy TOU slots (3038-3059) cannot be written.
+
+    Growatt firmware that reports VPP V2.05 (holding 30099 = 205) moved TOU to a schedule
+    with weekday calendars and Idle / Idle Charge modes. Writes to 3038-3059 are accepted
+    and put back within seconds, and the new modes read back as the classic ones - seen on
+    a MOD 12KTL3-HU (#480) and two MID TL3-XH on DN1.0 / DNBA0851 (#485). The controls
+    would appear to work and do nothing, so on such firmware they are not offered.
+
+    Applies only to register maps that declare it (`tou_locked_from_vpp`), and only once
+    the version is known: an unread 30099 leaves the controls as they were.
+    """
+    threshold = (register_map or {}).get("tou_locked_from_vpp")
+    if not threshold or not isinstance(vpp_protocol_raw, int):
+        return False
+    return vpp_protocol_raw >= threshold
+
+
+TOU_LOCKED_MESSAGE = (
+    "This inverter's firmware (VPP protocol {version}) does not accept time-of-use changes "
+    "over Modbus: they revert within seconds. Set the schedule in the Growatt app or web "
+    "portal instead."
+)
+
+
 def decode_bcu_version(registers) -> "str | None":
     """Battery control unit software version from VPP holding 30074-30076, e.g. "QAAb-3010".
 
