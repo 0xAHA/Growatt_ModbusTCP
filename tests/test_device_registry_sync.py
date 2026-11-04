@@ -49,3 +49,10 @@ def test_the_poll_applies_it_on_the_event_loop():
     assert "self._async_sync_device_registry()" in body
     sync = _function("_async_sync_device_registry")
     assert "async_update_device(" in sync and "device_registry_changes(" in sync
+
+
+def test_a_blank_23_27_falls_back_to_the_3000_range():
+    """MID 25KTL3-XH: 23-27 all zero, serial at 3001-3005 (#485)."""
+    body = _function("_read_device_identification")
+    fallback = body.index("fallback = self._read_holding(3000, 15)")
+    assert body.index("if not serial_found:") < fallback

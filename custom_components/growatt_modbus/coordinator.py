@@ -2124,6 +2124,20 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 if registers:
                     self._serial_number = self._registers_to_ascii(registers)
                     _LOGGER.debug(f"Read serial number: {self._serial_number}")
+
+                # Second place to look. `is_tl_x_model` tests a lower-case pattern against
+                # the upper-case map key, so it never matches and everything reads 23-27 -
+                # which works on the models that keep the serial there. A MID 25KTL3-XH
+                # reads 23-27 as zeros and holds the serial at 3001-3005, so the device page
+                # and diagnostics showed none (#485). Only consulted when 23-27 gave nothing,
+                # so no model that reports a serial today changes.
+                serial_found = bool(self._serial_number)
+                if not serial_found:
+                    fallback = self._read_holding(3000, 15)
+                    candidate = self._registers_to_ascii(fallback) if fallback else ""
+                    if candidate and candidate.isalnum():
+                        self._serial_number = candidate
+                        _LOGGER.debug("Read serial number from 3000-3014: %s", candidate)
             except Exception as e:
                 _LOGGER.debug(f"Could not read serial number: {e}")
             
