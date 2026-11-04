@@ -108,6 +108,7 @@ async def async_get_config_entry_diagnostics(
         "serial_number": getattr(coordinator, "_serial_number", None),
         "firmware_version": getattr(coordinator, "_firmware_version", None),
         "firmware_build": getattr(coordinator, "_firmware_build", None),
+        "battery_firmware": getattr(coordinator, "_battery_firmware", None),
         # Energy-guard state — relevant to every "my totals look wrong" report
         "midnight_grace_expires": _safe(getattr(coordinator, "_midnight_grace_expires", None)),
         "retained_daily_totals": _safe(getattr(coordinator, "_retained_daily_totals", None)),

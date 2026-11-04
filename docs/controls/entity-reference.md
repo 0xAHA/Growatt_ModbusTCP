@@ -200,6 +200,10 @@ matches the BMS's own delta, the pack count matches the install, and SOH agrees 
 copy. The rest of the block read as garbage on that hardware and is not mapped
 ([#486](https://github.com/0xAHA/Growatt_ModbusTCP/issues/486)).
 
+**Battery firmware.** On models that speak the VPP protocol, the battery control unit's
+software version (VPP holding 30074-30076, e.g. `QAAb-3010`, as the Growatt portal shows it)
+appears as the firmware of the **Battery** device in Home Assistant.
+
 **Note that these are input registers.** Holding 1091 and 1092 at the same addresses are AC
 Charge Stop SOC and AC Charge Enable — an overlap that runs through this whole protocol.
 

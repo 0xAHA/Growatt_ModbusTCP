@@ -16,6 +16,7 @@ import homeassistant.util.dt as dt_util
 
 from .const import (
     battery_power_scale_from_store,
+    decode_bcu_version,
     device_registry_changes,
     DEVICE_REGISTRY_FIELDS,
     battery_power_scale_into_payload,
@@ -174,6 +175,8 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         self._firmware_version = None
         # Holding 82-87, "FW Build No." - the string the Growatt portal shows as Version.
         self._firmware_build = None
+        # VPP 30074-30076, the battery control unit's software version (#486).
+        self._battery_firmware = None
         self._inverter_type = None
         self._model_name = None
         self._protocol_version = None  # VPP Protocol version (from register 30099)
@@ -2227,6 +2230,16 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                     _LOGGER.debug(f"Could not read protocol version (73): {e}")
                     self._protocol_version = "OffGrid Modbus"
 
+            # Battery firmware (BCU version, VPP holding 30074-30076). Only where the profile
+            # speaks VPP at all; an off-grid map must never touch the 30000 range.
+            holding_map = profile.get("holding_registers", {})
+            if (not profile.get("offgrid_protocol", False)
+                    and any(addr >= 30000 for addr in holding_map)):
+                try:
+                    self._battery_firmware = decode_bcu_version(self._read_holding(30074, 3))
+                except Exception as e:
+                    _LOGGER.debug(f"Could not read battery firmware (30074-30076): {e}")
+
             # Identification is done once we have learned ANYTHING, not once we have the
             # serial (#438).
             #
@@ -2561,16 +2574,18 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         from homeassistant.helpers import device_registry as dr
 
         try:
-            info = self.get_device_info(DEVICE_TYPE_INVERTER)
             registry = dr.async_get(self.hass)
-            device = registry.async_get_device(identifiers=info["identifiers"])
-            if device is None:
-                return
-            current = {key: getattr(device, key, None) for key in DEVICE_REGISTRY_FIELDS}
-            changes = device_registry_changes(current, info)
-            if changes:
-                registry.async_update_device(device.id, **changes)
-                _LOGGER.debug("Device registry updated with %s", sorted(changes))
+            # The Battery device carries the battery's own firmware (#486).
+            for device_type in (DEVICE_TYPE_INVERTER, DEVICE_TYPE_BATTERY):
+                info = self.get_device_info(device_type)
+                device = registry.async_get_device(identifiers=info["identifiers"])
+                if device is None:
+                    continue
+                current = {key: getattr(device, key, None) for key in DEVICE_REGISTRY_FIELDS}
+                changes = device_registry_changes(current, info)
+                if changes:
+                    registry.async_update_device(device.id, **changes)
+                    _LOGGER.debug("Device registry updated for %s with %s", device_type, sorted(changes))
         except Exception as err:  # noqa: BLE001 - cosmetic; must never fail a poll
             _LOGGER.debug("Could not update the device registry: %s", err)
 
@@ -2651,6 +2666,7 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 "name": f"{base_name} Battery",
                 "manufacturer": "Growatt",
                 "model": "Battery Storage",
+                **({"sw_version": self._battery_firmware} if self._battery_firmware else {}),
                 **via_device,
             }
 

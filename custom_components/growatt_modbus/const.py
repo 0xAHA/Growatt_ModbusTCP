@@ -1549,6 +1549,22 @@ def profile_register_names(register_map) -> list:
     return sorted(names)
 
 
+def decode_bcu_version(registers) -> "str | None":
+    """Battery control unit software version from VPP holding 30074-30076, e.g. "QAAb-3010".
+
+    Two ASCII registers then a number, the format the Growatt portal shows for the battery
+    firmware (#486). None when the registers are absent, blank or not text - an unfitted
+    battery answers with zeros, and that must not become a firmware string.
+    """
+    if not registers or len(registers) < 3:
+        return None
+    name = "".join(chr((r >> 8) & 0xFF) + chr(r & 0xFF) for r in registers[:2]).strip("\x00 ")
+    number = registers[2]
+    if not name or not (name.isascii() and name.isalnum()) or number in (0, 0xFFFF):
+        return None
+    return f"{name}-{number}"
+
+
 DEVICE_REGISTRY_FIELDS = ("model", "serial_number", "sw_version", "hw_version")
 
 

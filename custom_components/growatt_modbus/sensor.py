@@ -870,6 +870,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "bms_constant_volt",
+        "precision": 2,     # 57.40 V on 48 V packs (#486)
         "condition": lambda data: hasattr(data, 'bms_constant_volt'),
     },
     "bms_max_cell_volt": {
@@ -879,6 +880,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "bms_max_cell_volt",
+        "precision": 3,     # millivolts matter: 3.307 vs 3.280 V (#486)
         "condition": lambda data: hasattr(data, 'bms_max_cell_volt'),
     },
     "bms_min_cell_volt": {
@@ -888,6 +890,7 @@ SENSOR_DEFINITIONS = {
         "state_class": SensorStateClass.MEASUREMENT,
         "unit": UnitOfElectricPotential.VOLT,
         "attr": "bms_min_cell_volt",
+        "precision": 3,
         "condition": lambda data: hasattr(data, 'bms_min_cell_volt'),
     },
     "bms_module_num": {
@@ -2002,6 +2005,13 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
         self._sensor_key = sensor_key
         self._sensor_def = sensor_def
 
+        # A definition can ask for more decimals than its unit's default. Volts round to one
+        # place, which turned 3.307 / 3.280 V cell voltages into 3.3 / 3.3 and hid the very
+        # gap they exist to show (#486). Used for the rounding below and as HA's suggested
+        # display precision, so the two agree.
+        if "precision" in sensor_def:
+            self._attr_suggested_display_precision = sensor_def["precision"]
+
         # Per device profile, not register map: SPA-TL3 shares SPH-TL3's map (#447).
         self._house_from_ac_side = False
         if sensor_key == "house_consumption":
@@ -2376,7 +2386,9 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
             return self._sensor_def["value_map"].get(int(value), f"Unknown ({value})")
 
         # Round numeric values to reasonable precision
-        if isinstance(value, float):
+        if isinstance(value, float) and "precision" in self._sensor_def:
+            raw_value = round(value, self._sensor_def["precision"])
+        elif isinstance(value, float):
             if self._sensor_def.get("unit") == UnitOfPower.WATT:
                 raw_value = round(value, 1)
             elif self._sensor_def.get("unit") == UnitOfElectricPotential.VOLT:
