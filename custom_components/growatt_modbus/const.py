@@ -1549,6 +1549,22 @@ def profile_register_names(register_map) -> list:
     return sorted(names)
 
 
+DEVICE_REGISTRY_FIELDS = ("model", "serial_number", "sw_version", "hw_version")
+
+
+def device_registry_changes(current: dict, info: dict) -> dict:
+    """Fields of the inverter's device-info that the registry entry does not yet hold.
+
+    Identification runs on the first successful poll, which can come after the device and
+    its entities were registered - an inverter asleep at startup, for one. Nothing then
+    told the registry, so the device page showed no firmware or serial for the whole
+    session while the diagnostics had both (#485). Only fields we actually know are sent;
+    a blank never overwrites a value.
+    """
+    return {key: info[key] for key in DEVICE_REGISTRY_FIELDS
+            if info.get(key) and current.get(key) != info[key]}
+
+
 def battery_power_scale_from_store(stored, profile_key: str):
     """(scale, reason) for a stored battery power scale.
 

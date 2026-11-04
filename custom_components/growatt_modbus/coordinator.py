@@ -16,6 +16,8 @@ import homeassistant.util.dt as dt_util
 
 from .const import (
     battery_power_scale_from_store,
+    device_registry_changes,
+    DEVICE_REGISTRY_FIELDS,
     battery_power_scale_into_payload,
     DOMAIN,
     CONF_SLAVE_ID,
@@ -166,6 +168,9 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # Device identification (populated during first refresh)
         self._serial_number = None
         self._identification_complete = False
+        # Set when identification learns something; applied to the device registry on the
+        # event loop by _async_sync_device_registry (#485).
+        self._device_info_pending = False
         self._firmware_version = None
         # Holding 82-87, "FW Build No." - the string the Growatt portal shows as Version.
         self._firmware_build = None
@@ -1652,6 +1657,10 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 except Exception as err:
                     _LOGGER.debug("Could not clear profile mismatch issue: %s", err)
 
+            if self._device_info_pending:
+                self._device_info_pending = False
+                self._async_sync_device_registry()
+
             if self._pending_clock_notification:
                 notif = self._pending_clock_notification
                 self._pending_clock_notification = None
@@ -2225,6 +2234,8 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
                 self._inverter_type,
                 self._protocol_version,
             ))
+            if self._identification_complete:
+                self._device_info_pending = True
 
             # Consolidated identification summary — replaces scattered debug lines
             # with one INFO-level line visible in the default HA log.
@@ -2529,6 +2540,25 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
             return {}
 
         return {"via_device_id": device_id}
+
+    @callback
+    def _async_sync_device_registry(self) -> None:
+        """Write what identification learned into the inverter's registry entry (#485)."""
+        from homeassistant.helpers import device_registry as dr
+
+        try:
+            info = self.get_device_info(DEVICE_TYPE_INVERTER)
+            registry = dr.async_get(self.hass)
+            device = registry.async_get_device(identifiers=info["identifiers"])
+            if device is None:
+                return
+            current = {key: getattr(device, key, None) for key in DEVICE_REGISTRY_FIELDS}
+            changes = device_registry_changes(current, info)
+            if changes:
+                registry.async_update_device(device.id, **changes)
+                _LOGGER.debug("Device registry updated with %s", sorted(changes))
+        except Exception as err:  # noqa: BLE001 - cosmetic; must never fail a poll
+            _LOGGER.debug("Could not update the device registry: %s", err)
 
     def get_device_info(self, device_type: str) -> dict:
         """Get device info for a specific device type.
