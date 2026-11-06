@@ -230,7 +230,7 @@ that model has, for most entries, never been verified against hardware. See
 | 30304 | Peak-shaving backup power SOC (V2.03) | RW | UINT16 | % | 1 | [0,100], Default: 50 |
 | 30305 | Peak-shaving enable (V2.03) | RW | UINT16 | - | 1 | 0: not enabled, 1: enable, Default: 0 |
 | 30306 | Reserve | RW | UINT16 | - | 94 | - (V2.05: 74, ending at 30379) |
-| 30380 | Time period priority, periods 1-20 (V2.05) | RW | UINT16 | - | 20 | 0: Load first, 1/2: battery/grid first from the sign of the period's power, 3: PV-only storage, 4: idle charging, 6: idle, 5/7: reserved. Default: 1 |
+| 30380 | Time period priority, periods 1-20 (V2.05) | RW | UINT16 | - | 20 | 0: Load first, 1/2: battery/grid first from the sign of the period's power, 3: PV-only storage, 4: idle charging, 6: idle, 5/7: reserved. Default: 1. Growatt's web UI describes them: Idle Charge = battery does not discharge, excess PV may charge it; Idle = battery neither charges nor discharges ([#480](https://github.com/0xAHA/Growatt_ModbusTCP/issues/480)) |
 | 30400 | Reserve (Battery max charging power) | RW | UINT32 | 0.1W | 2 | Not used |
 | 30402 | Reserve (Battery max discharging power) | RW | UINT32 | 0.1W | 2 | Not used |
 | 30404 | Charging cut off SOC | RW | UINT8 | % | 1 | [10,100], Default: 100 |
