@@ -713,12 +713,13 @@ MOD_6000_15000TL3_XH = {
         #      The 912 W often quoted for this is one sample five seconds in, from a run
         #      an abort threshold stopped while charge power was still climbing
         #      (2592 -> 4767 W in those five seconds) — a lower bound, not a typical value.
-        #   2. The duration is not reliable in either direction. At 30408=2 the constraint
-        #      released at ~128 s; at 30408=5 it had NOT released at 390 s and only did so
-        #      when 30407/30100 were written back to 0 by hand. In both runs 30407, 30409
-        #      and 30100 stayed set throughout. So active state cannot be inferred from
-        #      these values, and an implementation must clear them itself rather than
-        #      treating the timer as a safety net.
+        #   2. An expired 30408 window goes to VPP self-consumption (30476 mode) with
+        #      30100 still 1, which keeps the TOU schedule out of circuit - V2.05 appendix
+        #      3.3.3. At 30408=2 the constraint released at ~128 s; the 30408=5 run, once
+        #      read as the timer not firing, cannot show that either way (the setpoint was
+        #      not honoured to begin with) - see protocol-vpp.md and #481. Either way active
+        #      state cannot be inferred from these values, and an implementation must clear
+        #      30407/30100 itself to get back to the TOU schedule.
         #   3. 30407 alone does nothing — 30100 (control authority) must also be set. That
         #      is presumably why the capability was assumed absent on this family.
         #

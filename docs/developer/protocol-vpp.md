@@ -312,14 +312,26 @@ needs:
     those five seconds. Treat it as a lower bound on what this does, not a characteristic
     value.
 
-2. **The duration is not reliable in either direction.** With 30408 = 2 minutes the
-   constraint released at ~128 s. With 30408 = 5 minutes it had **not** released at 390 s
-   and only did so when 30407 and 30100 were written back to 0 by hand. In both runs
-   30407, 30409 and 30100 stayed set throughout.
+2. **When the duration runs out, the inverter goes to VPP self-consumption, not back to
+   its TOU schedule.** With 30408 = 2 minutes the constraint released at ~128 s. With
+   30408 = 5 minutes, charging at 2.6 kW under the TOU schedule did not come back at 390 s,
+   and did only once 30407 and 30100 were written back to 0 by hand. In both runs 30407,
+   30409 and 30100 stayed set throughout.
 
-    Two consequences. Active state cannot be inferred from the register values — that
-    holds either way. And **an implementation must clear the registers itself**; the timer
-    is not a safety net that will release the inverter on its own.
+    That 5-minute run was first read as the timer failing to expire. It does not show
+    that ([#481](https://github.com/0xAHA/Growatt_ModbusTCP/issues/481)): the commanded
+    20 % was not honoured either (charge went to 0 W within 6 s), so the battery looked
+    the same before and after 300 s; and Growatt's V2.05 logic diagram (appendix 3.3.3)
+    sends an expired window to self-consumption in the 30476 mode with 30100 still 1,
+    while 30100 = 1 itself keeps the TOU schedule out of circuit (below). The 2.6 kW
+    returning only when 30100 was cleared is the schedule coming back, which it would
+    have done whether or not the timer had expired. Whether the timer fires on time on
+    this firmware is therefore **unmeasured**, not disproven.
+
+    The consequences stand, for a better reason. Active state cannot be inferred from the
+    register values. And **an implementation must clear 30407 and 30100 itself**: even a
+    timer that fires correctly leaves the inverter in VPP self-consumption with the TOU
+    schedule disabled, not where it started.
 
 3. **30407 alone does nothing** — 30100 (control authority) must also be set. This is
    presumably why the capability was assumed absent on non-WIT families.
