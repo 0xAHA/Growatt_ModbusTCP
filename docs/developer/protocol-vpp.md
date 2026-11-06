@@ -127,6 +127,14 @@ that model has, for most entries, never been verified against hardware. See
 
 ## Holding Registers (93 registers)
 
+!!! note "Which registers are written to EEPROM"
+    From the VPP V2.05 document: *"All RW parameters are stored in EEPROM (retained in memory
+    during power loss), except for those specifically marked as 'Not stored'. High-frequency
+    writing is not supported for parameters stored in EEPROM."* The "Not storage" / "Not
+    stored" notes in the table below are therefore the only RW registers safe to write
+    repeatedly (30154, 30216, 30407, 30408, 30409; 30101 is also marked so in V2.03). No
+    write-endurance figure is given.
+
 | Address | Parameter Name | R/W | Type | Unit | Count | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | 30000 | Equipment type (DTC) | RO | UINT16 | - | 1 | See Table 3-1 |

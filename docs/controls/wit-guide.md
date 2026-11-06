@@ -81,13 +81,17 @@ model rejects the write, use the inverter display panel or the manufacturer app 
 
 > **EEPROM-safe:** Registers 30407, 30408, and 30409 are explicitly marked **"Not storage"** in the VPP V2.03 spec — they bypass non-volatile memory entirely. High-frequency writes (e.g., updating charge/discharge power every minute based on spot prices or live consumption) do not risk wearing out the inverter's flash memory.
 >
-> **About the other registers — this is an inference, not a specification.** Growatt marks
-> these three as "Not storage" and says nothing about the rest, so we assume the unmarked
-> ones *are* written to non-volatile memory and treat them conservatively. Growatt has not
-> stated that, we have not measured it, and the protocol documents carry no memory or
-> endurance column for the V1.39 ranges at all. Write infrequently to anything not marked
-> "Not storage", but understand that as caution rather than as a documented limit — see
-> [#392](https://github.com/0xAHA/Growatt_ModbusTCP/issues/392).
+> **The other VPP registers are EEPROM — Growatt now says so.** The VPP V2.05 document
+> states: *"All RW parameters are stored in EEPROM (retained in memory during power loss),
+> except for those specifically marked as 'Not stored'. High-frequency writing is not
+> supported for parameters stored in EEPROM."* In the VPP block only **30154, 30216, 30407,
+> 30408 and 30409** are marked "Not stored". So **Control Authority (30100), AC Charge
+> (30410), the time segments (30411-30471), the per-period priorities (30380-30399), the
+> default mode (30476) and the SOC limits are all EEPROM**: set them when a session or
+> schedule changes, never on a timer. Growatt gives no figure for "high-frequency", and the
+> document covers the VPP range only; for the V1.39 ranges there is still nothing, so the
+> same caution applies ([#392](https://github.com/0xAHA/Growatt_ModbusTCP/issues/392),
+> [#481](https://github.com/0xAHA/Growatt_ModbusTCP/issues/481)).
 
 #### Register 30407: Remote Power Control Enable
 - 0 = Disabled
