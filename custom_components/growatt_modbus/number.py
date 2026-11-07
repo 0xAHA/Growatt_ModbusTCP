@@ -359,8 +359,12 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         if raw_value is None:
             return None
 
-        # Apply scale
-        scale = self._control_config.get('scale', 1)
+        # Most controls keep raw register values in GrowattData. H3311 is decoded by
+        # _read_peak_shaving() before it reaches this generic entity, so it declares a
+        # separate read scale while retaining its raw-register scale for writes.
+        scale = self._control_config.get(
+            'read_scale', self._control_config.get('scale', 1)
+        )
         return round(float(raw_value) * scale, 2)
 
     # ------------------------------------------------------------------

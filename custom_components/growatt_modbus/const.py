@@ -1025,6 +1025,9 @@ WRITABLE_REGISTERS = {
     'ac_charge_max_power': {
         'register': 3311,
         'scale': 0.1,
+        # _read_peak_shaving() stores this field in kW already; keep the raw-register
+        # scale above for writes and range calculation, but do not apply it on read.
+        'read_scale': 1,
         'valid_range': (0, 1000),
         'unit': 'kW',
         'label': 'Max Charge Power From Grid',
