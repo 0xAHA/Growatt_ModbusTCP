@@ -4,6 +4,20 @@
 
 ---
 
+## v2.0.7-b8
+
+Issues: #491
+
+- **MIN TL-XH: the TOU Period controls are now created enabled.** Writing them from Home
+  Assistant is confirmed: changes to all nine periods were read back by the Growatt portal.
+  Installs where they are already disabled keep that until you enable them on the device
+  page. Thanks to @l4m4re for the test.
+
+- **TOU Priority and Enable no longer write when nothing changes.** Choosing the value the
+  inverter already holds now sends nothing, as the start and end times already did.
+
+---
+
 ## v2.0.7-b7
 
 Issues: #480, #485
