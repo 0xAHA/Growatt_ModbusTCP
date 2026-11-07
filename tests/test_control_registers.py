@@ -367,3 +367,12 @@ def test_min_tl_xh_offers_the_grid_charge_control_for_hardware_validation():
     assert str(register.get("access", "")).upper() == "RW"
     assert "allow_grid_charge" in _controls_created_for(map_key)
     assert REGISTER_MAPS[map_key]["allow_grid_charge_disabled_by_default"] is True
+
+
+def test_min_tl_xh_maps_the_portal_off_grid_discharge_stop_soc():
+    """MIN TL-XH exposes the portal's off-grid stop-SOC at holding 3037."""
+    holding = _holding("MIN_TL_XH_3000_10000_V201")
+    register = holding.get(3037)
+    assert register is not None
+    assert register["name"] == "off_grid_discharge_stopped_soc"
+    assert register["access"] == "RW"

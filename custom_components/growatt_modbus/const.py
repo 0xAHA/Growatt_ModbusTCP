@@ -924,6 +924,13 @@ WRITABLE_REGISTERS = {
         },
         'desc': 'Priority mode — hardware-confirmed on MIN TL-XH (Issue #311)'
     },
+    'off_grid_discharge_stopped_soc': {
+        'register': 3037,
+        'scale': 1,
+        'valid_range': (1, 100),
+        'unit': '%',
+        'desc': 'SOC to stop discharging in off-grid operation (portal setting; MIN TL-XH)'
+    },
     'batt_first_charge_power_rate': {
         'register': 3047,
         'scale': 1,

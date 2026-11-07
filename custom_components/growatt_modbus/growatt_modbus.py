@@ -601,6 +601,7 @@ class GrowattData:
     grid_first_discharge_power_rate: int = 0  # 0-100% discharge rate when Grid First (register 3036)
     batt_first_charge_power_rate: int = 0      # 0-100% charge rate when Battery First (register 3047)
     tl_xh_priority_mode: int = 3               # MIN TL-XH priority mode: 0=Load First, 2=Battery First, 3=Grid First (register 3018)
+    off_grid_discharge_stopped_soc: int = 0    # SOC % to stop discharging off-grid (register 3037)
     batt_first_charge_stopped_soc: int = 0     # SOC % to stop charging in Battery First mode (register 3048)
     grid_first_discharge_stopped_soc: int = 0  # SOC % to stop discharging in Grid First mode (register 3067)
     vpp_offgrid_discharge_soc: int = 10        # SOC % to stop discharging off-grid (register 30475)
@@ -6374,6 +6375,21 @@ class GrowattModbus:
                     logger.debug("[TL-XH CTRL] tl_xh_priority_mode=%s", data.tl_xh_priority_mode)
             except Exception as e:
                 logger.debug(f"Could not read tl_xh_priority_mode register 3018: {e}")
+
+        # MIN TL-XH portal: Off-grid Battery Discharge Stop SOC (register 3037).
+        if 3037 in holding_map:
+            try:
+                ogds_regs = self.read_holding_registers(3037, 1)
+                if ogds_regs is not None and len(ogds_regs) >= 1:
+                    data.off_grid_discharge_stopped_soc = int(ogds_regs[0])
+                    logger.debug(
+                        "[TL-XH CTRL] off_grid_discharge_stopped_soc=%s%%",
+                        data.off_grid_discharge_stopped_soc,
+                    )
+            except Exception as e:
+                logger.debug(
+                    "Could not read off_grid_discharge_stopped_soc register 3037: %s", e
+                )
 
         # TL-XH / MOD Battery First charge stopped SOC (register 3048)
         if 3048 in holding_map:
