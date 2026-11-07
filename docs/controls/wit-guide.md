@@ -481,6 +481,15 @@ stayed enabled after authority was turned off, so check it in ShineTools afterwa
 If your WIT loses grid output as soon as authority is enabled, read holding 30155. Only
 one model has shown this so far.
 
+**Discharge power on the same WIT 100K-HU.** Charge commands followed the setpoint, but a
+negative setpoint ran the inverter in Grid First at full power, whatever 30409 asked for.
+What did cap it was demand management: with its export limit set (holding 30301 enable,
+30302 export limit, 0.1 kW), the discharge followed that limit instead
+([#349](https://github.com/0xAHA/Growatt_ModbusTCP/issues/349)). If a discharge command on
+your WIT ignores the percentage, that is the thing to try. It has not been checked on other
+WIT models. The demand-management registers are stored in EEPROM, so set the limit when you
+need it rather than adjusting it on a timer.
+
 ---
 
 ## Common Problems and Solutions
