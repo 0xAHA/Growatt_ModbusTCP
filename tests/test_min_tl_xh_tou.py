@@ -82,8 +82,10 @@ def test_end_minute_steps_read_back(raw, minute):
     assert ((data.mod_tou_1_end >> 8) & 0x1F, data.mod_tou_1_end & 0xFF) == (7, minute)
 
 
-def test_min_tl_xh_asks_for_tou_entities_disabled_and_mod_does_not():
-    assert _profiles.REGISTER_MAPS[MAP].get("tou_disabled_by_default") is True
+def test_min_tl_xh_tou_entities_are_enabled_now_writes_are_confirmed():
+    """Created disabled while Modbus writes were untested (#400); writes from HA were then
+    read back by the Growatt portal on a MIN 6000TL-XH, all nine periods (#491)."""
+    assert not _profiles.REGISTER_MAPS[MAP].get("tou_disabled_by_default")
     assert not _profiles.REGISTER_MAPS["MOD_6000_15000TL3_XH"].get("tou_disabled_by_default")
 
 

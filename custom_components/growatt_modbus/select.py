@@ -938,10 +938,16 @@ class GrowattModTouPriority(GrowattEntity, SelectEntity):
         fresh = await self.hass.async_add_executor_job(
             self.coordinator.modbus_client.read_holding_registers, self._start_reg, 2
         )
-        current_raw, current_end, _ = tou_current_pair(
+        current_raw, current_end, is_fresh = tou_current_pair(
             fresh, self.coordinator.data, self._start_field, self._end_field
         )
         new_raw = tou_with_priority(current_raw, priority)
+        # Nothing to change: no write (#491). Only on a fresh read - a stale cached copy
+        # matching proves nothing about what the inverter holds now.
+        if is_fresh and new_raw == current_raw:
+            _LOGGER.debug("MOD TOU period %d already reads 0x%04X - skipping write",
+                          self._period, current_raw)
+            return
         try:
             success = await self.hass.async_add_executor_job(
                 self.coordinator.modbus_client.write_registers,
@@ -1018,10 +1024,16 @@ class GrowattModTouEnable(GrowattEntity, SelectEntity):
         fresh = await self.hass.async_add_executor_job(
             self.coordinator.modbus_client.read_holding_registers, self._start_reg, 2
         )
-        current_raw, current_end, _ = tou_current_pair(
+        current_raw, current_end, is_fresh = tou_current_pair(
             fresh, self.coordinator.data, self._start_field, self._end_field
         )
         new_raw = tou_with_enable(current_raw, bool(enable))
+        # Nothing to change: no write (#491). Only on a fresh read - a stale cached copy
+        # matching proves nothing about what the inverter holds now.
+        if is_fresh and new_raw == current_raw:
+            _LOGGER.debug("MOD TOU period %d already reads 0x%04X - skipping write",
+                          self._period, current_raw)
+            return
         try:
             success = await self.hass.async_add_executor_job(
                 self.coordinator.modbus_client.write_registers,

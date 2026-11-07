@@ -729,6 +729,32 @@
 
 ---
 
+## Field-confirmed holding registers on MIN TL-XH
+
+Mapped by setting each value in the Growatt portal and reading the register back, on a
+MIN 6000TL-XH with firmware ALBA180101 / ZABA-0022
+([#489](https://github.com/0xAHA/Growatt_ModbusTCP/issues/489),
+[#490](https://github.com/0xAHA/Growatt_ModbusTCP/issues/490)). Writing them was not part of
+the test unless stated.
+
+| Register | Portal setting | Notes |
+|---|---|---|
+| 0 | Set Inverter On/Off | As V1.39 documents. "Off" stopped the PV inputs but not the inverter: Modbus and the portal stayed reachable, and the battery still supplied ~40 W |
+| 3036 | Discharging Power Rate | % |
+| 3037 | Off-grid Discharge Stop SOC | % |
+| 3047 | Charging Power Rate | % |
+| 3048 | Charge Stop SOC | % |
+| 3049 | Grid Charging | 0 / 1 |
+| 3067 | On-grid Discharge Stop SOC | % |
+| 3079 | Set Backup On/Off | V1.39 "UpsFunEn" |
+| 3082 | Set SYN On/Off | V1.39 lists two meanings at this address; the portal uses it for SYN |
+| 3295 | Battery sleep mode enable | **Not in V1.39.** 0 = off, 1 = on |
+| 3311 | Max. Charge Power From Grid | 0.1 kW (13 = 1.3 kW) |
+| 3312 | Charge Stop SOC from Grid | % |
+
+After switching SYN on and the inverter off and on, the portal showed backup and battery
+sleep both disabled. Which change caused that is not established.
+
 ## Input Registers
 
 > All input registers are read-only (R) unless noted. Unit values are resolution (e.g. 0.1V means 1 LSB = 0.1 V).

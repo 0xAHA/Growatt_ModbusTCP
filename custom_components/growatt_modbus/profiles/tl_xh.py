@@ -254,8 +254,10 @@ MIN_TL_XH_3000_10000_V201 = {
     'name': 'MIN TL-XH 3000-10000 (V2.01)',
     'description': 'MIN series TL-XH hybrid with battery (3-10kW) using 3000+ and 31000+ ranges',
     'notes': 'Uses MIN 3000+ range for base sensors and VPP 31200+ range for battery. 3-6kW models have 2 PV strings, 7-10kW models have 3 PV strings. Found in MIN 6000/10000 TL-XH models with DTC 5100.',
-    # TOU entities exist but start disabled until a Modbus write is confirmed (#400).
-    'tou_disabled_by_default': True,
+    # TOU entities used to start disabled until a Modbus write was confirmed (#400). Now
+    # confirmed: on a MIN 6000TL-XH (ALBA180101 / ZABA-0022) priority, enable and times
+    # written for all nine periods from Home Assistant were read back by the Growatt
+    # portal (#491). So they are created enabled, like MOD's.
     # ShinePhone "Allow Grid Charge" followed holding 3049 in both states (Disabled=0,
     # Enabled=1), but a Modbus write has not yet been confirmed. Expose the control for
     # validation without enabling an untested write path for every MIN TL-XH install (#400).
@@ -514,8 +516,8 @@ MIN_TL_XH_3000_10000_V201 = {
         #
         # Decoding confirmed on a MIN 4200TL-XH (#400): period 1 set in ShinePhone as Battery
         # First 00:00-07:00 read 3038 = 40960 (0xA000) and 3039 = 1792 (0x0700), and moving
-        # the end to 07:01 and 07:02 read back 1793 and 1794. Writes over Modbus have not
-        # been tested yet, so the entities are created disabled (tou_disabled_by_default).
+        # the end to 07:01 and 07:02 read back 1793 and 1794. Writes from Home Assistant
+        # were confirmed through the Growatt portal on a MIN 6000TL-XH (#491).
         3038: {'name': 'mod_tou_1_start', 'scale': 1, 'unit': '', 'access': 'RW'},
         3039: {'name': 'mod_tou_1_end',   'scale': 1, 'unit': '', 'access': 'RW'},
         3040: {'name': 'mod_tou_2_start', 'scale': 1, 'unit': '', 'access': 'RW'},
