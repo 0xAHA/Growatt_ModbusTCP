@@ -632,6 +632,11 @@ MIN_TL_XH2_3000_10000_V201 = {
         # Active power — VPP 2.03 spec item 45. INT32 signed, 0.1 W.
         # Positive = export to grid, Negative = import from grid.
         #
+        # UNCONFIRMED on the XH2 (#461): in every reading it matched the inverter's own
+        # AC output (31109 x 31106), and 31112-31113 stayed 0 with a Chint meter fitted,
+        # so it may be inverter output rather than grid exchange. The deciding reading -
+        # battery idle, no PV, house load on - never came. Assumed below:
+        #
         # On a HYBRID this is net grid exchange, not raw inverter output: the firmware
         # already subtracts battery and load. Same reasoning as the MID design note in
         # mid.py (confirmed there against the #242 scan) — the Meter Power caveat applies

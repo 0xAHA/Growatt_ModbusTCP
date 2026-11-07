@@ -735,6 +735,14 @@ the XH2 shares DTC 5100 with the first-generation TL-XH but answers only the VPP
 each by a real change, a read-back and the inverter acting on it
 ([#461](https://github.com/0xAHA/Growatt_ModbusTCP/issues/461)).
 
+**Grid power is unconfirmed on this model.** It comes from input 31100-31101, Growatt's
+"active power", which on other hybrids is the net grid exchange. On the XH2 it matched the
+inverter's own AC output (31109 × 31106) in every reading, and the meter register (31112-31113)
+stayed 0 even with a Chint meter fitted, so it may be the inverter's output instead. One
+reading would settle it: battery idle, little or no sun, the house drawing power (a kettle).
+If 31100 reads near 0 while your meter shows import, it is the inverter's output. Please
+post that on #461 if you can take it.
+
 | Entity | Type | Register | Options / Range | Description |
 |--------|------|----------|-----------------|--------------|
 | Charge Stop SOC | Number | 30404 | 10–100 % | SOC at which battery charging stops |
