@@ -333,6 +333,19 @@ needs:
     timer that fires correctly leaves the inverter in VPP self-consumption with the TOU
     schedule disabled, not where it started.
 
+    **The timer has since been measured working on a MID 25KTL3-XH** (firmware DN1.0 /
+    DNBA0851, VPP V2.05): 30408 = 1, 3, 5, 15 and 30 minutes each ended on time, to the
+    owner's 1-minute sampling, falling back to Load First; writing 30408 again afterwards
+    started a new cycle. Whether a rewrite *during* a cycle restarts it is untested
+    ([#480](https://github.com/0xAHA/Growatt_ModbusTCP/issues/480)).
+
+    **Ending a cycle by clearing only 30100 is not safe on that MID.** With 30407 left on and
+    30409 = 0, the inverter reported Load First but behaved as Grid First, exporting solar
+    and battery, until VPP was re-armed and a new cycle run (#480). The integration's own
+    release clears 30407 (and 30411) before 30100. A full 30407-then-30100 sequence has not
+    yet been timed on MOD/MID; the WIT guide's 30100-first sequence is confirmed on a WIT
+    15KTL3 only.
+
 3. **30407 alone does nothing** — 30100 (control authority) must also be set. This is
    presumably why the capability was assumed absent on non-WIT families.
 

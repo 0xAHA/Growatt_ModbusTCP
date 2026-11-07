@@ -356,6 +356,12 @@ action:
           entity_id: input_boolean.wit_session_active
 ```
 
+> **WIT only.** This order is confirmed on a WIT 15KTL3. On a MID 25KTL3-XH, clearing 30100
+> while 30407 stayed on left the inverter reporting Load First but exporting like Grid First
+> until VPP was re-armed ([#480](https://github.com/0xAHA/Growatt_ModbusTCP/issues/480)). On
+> MOD/MID, clear 30407 first, as the integration's own release does, and do not stop after
+> clearing 30100 alone.
+
 > **Why two steps?** `control_authority` (register 30100) is the master VPP compliance switch. Disabling it immediately drops the inverter out of externally-commanded state and resumes local battery self-consumption logic — even before 30407 is cleared. Disabling 30407 afterwards cleanly resets the remote control registers. Skipping step 1 and only clearing 30407 can leave the inverter in a brief intermediate state with undefined battery behaviour. Credit: [@Wojak129](https://github.com/Wojak129) — confirmed on WIT 15KTL3 hardware.
 
 ### Pattern 6: Dynamic Spot-Price Automation
