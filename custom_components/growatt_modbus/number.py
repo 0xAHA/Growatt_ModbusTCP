@@ -204,6 +204,7 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
             'max_output_power_rate': 'Max Output Power Rate',
             'vpp_export_limit_power_rate': 'VPP Export Limit Power Rate',
             'load_first_battery_minimum_soc': 'Load First Battery Minimum SOC',
+            'ac_charge_max_power': 'Max Charge Power From Grid',
             'off_grid_discharge_stopped_soc': 'Off-grid Discharge Stop SOC',
             # Register 3067. Growatt calls it "Grid First", but #362 demonstrated it
             # also governs discharge in Load/self-consumption operation, so the mode

@@ -6328,7 +6328,7 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read allow_grid_charge register 3049: {e}")
 
-        # MOD GEN4 Grid First discharge rate (register 3036)
+        # MOD/MIN Grid First discharge rate (register 3036)
         if 3036 in holding_map:
             try:
                 gfdr_regs = self.read_holding_registers(3036, 1)
@@ -6338,7 +6338,7 @@ class GrowattModbus:
             except Exception as e:
                 logger.debug(f"Could not read grid_first_discharge_power_rate register 3036: {e}")
 
-        # MOD GEN4 Battery First charge rate (register 3047)
+        # MOD/MIN Battery First charge rate (register 3047)
         if 3047 in holding_map:
             try:
                 bfcr_regs = self.read_holding_registers(3047, 1)
@@ -6448,7 +6448,7 @@ class GrowattModbus:
         # deliberately do not map (3309, 3313) fall inside or beside it, so a block read
         # costs no more than the five individual reads would and is gentler on a marginal
         # gateway. Values we do not trust are simply not assigned.
-        if 3307 in holding_map:
+        if any(reg in holding_map for reg in (3307, 3308, 3310, 3311, 3312)):
             self._read_peak_shaving(data)
 
         # Mirror of the last commanded VPP power setpoint (30474, #373).

@@ -1009,7 +1009,7 @@ WRITABLE_REGISTERS = {
     # Confirmed in reverse: written over Modbus, then observed arriving in the Growatt
     # cloud about 12 minutes later.
     #
-    # Only offered where the profile maps 3312, which today is the MOD-XH map alone. The
+    # Only offered where the profile maps 3312, currently MOD-XH and MIN TL-XH. The
     # register appears in no public protocol document.
     'grid_charge_stopped_soc': {
         'register': 3312,
@@ -1018,6 +1018,17 @@ WRITABLE_REGISTERS = {
         'unit': '%',
         'desc': 'SOC to stop charging from the grid (ub_ac_charging_stop_soc). Separate from '
                 'Charge Stopped SOC (3048), which applies to charging from any source (#372)'
+    },
+    # Grid-charge power ceiling. The portal write was captured on MIN TL-XH as raw 13 for
+    # 1.3 kW. The same register is read-only on the existing MOD profile, so the control is
+    # offered only by profiles that explicitly mark it writable.
+    'ac_charge_max_power': {
+        'register': 3311,
+        'scale': 0.1,
+        'valid_range': (0, 1000),
+        'unit': 'kW',
+        'label': 'Max Charge Power From Grid',
+        'desc': 'Maximum charging power from the grid (portal setting; MIN TL-XH)',
     },
 
     # Grid-charge permission. On MOD GEN4 it is also the prerequisite gate that must be

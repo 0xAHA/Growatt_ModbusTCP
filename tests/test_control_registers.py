@@ -376,3 +376,25 @@ def test_min_tl_xh_maps_the_portal_off_grid_discharge_stop_soc():
     assert register is not None
     assert register["name"] == "off_grid_discharge_stopped_soc"
     assert register["access"] == "RW"
+
+
+def test_min_tl_xh_maps_the_portal_battery_settings():
+    """The MIN TL-XH portal battery settings use the confirmed holding addresses."""
+    holding = _holding("MIN_TL_XH_3000_10000_V201")
+    expected = {
+        3036: ("grid_first_discharge_power_rate", "RW"),
+        3037: ("off_grid_discharge_stopped_soc", "RW"),
+        3047: ("batt_first_charge_power_rate", "RW"),
+        3048: ("batt_first_charge_stopped_soc", "RW"),
+        3049: ("allow_grid_charge", "RW"),
+        3067: ("grid_first_discharge_stopped_soc", "RW"),
+        3311: ("ac_charge_max_power", "RW"),
+        3312: ("grid_charge_stopped_soc", "RW"),
+    }
+
+    for address, (name, access) in expected.items():
+        assert holding[address]["name"] == name
+        assert holding[address]["access"] == access
+
+    assert WRITABLE_REGISTERS["ac_charge_max_power"]["register"] == 3311
+    assert "ac_charge_max_power" in _controls_created_for("MIN_TL_XH_3000_10000_V201")
