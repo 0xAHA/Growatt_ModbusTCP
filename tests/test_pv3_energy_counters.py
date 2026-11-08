@@ -91,14 +91,16 @@ def test_every_three_string_profile_can_count_its_third_string(profile_key):
     evidence before either mapping is disturbed.
     """
     map_name = INVERTER_PROFILES[profile_key]["register_map"]
+    rmap = _profiles.get_profile(map_name)
+    if not rmap.get("use_mppt_energy_today"):
+        pytest.skip(f"{map_name} uses the AC daily energy counter")
     names = _input_names(map_name)
 
     if not {"pv1_energy_total_high", "pv2_energy_total_high"} <= names:
         pytest.skip(f"{map_name} does not use per-string energy counters")
 
     if "energy_to_grid_today_high" in names:
-        rmap = _profiles.get_profile(map_name)["input_registers"]
-        if rmap.get(69, {}).get("name") == "energy_to_grid_today_high":
+        if rmap["input_registers"].get(69, {}).get("name") == "energy_to_grid_today_high":
             pytest.skip(f"{map_name} maps 69/70 as grid export — see the TL-XH conflict")
 
     assert "pv3_energy_total_high" in names, (
