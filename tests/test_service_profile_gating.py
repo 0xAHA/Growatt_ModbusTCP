@@ -26,6 +26,7 @@ COMPONENT = Path(__file__).parent.parent / "custom_components" / "growatt_modbus
 GATED_ACTIONS = {
     "set_battery_mode": (30100, 30407, 30409),
     "sync_tou_schedule": (30411, 30412),
+    "set_tou_period": (3038,),
 }
 
 

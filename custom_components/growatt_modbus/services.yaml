@@ -374,6 +374,61 @@ write_registers:
       selector:
         object:
 
+set_tou_period:
+  name: Set TOU Period
+  description: "Set one time-of-use period on MOD / MID TL3-XH and MIN TL-XH (holding 3038-3059) in a single write: start, end, priority and enable together. Fields you leave out keep what the inverter holds. Nothing is written when the inverter already holds the requested values, so an automation can call this repeatedly without extra writes. Not for WIT (use Sync TOU Schedule) or SPH."
+  fields:
+    device_id:
+      name: Device
+      description: The Growatt inverter device
+      required: true
+      selector:
+        device:
+          integration: growatt_modbus
+    period:
+      name: Period
+      description: TOU period number, 1-9
+      required: true
+      example: 1
+      selector:
+        number:
+          min: 1
+          max: 9
+          mode: box
+    start:
+      name: Start
+      description: Period start time (HH:MM)
+      required: false
+      example: "01:00"
+      selector:
+        time:
+    end:
+      name: End
+      description: Period end time (HH:MM)
+      required: false
+      example: "05:59"
+      selector:
+        time:
+    priority:
+      name: Priority
+      description: What the inverter favours during the period
+      required: false
+      selector:
+        select:
+          options:
+            - label: "Load first"
+              value: "load"
+            - label: "Battery first"
+              value: "battery"
+            - label: "Grid first"
+              value: "grid"
+    enabled:
+      name: Enabled
+      description: Whether the period is active
+      required: false
+      selector:
+        boolean:
+
 sync_tou_schedule:
   name: Sync TOU Schedule
   description: "Write Time-of-Use schedule to inverter for autonomous operation. The inverter will follow this schedule even if Home Assistant goes offline. Maximum 20 periods. CRITICAL: Periods CANNOT overlap! Use XX:59 end times (e.g., 119 for 01:59) then start next at XX:00 (e.g., 120 for 02:00). For HOLD mode, use power=1 (+1% charge brings the battery near idle - not an exact zero; see Set Battery Mode)."

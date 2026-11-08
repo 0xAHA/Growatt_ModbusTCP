@@ -14,7 +14,11 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 
-from .const import DOMAIN, CONF_DEVICE_PATH, CONF_INVERTER_SERIES, resolve_block_size, hold_tou_periods
+from .const import (
+    DOMAIN, CONF_DEVICE_PATH, CONF_INVERTER_SERIES, resolve_block_size, hold_tou_periods,
+    MOD_TOU_PERIODS, TOU_LOCKED_MESSAGE,
+)
+from .tou_packing import plan_period as tou_plan_period, publish as tou_publish
 from .device_profiles import fill_register_map, get_display_name_for_profile, get_profile
 from .auto_detection import ASSUMED, CONFIRMED, DTC_REGISTRY, convert_to_legacy_profile
 
@@ -109,6 +113,7 @@ SERVICE_SET_BATTERY_MODE = "set_battery_mode"
 SERVICE_SYNC_TOU_SCHEDULE = "sync_tou_schedule"
 SERVICE_GET_REGISTER_DATA = "get_register_data"
 SERVICE_SYNC_INVERTER_TIME = "sync_inverter_time"
+SERVICE_SET_TOU_PERIOD = "set_tou_period"
 
 # Universal scan ranges - covers all Grid-Tied Growatt series
 # Split into chunks of max 125 registers to respect Modbus limits
@@ -283,6 +288,26 @@ SERVICE_SYNC_TOU_SCHEDULE_SCHEMA = vol.Schema(
         ]),
         vol.Optional("default_mode", default=0): vol.All(vol.Coerce(int), vol.Range(min=0, max=2)),
     }
+)
+def _require_a_tou_field(value: dict) -> dict:
+    """Set TOU Period needs something to set besides the period number."""
+    if not any(key in value for key in ("start", "end", "priority", "enabled")):
+        raise vol.Invalid("Give at least one of start, end, priority or enabled")
+    return value
+
+
+SERVICE_SET_TOU_PERIOD_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Required("device_id"): cv.string,
+            vol.Required("period"): vol.All(vol.Coerce(int), vol.Range(min=1, max=9)),
+            vol.Optional("start"): cv.time,
+            vol.Optional("end"): cv.time,
+            vol.Optional("priority"): vol.In(["load", "battery", "grid"]),
+            vol.Optional("enabled"): cv.boolean,
+        }
+    ),
+    _require_a_tou_field,
 )
 SERVICE_SYNC_INVERTER_TIME_SCHEMA = vol.Schema(
     {
@@ -1663,7 +1688,109 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Failed to sync TOU schedule: %s", e)
             raise HomeAssistantError(f"Failed to sync TOU schedule: {e}") from e
 
+    async def set_tou_period(call: ServiceCall) -> dict:
+        """Set one legacy TOU period - times, priority and enable - in one write (#491).
+
+        For MOD / MID TL3-XH and MIN TL-XH, holding 3038-3059. The separate Start, End,
+        Priority and Enable entities each write the period's register pair, so changing a
+        whole period from an automation took up to four writes. This takes one FC16 write
+        of the pair, and none at all when the inverter already holds what was asked: these
+        are holding registers and may be EEPROM-backed, which Growatt does not document
+        for this range.
+
+        Fields left out keep what the inverter holds. The pair is always read fresh first;
+        if that read fails nothing is written, because a partial request rebuilt from a
+        stale copy is exactly how earlier writes were undone (#475).
+        """
+        from .growatt_modbus import ModbusWriteError
+
+        device_id = call.data["device_id"]
+        period_no = call.data["period"]
+
+        device_reg = dr.async_get(hass)
+        device_entry = device_reg.async_get(device_id)
+        if not device_entry:
+            raise HomeAssistantError(f"Device {device_id} not found")
+        config_entry_id = _config_entry_id_for_device(hass, device_entry)
+        if not config_entry_id:
+            raise HomeAssistantError(f"No config entry found for device {device_id}")
+        coordinator = _coordinator_for_entry(hass, config_entry_id)
+        if not coordinator:
+            raise HomeAssistantError(f"Coordinator not found for device {device_id}")
+        client = coordinator.modbus_client
+
+        period = next(p for p in MOD_TOU_PERIODS if p["period"] == period_no)
+        holding = client.register_map.get("holding_registers", {})
+        if 3038 not in holding or period["start_reg"] not in holding:
+            raise HomeAssistantError(
+                f"Set TOU Period is not available on this model. Its profile "
+                f"({client.register_map.get('name', 'unknown')}) does not carry the "
+                f"time-of-use registers 3038-3059 (period {period_no} starts at "
+                f"{period['start_reg']}). On WIT use Sync TOU Schedule; on SPH use the "
+                f"Time Period controls."
+            )
+        if coordinator.tou_legacy_locked:
+            raise HomeAssistantError(
+                TOU_LOCKED_MESSAGE.format(version=coordinator.vpp_protocol_label))
+
+        current = await hass.async_add_executor_job(
+            client.read_holding_registers, period["start_reg"], 2
+        )
+        if current is None or len(current) < 2:
+            raise HomeAssistantError(
+                f"Could not read TOU period {period_no} (registers {period['start_reg']}-"
+                f"{period['end_reg']}). Nothing was written."
+            )
+
+        start = call.data.get("start")
+        end = call.data.get("end")
+        new_start, new_end, changed = tou_plan_period(
+            current,
+            start=(start.hour, start.minute) if start is not None else None,
+            end=(end.hour, end.minute) if end is not None else None,
+            priority=call.data.get("priority"),
+            enabled=call.data.get("enabled"),
+        )
+        result = {
+            "period": period_no,
+            "written": changed,
+            "start_word": new_start,
+            "end_word": new_end,
+        }
+        if not changed:
+            _LOGGER.debug("TOU period %d already reads start=0x%04X end=0x%04X - not writing",
+                          period_no, new_start, new_end)
+            return result
+
+        try:
+            success = await hass.async_add_executor_job(
+                client.write_registers, period["start_reg"], [new_start, new_end]
+            )
+        except ModbusWriteError as e:
+            raise HomeAssistantError(
+                f"Could not write TOU period {period_no}: {e.error_message}") from e
+        if not success:
+            raise HomeAssistantError(f"The write to TOU period {period_no} was not accepted")
+
+        _LOGGER.info("Set TOU period %d: start=0x%04X end=0x%04X (one FC16 write)",
+                     period_no, new_start, new_end)
+        coordinator.track_write(period["start_reg"], new_start, period["start_field"])
+        coordinator.track_write(period["end_reg"], new_end, period["end_field"])
+        tou_publish(coordinator.data, period["start_field"], period["end_field"],
+                    new_start, new_end)
+        coordinator.async_update_listeners()
+        await coordinator.async_request_refresh()
+        return result
+
     # Register services
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_TOU_PERIOD,
+        set_tou_period,
+        schema=SERVICE_SET_TOU_PERIOD_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_EXPORT_DUMP,

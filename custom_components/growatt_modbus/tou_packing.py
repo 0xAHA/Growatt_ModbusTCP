@@ -58,3 +58,35 @@ def publish(data: Any, start_field: str, end_field: str, start: int, end: int) -
         return
     setattr(data, start_field, int(start))
     setattr(data, end_field, int(end))
+
+
+PRIORITY_CODES = {"load": 0, "battery": 1, "grid": 2}
+
+
+def plan_period(
+    current: Sequence[int],
+    *,
+    start: Optional[tuple[int, int]] = None,
+    end: Optional[tuple[int, int]] = None,
+    priority: Optional[str] = None,
+    enabled: Optional[bool] = None,
+) -> tuple[int, int, bool]:
+    """(new_start, new_end, changed) for a whole period set in one go.
+
+    `current` is the [start, end] pair read from the inverter. Anything not given keeps
+    what the inverter holds, so a caller can set just the times, or just the enable,
+    without knowing the rest. `changed` is False when the inverter already holds exactly
+    this, and the caller then writes nothing: these are holding registers and may be
+    EEPROM-backed, so an automation repeating the same request costs no write.
+    """
+    new_start, new_end = int(current[0]) & 0xFFFF, int(current[1]) & 0xFFFF
+    if start is not None:
+        new_start = with_time(new_start, *start)
+    if priority is not None:
+        new_start = with_priority(new_start, PRIORITY_CODES[priority])
+    if enabled is not None:
+        new_start = with_enable(new_start, enabled)
+    if end is not None:
+        new_end = ((int(end[0]) & 0x1F) << 8) | (int(end[1]) & 0xFF)
+    changed = (new_start, new_end) != (int(current[0]) & 0xFFFF, int(current[1]) & 0xFFFF)
+    return new_start, new_end, changed

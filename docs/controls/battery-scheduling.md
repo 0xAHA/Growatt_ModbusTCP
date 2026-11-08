@@ -193,6 +193,23 @@ automation:
 > Since the schedule is persistent, this automation only needs to run once (or at HA
 > restart to re-assert after a power cut). There is no need to poll or repeat writes.
 
+Each select above is a separate write. To set a whole slot at once, use the
+[`set_tou_period`](actions.md#set-one-time-of-use-period) action. It sets the start, end,
+priority and enable in one write, and writes nothing if the slot already holds those
+values:
+
+```yaml
+    action:
+      - action: growatt_modbus.set_tou_period
+        data:
+          device_id: 1a2b3c4d5e6f7890abcdef1234567890
+          period: 1
+          start: "18:00"
+          end: "22:00"
+          priority: battery
+          enabled: true
+```
+
 ### Start Register Bit Format (Advanced)
 
 Each start register encodes three fields:

@@ -18,7 +18,8 @@ Assistant fills in the ID for you.
 | [`export_register_dump`](#scan-every-register) | Full register scan to CSV |
 | [`detect_grid_orientation`](#detect-grid-ct-orientation) | Work out the grid CT sign convention |
 | [`set_battery_mode`](#set-battery-mode-vpp) | VPP charge/discharge/hold (WIT, MOD, MIN TL-XH2), and release back to the inverter's own mode |
-| [`sync_tou_schedule`](#write-a-time-of-use-schedule) | Push a full TOU schedule to the inverter |
+| [`sync_tou_schedule`](#write-a-time-of-use-schedule) | Push a full TOU schedule to the inverter (WIT) |
+| [`set_tou_period`](#set-one-time-of-use-period) | Set one TOU period in a single write (MOD / MID TL3-XH, MIN TL-XH) |
 
 ---
 
@@ -310,3 +311,36 @@ data:
     - {start: 120,  end: 1019, power: 1}
     - {start: 1020, end: 1259, power: -100}
 ```
+
+---
+
+## Set one time-of-use period
+
+For MOD / MID TL3-XH and MIN TL-XH, whose nine TOU periods live in holding registers
+3038-3059. The **TOU Period N** Start, End, Priority and Enable entities each make their
+own write, so changing a whole period that way takes up to four. This action sets them
+together in **one** write.
+
+- Fields you leave out keep what the inverter holds, so `enabled: false` on its own just
+  switches a period off.
+- If the inverter already holds the requested values, **nothing is written**. An automation
+  can call this every day without adding writes. Growatt does not say whether these
+  registers are EEPROM-backed, so we avoid writes that change nothing.
+- The period is read from the inverter first. If that read fails, nothing is written.
+- Not available on firmware that reports VPP V2.05 or later, where these registers no
+  longer accept changes (see [Battery & Scheduling](battery-scheduling.md#mod-gen4-tou-schedule-9-slots)).
+
+```yaml
+action: growatt_modbus.set_tou_period
+data:
+  device_id: 1a2b3c4d5e6f7890abcdef1234567890
+  period: 1
+  start: "18:00"
+  end: "22:00"
+  priority: battery   # load, battery or grid
+  enabled: true
+response_variable: tou
+```
+
+The response says whether a write was made (`written`) and gives the two register words
+(`start_word`, `end_word`).
