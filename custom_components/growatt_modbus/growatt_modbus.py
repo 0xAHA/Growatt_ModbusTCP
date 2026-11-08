@@ -5808,6 +5808,39 @@ class GrowattModbus:
         except Exception as e:
             logger.debug(f"Could not read peak shaving registers 3307-3312: {e}")
 
+    def _read_min_tlxh_grid_charge_settings(
+        self, data: GrowattData, holding_map: dict[int, dict]
+    ) -> None:
+        """Read the MIN TL-XH grid-charge controls without assuming the MOD block exists."""
+        for address, field in (
+            (3311, 'ac_charge_max_power'),
+            (3312, 'grid_charge_stopped_soc'),
+        ):
+            if address not in holding_map:
+                continue
+
+            registers = None
+            try:
+                registers = self.read_holding_registers(address, 1)
+            except Exception as e:
+                logger.debug("Could not read MIN TL-XH register %d: %s", address, e)
+
+            if registers is None or len(registers) < 1:
+                data.unread_fields.add(field)
+                continue
+
+            raw = int(registers[0])
+            if address == 3311:
+                value = self._peak_shaving_kw(raw)
+                if value is None:
+                    data.unread_fields.add(field)
+                    continue
+                data.ac_charge_max_power = value
+            else:
+                data.grid_charge_stopped_soc = raw
+
+            logger.debug("[MIN TL-XH CTRL] %s=%s (raw=%s)", field, getattr(data, field), raw)
+
     def _read_backup_box_data(self, data: GrowattData) -> None:
         """Populate backup box (Growatt SYN) fields from cached 3000-range registers."""
         try:
@@ -6378,18 +6411,21 @@ class GrowattModbus:
 
         # MIN TL-XH portal: Off-grid Battery Discharge Stop SOC (register 3037).
         if 3037 in holding_map:
+            ogds_regs = None
             try:
                 ogds_regs = self.read_holding_registers(3037, 1)
-                if ogds_regs is not None and len(ogds_regs) >= 1:
-                    data.off_grid_discharge_stopped_soc = int(ogds_regs[0])
-                    logger.debug(
-                        "[TL-XH CTRL] off_grid_discharge_stopped_soc=%s%%",
-                        data.off_grid_discharge_stopped_soc,
-                    )
             except Exception as e:
                 logger.debug(
                     "Could not read off_grid_discharge_stopped_soc register 3037: %s", e
                 )
+            if ogds_regs is not None and len(ogds_regs) >= 1:
+                data.off_grid_discharge_stopped_soc = int(ogds_regs[0])
+                logger.debug(
+                    "[TL-XH CTRL] off_grid_discharge_stopped_soc=%s%%",
+                    data.off_grid_discharge_stopped_soc,
+                )
+            else:
+                data.unread_fields.add('off_grid_discharge_stopped_soc')
 
         # TL-XH / MOD Battery First charge stopped SOC (register 3048)
         if 3048 in holding_map:
@@ -6448,8 +6484,10 @@ class GrowattModbus:
         # deliberately do not map (3309, 3313) fall inside or beside it, so a block read
         # costs no more than the five individual reads would and is gentler on a marginal
         # gateway. Values we do not trust are simply not assigned.
-        if any(reg in holding_map for reg in (3307, 3308, 3310, 3311, 3312)):
+        if 3307 in holding_map:
             self._read_peak_shaving(data)
+        elif any(reg in holding_map for reg in (3311, 3312)):
+            self._read_min_tlxh_grid_charge_settings(data, holding_map)
 
         # Mirror of the last commanded VPP power setpoint (30474, #373).
         #

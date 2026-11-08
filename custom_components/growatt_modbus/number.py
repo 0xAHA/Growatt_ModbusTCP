@@ -33,6 +33,11 @@ _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
 
 
+def _raw_value_from_display(value: float, scale: float) -> int:
+    """Convert a displayed value to a raw register value without float truncation."""
+    return int(round(value / scale))
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -527,7 +532,7 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         scale = self._control_config.get('scale', 1)
 
         # Convert display value to raw value
-        raw_value = int(value / scale)
+        raw_value = _raw_value_from_display(value, scale)
 
         # Validate range
         valid_range = self._control_config.get('valid_range', (0, 100))

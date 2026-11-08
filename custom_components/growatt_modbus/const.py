@@ -900,7 +900,7 @@ WRITABLE_REGISTERS = {
         'desc': 'Power rate to open relay (0.0–100.0%)'
     },
 
-    # MOD GEN4 power rate limits for priority modes
+    # MOD/MIN TL-XH power rate limits for priority modes
     # Scan #228 confirmed: 3036=100 (GridFirstDischargePowerRate), 3047=80 (BatFirstPowerRate)
     #
     # Floor 0, not the 1 that Protocol V1.39 prints for 3036 ("1-255"): the Growatt app sets
@@ -929,6 +929,7 @@ WRITABLE_REGISTERS = {
         'scale': 1,
         'valid_range': (1, 100),
         'unit': '%',
+        'label': 'Off-grid Battery Discharge Stop SOC',
         'desc': 'SOC to stop discharging in off-grid operation (portal setting; MIN TL-XH)'
     },
     'batt_first_charge_power_rate': {

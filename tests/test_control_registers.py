@@ -358,6 +358,24 @@ def test_min_tl_xh_exposes_the_firmware_confirmed_soc_controls():
         assert name in _controls_created_for(map_key)
 
 
+def test_min_tl_xh_exposes_each_portal_battery_control_once():
+    """The four portal settings must not create aliases or duplicate controls."""
+    created = _controls_created_for("MIN_TL_XH_3000_10000_V201")
+    expected = {
+        "grid_first_discharge_power_rate",
+        "off_grid_discharge_stopped_soc",
+        "ac_charge_max_power",
+        "grid_charge_stopped_soc",
+    }
+    assert expected <= created
+    for address in (3036, 3037, 3311, 3312):
+        controls = [
+            name for name, config in WRITABLE_REGISTERS.items()
+            if config.get("register") == address and name in created
+        ]
+        assert len(controls) == 1, f"register {address} creates {controls}"
+
+
 def test_min_tl_xh_offers_the_grid_charge_control_for_hardware_validation():
     """3049 matched ShinePhone's Allow Grid Charge state; writes remain opt-in."""
     map_key = "MIN_TL_XH_3000_10000_V201"
