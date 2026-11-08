@@ -1668,6 +1668,16 @@ async def async_setup_entry(
             [sk for sk, _ in deferred],
         )
 
+        listener_removed = False
+
+        @callback
+        def _remove_listener_once() -> None:
+            nonlocal listener_removed
+            if listener_removed:
+                return
+            listener_removed = True
+            _remove_listener()
+
         @callback
         def _async_check_deferred_sensors() -> None:
             if not coordinator.has_real_data:
@@ -1690,10 +1700,10 @@ async def async_setup_entry(
             if new_entities:
                 async_add_entities(new_entities)
             if not deferred:
-                _remove_listener()
+                _remove_listener_once()
 
         _remove_listener = coordinator.async_add_listener(_async_check_deferred_sensors)
-        config_entry.async_on_unload(_remove_listener)
+        config_entry.async_on_unload(_remove_listener_once)
 
 
 class GrowattInverterClockSensor(GrowattEntity, SensorEntity):
