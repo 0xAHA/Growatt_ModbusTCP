@@ -35,6 +35,15 @@ your hardware will save significant debugging time.
 
 > **Grid-tied models (MIN TL-X, MIC, MID)** have no battery controls and are not covered here.
 
+!!! note "SOC limits are targets, not hard stops"
+    The battery's own management system can step outside the charge and discharge stop SOCs.
+    On a MIN 6000TL-XH with ARK batteries, the battery regularly charged to 99-100 % despite
+    a 90-95 % limit, and dipped just below a 15 % stop SOC before pulling a little from the
+    grid with grid charging disabled
+    ([#492](https://github.com/0xAHA/Growatt_ModbusTCP/issues/492)). That fits cell
+    balancing and low-SOC protection, which the integration cannot override. Growatt does
+    not document either behaviour for the ARK.
+
 ---
 
 ## MOD GEN4 — TOU Schedule (9 Slots)
