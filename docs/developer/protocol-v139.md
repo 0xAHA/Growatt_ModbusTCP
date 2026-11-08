@@ -748,7 +748,7 @@ the test unless stated.
 | 3067 | On-grid Discharge Stop SOC | % |
 | 3079 | Set Backup On/Off | V1.39 "UpsFunEn" |
 | 3082 | Set SYN On/Off | V1.39 lists two meanings at this address; the portal uses it for SYN |
-| 3295 | Battery sleep mode enable | **Not in V1.39.** 0 = off, 1 = on |
+| 3295 | Off-grid function in battery sleep mode | **Not in V1.39.** 0 = off, 1 = on. Re-confirmed by writing it from the portal; the portal's own display of it can lag the register |
 | 3311 | Max. Charge Power From Grid | 0.1 kW (13 = 1.3 kW) |
 | 3312 | Charge Stop SOC from Grid | % |
 
