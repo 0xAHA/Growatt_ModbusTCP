@@ -248,6 +248,8 @@ data:
 ```
 
 If your gateway cannot serve large blocks — LoRa bridges especially — add `block_size: 1`.
+The scanner retries a block once after a transport disconnect, then records the exception if
+the reconnect also fails.
 Since v1.7.1 the scanner detects that and drops to single reads on its own, but setting it
 explicitly is faster.
 

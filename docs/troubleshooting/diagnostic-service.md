@@ -66,6 +66,11 @@ The **Block Size** setting still controls the Modbus request chunks within those
 does not remove any registers from the scan. **OffGrid Mode** remains a separate safety mode
 and never scans VPP ranges.
 
+If a block read loses the TCP connection, the scanner closes and reconnects the scan client
+and retries that block once. A Modbus exception response is kept as evidence that the range
+may be unsupported and is not retried. For gateways that repeatedly reject large blocks,
+use a smaller **Block Size**.
+
 ### Step 3: Check Results
 
 **Option A: Notification (if enabled)**

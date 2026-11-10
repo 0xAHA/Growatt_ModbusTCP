@@ -38,6 +38,9 @@ except ImportError:
 
 _LOGGER = logging.getLogger(__name__)
 
+_SCAN_TRANSPORT_RETRIES = 1
+_SCAN_MIN_RETRY_DELAY_S = 0.25
+
 
 def _coordinator_for_entry(hass: HomeAssistant, entry_id: str):
     """Resolve a coordinator from a config entry id, or None.
@@ -1892,6 +1895,10 @@ def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk
     scan that looks like a dead inverter on a system whose entities are updating fine
     (#360). The only pauses in the scanner used to be between whole ranges, never within.
 
+    Transport exceptions close the raw client and get one reconnect-and-retry attempt for
+    the same block. Modbus exception responses are kept as range evidence and are not
+    retried, because they usually mean the register is unsupported.
+
     Returns dict mapping register address to: {
         'value': int or None,
         'status': 'success'|'error'|'exception',
@@ -1922,81 +1929,104 @@ def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk
         if delay_s and not first_chunk:
             time.sleep(delay_s)
         first_chunk = False
+        retry_with_smaller_chunk = False
 
-        try:
-            # Choose read method based on register type
-            if register_type == 'holding':
-                response = client.read_holding_registers(
-                    address=chunk_address,
-                    count=chunk_count,
-                    device_id=slave_id
-                )
-            else:  # 'input'
-                response = client.read_input_registers(
-                    address=chunk_address,
-                    count=chunk_count,
-                    device_id=slave_id
-                )
+        for attempt in range(_SCAN_TRANSPORT_RETRIES + 1):
+            try:
+                # Choose read method based on register type
+                if register_type == 'holding':
+                    response = client.read_holding_registers(
+                        address=chunk_address,
+                        count=chunk_count,
+                        device_id=slave_id
+                    )
+                else:  # 'input'
+                    response = client.read_input_registers(
+                        address=chunk_address,
+                        count=chunk_count,
+                        device_id=slave_id
+                    )
 
-            if not response.isError():
-                # Store ALL values, including zeros
-                for i, value in enumerate(response.registers):
-                    register_data[chunk_address + i] = {
-                        'value': value,
-                        'status': 'success',
-                        'error': None
-                    }
-                _LOGGER.debug(f"Read chunk {chunk_address}-{chunk_address+chunk_count-1}: {chunk_count} registers")
-            else:
-                # Store error for each register in the chunk
-                error_msg = str(response)
-                # Try to extract specific error type
-                if hasattr(response, 'exception_code'):
-                    error_code = response.exception_code
-                    error_names = {
-                        1: "Illegal Function",
-                        2: "Illegal Data Address",
-                        3: "Illegal Data Value",
-                        4: "Slave Device Failure",
-                        5: "Acknowledge",
-                        6: "Slave Device Busy",
-                        10: "Gateway Path Unavailable",
-                        11: "Gateway Target Failed to Respond"
-                    }
-                    error_msg = error_names.get(error_code, f"Error Code {error_code}")
+                if not response.isError():
+                    # Store ALL values, including zeros
+                    for i, value in enumerate(response.registers):
+                        register_data[chunk_address + i] = {
+                            'value': value,
+                            'status': 'success',
+                            'error': None
+                        }
+                    _LOGGER.debug(f"Read chunk {chunk_address}-{chunk_address+chunk_count-1}: {chunk_count} registers")
+                else:
+                    # Store error for each register in the chunk
+                    error_msg = str(response)
+                    # Try to extract specific error type
+                    if hasattr(response, 'exception_code'):
+                        error_code = response.exception_code
+                        error_names = {
+                            1: "Illegal Function",
+                            2: "Illegal Data Address",
+                            3: "Illegal Data Value",
+                            4: "Slave Device Failure",
+                            5: "Acknowledge",
+                            6: "Slave Device Busy",
+                            10: "Gateway Path Unavailable",
+                            11: "Gateway Target Failed to Respond"
+                        }
+                        error_msg = error_names.get(error_code, f"Error Code {error_code}")
 
-                if effective_chunk > 1 and not probed_single:
-                    probed_single = True
-                    if _single_register_read_works(client, chunk_address, slave_id, register_type):
-                        _LOGGER.warning(
-                            "Block read of %d registers at %d failed (%s) but a single-register "
-                            "read succeeded - the gateway cannot relay blocks this large. "
-                            "Continuing this scan at 1 register per request; it will be slower. "
-                            "Set 'Max Register Block Size' to 1 for normal polling too.",
-                            chunk_count, chunk_address, error_msg,
-                        )
-                        effective_chunk = 1
-                        continue  # re-read this chunk one register at a time
+                    if effective_chunk > 1 and not probed_single:
+                        probed_single = True
+                        if _single_register_read_works(client, chunk_address, slave_id, register_type):
+                            _LOGGER.warning(
+                                "Block read of %d registers at %d failed (%s) but a single-register "
+                                "read succeeded - the gateway cannot relay blocks this large. "
+                                "Continuing this scan at 1 register per request; it will be slower. "
+                                "Set 'Max Register Block Size' to 1 for normal polling too.",
+                                chunk_count, chunk_address, error_msg,
+                            )
+                            effective_chunk = 1
+                            retry_with_smaller_chunk = True
+                            break  # re-read this chunk one register at a time
 
+                    for i in range(chunk_count):
+                        register_data[chunk_address + i] = {
+                            'value': None,
+                            'status': 'error',
+                            'error': error_msg
+                        }
+                    _LOGGER.debug(f"Chunk {chunk_address}-{chunk_address+chunk_count-1} returned error: {error_msg}")
+                break
+
+            except Exception as e:
+                if attempt < _SCAN_TRANSPORT_RETRIES:
+                    _LOGGER.debug(
+                        "Chunk %d-%d transport exception (%s); reconnecting and retrying",
+                        chunk_address, chunk_address + chunk_count - 1, e,
+                    )
+                    try:
+                        client.close()
+                    except Exception as close_error:
+                        _LOGGER.debug("Scanner client close before retry failed: %s", close_error)
+                    time.sleep(max(delay_s, _SCAN_MIN_RETRY_DELAY_S))
+                    try:
+                        if client.connect():
+                            continue
+                    except Exception as reconnect_error:
+                        _LOGGER.debug("Scanner client reconnect failed: %s", reconnect_error)
+
+                # Store exception for each register in the chunk
+                error_msg = f"Exception: {type(e).__name__}: {str(e)}"
                 for i in range(chunk_count):
                     register_data[chunk_address + i] = {
                         'value': None,
-                        'status': 'error',
+                        'status': 'exception',
                         'error': error_msg
                     }
-                _LOGGER.debug(f"Chunk {chunk_address}-{chunk_address+chunk_count-1} returned error: {error_msg}")
+                _LOGGER.debug(f"Chunk {chunk_address} exception: {e}")
+                break
 
-        except Exception as e:
-            # Store exception for each register in the chunk
-            error_msg = f"Exception: {type(e).__name__}: {str(e)}"
-            for i in range(chunk_count):
-                register_data[chunk_address + i] = {
-                    'value': None,
-                    'status': 'exception',
-                    'error': error_msg
-                }
-            _LOGGER.debug(f"Chunk {chunk_address} exception: {e}")
-
+        if retry_with_smaller_chunk:
+            continue
         pos += chunk_count
 
     return register_data
@@ -2756,6 +2786,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             writer.writerow(["Slave ID", slave_id])
             writer.writerow(["Block Size", block_size, "registers per Modbus request"])
             writer.writerow(["Read Pacing", _scan_delay_ms, "ms between reads (from modbus_delay)"])
+            writer.writerow(["Transport Retries", _SCAN_TRANSPORT_RETRIES, "reconnect retries per failed Modbus block"])
             writer.writerow(["Scan Mode", "Full vendor blocks" if scan_full_vendor_blocks else "Standard scanner ranges"])
 
             # Add currently selected/configured profile (if coordinator found)
