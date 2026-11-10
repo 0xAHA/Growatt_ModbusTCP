@@ -1774,3 +1774,44 @@ sleep both disabled. Which change caused that is not established.
 | 5091 | BatMinTemp | Minimum battery temperature | 0.1C | [-40.0, 125.0C] |
 | 5092 | BatMaxLimitChargeCurrent | Maximum allowable charging current | 0.1A | [0, 1000.0A] |
 | 5093 | BatMaxLimitDischargeCurrent | Maximum allowable discharge current | 0.1A | (truncated in source) |
+
+---
+
+## Meter registers (function code 0x20)
+
+V1.39 section 2.3 defines a separate **function code 0x20** for reading the energy meter
+through the inverter. It is neither the holding (FC03) nor the input (FC04) space. The
+request and response frames are the same shape as FC03, and an error response comes back
+as `0x80 | 0x20`. The integration does not use it.
+
+| Word | Name | Description | Unit |
+|---|---|---|---|
+| 8-9 | L1 Current | L1 phase current | 0.1A |
+| 10-11 | L2 Current | L2 phase current | 0.1A |
+| 14-15 | L1ActivePower | L1 phase active power | 0.1W |
+| 16-17 | L2ActivePower | L2 phase active power | 0.1W |
+| 38-39 | TotalActivePower | Total active power | 0.1W |
+
+All other words up to 39 are marked Reserved. The source table is laid out loosely in the
+PDF, so the pairing above was checked against live traffic.
+
+**Field capture, MIN 6000TL-XH** ([#498](https://github.com/0xAHA/Growatt_ModbusTCP/issues/498)):
+the Shine datalogger polls unit 1 with `01 20 00 00 00 64`, which reads 100 words from
+address 0. With the response read as 0-based word offsets from that address, the documented
+fields decode correctly. 32-bit values are high word first. L1 power read 41.7 W and
+3522.2 W at two operating points, the second matching about 3.7 kW of grid import in the
+portal. On that installation, L1 active power was **positive while importing**.
+
+Words beyond V1.39's list also carry data. These are **undocumented**. The candidates below
+fit three samples at different operating points, and are not confirmed:
+
+| Word | Candidate | Basis |
+|---|---|---|
+| 3 | L1 voltage, 0.1V | 224.8-232.4 |
+| 20-21 | L1 apparent power, 0.1VA | close to the root of P squared plus Q squared (242.7 vs 242.8, 3528.6 vs 3536.6) |
+| 26-27 | L1 reactive power, 0.1var, signed | negative in all three |
+| 33 | L1 power factor, 0.001 | close to active / apparent (0.170 vs 0.172, 0.995 vs 0.998), not exact |
+| 38-45 | totals of the same quantities | mirror the L1 words when only L1 is loaded |
+| 47 | Frequency, 0.1Hz | constant 500 |
+
+Words 1, 55 and 57 also carry values, and word 56 reads 1. None of them has a candidate meaning yet.
