@@ -123,6 +123,7 @@ UNIVERSAL_SCAN_RANGES = [
     {"name": "Extended Range 125-249",   "start": 125,   "count": 125, "group": "legacy"},
     # Battery/storage range (SPH, SPM, MIN battery models)
     {"name": "Storage Range 1000-1124",  "start": 1000,  "count": 125, "group": "storage"},
+    {"name": "Storage Extended Range 1125-1249", "start": 1125, "count": 125, "group": "storage"},
     # SPA second input block. The Growatt storage protocol splits these by type:
     #
     #   Storage (SPH type):  FC04 range 0~124,    1000~1124
@@ -147,6 +148,7 @@ UNIVERSAL_SCAN_RANGES = [
     {"name": "MOD Holding 3125-3249",           "start": 3125, "count": 125, "group": "mod_extended", "register_type": "holding"},
     {"name": "MOD/TL-XH Extended Holding 3250-3374",  "start": 3250, "count": 125, "group": "mod_extended", "register_type": "holding"},
     # WIT/WIS battery range
+    {"name": "Extended Range 875-999", "start": 875, "count": 125, "group": "wit"},
     {"name": "WIT/WIS Battery Range 8000-8124", "start": 8000, "count": 125, "group": "wit"},
     # VPP Control holding registers (30100-30499) — system/AC/battery control settings
     {"name": "VPP System Control 30100-30129",  "start": 30100, "count": 30,  "group": "vpp_control", "register_type": "holding"},
@@ -159,6 +161,23 @@ UNIVERSAL_SCAN_RANGES = [
     {"name": "VPP Battery 1: 31200-31299",       "start": 31200, "count": 100, "group": "vpp_data"},  # Battery cluster 1 data
     {"name": "VPP Battery 2: 31300-31399",       "start": 31300, "count": 100, "group": "vpp_data"},  # Battery cluster 2 data (optional)
 ]
+
+# Full vendor-block scan ranges. These retain the existing legacy coverage but replace
+# semantic VPP subranges with the complete vendor-defined blocks, including reserved words.
+FULL_VENDOR_SCAN_RANGES = [
+    range_config
+    for range_config in UNIVERSAL_SCAN_RANGES
+    if range_config.get("group") not in {"vpp_control", "vpp_data"}
+]
+FULL_VENDOR_SCAN_RANGES.extend([
+    {"name": "VPP Holding 30000-30499", "start": 30000, "count": 500, "group": "vpp_control", "register_type": "holding"},
+    {"name": "VPP Safety Holding 30500-30999", "start": 30500, "count": 500, "group": "vpp_control", "register_type": "holding"},
+    {"name": "VPP Reserved Holding 32000-32099", "start": 32000, "count": 100, "group": "vpp_control", "register_type": "holding"},
+    {"name": "VPP Input 31000-31299", "start": 31000, "count": 300, "group": "vpp_data"},
+    {"name": "VPP Battery Information 31300-31399", "start": 31300, "count": 100, "group": "vpp_data"},
+    {"name": "VPP Battery Information 31400-31499", "start": 31400, "count": 100, "group": "vpp_data"},
+    {"name": "VPP Battery Information 31500-31599", "start": 31500, "count": 100, "group": "vpp_data"},
+])
 
 # OffGrid scan ranges - SAFE for SPF series (prevents power resets!)
 # CRITICAL: OffGrid inverters RESET if VPP registers (30000+, 31000+) are accessed
@@ -196,11 +215,12 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         vol.Optional("offgrid_mode", default=False): cv.boolean,  # CRITICAL: Enable for SPF to prevent power reset
         # Range group selection (all enabled by default)
         vol.Optional("scan_legacy",       default=False): cv.boolean,  # Base 0-249 (all models)
-        vol.Optional("scan_storage",      default=False): cv.boolean,  # Storage 1000-1124 (SPH/MIN battery)
+        vol.Optional("scan_storage",      default=False): cv.boolean,  # Storage 1000-1249 (SPH/SPA/MIN battery)
         vol.Optional("scan_mod_extended", default=False): cv.boolean,  # MIN/MOD/TL-XH 3000-3374 (incl. backup box regs 3250-3374)
-        vol.Optional("scan_wit",          default=False): cv.boolean,  # WIT/WIS 8000-8124
-        vol.Optional("scan_vpp_control",  default=False): cv.boolean,  # VPP control 30100-30499
-        vol.Optional("scan_vpp_data",     default=False): cv.boolean,  # VPP data 31000-31399
+        vol.Optional("scan_wit",          default=False): cv.boolean,  # Extended 875-999 and WIT/WIS 8000-8124
+        vol.Optional("scan_vpp_control",  default=False): cv.boolean,  # VPP holding blocks 30000-30999, 32000-32099
+        vol.Optional("scan_vpp_data",     default=False): cv.boolean,  # VPP input blocks 31000-31599
+        vol.Optional("scan_full_vendor_blocks", default=False): cv.boolean,  # Complete vendor blocks, including reserved words
         # Block size for range reads: 125 (default, fastest), 25 (for finicky inverters), 1 (single-register, slowest but most compatible)
         # Same set the options flow offers (BLOCK_SIZE_OPTIONS), so a scan can be run at
         # whatever block size the poller is using. These were [125, 25, 1] while the
@@ -498,12 +518,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         send_notification = call.data.get("notify", True)
         offgrid_mode = call.data.get("offgrid_mode", False)
         block_size = call.data.get("block_size", 125)
+        scan_full_vendor_blocks = call.data.get("scan_full_vendor_blocks", False)
 
         # Overridden from the entry's own modbus_delay when one is selected below.
         scan_delay_ms = 250
 
         # Build enabled scan groups from boolean flags.
-        # If none are explicitly checked, scan everything (full scan is the default).
+        # If none are explicitly checked, scan every group in the selected range mode.
         # Check one or more to restrict the scan to those register ranges only.
         _SCAN_FLAGS = {
             "scan_legacy":       "legacy",
@@ -605,7 +626,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         # Run export in executor — pass pre-resolved coordinator if available
         result = await hass.async_add_executor_job(
-            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode, enabled_groups, pre_resolved_coordinator, block_size, scan_delay_ms
+            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode, enabled_groups, pre_resolved_coordinator, block_size, scan_delay_ms, scan_full_vendor_blocks
         )
         
         if result["success"]:
@@ -2368,7 +2389,7 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     return detection
 
 
-def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False, enabled_groups: set = None, coordinator=None, block_size: int = 125, scan_delay_ms: int = 250) -> dict:
+def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False, enabled_groups: set = None, coordinator=None, block_size: int = 125, scan_delay_ms: int = 250, scan_full_vendor_blocks: bool = False) -> dict:
     """
     Export all registers to CSV file with auto-detection (blocking).
 
@@ -2380,6 +2401,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         baudrate: Serial baudrate for serial connection
         slave_id: Modbus slave ID
         offgrid_mode: If True, skip VPP registers (30000+, 31000+) to prevent SPF power resets
+        scan_full_vendor_blocks: If True, scan complete vendor-defined blocks, including reserved words
         coordinator: Pre-resolved coordinator (from config_entry selection). When provided,
                      the auto-detection loop is skipped entirely — connection parameters and
                      profile/entity values are sourced directly from this coordinator.
@@ -2620,7 +2642,8 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         else:
             all_groups = {"legacy", "storage", "mod_extended", "wit", "vpp_control", "vpp_data"}
             active_groups = enabled_groups if enabled_groups is not None else all_groups
-            scan_ranges = [r for r in UNIVERSAL_SCAN_RANGES if r.get("group", "legacy") in active_groups]
+            range_catalog = FULL_VENDOR_SCAN_RANGES if scan_full_vendor_blocks else UNIVERSAL_SCAN_RANGES
+            scan_ranges = [r for r in range_catalog if r.get("group", "legacy") in active_groups]
 
         for range_config in scan_ranges:
             range_name = range_config["name"]
@@ -2733,6 +2756,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             writer.writerow(["Slave ID", slave_id])
             writer.writerow(["Block Size", block_size, "registers per Modbus request"])
             writer.writerow(["Read Pacing", _scan_delay_ms, "ms between reads (from modbus_delay)"])
+            writer.writerow(["Scan Mode", "Full vendor blocks" if scan_full_vendor_blocks else "Standard scanner ranges"])
 
             # Add currently selected/configured profile (if coordinator found)
             if selected_profile_key and selected_profile_name:
@@ -3023,7 +3047,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             # THEN: Group by input register ranges for organized output
             # Skip holding ranges — they are written separately below to avoid
             # showing holding values in what should be an input-register section.
-            for range_config in UNIVERSAL_SCAN_RANGES:
+            for range_config in scan_ranges:
                 if range_config.get("register_type") == "holding":
                     continue
                 range_name = range_config["name"]
@@ -3102,7 +3126,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                             ])
         
             # Holding register ranges (separate from input — H-prefix, FC03)
-            holding_scan_ranges = [r for r in UNIVERSAL_SCAN_RANGES if r.get("register_type") == "holding"]
+            holding_scan_ranges = [r for r in scan_ranges if r.get("register_type") == "holding"]
             for range_config in holding_scan_ranges:
                 range_name = range_config["name"]
                 start = range_config["start"]

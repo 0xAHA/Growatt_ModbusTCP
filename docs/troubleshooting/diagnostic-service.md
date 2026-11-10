@@ -42,13 +42,29 @@ If your inverter is not supported yet, see [Scanning an inverter that is not sup
 1. Go to **Settings** → **Tools** → **Actions**
 2. Search for **"Growatt Modbus: Universal Register Scanner"**
 3. Select your inverter from the **Device** dropdown (recommended), or enter connection parameters manually
-4. Click **"Perform Action"**
+4. Enable **Scan Full Vendor Blocks** when you want a discovery scan that includes reserved and undocumented words inside each defined vendor block
+5. Click **"Perform Action"**
 
 The scanner will:
 - Automatically detect your model (if VPP 2.01 supported)
-- Scan all register ranges (0-124, 125-249, 1000-1124, 3000-3249)
+- Scan all configured register ranges
+- With **Scan Full Vendor Blocks**, scan complete vendor-defined blocks, including reserved words
 - Show detection confidence rating (High/Medium/Low)
 - Export results to CSV file
+
+### Standard scan versus full vendor-block scan
+
+The standard scan uses the established semantic ranges and is faster. Enable **Scan Full
+Vendor Blocks** for protocol discovery or when looking for new, undocumented registers. The
+full mode preserves the vendor block boundaries and scans every address in them, including
+words labelled `Reserved`, `Safety Information`, or `raw`. For VPP V2.01 this includes:
+
+* Holding: `H30000–H30499`, `H30500–H30999`, and `H32000–H32099`
+* Input: `I875–I999`, `I1125–I1249`, `I31000–I31299`, `I31300–I31399`, `I31400–I31499`, and `I31500–I31599`
+
+The **Block Size** setting still controls the Modbus request chunks within those ranges; it
+does not remove any registers from the scan. **OffGrid Mode** remains a separate safety mode
+and never scans VPP ranges.
 
 ### Step 3: Check Results
 

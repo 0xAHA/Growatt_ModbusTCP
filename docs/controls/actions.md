@@ -244,6 +244,7 @@ data:
   port: 502
   slave_id: 1
   notify: true
+  scan_full_vendor_blocks: true  # Include reserved/undocumented words in vendor blocks
 ```
 
 If your gateway cannot serve large blocks — LoRa bridges especially — add `block_size: 1`.
