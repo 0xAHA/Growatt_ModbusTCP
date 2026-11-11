@@ -1,6 +1,9 @@
 {
   "domain": "growatt_modbus",
   "name": "Growatt Modbus",
+  "categories": [
+    "energy.solar_batteries"
+  ],
   "codeowners": [
     "@0xAHA"
   ],
