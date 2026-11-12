@@ -34,6 +34,8 @@ from .const import (
     hybrid_grid_connection_status,
     offgrid_grid_connection_status,
     PROFILE_STATUS_MAP,
+    VPP_CONTROL_STATES,
+    vpp_control_state_from_registers,
 )
 from .coordinator import GrowattModbusCoordinator
 from .entity import GrowattEntity
@@ -1632,6 +1634,12 @@ async def async_setup_entry(
     if coordinator.modbus_client.is_clock_readable:
         entities.append(GrowattInverterClockSensor(coordinator, config_entry))
 
+    # Also not register-driven: one state derived from three VPP registers (#481). Offered
+    # wherever the profile maps all three, which is where the integration reads them.
+    holding = coordinator.modbus_client.register_map.get("holding_registers", {})
+    if all(register in holding for register in (30100, 30407, 30409)):
+        entities.append(GrowattVppControlStateSensor(coordinator, config_entry))
+
     _LOGGER.info("Created %d sensors for %s", len(entities), inverter_series)
     async_add_entities(entities)
 
@@ -1704,6 +1712,44 @@ async def async_setup_entry(
 
         _remove_listener = coordinator.async_add_listener(_async_check_deferred_sensors)
         config_entry.async_on_unload(_remove_listener_once)
+
+
+class GrowattVppControlStateSensor(GrowattEntity, SensorEntity):
+    """Whether, and how, the inverter is under VPP remote control (#481).
+
+    Mode (VPP) is the command surface, and a select cannot show a state that is not one of
+    its options, so with no session running it reads `unknown`. Monitoring flagged that as
+    a fault. This is the read-only counterpart: every state comes from registers already
+    polled (see vpp_control_state_from_registers), so it adds no reads and never falls back
+    to a remembered command.
+    """
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = VPP_CONTROL_STATES
+    _attr_icon = "mdi:remote"
+    _attr_translation_key = "vpp_control_state"
+
+    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
+        """Initialise the VPP control state sensor."""
+        super().__init__(
+            coordinator,
+            config_entry,
+            unique_key="vpp_control_state",
+            device_type=get_device_type_for_sensor("vpp_control_state"),
+        )
+
+    @property
+    def available(self) -> bool:
+        """Unavailable when the registers were not read, never a guessed state."""
+        return (
+            self.coordinator.last_update_success
+            and self.coordinator.is_online
+            and vpp_control_state_from_registers(self.coordinator.data) is not None
+        )
+
+    @property
+    def native_value(self) -> str | None:
+        return vpp_control_state_from_registers(self.coordinator.data)
 
 
 class GrowattInverterClockSensor(GrowattEntity, SensorEntity):

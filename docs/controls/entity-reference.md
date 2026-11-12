@@ -437,6 +437,26 @@ actual charge/discharge power, but it is only updated while remote or time-segme
 is running and keeps its last value afterwards, so it cannot tell you that control has
 ended.
 
+**Sensor:** VPP Control State. It is the read-only state to watch, where Mode (VPP) is the
+command. It is worked out from registers already polled each poll: Control Authority (30100),
+Remote Power Control (30407) and the sign of the setpoint (30409). It adds no reads
+([#481](https://github.com/0xAHA/Growatt_ModbusTCP/issues/481)).
+
+| State | 30100 | 30407 | 30409 | Meaning |
+|-------|-------|-------|-------|---------|
+| Charge | 1 | 1 | > 0 | Remote control commanding a charge |
+| Discharge | 1 | 1 | < 0 | Remote control commanding a discharge |
+| Armed, nothing commanded | 1 | 1 | 0 | Armed with no setpoint, which is what a half-applied arming sequence leaves |
+| Authority on, remote control off | 1 | 0 | any | The schedule branch, which is how Hold runs, or VPP standby. The schedule is not polled, so this does not say which |
+| Remote control on, authority off | 0 | 1 | any | The transient inside the WIT stop sequence. Left standing, it is the combination that put a MID into the wrong mode ([#480](https://github.com/0xAHA/Growatt_ModbusTCP/issues/480)) |
+| Not under remote control | 0 | 0 | any | Released |
+
+It is unavailable when either register block missed the poll, never a guessed state. It
+reports what the registers say, not what the inverter is doing: after a 30408 window runs
+out, the registers stay set (see below), so it still shows Charge or Discharge. Also created
+on the MOD 6000-15000TL3-XH, SPH V2.01 and MIN TL-XH2 profiles, which map the same
+registers.
+
 **30408 is a countdown, not a maximum.** Per VPP V2.05 (appendix 3.3.3), once the window
 runs out the inverter drops to self-consumption — Load First unless 30476 says otherwise —
 while Control Authority, Remote Power Control and the setpoint all still read as set, with
@@ -574,7 +594,8 @@ MOD TL3-XH **does** support VPP remote power control — this was measured on ha
 ([#373](https://github.com/0xAHA/Growatt_ModbusTCP/issues/373)) — but the controls are not
 exposed for writing yet. The state is available as disabled-by-default diagnostic entities:
 VPP Control Authority (30100), VPP Remote Power Control (30407), VPP Commanded Power
-(30409) and VPP Last Setpoint (30474).
+(30409) and VPP Last Setpoint (30474). VPP Control State combines the first three into one
+state; see the [WIT section](#wit-commercial-hybrid-inverters) for its states.
 
 !!! danger "Why writing is not exposed"
     **The commanded power is a target, not a limit.** At 100 % with insufficient solar, the

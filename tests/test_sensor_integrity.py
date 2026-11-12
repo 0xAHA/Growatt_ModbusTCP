@@ -39,6 +39,9 @@ KNOWN_MAP_WITHOUT_DEF: frozenset = frozenset({
     # GrowattData field, and this one reads the clock registers directly through
     # GrowattInverterClockSensor in sensor.py. It still needs a device assignment (#393).
     "inverter_clock",
+    # VPP Control State: derived from 30100/30407/30409 by GrowattVppControlStateSensor,
+    # not a GrowattData field, so it has no SENSOR_DEFINITIONS entry either (#481).
+    "vpp_control_state",
 })
 
 

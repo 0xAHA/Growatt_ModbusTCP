@@ -1105,6 +1105,63 @@ def vpp_mode_from_registers(data) -> "str | None":
     return None
 
 
+# States of the VPP Control State sensor, in the order they are documented.
+VPP_CONTROL_STATES = [
+    'charge',
+    'discharge',
+    'armed_idle',
+    'authority_only',
+    'remote_without_authority',
+    'released',
+]
+
+
+def vpp_control_state_from_registers(data) -> "str | None":
+    """What the polled VPP registers say about remote control, as one state (#481).
+
+    Mode (VPP) is a command surface and can only show modes that can be chosen, so with no
+    session running it has nothing true to show and reads `unknown`. This is the readout
+    to watch instead, and it never guesses: every state is a combination of registers
+    already read each poll - 30100 (control authority), 30407 (remote power control) and
+    the sign of 30409 (setpoint). Nothing extra is polled.
+
+    - charge / discharge: authority and remote control on, setpoint positive / negative.
+    - armed_idle: both on with a setpoint of 0. Armed but not commanding anything, which
+      is what a half-applied arming sequence leaves behind.
+    - authority_only: authority on, remote control off. The schedule branch (30411+),
+      which is how Hold runs, or VPP standby. The schedule is not polled, so this state
+      does not say which.
+    - remote_without_authority: remote control on, authority off. The transient inside
+      the WIT stop sequence, and the combination that put a MID into a wrong mode when
+      left standing (#480).
+    - released: both off. Not under remote control.
+
+    None (unavailable) when either block missed this poll, or a register holds a value
+    other than 0 or 1.
+    """
+    if data is None:
+        return None
+    if not (getattr(data, 'vpp_control_authority_available', False)
+            and getattr(data, 'vpp_remote_power_available', False)):
+        return None
+    authority = getattr(data, 'control_authority', None)
+    remote = getattr(data, 'remote_power_control_enable', None)
+    if authority not in (0, 1) or remote not in (0, 1):
+        return None
+    if authority == 1 and remote == 1:
+        setpoint = getattr(data, 'remote_charge_and_discharge_power', 0) or 0
+        if setpoint > 0:
+            return 'charge'
+        if setpoint < 0:
+            return 'discharge'
+        return 'armed_idle'
+    if authority == 1:
+        return 'authority_only'
+    if remote == 1:
+        return 'remote_without_authority'
+    return 'released'
+
+
 VPP_CONTROL_AVAILABILITY_FLAG = {
     'control_authority': 'vpp_control_authority_available',               # 30100
     'vpp_export_limit_enable': 'vpp_export_limit_available',              # 30200
@@ -1143,6 +1200,8 @@ SENSOR_DEVICE_MAP = {
         # Inverter RTC. Not register-driven like the rest - see sensor.py - but it still
         # needs a device assignment, and it belongs with the sync button on the inverter.
         'inverter_clock',
+        # VPP Control State, derived from 30100/30407/30409 - see sensor.py (#481).
+        'vpp_control_state',
         'inverter_temp', 'ipm_temp', 'boost_temp', 'dcdc_temp',
         'battery_derating_mode',  # Battery-related status on inverter
         # SPF Off-Grid fan speeds

@@ -28,6 +28,8 @@ COMPONENT = Path(__file__).parent.parent / "custom_components" / "growatt_modbus
 STANDALONE_SENSORS = {
     # Reads the RTC registers directly via GrowattInverterClockSensor (#393)
     "inverter_clock",
+    # Derived from 30100/30407/30409 by GrowattVppControlStateSensor (#481)
+    "vpp_control_state",
 }
 
 

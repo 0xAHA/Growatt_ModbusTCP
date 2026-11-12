@@ -720,6 +720,17 @@
       "inverter_clock": {
         "name": "Inverter Clock"
       },
+      "vpp_control_state": {
+        "name": "VPP Control State",
+        "state": {
+          "charge": "Charge",
+          "discharge": "Discharge",
+          "armed_idle": "Armed, nothing commanded",
+          "authority_only": "Authority on, remote control off",
+          "remote_without_authority": "Remote control on, authority off",
+          "released": "Not under remote control"
+        }
+      },
       "ct_grid_import_l1": {
         "name": "CT Grid Import L1"
       },

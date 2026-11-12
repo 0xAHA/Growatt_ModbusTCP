@@ -198,6 +198,11 @@ Two limits remain, and both matter when writing automations:
   v2.0.7 it only remembered the last command and fell back to Hold after a restart, even with
   a charge running ([#481](https://github.com/0xAHA/Growatt_ModbusTCP/issues/481)). For
   automations, the sign of Remote Charge/Discharge Power (30409) is the direct check.
+- **Unknown on Mode (VPP) is expected when no remote session is running.** A select can only
+  show one of its options, and with nothing commanded there is no true one to show.
+  Monitoring and automations should watch the read-only **VPP Control State** sensor
+  instead, which always has a state while the registers are being read (see the
+  [entity reference](entity-reference.md#wit-commercial-hybrid-inverters)).
 
 ---
 
@@ -361,6 +366,13 @@ action:
 > until VPP was re-armed ([#480](https://github.com/0xAHA/Growatt_ModbusTCP/issues/480)). On
 > MOD/MID, clear 30407 first, as the integration's own release does, and do not stop after
 > clearing 30100 alone.
+
+> **Watch the gap between the two steps.** For those 35 seconds, authority is off and remote
+> control is still on. If the second write fails, the inverter stays in that state, and a
+> watchdog that only checks Control Authority will not notice. Check for it directly:
+> VPP Control State reads *Remote control on, authority off*. Clear 30407 if it persists.
+> Credit: [@Wojak129](https://github.com/Wojak129)
+> ([#481](https://github.com/0xAHA/Growatt_ModbusTCP/issues/481)).
 
 > **Why two steps?** `control_authority` (register 30100) is the master VPP compliance switch. Disabling it immediately drops the inverter out of externally-commanded state and resumes local battery self-consumption logic — even before 30407 is cleared. Disabling 30407 afterwards cleanly resets the remote control registers. Skipping step 1 and only clearing 30407 can leave the inverter in a brief intermediate state with undefined battery behaviour. Credit: [@Wojak129](https://github.com/Wojak129) — confirmed on WIT 15KTL3 hardware.
 
