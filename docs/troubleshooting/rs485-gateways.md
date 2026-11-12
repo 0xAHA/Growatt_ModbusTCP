@@ -76,6 +76,8 @@ Running on the maintainer's own MIN 10000TL-X without issue, and the reference s
 
 Set the work mode so it performs **Modbus TCP to RTU** conversion rather than plain transparent passthrough — see the section above for why that is the one setting that decides whether a gateway can work at all.
 
+The port in the integration must match the EW11's socket port, which is not necessarily 502. On an SPH3600 the connection only worked on **8899** ([#499](https://github.com/0xAHA/Growatt_ModbusTCP/issues/499)), and that reporter's full EW11 settings are in their [setup write-up](https://github.com/Vict20/Growatt-SPH-on-HA-with-Predbat-and-Modbus-integration/blob/main/docs/ew11-setup.md).
+
 One EW11A report ([#309](https://github.com/0xAHA/Growatt_ModbusTCP/issues/309)) showed all entities reading zero, but the same symptom followed the reporter onto a Waveshare adapter, so the gateway was not the cause. They resolved it with a Growatt WiLan-X2.
 
 !!! tip "It can hang after its settings are changed — reboot it"

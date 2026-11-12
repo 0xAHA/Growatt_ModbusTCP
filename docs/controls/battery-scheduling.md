@@ -451,6 +451,16 @@ for.
 This is firmware behaviour rather than anything SPH-specific, so the same pattern should
 apply on other families that refuse overlapping enabled periods.
 
+The complete setup behind these results is published by @Vict20 as a
+[worked example](https://github.com/Vict20/Growatt-SPH-on-HA-with-Predbat-and-Modbus-integration)
+([#499](https://github.com/0xAHA/Growatt_ModbusTCP/issues/499)): an SPH3600 under full
+Predbat control on local Modbus, with the EW11 settings, the slot-writing automation, the
+register map for the extra TOU slots and a script that checks every write in the debug log.
+It is one UK SPH3600 on firmware RAAa919486 / ZCBa-0086. Its addresses for the extra slots
+match the integration's, which were confirmed on that inverter in
+[#484](https://github.com/0xAHA/Growatt_ModbusTCP/issues/484); other models and firmware
+may differ.
+
 !!! note "The inverter's SoC reserve is a separate protection"
     A discharge window does not run the battery flat. Discharge throttles to near zero as
     SoC approaches your configured reserve floor, whatever the schedule says — observed
