@@ -142,8 +142,8 @@ export_register_dump:
       selector:
         boolean:
     scan_storage:
-      name: Scan Storage Registers (1000-1124)
-      description: "Restrict scan to: battery/storage control registers (SPH, SPM, MIN battery models)."
+      name: Scan Storage Registers (1000-1249)
+      description: "Restrict scan to: storage blocks 1000-1124 and 1125-1249 (SPH, SPA, SPM, and MIN battery models)."
       required: false
       default: false
       selector:
@@ -156,22 +156,43 @@ export_register_dump:
       selector:
         boolean:
     scan_wit:
-      name: Scan WIT/WIS Battery Registers (8000-8124)
-      description: "Restrict scan to: battery registers specific to WIT and WIS commercial hybrid inverters."
+      name: Scan Extended/WIT Registers (875-999, 8000-8139)
+      description: "Restrict scan to: the 875-999 extended block and WIT/WIS battery registers 8000-8139."
       required: false
       default: false
       selector:
         boolean:
     scan_vpp_control:
-      name: Scan VPP Control Registers (30100-30499)
-      description: "Restrict scan to: VPP system, AC power, and battery control registers (MOD TL3-XH, MID-XH, VPP V2.01 inverters)."
+      name: Scan VPP Holding Blocks (30000-30999, 32000-32099)
+      description: "Restrict scan to: VPP holding ranges. Enable Full Vendor Blocks to include every reserved word in the defined blocks."
       required: false
       default: false
       selector:
         boolean:
     scan_vpp_data:
-      name: Scan VPP Data Registers (31000-31399)
-      description: "Restrict scan to: VPP protocol data registers for status, PV, grid, load, and battery cluster data."
+      name: Scan VPP Input Blocks (31000-31599)
+      description: "Restrict scan to: VPP input ranges for status, PV, grid, load, and battery information. Enable Full Vendor Blocks to include every reserved word in the defined blocks."
+      required: false
+      default: false
+      selector:
+        boolean:
+    scan_full_vendor_blocks:
+      name: Scan Full Vendor Blocks
+      description: "Read complete vendor-defined blocks, including reserved and undocumented words. This is recommended when looking for new registers; it increases scan time."
+      required: false
+      default: false
+      selector:
+        boolean:
+    scan_firmware_discovered:
+      name: Scan ZABA22 Firmware-Discovered Ranges
+      description: "Opt-in read-only scan of six FC03/FC04 windows recovered from the ZABA22 firmware dispatcher. These are candidates for live validation and may be unsupported on other firmware versions."
+      required: false
+      default: false
+      selector:
+        boolean:
+    scan_firmware_diagnostics:
+      name: Scan ZABA22 102-Register Diagnostics
+      description: "Opt-in read-only FC03 diagnostic scan. Sends exactly 102 registers for each of 100 ZABA22-derived diagnostic blocks and writes a separate CSV; no single-register fallback is used. Disabled by OffGrid Mode."
       required: false
       default: false
       selector:

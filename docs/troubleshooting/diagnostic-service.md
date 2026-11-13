@@ -42,13 +42,69 @@ If your inverter is not supported yet, see [Scanning an inverter that is not sup
 1. Go to **Settings** → **Tools** → **Actions**
 2. Search for **"Growatt Modbus: Universal Register Scanner"**
 3. Select your inverter from the **Device** dropdown (recommended), or enter connection parameters manually
-4. Click **"Perform Action"**
+4. Enable **Scan Full Vendor Blocks** when you want a discovery scan that includes reserved and undocumented words inside each defined vendor block
+5. Enable **Scan ZABA22 Firmware-Discovered Ranges** only for the firmware-derived candidate windows
+6. Click **"Perform Action"**
 
 The scanner will:
 - Automatically detect your model (if VPP 2.01 supported)
-- Scan all register ranges (0-124, 125-249, 1000-1124, 3000-3249)
+- Scan all configured register ranges
+- With **Scan Full Vendor Blocks**, scan complete vendor-defined blocks, including reserved words
 - Show detection confidence rating (High/Medium/Low)
 - Export results to CSV file
+
+### Standard scan versus full vendor-block scan
+
+The standard scan uses the established semantic ranges and is faster. Enable **Scan Full
+Vendor Blocks** for protocol discovery or when looking for new, undocumented registers. The
+full mode preserves the vendor block boundaries and scans every address in them, including
+words labelled `Reserved`, `Safety Information`, or `raw`. For VPP V2.01 this includes:
+
+* Legacy holding/input: `H/I875–H/I999` and `H/I1125–H/I1249`
+* WIT/WIS input: `I8000–I8139`
+* VPP holding: `H30000–H30499`, `H30500–H30999`, and `H32000–H32099`
+* VPP input: `I31000–I31299`, `I31300–I31399`, `I31400–I31499`, and `I31500–I31599`
+
+The legacy holding and input blocks are part of the standard range catalog as well;
+full mode additionally guarantees that all reserved words inside every defined block are scanned.
+
+The **Block Size** setting still controls the Modbus request chunks within those ranges; it
+does not remove any registers from the scan. **OffGrid Mode** remains a separate safety mode
+and never scans VPP ranges.
+
+### ZABA22 firmware-discovered ranges
+
+The optional firmware-discovered scan is read-only and covers candidate providers recovered
+from the ZABA22 ARM dispatcher. It does not assign semantic names to the values:
+
+* FC03 holding: `H5000–H5079`, `H5400–H7959`, `H10000–H10125`, `H40000–H41000`
+* FC04 input: `I4000–I4107`, `I5080–I5319`
+
+These ranges are evidence-derived from ZABA22 and are not guaranteed to respond on ZABA23 or
+other inverter/battery combinations. The scan records zeros, successful values, Modbus
+exceptions, and transport exceptions just like the existing ranges.
+
+### ZABA22 special FC03 diagnostics
+
+Enable **Scan ZABA22 102-Register Diagnostics** separately when the exact-count dispatcher
+should be exercised. It sends FC03 requests with `count=102` at these starts:
+`0x8000 + block_index * 102`, for block indices `0..99` (32768 through 42866).
+The route is selected by the combination of address and exact count, not by address alone.
+
+The diagnostic data is written to a separate `growatt_firmware_diagnostic_*.csv` file with
+the same Scan ID as the normal dump. It contains both one row per block with the original
+102-word JSON sequence and one row per word with block index, request address, offset, raw
+value, status, error, and timestamp. Modbus exceptions remain errors; a transport retry
+repeats the same 102-register request. No 125/25/1-register fallback is used.
+
+The ZABA22 reconstruction proves the dispatcher predicate, 102-word response shape, and
+the 100 block indices implied by the recovered stride and upper bound. It does not prove
+that ZABA23 or every hardware variant implements the same backing table.
+
+If a block read loses the TCP connection, the scanner closes and reconnects the scan client
+and retries that block once. A Modbus exception response is kept as evidence that the range
+may be unsupported and is not retried. For gateways that repeatedly reject large blocks,
+use a smaller **Block Size**.
 
 ### Step 3: Check Results
 

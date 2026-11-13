@@ -244,11 +244,26 @@ data:
   port: 502
   slave_id: 1
   notify: true
+  scan_full_vendor_blocks: true  # Include reserved/undocumented words in vendor blocks
 ```
 
 If your gateway cannot serve large blocks — LoRa bridges especially — add `block_size: 1`.
+The scanner retries a block once after a transport disconnect, then records the exception if
+the reconnect also fails.
 Since v1.7.1 the scanner detects that and drops to single reads on its own, but setting it
 explicitly is faster.
+
+For protocol discovery, `scan_full_vendor_blocks: true` also includes the holding-side
+875–999 and 1125–1249 blocks, WIT/WIS input 8000–8139, and the complete VPP blocks,
+including reserved words.
+
+Set `scan_firmware_discovered: true` to add the six read-only windows recovered from the
+ZABA22 firmware dispatcher. They are explicitly opt-in candidates for live validation and
+are labelled with their source in the exported metadata.
+
+Set `scan_firmware_diagnostics: true` separately to issue the exact-count FC03 diagnostic
+requests and create the companion diagnostic CSV. Both options are disabled by default and
+are skipped when `offgrid_mode: true`.
 
 ## Detect grid CT orientation
 
