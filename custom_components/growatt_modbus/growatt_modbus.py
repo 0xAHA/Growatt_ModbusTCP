@@ -16,9 +16,11 @@ Hardware Setup:
 - Set converter to 9600 baud, 8N1, no flow control
 """
 
+import os
 import time
 import logging
 import threading
+import weakref
 from datetime import datetime, timedelta
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -171,6 +173,17 @@ class ModbusWriteError(Exception):
         else:
             summary = f"Failed to {operation}: {error_message}"
         super().__init__(summary)
+
+
+class ModbusConnectionError(ModbusWriteError):
+    """Nothing was sent: the connection itself could not be opened (#501).
+
+    A subclass, so every existing `except ModbusWriteError` still catches it, while a caller
+    that adds its own advice can tell "the inverter refused" from "the inverter was never
+    asked".
+    """
+    def __init__(self, error_message: str):
+        super().__init__(0, [], error_message, operation="connect")
 
 
 def _format_modbus_error(result) -> str:
@@ -695,6 +708,66 @@ class GrowattData:
     # Device Info
     firmware_version: str = ""
     serial_number: str = ""
+
+
+class _SerialPortBus:
+    """The bus for one physical serial port, shared by every client on it (#501).
+
+    Several inverters on one RS485 adapter is an ordinary setup: one config entry per slave
+    ID, all naming the same device. Each entry used to get its own lock, so nothing stopped
+    entry 2 opening the port while entry 1 had it, and a serial port is exclusive - the
+    open failed with "Could not exclusively lock port". Polling hid it by retrying three
+    times; a service call does not retry, so it failed outright.
+
+    Sharing the lock makes the entries queue instead. That alone is not enough, because
+    pymodbus opens the port on any request and only the poll path ever closed it: a write
+    or a service read left the port open after it released the lock, and the next entry
+    to take the lock still could not open it. So when more than one client is on the port,
+    the outermost holder closes the port on its way out. A single-entry setup keeps the
+    old behaviour exactly.
+
+    This is not the serial hub reverted in v1.7.5. Nothing here opens the port; each
+    client still owns its own connection and only one of them has it open at a time.
+    """
+
+    def __init__(self) -> None:
+        self.lock = threading.RLock()
+        # Nesting depth of the current holder. Only touched with the lock held, so the
+        # holder's thread is the only one that can change it.
+        self.depth = 0
+        # Weak, so the short-lived clients the config flow builds do not make a
+        # single-entry port look shared for ever.
+        self.clients: "weakref.WeakSet" = weakref.WeakSet()
+
+    @property
+    def shared(self) -> bool:
+        return len(self.clients) > 1
+
+
+_SERIAL_PORT_BUSES: Dict[str, _SerialPortBus] = {}
+_SERIAL_PORT_BUSES_GUARD = threading.Lock()
+
+
+def _serial_port_key(device: str) -> str:
+    """One key per physical port, whatever name the entry uses for it.
+
+    /dev/serial/by-id/... and /dev/serial/by-path/... are symlinks to /dev/ttyUSBn, and
+    two entries naming the same adapter differently is a known way to collide (#384).
+    """
+    try:
+        return os.path.realpath(device)
+    except (OSError, ValueError, TypeError):
+        return str(device)
+
+
+def _serial_port_bus(device: str) -> _SerialPortBus:
+    key = _serial_port_key(device)
+    with _SERIAL_PORT_BUSES_GUARD:
+        bus = _SERIAL_PORT_BUSES.get(key)
+        if bus is None:
+            bus = _SERIAL_PORT_BUSES[key] = _SerialPortBus()
+        return bus
+
 
 def _describe_socket(client) -> str:
     """The OS-level identity of a pymodbus client's socket, for #426.
@@ -1529,7 +1602,17 @@ class GrowattModbus:
         # This is NOT the serial shared connection that was reverted in v1.7.5. Nothing
         # here opens the port - the client still owns its own socket. It only stops two
         # callers using that socket at once.
-        self._local_bus_lock = threading.RLock()
+        #
+        # For serial the lock belongs to the PORT, not the client, so several entries on one
+        # adapter queue behind each other rather than fighting over an exclusive open (#501).
+        # See _SerialPortBus.
+        self._serial_bus: Optional[_SerialPortBus] = None
+        if connection_type == 'serial' and shared_conn is None:
+            self._serial_bus = _serial_port_bus(device)
+            self._serial_bus.clients.add(self)
+            self._local_bus_lock = self._serial_bus.lock
+        else:
+            self._local_bus_lock = threading.RLock()
 
         # Battery temperature scale detection (#397). Latched per connection so the
         # decision cannot flap between polls as the temperature moves.
@@ -4120,10 +4203,38 @@ class GrowattModbus:
                 0, [], f"Modbus bus busy (lock timeout after {SHARED_LOCK_TIMEOUT}s)",
                 operation=what,
             )
+        self._enter_serial_bus()
         try:
             yield
         finally:
-            lock.release()
+            try:
+                self._leave_serial_bus()
+            finally:
+                lock.release()
+
+    def _enter_serial_bus(self) -> None:
+        """Count one more level of holding the port's bus. Call with the lock held."""
+        if self._serial_bus is not None:
+            self._serial_bus.depth += 1
+
+    def _leave_serial_bus(self) -> None:
+        """Give the port back when the outermost holder on a shared port lets go (#501).
+
+        Call with the lock still held. pymodbus opens the port on any request and nothing
+        but the poll closes it, so without this the next entry to take the lock finds the
+        port still open in another entry's client and cannot open it.
+        """
+        bus = self._serial_bus
+        if bus is None:
+            return
+        bus.depth -= 1
+        if bus.depth > 0 or not bus.shared or self.client is None:
+            return
+        try:
+            self.client.close()
+        except Exception as err:  # noqa: BLE001 - closing must never fail the caller
+            logger.debug("[%s] closing the shared serial port raised: %s",
+                         self.connection_id, err)
 
     @contextmanager
     def write_batch(self, what: str = "write sequence"):
@@ -4174,6 +4285,7 @@ class GrowattModbus:
             raise ModbusWriteError(
                 0, [], f"Modbus bus busy (lock timeout on {what})"
             )
+        self._enter_serial_bus()
         try:
             logger.debug("[BATCH] Holding %s bus for %s", scope, what)
             yield
@@ -4181,7 +4293,10 @@ class GrowattModbus:
             # Released even if a write inside raised. A leaked lock would stall every
             # subsequent poll on this connection — a worse failure than the one this
             # method exists to prevent.
-            lock.release()
+            try:
+                self._leave_serial_bus()
+            finally:
+                lock.release()
             logger.debug("[BATCH] Released %s bus after %s", scope, what)
 
     def write_register(self, register: int, value: int,
@@ -4726,6 +4841,20 @@ class GrowattModbus:
             )
             time.sleep(wait)
             when = when + timedelta(seconds=wait)
+
+        # Find out whether the inverter can be reached at all before writing anything. A
+        # write that never left the adapter returns False exactly like one the inverter
+        # refused, and the year's refusal message below then blames the model's firmware.
+        # That sent one reporter comparing firmware on two identical inverters when the
+        # port simply could not be opened (#501).
+        if self._shared_conn is None:
+            with self._bus("connect"):
+                reachable = self.connect()
+            if not reachable:
+                raise ModbusConnectionError(
+                    "could not open the connection to the inverter (see the log line "
+                    "above), so nothing was sent and the clock is exactly as it was"
+                )
 
         # Year first, in whichever form this hardware family takes. Off-grid wants the
         # full four digits; everything else wants the offset from 2000 (#443). Seconds is

@@ -76,6 +76,7 @@ def test_xh2_sets_its_clock_with_one_six_register_write():
     client.write_registers = lambda reg, values: multi.append((reg, list(values))) or True
     client.write_single_register_any_fc = lambda reg, value: single.append((reg, value)) or True
     client._verify_clock_write = lambda when: None
+    client.connect = lambda: True  # the write checks the port opens first (#501)
 
     assert client.is_clock_writable is True
     assert client.write_inverter_time(datetime(2026, 10, 2, 15, 34, 22)) is True
@@ -91,6 +92,7 @@ def test_v139_profiles_still_write_the_clock_field_by_field():
     client.write_registers = lambda reg, values: multi.append(reg) or True
     client.write_single_register_any_fc = lambda reg, value: single.append(reg) or True
     client._verify_clock_write = lambda when: None
+    client.connect = lambda: True  # the write checks the port opens first (#501)
     import growatt_under_test.growatt_modbus as gm
     gm.time.sleep, _sleep = (lambda s: None), gm.time.sleep
     try:

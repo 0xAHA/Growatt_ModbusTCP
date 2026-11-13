@@ -77,6 +77,8 @@ def _client(offgrid=False, registers=None):
     client.read_holding_registers = fake.read_holding_registers
     client.write_registers = fake.write_registers
     client.write_single_register_any_fc = fake.write_single
+    # The write checks the connection opens before sending anything (#501).
+    client.connect = lambda: True
     client._fake = fake
     return client
 

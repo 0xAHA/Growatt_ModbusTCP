@@ -263,9 +263,12 @@ integration sharing one bus.
 
 If you run several inverters as separate integration entries over **one** USB-RS485 adapter or one gateway, they share a single physical bus. Only one master can be talking at a time.
 
-The integration handles this for you: every entry pointing at the same device path (or the same host:port) shares one connection and one lock, so their reads are queued rather than interleaved. Nothing to configure.
+The integration handles this for you, so there is nothing to configure:
 
-**Serial setups need v1.7.0 or later for this.** Before that, only TCP entries were coordinated — each serial entry opened its own client on the same adapter and paced only itself, which produced random read failures on *all* the inverters sharing that bus. If you have two entries on one adapter and see unexplained dropouts, this is the first thing to rule out.
+- **TCP:** every entry on the same host:port shares one connection and one lock, so their reads queue rather than interleave.
+- **Serial:** every entry on the same adapter shares one lock, even if the entries name it differently (`/dev/ttyUSBn`, `by-id` or `by-path`). Each entry still opens the port for itself. When it has finished it closes the port again, so the next entry can open it.
+
+**Serial setups need v2.0.7-b9 or later for this.** Before that, each serial entry locked only itself. Polling usually got through because it retries. Actions such as **Sync Inverter Time** and **Get Register Data** don't retry, so they could fail for every entry but one with `Could not open the serial port` ([#501](https://github.com/0xAHA/Growatt_ModbusTCP/issues/501)). If you have two entries on one adapter and see that, update first.
 
 ### WIT: every unit answers on address 1, whatever ShineTools says
 
@@ -294,13 +297,13 @@ The most common cheap USB-RS485 adapters use the **CH340** chip (USB vendor `1a8
 - Their `/dev/serial/by-id/` names do not distinguish them — you may see one entry, or two that differ only by an index that can move.
 - Their `/dev/ttyUSBn` numbers are assigned in enumeration order and **swap between reboots**.
 
-So it is entirely possible to configure two entries that both point at the *same* adapter under different names, leaving the second adapter unused. The symptom is one entry working and the other failing with:
+So it is entirely possible to configure two entries that both point at the *same* adapter under different names, leaving the second adapter unused. On versions before v2.0.7-b9 the symptom is one entry working and the other failing with:
 
 ```
 [Errno 11] Could not exclusively lock port /dev/ttyUSB3: Resource temporarily unavailable
 ```
 
-A serial port can only be held by one owner. If you see that, run:
+From v2.0.7-b9 the entries recognise the shared port and take turns, so that error no longer appears. Instead, the inverter on the unused adapter never answers, and its entry stays unavailable. To check, run:
 
 ```bash
 ls -l /dev/serial/by-id/ /dev/serial/by-path/

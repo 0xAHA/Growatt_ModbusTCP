@@ -879,6 +879,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             # Raised as HomeAssistantError so the message reaches the UI. A bare exception
             # from a service handler shows only "Unknown error" and sends the user to the
             # log to find out what happened.
+            from .growatt_modbus import ModbusConnectionError
+            if isinstance(err, ModbusConnectionError):
+                # Nothing reached the inverter, so advice about which registers this model
+                # accepts would point at the wrong problem (#501).
+                raise HomeAssistantError(
+                    f"Could not set the inverter clock: {err}."
+                ) from err
             raise HomeAssistantError(
                 f"Could not set the inverter clock: {err}. The clock registers (45-51) were "
                 f"tried as one block and then individually. If your model does not accept "
@@ -2449,6 +2456,27 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         except Exception as err:
             _LOGGER.debug("Hub reset before scan failed (continuing): %s", err)
 
+    # Serial has no hub, but a serial port is exclusive: the scanner's own client cannot open
+    # it while any entry's client holds it. Take the port's bus, which every entry on this
+    # adapter queues behind, and close their clients so the port is free (#501). Each entry
+    # reopens on its next poll.
+    _serial_bus = None
+    if connection_type != "tcp" and device:
+        from .growatt_modbus import _serial_port_bus
+        _serial_bus = _serial_port_bus(device)
+        if not _serial_bus.lock.acquire(timeout=60):
+            _serial_bus = None
+            result["error"] = (
+                f"Could not pause polling on {device} within 60s - a poll appears to be "
+                f"stuck. Reload the integration and retry the scan."
+            )
+            return result
+        for _entry_client in list(_serial_bus.clients):
+            try:
+                _entry_client.disconnect()
+            except Exception as err:  # noqa: BLE001 - a failed close must not stop the scan
+                _LOGGER.debug("Closing an entry's serial client before scan failed: %s", err)
+
     try:
         # Connect with appropriate client type
         if connection_type == "tcp":
@@ -3223,3 +3251,10 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                 _LOGGER.debug("Hub reset after scan failed (non-critical): %s", err)
             _hub._lock.release()
             _LOGGER.info("Resumed coordinator polling on %s:%s after scan", host, port)
+        if _serial_bus is not None:
+            # The scanner's own client must be closed before the entries can reopen the port.
+            try:
+                client.close()
+            except Exception as err:  # noqa: BLE001 - includes client never having been built
+                _LOGGER.debug("Closing the scanner's serial client failed: %s", err)
+            _serial_bus.lock.release()
