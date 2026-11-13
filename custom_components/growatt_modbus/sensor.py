@@ -1010,6 +1010,7 @@ SENSOR_DEFINITIONS = {
             "attr": f"battery{n}_{field}" + ("_low" if field == "current" else ""),
             "condition": (lambda nn: lambda data: hasattr(data, f"battery{nn}_voltage"))(n),
             "disabled_by_default": True,
+            "keep_once_seen": True,
         }
         for n in (2, 3, 4)
         for field, label, icon, extra in (
@@ -1050,6 +1051,7 @@ SENSOR_DEFINITIONS = {
         "attr": "battery1_charge_energy_today",
         "condition": lambda data: hasattr(data, "battery2_voltage"),
         "disabled_by_default": True,
+        "keep_once_seen": True,
     },
     "battery1_charge_energy_total": {
         "name": "Battery 1 Charge Total",
@@ -1060,6 +1062,7 @@ SENSOR_DEFINITIONS = {
         "attr": "battery1_charge_energy_total",
         "condition": lambda data: hasattr(data, "battery2_voltage"),
         "disabled_by_default": True,
+        "keep_once_seen": True,
     },
     "battery1_discharge_energy_today": {
         "name": "Battery 1 Discharge Today",
@@ -1070,6 +1073,7 @@ SENSOR_DEFINITIONS = {
         "attr": "battery1_discharge_energy_today",
         "condition": lambda data: hasattr(data, "battery2_voltage"),
         "disabled_by_default": True,
+        "keep_once_seen": True,
     },
     "battery1_discharge_energy_total": {
         "name": "Battery 1 Discharge Total",
@@ -1080,6 +1084,7 @@ SENSOR_DEFINITIONS = {
         "attr": "battery1_discharge_energy_total",
         "condition": lambda data: hasattr(data, "battery2_voltage"),
         "disabled_by_default": True,
+        "keep_once_seen": True,
     },
     # Battery 2's full-charge capacity (31319-31320, #482); battery 1's is bms_gauge_fcc.
     # It drops by one module's rated capacity for each module asleep or offline, and slowly
@@ -1095,6 +1100,7 @@ SENSOR_DEFINITIONS = {
         "entity_category": EntityCategory.DIAGNOSTIC,
         "condition": lambda data: hasattr(data, "battery2_full_charge_capacity"),
         "disabled_by_default": True,
+        "keep_once_seen": True,
     },
 
     "ac_charge_energy_today": {
@@ -1600,16 +1606,32 @@ async def async_setup_entry(
     )
     
     entities = []
-    
+
+    # Pack sensors this system has had before (#500). Battery 2's sensors are gated on the
+    # pack reporting a voltage, and setup always sees the empty placeholder, so they wait
+    # for the first poll with the pack awake. A pack in deep standby reads 0 V, and a
+    # restart or reload during it left them uncreated - "no longer provided" - until the
+    # pack woke. Having been registered for this entry is the evidence a second pack
+    # exists, so those are created straight away and show unavailable while it sleeps.
+    from homeassistant.helpers import entity_registry as er
+    _registry = er.async_get(hass)
+    _seen_before = {
+        sensor_key
+        for sensor_key, sensor_def in SENSOR_DEFINITIONS.items()
+        if sensor_def.get("keep_once_seen")
+        and _registry.async_get_entity_id(
+            "sensor", DOMAIN, f"{config_entry.entry_id}_{sensor_key}")
+    }
+
     # Create sensors based on available data and conditions
     for sensor_key, sensor_def in SENSOR_DEFINITIONS.items():
         # Check if sensor is supported by this inverter profile
         if sensor_key not in available_sensors:
             _LOGGER.debug("Skipping sensor %s - not in profile %s", sensor_key, inverter_series)
             continue
-        
+
         # Check if sensor should be created based on condition
-        if "condition" in sensor_def:
+        if "condition" in sensor_def and sensor_key not in _seen_before:
             try:
                 if not sensor_def["condition"](coordinator.data):
                     _LOGGER.debug("Skipping sensor %s - condition not met", sensor_key)
@@ -2108,8 +2130,21 @@ class GrowattModbusSensor(GrowattEntity, SensorEntity):
         flatline data from being recorded as real measurements. When the inverter is
         online but dormant (responds with zeros), available stays True and the
         coordinator's retention logic protects total_increasing sensors.
+
+        A second pack in deep standby reads 0 V and the inverter stops reporting it, so
+        its sensors are unavailable then rather than unknown, and before the first real
+        poll, rather than showing the placeholder (#500).
         """
-        return self.coordinator.last_update_success and self.coordinator.is_online
+        if not (self.coordinator.last_update_success and self.coordinator.is_online):
+            return False
+        if self._sensor_def.get("keep_once_seen"):
+            if not self.coordinator.has_real_data:
+                return False
+            try:
+                return bool(self._sensor_def["condition"](self.coordinator.data))
+            except (AttributeError, TypeError):
+                return False
+        return True
 
     @property
     def native_value(self) -> Any:

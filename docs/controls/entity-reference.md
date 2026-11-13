@@ -230,6 +230,13 @@ one pack never creates the entity in the first place (confirmed via a debug log 
 second cluster's block reading successfully while `battery2_*` remained entirely absent from
 both the entity registry and the coordinator data — [#454](https://github.com/0xAHA/Growatt_ModbusTCP/issues/454)).
 
+**When a second pack goes into deep standby**, its voltage register reads 0 and the
+inverter stops reporting it. From v2.0.7-b9 its sensors show **unavailable** until it wakes,
+and they stay in place across a restart or reload. Before that, a restart while the pack
+slept left them "no longer provided" until it woke ([#500](https://github.com/0xAHA/Growatt_ModbusTCP/issues/500)).
+Once Battery 2 sensors have been created for an entry they keep being created. If the
+second pack is removed for good, disable them in the entity settings.
+
 **These are not summed into the main Battery Power/SOC/etc. sensors.** Two packs of
 different capacity don't average or add meaningfully at the SOC/voltage level, so each
 pack's figures stand on their own — add Battery Power and Battery 2 Power yourself in a
