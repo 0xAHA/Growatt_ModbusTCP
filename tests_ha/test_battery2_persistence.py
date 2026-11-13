@@ -38,12 +38,11 @@ def _mod_entry() -> MockConfigEntry:
     )
 
 
-def _register(hass: HomeAssistant, entry: MockConfigEntry, key: str) -> str:
+def _register(hass: HomeAssistant, entry: MockConfigEntry, key: str) -> None:
     """What a previous session with pack 2 awake would have left in the registry."""
-    registry = er.async_get(hass)
-    return registry.async_get_or_create(
+    er.async_get(hass).async_get_or_create(
         "sensor", DOMAIN, f"{entry.entry_id}_{key}", config_entry=entry,
-    ).entity_id
+    )
 
 
 async def test_a_pack_seen_before_is_created_while_it_sleeps(
@@ -51,12 +50,16 @@ async def test_a_pack_seen_before_is_created_while_it_sleeps(
 ):
     entry = _mod_entry()
     entry.add_to_hass(hass)
-    entity_id = _register(hass, entry, "battery2_soc")
+    _register(hass, entry, "battery2_soc")
 
     # Already added above (the registry entry needs it), so not via setup_entry().
     assert await hass.config_entries.async_setup(entry.entry_id), entry.reason
     await hass.async_block_till_done()
 
+    # Looked up again: setup's entity-ID migration renames the registered ID.
+    entity_id = er.async_get(hass).async_get_entity_id(
+        "sensor", DOMAIN, f"{entry.entry_id}_battery2_soc")
+    assert entity_id is not None, "the registry entry was removed"
     state = hass.states.get(entity_id)
     assert state is not None, "Battery 2 SOC was not created"
     assert not state.attributes.get("restored"), (
