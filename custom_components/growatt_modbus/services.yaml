@@ -190,6 +190,13 @@ export_register_dump:
       default: false
       selector:
         boolean:
+    scan_firmware_diagnostics:
+      name: Scan ZABA22 102-Register Diagnostics
+      description: "Opt-in read-only FC03 diagnostic scan. Sends exactly 102 registers for each of 100 ZABA22-derived diagnostic blocks and writes a separate CSV; no single-register fallback is used. Disabled by OffGrid Mode."
+      required: false
+      default: false
+      selector:
+        boolean:
     block_size:
       name: Block Size
       description: "Number of registers read per Modbus request. Leave unset to inherit the block size configured for the selected device, which is usually what you want. 125 is fastest; smaller values suit gateways or inverters that reject large reads."

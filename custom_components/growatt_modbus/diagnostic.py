@@ -240,6 +240,18 @@ FIRMWARE_DISCOVERED_REGISTER_COUNT = sum(
     range_config["count"] for range_config in FIRMWARE_DISCOVERED_SCAN_RANGES
 )
 
+# ZABA22 FC03 diagnostic dispatch: exact count 0x66 selects this route for 100
+# consecutive blocks starting at 0x8000. The reconstructed code proves the stride and
+# upper index, but not the runtime contents or semantic meaning of each record.
+FIRMWARE_DIAGNOSTIC_REQUEST_COUNT = 102
+FIRMWARE_DIAGNOSTIC_BLOCK_COUNT = 100
+FIRMWARE_DIAGNOSTIC_START = 0x8000
+FIRMWARE_DIAGNOSTIC_DISPATCH_END = FIRMWARE_DIAGNOSTIC_START + 0x2773 - 1
+FIRMWARE_DIAGNOSTIC_BLOCK_STARTS = tuple(
+    FIRMWARE_DIAGNOSTIC_START + index * FIRMWARE_DIAGNOSTIC_REQUEST_COUNT
+    for index in range(FIRMWARE_DIAGNOSTIC_BLOCK_COUNT)
+)
+
 
 def _deduplicate_scan_ranges(ranges: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Return ranges with no duplicate address requests per Modbus function."""
@@ -294,6 +306,22 @@ def _select_scan_ranges(
         selected.extend(FIRMWARE_DISCOVERED_SCAN_RANGES)
     return _deduplicate_scan_ranges(selected)
 
+
+def _safe_standard_chunk_count(
+    start: int,
+    count: int,
+    remaining: int,
+    register_type: str = "holding",
+) -> int:
+    """Keep normal FC03 reads away from ZABA22's exact-count diagnostic dispatch."""
+    if (
+        register_type == "holding"
+        and count == FIRMWARE_DIAGNOSTIC_REQUEST_COUNT
+        and FIRMWARE_DIAGNOSTIC_START <= start <= FIRMWARE_DIAGNOSTIC_DISPATCH_END
+    ):
+        return min(101, remaining)
+    return count
+
 # OffGrid scan ranges - SAFE for SPF series (prevents power resets!)
 # CRITICAL: OffGrid inverters RESET if VPP registers (30000+, 31000+) are accessed
 # Limits based on OffGrid Modbus Protocol documentation
@@ -337,6 +365,7 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         vol.Optional("scan_vpp_data",     default=False): cv.boolean,  # VPP input blocks 31000-31599
         vol.Optional("scan_full_vendor_blocks", default=False): cv.boolean,  # Complete vendor blocks, including reserved words
         vol.Optional("scan_firmware_discovered", default=False): cv.boolean,  # ZABA22-derived read windows
+        vol.Optional("scan_firmware_diagnostics", default=False): cv.boolean,  # ZABA22 exact-count FC03 diagnostic blocks
         # Block size for range reads: 125 (default, fastest), 25 (for finicky inverters), 1 (single-register, slowest but most compatible)
         # Same set the options flow offers (BLOCK_SIZE_OPTIONS), so a scan can be run at
         # whatever block size the poller is using. These were [125, 25, 1] while the
@@ -636,6 +665,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         block_size = call.data.get("block_size", 125)
         scan_full_vendor_blocks = call.data.get("scan_full_vendor_blocks", False)
         scan_firmware_discovered = call.data.get("scan_firmware_discovered", False)
+        scan_firmware_diagnostics = call.data.get("scan_firmware_diagnostics", False)
 
         # Overridden from the entry's own modbus_delay when one is selected below.
         scan_delay_ms = 250
@@ -743,7 +773,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         # Run export in executor — pass pre-resolved coordinator if available
         result = await hass.async_add_executor_job(
-            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode, enabled_groups, pre_resolved_coordinator, block_size, scan_delay_ms, scan_full_vendor_blocks, scan_firmware_discovered
+            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode, enabled_groups, pre_resolved_coordinator, block_size, scan_delay_ms, scan_full_vendor_blocks, scan_firmware_discovered, scan_firmware_diagnostics
         )
         
         if result["success"]:
@@ -781,6 +811,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 f"• Responding ranges: {result['responding_ranges']}\n",
                 f"Download from File Editor or `/config/{result['filename']}`",
             ])
+            if result.get("diagnostic_filename"):
+                message_lines.extend([
+                    f"**Firmware diagnostics:** {result['diagnostic_successful_blocks']}/{result['diagnostic_blocks']} blocks responded",
+                    f"Download diagnostic CSV from File Editor or `/config/{result['diagnostic_filename']}`",
+                ])
             
             if send_notification:
                 await hass.services.async_call(
@@ -2039,6 +2074,12 @@ def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk
     while pos < count:
         chunk_count = min(effective_chunk, count - pos)
         chunk_address = start + pos
+        chunk_count = _safe_standard_chunk_count(
+            chunk_address,
+            chunk_count,
+            count - pos,
+            register_type,
+        )
 
         if delay_s and not first_chunk:
             time.sleep(delay_s)
@@ -2144,6 +2185,206 @@ def _read_registers_chunked(client, start: int, count: int, slave_id: int, chunk
         pos += chunk_count
 
     return register_data
+
+
+def _read_firmware_diagnostic_blocks(
+    client: Any,
+    slave_id: int,
+    delay_s: float = 0.0,
+) -> list[dict[str, Any]]:
+    """Read ZABA22's exact 102-register FC03 diagnostic blocks without fallback."""
+    records: list[dict[str, Any]] = []
+    first_block = True
+
+    for block_index, request_start in enumerate(FIRMWARE_DIAGNOSTIC_BLOCK_STARTS):
+        if delay_s and not first_block:
+            time.sleep(delay_s)
+        first_block = False
+        status = "exception"
+        error: str | None = None
+        exception_code: int | None = None
+        raw_values: list[int | None] = [None] * FIRMWARE_DIAGNOSTIC_REQUEST_COUNT
+        received_word_count = 0
+
+        for attempt in range(_SCAN_TRANSPORT_RETRIES + 1):
+            try:
+                response = client.read_holding_registers(
+                    address=request_start,
+                    count=FIRMWARE_DIAGNOSTIC_REQUEST_COUNT,
+                    device_id=slave_id,
+                )
+                if response.isError():
+                    status = "error"
+                    exception_code = getattr(response, "exception_code", None)
+                    error_names = {
+                        1: "Illegal Function",
+                        2: "Illegal Data Address",
+                        3: "Illegal Data Value",
+                        4: "Slave Device Failure",
+                        5: "Acknowledge",
+                        6: "Slave Device Busy",
+                        10: "Gateway Path Unavailable",
+                        11: "Gateway Target Failed to Respond",
+                    }
+                    error = error_names.get(
+                        exception_code,
+                        f"Error Code {exception_code}" if exception_code is not None else str(response),
+                    )
+                else:
+                    response_values = list(response.registers)
+                    received_word_count = len(response_values)
+                    raw_values[: min(received_word_count, FIRMWARE_DIAGNOSTIC_REQUEST_COUNT)] = response_values[:FIRMWARE_DIAGNOSTIC_REQUEST_COUNT]
+                    if received_word_count == FIRMWARE_DIAGNOSTIC_REQUEST_COUNT:
+                        status = "success"
+                    else:
+                        status = "error"
+                        error = (
+                            f"Unexpected response length {received_word_count}; "
+                            f"expected {FIRMWARE_DIAGNOSTIC_REQUEST_COUNT}"
+                        )
+                break
+            except Exception as exc:
+                if attempt < _SCAN_TRANSPORT_RETRIES:
+                    _LOGGER.debug(
+                        "Firmware diagnostic block %d transport exception (%s); reconnecting and retrying",
+                        block_index,
+                        exc,
+                    )
+                    try:
+                        client.close()
+                    except Exception as close_error:
+                        _LOGGER.debug("Diagnostic client close before retry failed: %s", close_error)
+                    time.sleep(max(delay_s, _SCAN_MIN_RETRY_DELAY_S))
+                    try:
+                        if client.connect():
+                            continue
+                    except Exception as reconnect_error:
+                        _LOGGER.debug("Diagnostic client reconnect failed: %s", reconnect_error)
+                status = "exception"
+                error = f"Exception: {type(exc).__name__}: {exc}"
+                break
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+        words = [
+            {
+                "scan_type": "firmware_diagnostic",
+                "function_code": 3,
+                "request_start": request_start,
+                "request_count": FIRMWARE_DIAGNOSTIC_REQUEST_COUNT,
+                "diagnostic_block_index": block_index,
+                "word_offset": word_offset,
+                "register_address": request_start + word_offset,
+                "raw_value": raw_values[word_offset],
+                "status": status,
+                "error": error,
+                "timestamp": timestamp,
+            }
+            for word_offset in range(FIRMWARE_DIAGNOSTIC_REQUEST_COUNT)
+        ]
+        records.append(
+            {
+                "scan_type": "firmware_diagnostic",
+                "function_code": 3,
+                "request_start": request_start,
+                "request_count": FIRMWARE_DIAGNOSTIC_REQUEST_COUNT,
+                "diagnostic_block_index": block_index,
+                "raw_values": raw_values,
+                "received_word_count": received_word_count,
+                "status": status,
+                "error": error,
+                "exception_code": exception_code,
+                "timestamp": timestamp,
+                "words": words,
+            }
+        )
+        _LOGGER.info(
+            "Firmware diagnostic block %d (%d-%d): %s",
+            block_index,
+            request_start,
+            request_start + FIRMWARE_DIAGNOSTIC_REQUEST_COUNT - 1,
+            status,
+        )
+
+    return records
+
+
+def _write_firmware_diagnostics_csv(
+    hass: HomeAssistant,
+    scan_id: str,
+    records: list[dict[str, Any]],
+) -> str:
+    """Write block summaries and word-level data without merging scan identities."""
+    filename = f"growatt_firmware_diagnostic_{scan_id}.csv"
+    filepath = hass.config.path(filename)
+    with open(filepath, "w", newline="", encoding="utf-8") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["SCAN METADATA"])
+        writer.writerow(["Scan ID", scan_id])
+        writer.writerow(["Scan Type", "firmware_diagnostic"])
+        writer.writerow(["Function Code", 3])
+        writer.writerow(["Request Count", FIRMWARE_DIAGNOSTIC_REQUEST_COUNT])
+        writer.writerow(["Diagnostic Block Count", FIRMWARE_DIAGNOSTIC_BLOCK_COUNT])
+        writer.writerow(["Source", "ZABA22 firmware reconstruction"])
+        writer.writerow([])
+        writer.writerow(["BLOCK SUMMARY"])
+        writer.writerow([
+            "scan_type",
+            "function_code",
+            "request_start",
+            "request_count",
+            "diagnostic_block_index",
+            "status",
+            "error",
+            "exception_code",
+            "received_word_count",
+            "raw_values_json",
+            "timestamp",
+        ])
+        for record in records:
+            writer.writerow([
+                record["scan_type"],
+                record["function_code"],
+                record["request_start"],
+                record["request_count"],
+                record["diagnostic_block_index"],
+                record["status"],
+                record["error"] or "",
+                record["exception_code"] or "",
+                record["received_word_count"],
+                json.dumps(record["raw_values"], separators=(",", ":")),
+                record["timestamp"],
+            ])
+        writer.writerow([])
+        writer.writerow(["WORD DATA"])
+        writer.writerow([
+            "scan_type",
+            "function_code",
+            "request_start",
+            "request_count",
+            "diagnostic_block_index",
+            "word_offset",
+            "register_address",
+            "raw_value",
+            "status",
+            "error",
+            "timestamp",
+        ])
+        for record in records:
+            for word in record["words"]:
+                writer.writerow([
+                    word["scan_type"],
+                    word["function_code"],
+                    word["request_start"],
+                    word["request_count"],
+                    word["diagnostic_block_index"],
+                    word["word_offset"],
+                    word["register_address"],
+                    word["raw_value"] if word["raw_value"] is not None else "",
+                    word["status"],
+                    word["error"] or "",
+                    word["timestamp"],
+                ])
+    return filename
 
 
 def _single_register_read_works(client, address: int, slave_id: int, register_type: str) -> bool:
@@ -2533,7 +2774,7 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     return detection
 
 
-def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False, enabled_groups: set = None, coordinator=None, block_size: int = 125, scan_delay_ms: int = 250, scan_full_vendor_blocks: bool = False, scan_firmware_discovered: bool = False) -> dict:
+def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False, enabled_groups: set = None, coordinator=None, block_size: int = 125, scan_delay_ms: int = 250, scan_full_vendor_blocks: bool = False, scan_firmware_discovered: bool = False, scan_firmware_diagnostics: bool = False) -> dict:
     """
     Export all registers to CSV file with auto-detection (blocking).
 
@@ -2547,6 +2788,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         offgrid_mode: If True, skip VPP registers (30000+, 31000+) to prevent SPF power resets
         scan_full_vendor_blocks: If True, scan complete vendor-defined blocks, including reserved words
         scan_firmware_discovered: If True, include read windows recovered from ZABA22 firmware
+        scan_firmware_diagnostics: If True, issue exact-count FC03 diagnostic block reads recovered from ZABA22
         coordinator: Pre-resolved coordinator (from config_entry selection). When provided,
                      the auto-detection loop is skipped entirely — connection parameters and
                      profile/entity values are sourced directly from this coordinator.
@@ -2557,7 +2799,12 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         "total_registers": 0,
         "non_zero": 0,
         "responding_ranges": 0,
+        "diagnostic_filename": "",
+        "diagnostic_blocks": 0,
+        "diagnostic_successful_blocks": 0,
     }
+
+    scan_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     # Pace the scan the way the poller paces itself.
     #
@@ -2719,6 +2966,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         holding_range_data = {}    # holding registers (FC03) from scan loop — kept separate
         #                            so holding and input addresses don't overwrite each other
         range_responses = {}
+        firmware_diagnostic_records: list[dict[str, Any]] = []
 
         # FIRST: Read DTC code, protocol version, and firmware version (holding registers - critical for identification)
         # SKIP VPP registers if OffGrid mode to prevent SPF power resets!
@@ -2846,6 +3094,22 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
                     range_responses[range_name] = 0
                     _LOGGER.info(f"{range_name}: No response")
 
+        if scan_firmware_diagnostics:
+            if offgrid_mode:
+                _LOGGER.warning("Skipping ZABA22 firmware diagnostics in OffGrid mode")
+                range_responses["ZABA22 Firmware Diagnostics (SKIPPED - OffGrid mode)"] = 0
+            else:
+                _LOGGER.info(
+                    "Scanning %d ZABA22 firmware diagnostic blocks with exact count=%d",
+                    FIRMWARE_DIAGNOSTIC_BLOCK_COUNT,
+                    FIRMWARE_DIAGNOSTIC_REQUEST_COUNT,
+                )
+                firmware_diagnostic_records = _read_firmware_diagnostic_blocks(
+                    client,
+                    slave_id,
+                    delay_s=_scan_delay_s,
+                )
+
         # Re-read identification registers now that the connection is settled.
         # By the time the range scan finishes, several seconds have elapsed since the
         # scanner connected — the inverter is no longer reinitialising its Modbus state
@@ -2882,6 +3146,19 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
 
         client.close()
 
+        diagnostic_filename = ""
+        if firmware_diagnostic_records:
+            diagnostic_filename = _write_firmware_diagnostics_csv(
+                hass,
+                scan_id,
+                firmware_diagnostic_records,
+            )
+            result["diagnostic_filename"] = diagnostic_filename
+            result["diagnostic_blocks"] = len(firmware_diagnostic_records)
+            result["diagnostic_successful_blocks"] = sum(
+                1 for record in firmware_diagnostic_records if record["status"] == "success"
+            )
+
         # Auto-detect model
         detection = _detect_inverter_model(all_register_data)
         
@@ -2898,6 +3175,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             writer.writerow(["SCAN METADATA"])
             writer.writerow(["Integration Version", _get_integration_version()])
             writer.writerow(["Timestamp", datetime.now().astimezone().isoformat()])
+            writer.writerow(["Scan ID", scan_id])
             writer.writerow(["Connection", connection_str])
             writer.writerow(["Connection Type", connection_type.upper()])
             writer.writerow(["Slave ID", slave_id])
@@ -2905,6 +3183,13 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
             writer.writerow(["Read Pacing", _scan_delay_ms, "ms between reads (from modbus_delay)"])
             writer.writerow(["Transport Retries", _SCAN_TRANSPORT_RETRIES, "reconnect retries per failed Modbus block"])
             writer.writerow(["Scan Mode", "Full vendor blocks" if scan_full_vendor_blocks else "Standard scanner ranges"])
+            writer.writerow(["Firmware Discovered Ranges", "enabled" if scan_firmware_discovered and not offgrid_mode else "disabled"])
+            writer.writerow(["Firmware Diagnostics", "enabled" if scan_firmware_diagnostics and not offgrid_mode else "disabled"])
+            if scan_firmware_discovered and not offgrid_mode:
+                writer.writerow(["Firmware Discovered Source", "ZABA22 firmware reconstruction"])
+                writer.writerow(["Firmware Discovered Register Count", FIRMWARE_DISCOVERED_REGISTER_COUNT])
+            if diagnostic_filename:
+                writer.writerow(["Firmware Diagnostic CSV", diagnostic_filename])
 
             # Add currently selected/configured profile (if coordinator found)
             if selected_profile_key and selected_profile_name:

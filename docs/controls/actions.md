@@ -261,6 +261,10 @@ Set `scan_firmware_discovered: true` to add the six read-only windows recovered 
 ZABA22 firmware dispatcher. They are explicitly opt-in candidates for live validation and
 are labelled with their source in the exported metadata.
 
+Set `scan_firmware_diagnostics: true` separately to issue the exact-count FC03 diagnostic
+requests and create the companion diagnostic CSV. Both options are disabled by default and
+are skipped when `offgrid_mode: true`.
+
 ## Detect grid CT orientation
 
 ```yaml
