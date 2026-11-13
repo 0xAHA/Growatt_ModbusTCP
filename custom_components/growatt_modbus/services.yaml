@@ -156,8 +156,8 @@ export_register_dump:
       selector:
         boolean:
     scan_wit:
-      name: Scan Extended/WIT Registers (875-999, 8000-8124)
-      description: "Restrict scan to: the 875-999 extended block and WIT/WIS battery registers 8000-8124."
+      name: Scan Extended/WIT Registers (875-999, 8000-8139)
+      description: "Restrict scan to: the 875-999 extended block and WIT/WIS battery registers 8000-8139."
       required: false
       default: false
       selector:

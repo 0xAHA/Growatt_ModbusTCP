@@ -43,6 +43,24 @@ def test_standard_scan_contains_the_defined_legacy_extensions() -> None:
 
     assert ("input", 875, 125) in actual
     assert ("input", 1125, 125) in actual
+    assert ("holding", 875, 125) in actual
+    assert ("holding", 1125, 125) in actual
+    assert ("input", 8000, 140) in actual
+
+
+def test_full_vendor_scan_inherits_complete_legacy_blocks() -> None:
+    actual = {
+        (
+            range_config.get("register_type", "input"),
+            range_config["start"],
+            range_config["count"],
+        )
+        for range_config in _diagnostic.FULL_VENDOR_SCAN_RANGES
+    }
+
+    assert ("holding", 875, 125) in actual
+    assert ("holding", 1125, 125) in actual
+    assert ("input", 8000, 140) in actual
 
 
 def test_full_vendor_scan_is_selected_by_service_option() -> None:

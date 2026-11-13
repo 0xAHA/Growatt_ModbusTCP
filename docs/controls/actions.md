@@ -253,6 +253,10 @@ the reconnect also fails.
 Since v1.7.1 the scanner detects that and drops to single reads on its own, but setting it
 explicitly is faster.
 
+For protocol discovery, `scan_full_vendor_blocks: true` also includes the holding-side
+875–999 and 1125–1249 blocks, WIT/WIS input 8000–8139, and the complete VPP blocks,
+including reserved words.
+
 ## Detect grid CT orientation
 
 ```yaml

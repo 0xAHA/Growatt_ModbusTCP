@@ -145,14 +145,16 @@ UNIVERSAL_SCAN_RANGES = [
     # Legacy holding registers — writable controls present on all grid-tied/hybrid models
     # (TOU schedule, charge/discharge control, AC charge enable, priority mode, etc.)
     {"name": "Legacy Holding 0-124",    "start": 0,    "count": 125, "group": "legacy",  "register_type": "holding"},
+    {"name": "WIT Holding 875-999",     "start": 875,  "count": 125, "group": "wit",     "register_type": "holding"},
     {"name": "Legacy Holding 1000-1124","start": 1000, "count": 125, "group": "storage", "register_type": "holding"},
+    {"name": "Storage Holding 1125-1249", "start": 1125, "count": 125, "group": "storage", "register_type": "holding"},
     # MOD TL3-XH holding registers (FC03) — includes TOU schedule (3038-3045) and other settings
     {"name": "MOD Holding 3000-3124",           "start": 3000, "count": 125, "group": "mod_extended", "register_type": "holding"},
     {"name": "MOD Holding 3125-3249",           "start": 3125, "count": 125, "group": "mod_extended", "register_type": "holding"},
     {"name": "MOD/TL-XH Extended Holding 3250-3374",  "start": 3250, "count": 125, "group": "mod_extended", "register_type": "holding"},
     # WIT/WIS battery range
     {"name": "Extended Range 875-999", "start": 875, "count": 125, "group": "wit"},
-    {"name": "WIT/WIS Battery Range 8000-8124", "start": 8000, "count": 125, "group": "wit"},
+    {"name": "WIT/WIS Battery Range 8000-8139", "start": 8000, "count": 140, "group": "wit"},
     # VPP Control holding registers (30100-30499) — system/AC/battery control settings
     {"name": "VPP System Control 30100-30129",  "start": 30100, "count": 30,  "group": "vpp_control", "register_type": "holding"},
     {"name": "VPP AC Control 30150-30216",      "start": 30150, "count": 67,  "group": "vpp_control", "register_type": "holding"},
@@ -220,7 +222,7 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         vol.Optional("scan_legacy",       default=False): cv.boolean,  # Base 0-249 (all models)
         vol.Optional("scan_storage",      default=False): cv.boolean,  # Storage 1000-1249 (SPH/SPA/MIN battery)
         vol.Optional("scan_mod_extended", default=False): cv.boolean,  # MIN/MOD/TL-XH 3000-3374 (incl. backup box regs 3250-3374)
-        vol.Optional("scan_wit",          default=False): cv.boolean,  # Extended 875-999 and WIT/WIS 8000-8124
+        vol.Optional("scan_wit",          default=False): cv.boolean,  # Extended 875-999 and WIT/WIS 8000-8139
         vol.Optional("scan_vpp_control",  default=False): cv.boolean,  # VPP holding blocks 30000-30999, 32000-32099
         vol.Optional("scan_vpp_data",     default=False): cv.boolean,  # VPP input blocks 31000-31599
         vol.Optional("scan_full_vendor_blocks", default=False): cv.boolean,  # Complete vendor blocks, including reserved words

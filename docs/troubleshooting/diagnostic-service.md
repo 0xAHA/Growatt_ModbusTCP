@@ -59,8 +59,13 @@ Vendor Blocks** for protocol discovery or when looking for new, undocumented reg
 full mode preserves the vendor block boundaries and scans every address in them, including
 words labelled `Reserved`, `Safety Information`, or `raw`. For VPP V2.01 this includes:
 
-* Holding: `H30000–H30499`, `H30500–H30999`, and `H32000–H32099`
-* Input: `I875–I999`, `I1125–I1249`, `I31000–I31299`, `I31300–I31399`, `I31400–I31499`, and `I31500–I31599`
+* Legacy holding/input: `H/I875–H/I999` and `H/I1125–H/I1249`
+* WIT/WIS input: `I8000–I8139`
+* VPP holding: `H30000–H30499`, `H30500–H30999`, and `H32000–H32099`
+* VPP input: `I31000–I31299`, `I31300–I31399`, `I31400–I31499`, and `I31500–I31599`
+
+The legacy holding and input blocks are part of the standard range catalog as well;
+full mode additionally guarantees that all reserved words inside every defined block are scanned.
 
 The **Block Size** setting still controls the Modbus request chunks within those ranges; it
 does not remove any registers from the scan. **OffGrid Mode** remains a separate safety mode
