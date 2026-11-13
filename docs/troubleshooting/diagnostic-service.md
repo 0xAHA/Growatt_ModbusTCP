@@ -43,7 +43,8 @@ If your inverter is not supported yet, see [Scanning an inverter that is not sup
 2. Search for **"Growatt Modbus: Universal Register Scanner"**
 3. Select your inverter from the **Device** dropdown (recommended), or enter connection parameters manually
 4. Enable **Scan Full Vendor Blocks** when you want a discovery scan that includes reserved and undocumented words inside each defined vendor block
-5. Click **"Perform Action"**
+5. Enable **Scan ZABA22 Firmware-Discovered Ranges** only for the firmware-derived candidate windows
+6. Click **"Perform Action"**
 
 The scanner will:
 - Automatically detect your model (if VPP 2.01 supported)
@@ -70,6 +71,18 @@ full mode additionally guarantees that all reserved words inside every defined b
 The **Block Size** setting still controls the Modbus request chunks within those ranges; it
 does not remove any registers from the scan. **OffGrid Mode** remains a separate safety mode
 and never scans VPP ranges.
+
+### ZABA22 firmware-discovered ranges
+
+The optional firmware-discovered scan is read-only and covers candidate providers recovered
+from the ZABA22 ARM dispatcher. It does not assign semantic names to the values:
+
+* FC03 holding: `H5000–H5079`, `H5400–H7959`, `H10000–H10125`, `H40000–H41000`
+* FC04 input: `I4000–I4107`, `I5080–I5319`
+
+These ranges are evidence-derived from ZABA22 and are not guaranteed to respond on ZABA23 or
+other inverter/battery combinations. The scan records zeros, successful values, Modbus
+exceptions, and transport exceptions just like the existing ranges.
 
 If a block read loses the TCP connection, the scanner closes and reconnects the scan client
 and retries that block once. A Modbus exception response is kept as evidence that the range

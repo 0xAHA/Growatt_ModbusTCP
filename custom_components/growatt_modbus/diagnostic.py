@@ -184,6 +184,116 @@ FULL_VENDOR_SCAN_RANGES.extend([
     {"name": "VPP Battery Information 31500-31599", "start": 31500, "count": 100, "group": "vpp_data"},
 ])
 
+# Candidate read windows recovered from the ZABA22 ARM Modbus dispatcher. These are
+# intentionally opt-in: the live inverter may run another firmware revision and the
+# reconstructed providers do not establish field semantics or runtime availability.
+FIRMWARE_DISCOVERED_SCAN_RANGES = [
+    {
+        "name": "ZABA22 FC03 firmware window 5000-5079",
+        "start": 5000,
+        "count": 80,
+        "group": "firmware_discovered",
+        "register_type": "holding",
+        "source": "ZABA22 firmware reconstruction",
+    },
+    {
+        "name": "ZABA22 FC03 firmware window 5400-7959",
+        "start": 5400,
+        "count": 2560,
+        "group": "firmware_discovered",
+        "register_type": "holding",
+        "source": "ZABA22 firmware reconstruction",
+    },
+    {
+        "name": "ZABA22 FC03 firmware window 10000-10125",
+        "start": 10000,
+        "count": 126,
+        "group": "firmware_discovered",
+        "register_type": "holding",
+        "source": "ZABA22 firmware reconstruction",
+    },
+    {
+        "name": "ZABA22 FC03 firmware window 40000-41000",
+        "start": 40000,
+        "count": 1001,
+        "group": "firmware_discovered",
+        "register_type": "holding",
+        "source": "ZABA22 firmware reconstruction",
+    },
+    {
+        "name": "ZABA22 FC04 firmware window 4000-4107",
+        "start": 4000,
+        "count": 108,
+        "group": "firmware_discovered",
+        "source": "ZABA22 firmware reconstruction",
+    },
+    {
+        "name": "ZABA22 FC04 firmware window 5080-5319",
+        "start": 5080,
+        "count": 240,
+        "group": "firmware_discovered",
+        "source": "ZABA22 firmware reconstruction",
+    },
+]
+
+FIRMWARE_DISCOVERED_REGISTER_COUNT = sum(
+    range_config["count"] for range_config in FIRMWARE_DISCOVERED_SCAN_RANGES
+)
+
+
+def _deduplicate_scan_ranges(ranges: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return ranges with no duplicate address requests per Modbus function."""
+    selected: list[dict[str, Any]] = []
+    covered: dict[str, list[tuple[int, int]]] = {"input": [], "holding": []}
+
+    for range_config in ranges:
+        register_type = range_config.get("register_type", "input")
+        start = range_config["start"]
+        end = start + range_config["count"]
+        uncovered = [(start, end)]
+
+        for covered_start, covered_end in covered[register_type]:
+            next_uncovered = []
+            for segment_start, segment_end in uncovered:
+                if covered_end <= segment_start or covered_start >= segment_end:
+                    next_uncovered.append((segment_start, segment_end))
+                    continue
+                if segment_start < covered_start:
+                    next_uncovered.append((segment_start, covered_start))
+                if covered_end < segment_end:
+                    next_uncovered.append((covered_end, segment_end))
+            uncovered = next_uncovered
+
+        for segment_start, segment_end in uncovered:
+            segment = dict(range_config)
+            segment["start"] = segment_start
+            segment["count"] = segment_end - segment_start
+            if segment_start != start or segment_end != end:
+                segment["name"] = f"{range_config['name']} ({segment_start}-{segment_end - 1})"
+            selected.append(segment)
+            covered[register_type].append((segment_start, segment_end))
+
+    return selected
+
+
+def _select_scan_ranges(
+    offgrid_mode: bool,
+    enabled_groups: set[str] | None,
+    scan_full_vendor_blocks: bool,
+    scan_firmware_discovered: bool,
+) -> list[dict[str, Any]]:
+    """Build the selected catalog while keeping firmware ranges explicitly opt-in."""
+    if offgrid_mode:
+        return OFFGRID_SCAN_RANGES
+
+    all_groups = {"legacy", "storage", "mod_extended", "wit", "vpp_control", "vpp_data"}
+    active_groups = enabled_groups if enabled_groups is not None else all_groups
+    range_catalog = FULL_VENDOR_SCAN_RANGES if scan_full_vendor_blocks else UNIVERSAL_SCAN_RANGES
+    selected = [r for r in range_catalog if r.get("group", "legacy") in active_groups]
+    if scan_firmware_discovered:
+        selected.extend(FIRMWARE_DISCOVERED_SCAN_RANGES)
+    return _deduplicate_scan_ranges(selected)
+
 # OffGrid scan ranges - SAFE for SPF series (prevents power resets!)
 # CRITICAL: OffGrid inverters RESET if VPP registers (30000+, 31000+) are accessed
 # Limits based on OffGrid Modbus Protocol documentation
@@ -226,6 +336,7 @@ SERVICE_EXPORT_DUMP_SCHEMA = vol.Schema(
         vol.Optional("scan_vpp_control",  default=False): cv.boolean,  # VPP holding blocks 30000-30999, 32000-32099
         vol.Optional("scan_vpp_data",     default=False): cv.boolean,  # VPP input blocks 31000-31599
         vol.Optional("scan_full_vendor_blocks", default=False): cv.boolean,  # Complete vendor blocks, including reserved words
+        vol.Optional("scan_firmware_discovered", default=False): cv.boolean,  # ZABA22-derived read windows
         # Block size for range reads: 125 (default, fastest), 25 (for finicky inverters), 1 (single-register, slowest but most compatible)
         # Same set the options flow offers (BLOCK_SIZE_OPTIONS), so a scan can be run at
         # whatever block size the poller is using. These were [125, 25, 1] while the
@@ -524,6 +635,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         offgrid_mode = call.data.get("offgrid_mode", False)
         block_size = call.data.get("block_size", 125)
         scan_full_vendor_blocks = call.data.get("scan_full_vendor_blocks", False)
+        scan_firmware_discovered = call.data.get("scan_firmware_discovered", False)
 
         # Overridden from the entry's own modbus_delay when one is selected below.
         scan_delay_ms = 250
@@ -631,7 +743,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         # Run export in executor — pass pre-resolved coordinator if available
         result = await hass.async_add_executor_job(
-            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode, enabled_groups, pre_resolved_coordinator, block_size, scan_delay_ms, scan_full_vendor_blocks
+            _export_registers_to_csv, hass, connection_type, host, port, device, baudrate, slave_id, offgrid_mode, enabled_groups, pre_resolved_coordinator, block_size, scan_delay_ms, scan_full_vendor_blocks, scan_firmware_discovered
         )
         
         if result["success"]:
@@ -2421,7 +2533,7 @@ def _detect_inverter_model(register_data: Dict[int, Dict[str, Any]]) -> Dict[str
     return detection
 
 
-def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False, enabled_groups: set = None, coordinator=None, block_size: int = 125, scan_delay_ms: int = 250, scan_full_vendor_blocks: bool = False) -> dict:
+def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, device: str, baudrate: int, slave_id: int, offgrid_mode: bool = False, enabled_groups: set = None, coordinator=None, block_size: int = 125, scan_delay_ms: int = 250, scan_full_vendor_blocks: bool = False, scan_firmware_discovered: bool = False) -> dict:
     """
     Export all registers to CSV file with auto-detection (blocking).
 
@@ -2434,6 +2546,7 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         slave_id: Modbus slave ID
         offgrid_mode: If True, skip VPP registers (30000+, 31000+) to prevent SPF power resets
         scan_full_vendor_blocks: If True, scan complete vendor-defined blocks, including reserved words
+        scan_firmware_discovered: If True, include read windows recovered from ZABA22 firmware
         coordinator: Pre-resolved coordinator (from config_entry selection). When provided,
                      the auto-detection loop is skipped entirely — connection parameters and
                      profile/entity values are sourced directly from this coordinator.
@@ -2672,10 +2785,12 @@ def _export_registers_to_csv(hass, connection_type: str, host: str, port: int, d
         if offgrid_mode:
             scan_ranges = OFFGRID_SCAN_RANGES
         else:
-            all_groups = {"legacy", "storage", "mod_extended", "wit", "vpp_control", "vpp_data"}
-            active_groups = enabled_groups if enabled_groups is not None else all_groups
-            range_catalog = FULL_VENDOR_SCAN_RANGES if scan_full_vendor_blocks else UNIVERSAL_SCAN_RANGES
-            scan_ranges = [r for r in range_catalog if r.get("group", "legacy") in active_groups]
+            scan_ranges = _select_scan_ranges(
+                offgrid_mode=False,
+                enabled_groups=enabled_groups,
+                scan_full_vendor_blocks=scan_full_vendor_blocks,
+                scan_firmware_discovered=scan_firmware_discovered,
+            )
 
         for range_config in scan_ranges:
             range_name = range_config["name"]

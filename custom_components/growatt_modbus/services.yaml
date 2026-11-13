@@ -183,6 +183,13 @@ export_register_dump:
       default: false
       selector:
         boolean:
+    scan_firmware_discovered:
+      name: Scan ZABA22 Firmware-Discovered Ranges
+      description: "Opt-in read-only scan of six FC03/FC04 windows recovered from the ZABA22 firmware dispatcher. These are candidates for live validation and may be unsupported on other firmware versions."
+      required: false
+      default: false
+      selector:
+        boolean:
     block_size:
       name: Block Size
       description: "Number of registers read per Modbus request. Leave unset to inherit the block size configured for the selected device, which is usually what you want. 125 is fastest; smaller values suit gateways or inverters that reject large reads."

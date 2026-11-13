@@ -257,6 +257,10 @@ For protocol discovery, `scan_full_vendor_blocks: true` also includes the holdin
 875–999 and 1125–1249 blocks, WIT/WIS input 8000–8139, and the complete VPP blocks,
 including reserved words.
 
+Set `scan_firmware_discovered: true` to add the six read-only windows recovered from the
+ZABA22 firmware dispatcher. They are explicitly opt-in candidates for live validation and
+are labelled with their source in the exported metadata.
+
 ## Detect grid CT orientation
 
 ```yaml
