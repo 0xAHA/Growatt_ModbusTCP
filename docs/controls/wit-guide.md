@@ -195,15 +195,16 @@ What Charge and Discharge write, in order
 | 1 | 30100 | 1 | 1 | Control authority |
 | 2 | 30411 | 0 | 0 | Switches off the schedule, so a leftover Hold period cannot take over when 30407 is later cleared |
 | 3 | 30410 | 1 | not written | AC charge enable, needed for charging from the grid |
-| 4 | 30407 | 1 | 1 | Remote control on, which selects the direct branch |
-| 5 | 30409 | +VPP Power Rate | -VPP Power Rate | The setpoint |
+| 4 | 30409 | +VPP Power Rate | -VPP Power Rate | The setpoint |
+| 5 | 30407 | 1 | 1 | Remote control on, which selects the direct branch |
 
 - **30408 is not written.** Whatever duration was last written applies. Write 0 yourself for
   a session with no expiry.
-- **VPP Power Rate is held in Home Assistant's memory**, not read from the inverter. It
-  defaults to 100 % and returns to 100 % after a restart.
-- **30407 goes before 30409 here,** the reverse of the write order above. The two go out
-  back to back in one batch, so the gap is a single write.
+- **VPP Power Rate is a Home Assistant setting**, not an inverter register. It defaults to
+  100 %. From v2.0.7-b9 it keeps its value across a restart; before that it returned to
+  100 %.
+- **The setpoint goes before 30407**, the same order as above. Before v2.0.7-b9 the select
+  wrote 30407 first.
 - **If you write the registers yourself,** 30100, 30407 and a positive or negative 30409 are
   the session, plus 30410 for grid charging. Adding the select step on top of your own writes
   overwrites your 30409 with VPP Power Rate. If it comes before your 30409 write, the inverter

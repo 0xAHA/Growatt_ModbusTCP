@@ -3,7 +3,7 @@ import asyncio
 import logging
 from typing import Any
 
-from homeassistant.components.number import NumberEntity, NumberMode
+from homeassistant.components.number import NumberEntity, NumberMode, RestoreNumber
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -935,11 +935,16 @@ def _polled_soc(data, field: str) -> float | None:
     return None if value is None else float(value)
 
 
-class GrowattWitVppPowerPercentNumber(GrowattEntity, NumberEntity):
+class GrowattWitVppPowerPercentNumber(GrowattEntity, RestoreNumber):
     """WIT VPP: Power percentage for charge/discharge operations.
 
     This value is applied when Battery Mode is set to Charge or Discharge.
     It's stored locally and used by the Battery Mode select entity.
+
+    Restored across restarts (#481). It is not an inverter register, so there is nothing
+    to read it back from, and it used to return to 100 % on every restart. Someone who set
+    it to their working setpoint then armed a session at full power after the next
+    restart - a reporter measured 57-77 s at 100 % on each arming.
     """
 
     # Box rather than slider - see GrowattGenericNumber (#402).
@@ -964,6 +969,14 @@ class GrowattWitVppPowerPercentNumber(GrowattEntity, NumberEntity):
         )
         self._attr_name = "VPP Power Rate"
 
+    async def async_added_to_hass(self) -> None:
+        """Put back the rate from before the restart, if there was one."""
+        await super().async_added_to_hass()
+        last = await self.async_get_last_number_data()
+        restored = restore_vpp_power_percent(last.native_value if last else None)
+        if restored is not None:
+            setattr(self.coordinator, "wit_vpp_power_percent", restored)
+            _LOGGER.debug("[WIT-VPP] Restored power rate %d%%", restored)
 
     @property
     def native_value(self) -> float | None:
@@ -974,6 +987,22 @@ class GrowattWitVppPowerPercentNumber(GrowattEntity, NumberEntity):
         power_percent = int(value)
         setattr(self.coordinator, "wit_vpp_power_percent", power_percent)
         _LOGGER.info("[WIT-VPP] Set power rate to %d%% (will apply on next mode change)", power_percent)
+        # Written now so the state - and therefore what is restored - is current, not
+        # whatever it was at the last poll.
+        self.async_write_ha_state()
+
+
+def restore_vpp_power_percent(value: Any) -> int | None:
+    """A restored VPP Power Rate, or None when there is nothing usable to restore.
+
+    Kept to the entity's own 1-100 range: a stored value outside it can only be corrupt,
+    and falling back to the default is safer than arming with it.
+    """
+    try:
+        percent = int(value)
+    except (TypeError, ValueError):
+        return None
+    return percent if 1 <= percent <= 100 else None
 
 
 class GrowattWitVppChargeCutoffSocNumber(GrowattEntity, NumberEntity):

@@ -790,17 +790,20 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
                         "FC 0x10 - grid charging will not engage"
                     )
 
-                # Enable remote power control
-                success = client.write_register(self.VPP_REMOTE_POWER_ENABLE, 1)
-                if not success:
-                    _LOGGER.error("[WIT-VPP] Failed to enable remote power control for CHARGE mode")
-                    return False
-
-                # Set charge power (+100%)
+                # Setpoint BEFORE enabling remote control (#481). With 30407 written first
+                # the inverter could act on whatever 30409 already held - a previous
+                # session's value, or another controller's - until the setpoint landed.
+                # The guide's own write order puts the setpoint first too.
                 power_percent = getattr(self.coordinator, "wit_vpp_power_percent", 100)
                 success = client.write_register(self.VPP_REMOTE_POWER_PERCENT, power_percent)
                 if not success:
                     _LOGGER.error("[WIT-VPP] Failed to set charge power percentage")
+                    return False
+
+                # Enable remote power control
+                success = client.write_register(self.VPP_REMOTE_POWER_ENABLE, 1)
+                if not success:
+                    _LOGGER.error("[WIT-VPP] Failed to enable remote power control for CHARGE mode")
                     return False
 
             elif option == "Discharge":
@@ -813,18 +816,19 @@ class GrowattWitVppBatteryModeSelect(GrowattEntity, SelectEntity):
                     _LOGGER.error("[WIT-VPP] Failed to clear TOU periods for DISCHARGE mode")
                     return False
 
-                # Enable remote power control
-                success = client.write_register(self.VPP_REMOTE_POWER_ENABLE, 1)
-                if not success:
-                    _LOGGER.error("[WIT-VPP] Failed to enable remote power control for DISCHARGE mode")
-                    return False
-
-                # Set discharge power (-100% = 65436 unsigned)
+                # Setpoint BEFORE enabling remote control - see CHARGE above (#481).
+                # -100% = 65436 unsigned.
                 power_percent = getattr(self.coordinator, "wit_vpp_power_percent", 100)
                 power_value = 65536 - power_percent  # Convert to unsigned 16-bit
                 success = client.write_register(self.VPP_REMOTE_POWER_PERCENT, power_value)
                 if not success:
                     _LOGGER.error("[WIT-VPP] Failed to set discharge power percentage")
+                    return False
+
+                # Enable remote power control
+                success = client.write_register(self.VPP_REMOTE_POWER_ENABLE, 1)
+                if not success:
+                    _LOGGER.error("[WIT-VPP] Failed to enable remote power control for DISCHARGE mode")
                     return False
 
         return True
