@@ -4,6 +4,50 @@
 
 ---
 
+## v2.0.7-b9
+
+Issues: #481, #491, #495, #500, #501
+
+- **Fix: several inverters on one serial adapter now take turns** (#501). Entries on the
+  same USB-RS485 adapter share one lock, even when they name the port differently. Actions
+  such as Sync Inverter Time and Get Register Data no longer fail on every entry but one
+  with "Could not open the serial port". Polls now run one after another, so keep the scan
+  interval above the combined poll time. Setups with one entry per adapter are unchanged.
+  Thanks to @HA-Fredericia.
+
+- **Fix: Sync Inverter Time says when the inverter couldn't be reached.** It used to
+  report that the inverter refused the year register, which pointed at the firmware.
+
+- **Fix: Battery 2 sensors stay in place while the second pack is in standby** (#500).
+  A pack in deep standby reads 0 V. A restart during standby left its sensors "no longer
+  provided" until it woke; now they show unavailable instead. Applies to WIT, MOD and MID
+  with two packs. Thanks to @Rocko84.
+
+- **WIT: Mode (VPP) Charge and Discharge write the power setpoint before turning remote
+  control on** (#481), so the inverter never acts on an old setpoint in between.
+
+- **WIT: VPP Power Rate keeps its value across a restart** (#481). It used to return to
+  100 %, so the first Charge or Discharge after a restart ran at full power. Thanks to
+  @Wojak129 for the measurements and @l4m4re for the suggestion.
+
+- **New sensor: VPP Control State** (#481). Shows whether the inverter is under remote
+  control and whether it's charging or discharging, read from registers already polled.
+  Created on WIT, MOD 6-15k XH, SPH V2.01 and MIN TL-XH2. It shows the registers, so it
+  still reads Charge or Discharge after a session's duration (30408) has expired.
+
+- **New action: Set TOU Period** (#491). Changes one legacy time-of-use period (registers
+  3038-3059) in a single write, sending nothing if it already matches. MOD/MID TL3-XH and
+  MIN TL-XH; refused on firmware with weekday schedules (VPP protocol 2.05+). Not yet
+  tested on hardware.
+
+- **Fix: reloading the integration no longer raises an error while cleaning up** (#495).
+  Thanks to @l4m4re.
+
+- **Manifest:** listed under Home Assistant's new *Solar panels and home batteries*
+  category, and the `pyserial` requirement is dropped (Home Assistant already ships it).
+
+---
+
 ## v2.0.7-b8
 
 Issues: #491
