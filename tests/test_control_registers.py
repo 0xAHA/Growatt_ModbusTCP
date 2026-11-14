@@ -358,6 +358,24 @@ def test_min_tl_xh_exposes_the_firmware_confirmed_soc_controls():
         assert name in _controls_created_for(map_key)
 
 
+def test_min_tl_xh_exposes_each_portal_battery_control_once():
+    """The four portal settings must not create aliases or duplicate controls."""
+    created = _controls_created_for("MIN_TL_XH_3000_10000_V201")
+    expected = {
+        "grid_first_discharge_power_rate",
+        "off_grid_discharge_stopped_soc",
+        "ac_charge_max_power",
+        "grid_charge_stopped_soc",
+    }
+    assert expected <= created
+    for address in (3036, 3037, 3311, 3312):
+        controls = [
+            name for name, config in WRITABLE_REGISTERS.items()
+            if config.get("register") == address and name in created
+        ]
+        assert len(controls) == 1, f"register {address} creates {controls}"
+
+
 def test_min_tl_xh_offers_the_grid_charge_control_for_hardware_validation():
     """3049 matched ShinePhone's Allow Grid Charge state; writes remain opt-in."""
     map_key = "MIN_TL_XH_3000_10000_V201"
@@ -367,3 +385,34 @@ def test_min_tl_xh_offers_the_grid_charge_control_for_hardware_validation():
     assert str(register.get("access", "")).upper() == "RW"
     assert "allow_grid_charge" in _controls_created_for(map_key)
     assert REGISTER_MAPS[map_key]["allow_grid_charge_disabled_by_default"] is True
+
+
+def test_min_tl_xh_maps_the_portal_off_grid_discharge_stop_soc():
+    """MIN TL-XH exposes the portal's off-grid stop-SOC at holding 3037."""
+    holding = _holding("MIN_TL_XH_3000_10000_V201")
+    register = holding.get(3037)
+    assert register is not None
+    assert register["name"] == "off_grid_discharge_stopped_soc"
+    assert register["access"] == "RW"
+
+
+def test_min_tl_xh_maps_the_portal_battery_settings():
+    """The MIN TL-XH portal battery settings use the confirmed holding addresses."""
+    holding = _holding("MIN_TL_XH_3000_10000_V201")
+    expected = {
+        3036: ("grid_first_discharge_power_rate", "RW"),
+        3037: ("off_grid_discharge_stopped_soc", "RW"),
+        3047: ("batt_first_charge_power_rate", "RW"),
+        3048: ("batt_first_charge_stopped_soc", "RW"),
+        3049: ("allow_grid_charge", "RW"),
+        3067: ("grid_first_discharge_stopped_soc", "RW"),
+        3311: ("ac_charge_max_power", "RW"),
+        3312: ("grid_charge_stopped_soc", "RW"),
+    }
+
+    for address, (name, access) in expected.items():
+        assert holding[address]["name"] == name
+        assert holding[address]["access"] == access
+
+    assert WRITABLE_REGISTERS["ac_charge_max_power"]["register"] == 3311
+    assert "ac_charge_max_power" in _controls_created_for("MIN_TL_XH_3000_10000_V201")

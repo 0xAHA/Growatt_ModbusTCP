@@ -540,7 +540,19 @@ MIN_TL_XH_3000_10000_V201 = {
         3057: {'name': 'mod_tou_8_end',   'scale': 1, 'unit': '', 'access': 'RW'},
         3058: {'name': 'mod_tou_9_start', 'scale': 1, 'unit': '', 'access': 'RW'},
         3059: {'name': 'mod_tou_9_end',   'scale': 1, 'unit': '', 'access': 'RW'},
-
+        # Live portal round-trip on a MIN 6000 TL-XH, communication processor firmware:
+        # AL1.0/ALBA180101/ZABA-0022/S3EB08D00T00P0FU01M003C. The observed changed values
+        # were 3036=99, 3037=11, 3047=99, 3048=96, 3067=16, 3049=1, 3311=13 (1.3 kW),
+        # and 3312=85.
+        # Portal labels this MIN TL-XH register "Off-grid Battery Discharge Stop SOC".
+        # Live validation on MIN 6000 TL-XH read 10 while the portal showed 10; this is
+        # distinct from 3067, the portal's on-grid discharge stop SOC.
+        3036: {'name': 'grid_first_discharge_power_rate', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100),
+               'desc': 'Discharge power rate when Grid First mode (portal setting, MIN TL-XH)'},
+        3037: {'name': 'off_grid_discharge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (1, 100),
+               'desc': 'Off-grid battery discharge stop SOC (portal mapping, live validated)'},
         3047: {'name': 'batt_first_charge_power_rate',    'scale': 1, 'unit': '%', 'access': 'RW',
                'valid_range': (1, 100), 'desc': 'Charge power rate when Battery First mode (1-100%)'},
         3048: {'name': 'batt_first_charge_stopped_soc',   'scale': 1, 'unit': '%', 'access': 'RW',
@@ -550,6 +562,16 @@ MIN_TL_XH_3000_10000_V201 = {
                 'desc': 'Off-grid discharge stop SOC (VPP V2.01; hardware-confirmed after firmware update, #400)'},
         3067: {'name': 'grid_first_discharge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
                'valid_range': (1, 100), 'desc': 'SOC to stop discharging when Grid First mode is active (V1.39: US model / firmware ZACA-08+)'},
+
+        # Growatt portal battery settings observed on a MIN 6000 TL-XH. H3311 is writable
+        # and required by the local battery regulation; it is distinct from H3047, which is
+        # the Battery First charge-rate limit.
+        3311: {'name': 'ac_charge_max_power', 'scale': 0.1, 'unit': 'kW', 'access': 'RW',
+               'valid_range': (0, 1000),
+               'desc': 'Maximum charge power from grid (portal setting; MIN TL-XH)'},
+        3312: {'name': 'grid_charge_stopped_soc', 'scale': 1, 'unit': '%', 'access': 'RW',
+               'valid_range': (0, 100),
+               'desc': 'SOC to stop charging from the grid (portal setting; MIN TL-XH)'},
 
         # Safety/compliance diagnostic registers (read-only, Issue #282)
         235: {'name': 'ntognd_detect',     'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — NToGND detection'},

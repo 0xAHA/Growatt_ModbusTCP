@@ -33,6 +33,11 @@ _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 1
 
 
+def _raw_value_from_display(value: float, scale: float) -> int:
+    """Convert a displayed value to a raw register value without float truncation."""
+    return int(round(value / scale))
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -204,6 +209,8 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
             'max_output_power_rate': 'Max Output Power Rate',
             'vpp_export_limit_power_rate': 'VPP Export Limit Power Rate',
             'load_first_battery_minimum_soc': 'Load First Battery Minimum SOC',
+            'ac_charge_max_power': 'Max Charge Power From Grid',
+            'off_grid_discharge_stopped_soc': 'Off-grid Discharge Stop SOC',
             # Register 3067. Growatt calls it "Grid First", but #362 demonstrated it
             # also governs discharge in Load/self-consumption operation, so the mode
             # prefix misleads more than it describes. The entity_id of existing
@@ -357,8 +364,12 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         if raw_value is None:
             return None
 
-        # Apply scale
-        scale = self._control_config.get('scale', 1)
+        # Most controls keep raw register values in GrowattData. H3311 is decoded by
+        # _read_peak_shaving() before it reaches this generic entity, so it declares a
+        # separate read scale while retaining its raw-register scale for writes.
+        scale = self._control_config.get(
+            'read_scale', self._control_config.get('scale', 1)
+        )
         return round(float(raw_value) * scale, 2)
 
     # ------------------------------------------------------------------
@@ -521,7 +532,7 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         scale = self._control_config.get('scale', 1)
 
         # Convert display value to raw value
-        raw_value = int(value / scale)
+        raw_value = _raw_value_from_display(value, scale)
 
         # Validate range
         valid_range = self._control_config.get('valid_range', (0, 100))

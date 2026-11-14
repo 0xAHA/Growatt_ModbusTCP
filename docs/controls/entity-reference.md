@@ -666,8 +666,23 @@ the grid while solar charged the battery).
 | Allow Grid Charge | Select | 3049 | Disabled (0), Enabled (1) | Permits charging from the grid; disabled by default pending write confirmation |
 | Charge Power Rate | Number | 3047 | 1–100 % | Battery charge power limit when Battery First is active |
 | Charge Stopped SOC | Number | 3048 | 0–100 % | SOC at which charging stops when Battery First is active |
+| Discharge Power Rate | Number | 3036 | 0–100 % | Battery discharge power limit |
+| Off-grid Battery Discharge Stop SOC | Number | 3037 | 1–100 % | Portal-backed SOC at which off-grid battery discharge stops |
 | On-Grid Discharge Stop SOC | Number | 3067 | 1–100 % | SOC at which on-grid battery discharge stops |
 | Off-Grid Discharge Stop SOC | Number | 30475 | 10–100 % | SOC at which off-grid battery discharge stops (VPP V2.01) |
+| Max Charge Power From Grid | Number | 3311 | 0–1000 raw (0.1 kW) | Portal-backed grid-charging power ceiling; raw 13 displays as 1.3 kW |
+| Grid Charge Stopped SOC | Number | 3312 | 0–100 % | SOC at which charging from the grid stops |
+
+H3037 and H30475 are intentionally separate controls. Both have been read and written on
+first-generation MIN TL-XH hardware, but the available measurements do not yet establish
+whether they are two independent firmware settings or two addresses for the same underlying
+setting. H30475 therefore remains available on the original profile; it is not restricted to
+XH2.
+
+H3311 is writable only on the MIN TL-XH profile. Its register resolution is 0.1 kW: the raw
+value 13 is displayed as 1.3 kW, and writing 1.3 kW sends raw value 13. The protocol evidence
+does not establish a narrower firmware maximum than the declared raw 0–1000 range, so the
+integration does not invent an inverter-specific limit.
 
 !!! warning "SOC-limit writes on DTC 5100 depend on the firmware build"
     On a MIN 4200TL-XH with an APX battery, firmware build **ALBA13** silently refused
