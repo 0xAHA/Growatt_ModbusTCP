@@ -1608,6 +1608,29 @@ def profile_register_names(register_map) -> list:
     return sorted(names)
 
 
+def runtime_data_attributes(data) -> dict:
+    """Values set on a GrowattData instance that are not dataclass fields.
+
+    The read path assigns some values with setattr() only when they exist: Battery 2/3/4
+    (batteryN_*, gated on the pack's voltage), the BMS block and a few others. asdict()
+    sees only declared fields, so a diagnostics dump from a two-pack system said nothing
+    at all about pack 2 - awake or asleep (#500).
+
+    Unlike a dataclass field, an attribute listed here was actually set by a read; its
+    absence means the read did not set it (for a pack, that it reported 0 V).
+    """
+    from dataclasses import fields, is_dataclass
+
+    if data is None or not is_dataclass(data):
+        return {}
+    declared = {f.name for f in fields(data)}
+    return {
+        name: value
+        for name, value in sorted(vars(data).items())
+        if name not in declared and not name.startswith("_")
+    }
+
+
 def tou_legacy_writes_locked(register_map: dict, vpp_protocol_raw) -> bool:
     """True when this inverter's legacy TOU slots (3038-3059) cannot be written.
 

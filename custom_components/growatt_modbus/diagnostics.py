@@ -28,8 +28,9 @@ from typing import Any
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN, profile_register_names
+from .const import DOMAIN, profile_register_names, runtime_data_attributes
 
 # Host/device path can identify a network or a person's hardware layout, and the
 # serial number identifies the unit itself. Users routinely paste diagnostics into
@@ -83,6 +84,7 @@ async def async_get_config_entry_diagnostics(
             "Coordinator not loaded — the entry may be disabled, or setup may have "
             "failed. Entry data and options above are still accurate."
         )
+        diagnostics["entities"] = _entity_summary(hass, entry)
         return async_redact_data(diagnostics, TO_REDACT)
 
     client = getattr(coordinator, "_client", None)
@@ -174,7 +176,39 @@ async def async_get_config_entry_diagnostics(
         diagnostics["profile_register_names"] = _safe(
             profile_register_names(getattr(client, "register_map", None))
         )
+        # Values the read path sets only when present (Battery 2/3/4, BMS block). Not
+        # dataclass fields, so asdict() above never sees them (#500).
+        diagnostics["runtime_data"] = _safe(runtime_data_attributes(data))
     else:
         diagnostics["data"] = None
 
+    diagnostics["entities"] = _entity_summary(hass, entry)
+
     return async_redact_data(diagnostics, TO_REDACT)
+
+
+def _entity_summary(hass: HomeAssistant, entry: ConfigEntry) -> list[dict[str, Any]]:
+    """Every entity registered to this entry, with what Home Assistant shows for it.
+
+    Answers "was the sensor created, and what does it say" without a screenshot (#500).
+    `restored: true` is the "no longer provided" case: registered, but not created by the
+    integration in this session, so Home Assistant shows only its last record.
+    """
+    try:
+        registry = er.async_get(hass)
+        prefix = f"{entry.entry_id}_"
+        summary = []
+        for reg in er.async_entries_for_config_entry(registry, entry.entry_id):
+            state = hass.states.get(reg.entity_id)
+            unique_id = reg.unique_id or ""
+            summary.append({
+                "entity_id": reg.entity_id,
+                "key": unique_id[len(prefix):] if unique_id.startswith(prefix) else unique_id,
+                "platform": reg.domain,
+                "disabled_by": _safe(reg.disabled_by),
+                "state": state.state if state is not None else None,
+                "restored": bool(state is not None and state.attributes.get("restored")),
+            })
+        return sorted(summary, key=lambda e: e["entity_id"])
+    except Exception as err:  # noqa: BLE001 - diagnostics must never raise
+        return [{"error": str(err)}]

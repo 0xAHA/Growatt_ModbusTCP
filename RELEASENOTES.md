@@ -4,6 +4,13 @@
 
 ---
 
+## v2.0.7 (unreleased)
+
+- **Diagnostics now include Battery 2/3/4 and an entity list** (#500). The download
+  used to leave out second and further packs entirely. It now carries their values and
+  every entity with its current state, so a report about missing or unavailable sensors
+  no longer needs screenshots.
+
 ## v2.0.7-b10
 
 Issues: #481, #503

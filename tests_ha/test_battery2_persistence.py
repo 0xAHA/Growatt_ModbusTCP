@@ -68,6 +68,30 @@ async def test_a_pack_seen_before_is_created_while_it_sleeps(
     assert state.state == STATE_UNAVAILABLE
 
 
+async def test_diagnostics_show_the_sleeping_pack_and_its_entities(
+    hass: HomeAssistant, bypass_connection
+):
+    """#500 was diagnosed from screenshots, because the diagnostics download listed no
+    entities and no Battery 2 values. It must now show the entity and what it reads."""
+    from custom_components.growatt_modbus.diagnostics import (
+        async_get_config_entry_diagnostics,
+    )
+
+    entry = _mod_entry()
+    entry.add_to_hass(hass)
+    _register(hass, entry, "battery2_soc")
+    assert await hass.config_entries.async_setup(entry.entry_id), entry.reason
+    await hass.async_block_till_done()
+
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+
+    rows = [e for e in diag["entities"] if e.get("key") == "battery2_soc"]
+    assert len(rows) == 1, diag["entities"][:5]
+    assert rows[0]["state"] == STATE_UNAVAILABLE
+    assert rows[0]["restored"] is False
+    assert "runtime_data" in diag or diag.get("data") is None
+
+
 async def test_a_system_without_a_second_pack_still_gets_none(
     hass: HomeAssistant, bypass_connection
 ):

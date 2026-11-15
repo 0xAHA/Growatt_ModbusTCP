@@ -12,7 +12,7 @@ You don't need to fill in a long form. These two cover the majority of reports.
 
 **Settings → Devices & Services → Growatt Modbus → ⋮ → Download diagnostics**
 
-Attach the JSON file to your issue. It contains almost everything needed to diagnose a problem: integration version, inverter model and profile, connection type, block size, poll interval, how many polls have failed, which register ranges responded, and the last full set of decoded values.
+Attach the JSON file to your issue. It contains almost everything needed to diagnose a problem: integration version, inverter model and profile, connection type, block size, poll interval, how many polls have failed, which register ranges responded, and the last full set of decoded values. From v2.0.7 it also covers second and further battery packs, and lists every entity with what Home Assistant currently shows for it, including whether it is unavailable or "no longer provided".
 
 Your **IP address, serial number and device path are removed automatically** before the file is written.
 
@@ -33,6 +33,7 @@ Please paste log lines as text in a code block rather than a screenshot. Screens
     | A register scan | The CSV itself — drag it into the comment box. It holds far more than the on-screen summary |
     | Register or sensor values | The numbers typed out, ideally two readings taken at different operating points |
     | An error message | The message text |
+    | A device page with sensors unavailable or missing | The diagnostics file. From v2.0.7 it lists every entity and its state |
 
     Screenshots remain the right choice for genuinely visual things: a settings page, the shape of a graph, a dialog that is behaving oddly, or a page from a manufacturer document. It is specifically **text inside an image** that costs time.
 
