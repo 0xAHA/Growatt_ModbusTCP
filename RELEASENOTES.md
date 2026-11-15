@@ -4,6 +4,20 @@
 
 ---
 
+## v2.0.7-b10 (unreleased)
+
+Issues: #481, #503
+
+- **Fix (WIT): Extra Power to Grid reads correctly with an AC-coupled inverter on the GEN
+  port** (#503). The register is signed, and production showed as about 429 million W. It
+  now shows the external inverter's output as a positive figure. Confirmed on a WIT 15 HU.
+  Thanks to @mihaelko.
+
+- **WIT: battery current from the VPP range is now read as a 32-bit value** (#481). It
+  read as -0.1 A during discharge. The Battery Current sensor already used 8035 on most
+  units and is unchanged there; WITs without 8035 now get a real reading. Confirmed on a
+  WIT 15K. Thanks to @Wojak129.
+
 ## v2.0.7-b9
 
 Issues: #481, #491, #495, #500, #501

@@ -166,10 +166,14 @@ WIT_4000_15000TL3 = {
         8094: {'name': 'battery_soh', 'scale': 1, 'unit': '%'},
         8095: {'name': 'battery_voltage_bms', 'scale': 0.1, 'unit': 'V', 'desc': 'BMS reported voltage (auto-corrected for whole-volt BMS firmware)'},
 
-        # Extra/Parallel inverter output (for multi-inverter systems) - 32-bit pairs
-        # These will be 0 for single inverter installations
+        # Extra inverter output: an AC-coupled inverter on the GEN port (#503). 0 without one.
+        # Signed INT32 at 0.1 W, negative while the external inverter produces: a WIT 15 HU
+        # read [65535, 39483] and [65535, 37592] (-2605.3 / -2794.4 W), matching the external
+        # inverter's own figure. The protocol sheet's "0.1kW" does not fit those readings.
+        # Negated so the "Extra Power to Grid" sensor reads production as positive.
         8102: {'name': 'extra_power_to_grid_high', 'scale': 1, 'unit': '', 'pair': 8103},
-        8103: {'name': 'extra_power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 8102, 'combined_scale': 0.1, 'combined_unit': 'kW'},
+        8103: {'name': 'extra_power_to_grid_low', 'scale': 1, 'unit': '', 'pair': 8102,
+               'combined_scale': -0.1, 'combined_unit': 'W', 'signed': True},
         8104: {'name': 'extra_energy_today_high', 'scale': 1, 'unit': '', 'pair': 8105},
         8105: {'name': 'extra_energy_today_low', 'scale': 1, 'unit': '', 'pair': 8104, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
         8106: {'name': 'extra_energy_total_high', 'scale': 1, 'unit': '', 'pair': 8107},
@@ -223,7 +227,17 @@ WIT_4000_15000TL3 = {
 
         # Battery Cluster 1 State (31214-31223)
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
-        31215: {'name': 'battery_current_vpp', 'scale': 0.1, 'unit': 'A', 'maps_to': 'battery_current', 'signed': True},
+        # INT32 spanning 31215-31216 (VPP spec), not a single register. Read alone, 31215 is
+        # the high word: 0 while charging, 65535 (-0.1 A) while discharging - the "-0.1 A
+        # under a 27-35 A discharge" of #247 and #430. Verified on a WIT 15K (#481): 31215 = 0
+        # with 31216 = 466 and 664 (46.6 / 66.4 A charging) while 8035 read -37.0 / -64.9 A.
+        # The VPP sign is positive = charging; the integration and 8035 use negative =
+        # charging, so the combined scale is negated to keep the candidates in agreement.
+        31215: {'name': 'battery_current_vpp_high', 'scale': 1, 'unit': '', 'pair': 31216},
+        31216: {'name': 'battery_current_vpp_low', 'scale': 1, 'unit': '', 'pair': 31215,
+                'combined_scale': -0.1, 'combined_unit': 'A', 'signed': True,
+                'maps_to': 'battery_current',
+                'desc': 'Battery current (VPP INT32, sign flipped to negative = charging)'},
         31217: {'name': 'battery_soc_vpp', 'scale': 1, 'unit': '%', 'maps_to': 'battery_soc'},
         31218: {'name': 'battery_soh_vpp', 'scale': 1, 'unit': '%', 'desc': 'Battery SOH from VPP cluster (V2.03)'},
         # Per VPP Protocol V2.03 - firmware variant differences observed:

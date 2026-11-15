@@ -1173,7 +1173,7 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfPower.WATT,
         "attr": "extra_power_to_grid",
         "condition": lambda data: hasattr(data, 'extra_power_to_grid'),
-        "description": "Power being exported to the grid by a secondary/parallel inverter unit in a WIT multi-inverter system. Separate from the main inverter's grid export. Only present on WIT systems with parallel inverter configuration.",
+        "description": "Power produced by an external AC-coupled inverter connected to the WIT's GEN port, positive while it produces. Separate from the WIT's own output. Reads 0 without one, and Growatt reports very low production (a few hundred watts) as 0 (#503).",
     },
     "extra_energy_today": {
         "name": "Extra Energy Today",
