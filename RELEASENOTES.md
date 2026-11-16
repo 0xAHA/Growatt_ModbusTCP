@@ -4,6 +4,32 @@
 
 ---
 
+## v2.0.7
+
+Promoted to stable from the pre-release line below (b1 through b11). Every change in that
+line is included. See each `v2.0.7-bN` section for the individual reports and hardware
+confirmations behind it, or the [GitHub release](https://github.com/0xAHA/Growatt_ModbusTCP/releases/tag/v2.0.7)
+for a summary grouped by area.
+
+What you may notice on upgrading from v2.0.6:
+
+- **WIT:** Battery Current can read slightly higher when charging hard. It now uses
+  the VPP reading where that is the larger of the two, which matched the BMS to within
+  0.6 A at 195 A. Charging stays negative and discharging positive.
+- **WIT:** VPP Power Rate keeps its value across a restart, and Mode (VPP) shows what the
+  inverter is doing rather than the last mode chosen.
+- **WIT:** Extra Power to Grid shows an AC-coupled inverter's production as a positive figure.
+- **MOD/MID on firmware with weekday schedules** (VPP protocol 2.05+): the TOU Period
+  controls are removed. Set the schedule in the Growatt app or portal.
+- **MIN TL-XH:** the TOU Period controls are created enabled on new installs.
+- **Several inverters on one serial adapter** now poll one after another. Keep the scan
+  interval above their combined poll time.
+- **New sensors:** VPP Control State; WIT AC Couple Enable and GEN Port Device Type
+  (disabled by default); SPH 3000-6000 BMS and capacity sensors.
+- **Diagnostics** now include second and further battery packs and every entity's state.
+
+---
+
 ## v2.0.7-b11
 
 Issues: #500, #503, #481
