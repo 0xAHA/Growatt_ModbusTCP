@@ -10,6 +10,10 @@
   used to leave out second and further packs entirely. It now carries their values and
   every entity with its current state, so a report about missing or unavailable sensors
   no longer needs screenshots.
+- **WIT: AC Couple Enable and GEN Port Device Type** (#503). Two new read-only diagnostic
+  sensors, from holding 781 and 898, show whether an AC-coupled inverter or other device is
+  configured on the GEN port. They are disabled by default. The registers are undocumented
+  and were confirmed on a WIT 15K HU. Thanks @mihaelko.
 
 ## v2.0.7-b10
 

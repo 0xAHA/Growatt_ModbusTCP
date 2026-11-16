@@ -1429,6 +1429,23 @@ SENSOR_DEFINITIONS = {
         "value_map": {0: "Disabled", 1: "Enabled", 2: "Mode 2"},
     },
 
+    # WIT GEN port configuration, holding 781/898 (#503). Undocumented, read-only. Disabled
+    # by default: on a WIT with nothing on the GEN port, 898 = 0 reads "Generator".
+    "ac_couple_enable": {
+        "name": "AC Couple Enable",
+        "icon": "mdi:solar-power-variant",
+        "attr": "ac_couple_enable",
+        "disabled_by_default": True,
+        "value_map": {0: "Off", 1: "On"},
+    },
+    "gen_port_device_type": {
+        "name": "GEN Port Device Type",
+        "icon": "mdi:power-plug-outline",
+        "attr": "gen_port_device_type",
+        "disabled_by_default": True,
+        "value_map": {0: "Generator", 1: "PV Inverter", 2: "Smart Load"},
+    },
+
     # Load Sensors (SPF Off-Grid)
     "load_percentage": {
         "name": "Load Percentage",

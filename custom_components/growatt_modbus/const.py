@@ -1210,6 +1210,8 @@ SENSOR_DEVICE_MAP = {
         'dry_contact_state',
         # WIT debug/safety registers (read-only, disabled by default)
         'ntognd_detect', 'nonstd_vac_enable', 'enable_spec_set', 'fast_mppt_enable',
+        # WIT GEN port configuration (holding 781/898, read-only, #503)
+        'ac_couple_enable', 'gen_port_device_type',
         # Insulation/leakage diagnostics (ISO/DCI/GFCI — reg 3087-3091, disabled by default)
         'pv_iso', 'dci_r', 'dci_s', 'dci_t', 'gfci',
     },
@@ -1480,6 +1482,7 @@ ENTITY_CATEGORY_MAP = {
         'fault_code', 'warning_code', 'derating_mode', 'battery_derating_mode',
         'mppt_fan_speed', 'inverter_fan_speed',
         'ntognd_detect', 'nonstd_vac_enable', 'enable_spec_set', 'fast_mppt_enable',
+        'ac_couple_enable', 'gen_port_device_type',
     },
     'config': set(),
 }

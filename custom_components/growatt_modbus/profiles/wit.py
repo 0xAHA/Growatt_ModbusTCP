@@ -366,6 +366,13 @@ WIT_4000_15000TL3 = {
         237: {'name': 'enable_spec_set',    'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — appointed spec / grid-code setting'},
         238: {'name': 'fast_mppt_enable',   'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Disable, 1=Enable — fast MPPT algorithm'},
 
+        # GEN port configuration (#503). Not in Growatt's WIT protocol: found in a ShineTools
+        # disassembly and confirmed on a WIT 15K HU by switching each setting in ShineTools and
+        # reading it back. Read-only on purpose. These are installation settings for what is
+        # wired to the GEN port, and nothing documents what a wrong value would do.
+        781: {'name': 'ac_couple_enable', 'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Off, 1=On (undocumented, #503)'},
+        898: {'name': 'gen_port_device_type', 'scale': 1, 'unit': '', 'access': 'R', 'desc': '0=Generator, 1=PV Inverter, 2=Smart Load (undocumented, #503)'},
+
 		# Grid Phase Sequence
         871: {'name': 'grid_phase_sequence', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Positive, 1=Reverse'},
 		

@@ -556,6 +556,10 @@ class GrowattData:
     nonstd_vac_enable: int = 0       # reg 236 — non-standard VAC enable
     enable_spec_set: int = 0         # reg 237 — appointed spec / grid-code setting
     fast_mppt_enable: int = 0        # reg 238 — fast MPPT algorithm enable
+    # WIT GEN port configuration (holding 781/898, undocumented, read-only, #503). None until
+    # read: 0 means "Off" / "Generator", so a default of 0 would look like a real setting.
+    ac_couple_enable: int | None = None
+    gen_port_device_type: int | None = None
 
     # Control registers (writable holding registers)
     spf_blu_lbu_mode: int = 0         # SPF holding 116: 0=BLU (battery first), 1=LBU (load first)
@@ -6621,6 +6625,17 @@ class GrowattModbus:
                                  data.enable_spec_set, data.fast_mppt_enable)
             except Exception as e:
                 logger.debug(f"Could not read diagnostic registers 235-238: {e}")
+
+        # --- WIT GEN port configuration, holding 781 and 898 (read-only, #503) ---
+        # 116 registers apart, so two single reads rather than one block.
+        for gen_addr, gen_attr in ((781, "ac_couple_enable"), (898, "gen_port_device_type")):
+            if gen_addr in holding_map:
+                try:
+                    gen_regs = self.read_holding_registers(gen_addr, 1)
+                    if gen_regs is not None and len(gen_regs) >= 1:
+                        setattr(data, gen_attr, int(gen_regs[0]))
+                except Exception as e:
+                    logger.debug("Could not read %s register %s: %s", gen_attr, gen_addr, e)
 
         # --- VPP holding registers (30000+ range) ---
         # These are optional — some firmware variants don't implement them. A failing

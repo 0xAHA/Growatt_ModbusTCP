@@ -308,6 +308,8 @@ WIT_EXTRA_SENSORS: Set[str] = {
     # Extra/parallel inverter output (multi-inverter systems)
     "extra_power_to_grid",
     "extra_energy_today", "extra_energy_total",
+    # GEN port configuration, holding 781/898 (#503)
+    "ac_couple_enable", "gen_port_device_type",
 }
 
 # Holding 30474, mapped by both WIT register maps and already polled; it had no entity

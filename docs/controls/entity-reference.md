@@ -514,6 +514,27 @@ If a remembered scale is ever wrong, real load overrules it: detection keeps run
 three consistent samples of the other scale replace it. Changing profile discards it
 outright.
 
+### A second inverter on the GEN port (AC coupling)
+
+From v2.0.7, two read-only diagnostic sensors show how the GEN port is configured
+([#503](https://github.com/0xAHA/Growatt_ModbusTCP/issues/503)). Both are **disabled by
+default**: enable them on the inverter device page if you have something wired to the GEN port.
+
+| Sensor | Register | Values |
+|---|---|---|
+| AC Couple Enable | holding 781 | Off, On |
+| GEN Port Device Type | holding 898 | Generator, PV Inverter, Smart Load |
+
+Neither register is in Growatt's WIT protocol. They come from the ShineTools app and were
+confirmed on a WIT 15K HU by changing each setting in ShineTools and reading it back. The
+integration doesn't offer writes to either. On a WIT with nothing on the GEN port, GEN Port
+Device Type reads **Generator**, because that is what 0 means.
+
+**Extra Power to Grid** shows what the AC-coupled inverter is producing, positive while it
+produces. Growatt reports very low production (a few hundred watts) as 0. **Extra Energy Today**
+and **Extra Energy Total** read 0 on the one unit checked so far, even while it was producing.
+For a kWh figure, add an **Integral** helper on Extra Power to Grid instead.
+
 See [WIT Control Guide](wit-guide.md) for full protocol documentation.
 
 ---

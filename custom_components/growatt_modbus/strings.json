@@ -516,6 +516,12 @@
       "fast_mppt_enable": {
         "name": "Fast MPPT Enable"
       },
+      "ac_couple_enable": {
+        "name": "AC Couple Enable"
+      },
+      "gen_port_device_type": {
+        "name": "GEN Port Device Type"
+      },
       "fault_code": {
         "name": "Fault Code"
       },
