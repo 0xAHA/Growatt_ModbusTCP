@@ -4,7 +4,9 @@
 
 ---
 
-## v2.0.7 (unreleased)
+## v2.0.7-b11
+
+Issues: #500, #503, #481
 
 - **Diagnostics now include Battery 2/3/4 and an entity list** (#500). The download
   used to leave out second and further packs entirely. It now carries their values and
@@ -14,6 +16,10 @@
   sensors, from holding 781 and 898, show whether an AC-coupled inverter or other device is
   configured on the GEN port. They are disabled by default. The registers are undocumented
   and were confirmed on a WIT 15K HU. Thanks @mihaelko.
+- **Note on WIT Battery Current since b10** (#481). Where 8035 and the VPP reading both
+  respond and agree in sign, the larger of the two is shown. At high charge current that is now the VPP
+  value, which matched the BMS to 0.1 A at 180 A while 8035 read about 4% low. Expect a
+  slightly higher figure than b9 when charging hard.
 
 ## v2.0.7-b10
 
