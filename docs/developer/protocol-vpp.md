@@ -367,6 +367,23 @@ control is disabled — confirmed ten hours later still reading −33, raw 65503
 the written value while the read-back keeps the old one. An earlier report that it returns
 to 100 on its own has since failed to reproduce and should not be relied on.
 
+**Holding SOC using only registers that aren't stored**
+([#504](https://github.com/0xAHA/Growatt_ModbusTCP/issues/504)). This is from one owner's
+experiment on a MOD 8KTL3-XH with APX batteries. Early results, not a long run.
+
+The goal is to stop grid charging at a target SOC without writing to EEPROM. Leave 30410
+(AC charging enable) at 1 and switch 30216 (*AC charge power max limitation II*, not stored)
+between 0 and the charge rate. With 30409 = 0 the battery then covers the standby draw,
+80-110 W on that system.
+
+| 30409 | 30216 | Battery |
+|---|---|---|
+| 1 | 1 (0.1 kW) | Discharging at about 80 W; SOC falls slowly |
+| 1 | 2 (0.2 kW) | Hovering between 15 W charging and 5 W discharging |
+
+Why 0.1 kW was not enough is unknown. One possibility is that the cap applies before
+conversion losses, but nothing documents it.
+
 ---
 
 ## Input Registers (87 registers)
