@@ -2265,6 +2265,10 @@ class GrowattModbus:
           5=PV Charge, 6=AC Charge, 7=Combine Charge, 8=Combine Charge+Bypass,
           9=PV Charge+Bypass, 10=AC Charge+Bypass → battery_power must be positive
           2=Discharge → battery_power must be negative
+          29=Battery+Grid Load, 30=PV+Battery+Grid Load → battery_power must be negative.
+            An SPE 8000 ES reports the register with the opposite sign to the one the SPE
+            profile was built from, so in these two states every discharge was published
+            as charge power and a Riemann sum on it counted discharge as energy in.
           0,1,3,4,11,12 → skipped (ambiguous or no meaningful correction)
         """
         MIN_POWER_THRESHOLD = 10.0  # W - avoid correcting near-zero noise
@@ -2276,8 +2280,8 @@ class GrowattModbus:
 
         # Charging states: battery is receiving power — sign must be positive
         CHARGING_STATES = {5, 6, 7, 8, 9, 10}
-        # Discharging state: battery is supplying power — sign must be negative
-        DISCHARGING_STATES = {2}
+        # Discharging states: battery is supplying power — sign must be negative
+        DISCHARGING_STATES = {2, 29, 30}
         # Status 0,1,3,4,11 are standby/fault/bypass — skip correction
 
         if status in CHARGING_STATES and battery_power < 0:

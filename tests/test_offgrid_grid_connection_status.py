@@ -33,7 +33,8 @@ import pytest
 COMPONENT = Path(__file__).parent.parent / "custom_components" / "growatt_modbus"
 
 # The off-grid codes, and what each one settles about the AC input.
-ON_GRID = (6, 7, 8, 9, 10, 11)
+# 29 and 30 are the SPE's battery-plus-grid states: the utility is connected and feeding.
+ON_GRID = (6, 7, 8, 9, 10, 11, 29, 30)
 OFF_GRID = (2, 5, 12)
 UNDECIDED = (0, 1, 3, 4)
 

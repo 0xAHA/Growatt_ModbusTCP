@@ -1544,6 +1544,12 @@ SPF_STATUS_CODES = {
     10: {'name': 'AC Charge+Bypass',     'desc': 'AC charging with bypass to load'},
     11: {'name': 'Bypass',               'desc': 'AC input bypassed directly to load'},
     12: {'name': 'PV Charge+Discharge',  'desc': 'PV charging battery while discharging to load'},
+    # 13-28 are named in Off-Grid Protocol V0.26 but have no field report yet, so they are
+    # left out rather than guessed at. 29 and 30 are beyond that document: an SPE 8000 ES
+    # reports them whenever the battery carries the load with the utility connected, and
+    # Growatt's own portal labels them as below.
+    29: {'name': 'Battery+Grid Load',    'desc': 'Battery and grid supporting loads'},
+    30: {'name': 'PV+Battery+Grid Load', 'desc': 'PV, battery and grid supporting loads'},
 }
 
 # Which off-grid status codes settle whether the utility is carrying the system (#443).
@@ -1552,7 +1558,10 @@ SPF_STATUS_CODES = {
 # straight to the load - proves the utility is present and in use. Discharge, PV Charge and
 # PV Charge+Discharge prove it is not. Standby, No Use, Fault and Flash say nothing either
 # way and defer to the measured AC input voltage.
-SPF_STATUS_AC_INPUT_ACTIVE = frozenset({6, 7, 8, 9, 10, 11})
+#
+# 29 and 30 (battery, or PV and battery, supporting the load together with the grid) have
+# the utility connected and contributing, so they count as active.
+SPF_STATUS_AC_INPUT_ACTIVE = frozenset({6, 7, 8, 9, 10, 11, 29, 30})
 SPF_STATUS_AC_INPUT_IDLE = frozenset({2, 5, 12})
 
 # AC input volts above which the supply is considered present. Well clear of a floating
