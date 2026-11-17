@@ -406,8 +406,9 @@ what your model allows will be rejected by the inverter and the entity will reve
 
 
 **Grid Connection Status on SPF/SPE reports what the inverter is running on, not whether
-mains is present.** It reads the off-grid status code: AC charging in any combination, or
-bypassing the AC input straight to the load, is **On-grid**; discharging the battery, PV
+mains is present.** It reads the off-grid status code: AC charging in any combination,
+bypassing the AC input straight to the load, or the battery and grid supporting the load
+together (statuses 29 and 30, seen on SPE) is **On-grid**; discharging the battery, PV
 charging, or PV charging while discharging is **Off-grid**. Standby, Fault and Flash say
 nothing either way and fall back to the AC input voltage. So an SPF on battery-first
 priority can show **Off-grid with 230 V at its input** - the utility is there, and the

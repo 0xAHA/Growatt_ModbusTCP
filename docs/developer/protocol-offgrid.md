@@ -570,6 +570,14 @@
 | 11 | Grid Bypass | Grid bypass load only |
 | 12 | PV Charging+Loads Supporting | PV charging with inverter load support |
 | 13 | Export to Grid | Grid-tied export mode |
+| 29 | Battery&Grid Supporting Loads | **Not in V0.26.** Field-observed on an SPE 8000 ES; the name is the Growatt portal's ([#505](https://github.com/0xAHA/Growatt_ModbusTCP/pull/505)) |
+| 30 | PV&Battery&Grid Supporting Loads | **Not in V0.26.** Field-observed on an SPE 8000 ES; the name is the Growatt portal's ([#505](https://github.com/0xAHA/Growatt_ModbusTCP/pull/505)) |
+
+In 29 and 30 the battery is discharging with the utility connected and contributing. The
+integration counts both as **On-grid**, and treats the battery as discharging whatever sign
+the power register carries. On that SPE the register reads with the opposite sign to the
+SPE profile's assumption. Codes 13-28 in the full register 0 description above have no field
+report yet, so they display as `Unknown (n)`.
 
 ---
 

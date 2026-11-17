@@ -2294,10 +2294,15 @@ class GrowattModbus:
             return -battery_power
 
         if status in DISCHARGING_STATES and battery_power > 0:
-            logger.warning(
-                f"[SPF sign correction] Status {status} indicates discharging but "
-                f"battery_power={battery_power:.1f}W is positive — correcting to "
-                f"{-battery_power:.1f}W [issue #174]"
+            # 29/30 at debug (#505): an SPE 8000 ES sits in them most of the day with the
+            # register's sign reversed, so this fires on nearly every poll as routine. At
+            # warning it lands in Home Assistant's error log looking like a fault, the
+            # reason status 12 moved to debug (#384).
+            logger.log(
+                logging.DEBUG if status in (29, 30) else logging.WARNING,
+                "[SPF sign correction] Status %s indicates discharging but "
+                "battery_power=%.1fW is positive — correcting to %.1fW [issue #174]",
+                status, battery_power, -battery_power,
             )
             return -battery_power
 

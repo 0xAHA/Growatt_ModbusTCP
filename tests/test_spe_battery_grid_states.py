@@ -73,3 +73,23 @@ def test_the_states_have_a_name(status):
 @pytest.mark.parametrize("status", BATTERY_GRID_STATES)
 def test_the_grid_is_reported_connected_without_consulting_the_voltage(status):
     assert _const.offgrid_grid_connection_status(status, 0.0, True) == "On-grid"
+
+
+@pytest.mark.parametrize("status", BATTERY_GRID_STATES)
+def test_routine_29_30_correction_is_not_a_warning(status, caplog):
+    """The unit sits in 29/30 most of the day: at warning, every poll lands in HA's error log."""
+    import logging
+    caplog.set_level(logging.DEBUG)
+    _corrected(status, 1853.0)
+    records = [r for r in caplog.records if "SPF sign correction" in r.getMessage()]
+    assert records, "the correction should still be logged"
+    assert all(r.levelno == logging.DEBUG for r in records)
+
+
+def test_state_2_correction_still_warns(caplog):
+    """Plain Discharge with a positive reading is not routine, so it stays visible."""
+    import logging
+    caplog.set_level(logging.DEBUG)
+    _corrected(2, 1853.0)
+    records = [r for r in caplog.records if "SPF sign correction" in r.getMessage()]
+    assert records and all(r.levelno == logging.WARNING for r in records)

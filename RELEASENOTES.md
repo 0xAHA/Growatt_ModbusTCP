@@ -6,8 +6,12 @@
 
 ## v2.0.8 (unreleased)
 
-Issues: #503, #507
+Issues: #503, #505, #507
 
+- **Fix (SPF/SPE): statuses 29 and 30 are named, and the battery reads as discharging in
+  them** (#505). An SPE 8000 ES showed "Unknown (29/30)" and published its discharge as
+  charge power, so charge totals were far too high. Grid Connection Status shows On-grid in
+  both. Thanks @ksorokin.
 - **Fix (WIT): Extra Power to Grid, Extra Energy Today and Extra Energy Total now show the
   inverter's values** (#503). The registers were decoded but never reached the sensors,
   which always read 0. With an AC-coupled inverter on the GEN port, Extra Power to Grid now
