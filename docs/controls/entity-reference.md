@@ -765,7 +765,7 @@ VPP input register 31001: *Standby*, *Disconnected*, *Charging*, *Discharging*, 
 the sensor to watch for the sleep described above
 ([#460](https://github.com/0xAHA/Growatt_ModbusTCP/pull/460)).
 
-### Battery pack sensors (MIN TL-XH, MOD/MID TL3-XH)
+### Battery pack sensors (MIN TL-XH, MOD/MID TL3-XH, WIT 4-15K)
 
 Four diagnostic sensors describe the pack from VPP input registers 31225-31228: **Battery
 Clusters**, **Battery Modules per Cluster**, **Battery Module Rated Voltage** and **Battery
@@ -775,6 +775,17 @@ modules, each rated 51.2 V and 100.0 Ah
 for the battery's brand, so the integration cannot tell an APX from an ARK. On MOD/MID
 TL3-XH they describe pack 1; a MID 25KTL3-XH with two APX stacks read two clusters of six
 51.2 V, 104.0 Ah modules ([#482](https://github.com/0xAHA/Growatt_ModbusTCP/issues/482)).
+
+From v2.0.8, WIT 4-15K gets the first three of these. Its rated capacity register read 0 on
+both units checked, so **Battery Module Rated Capacity** isn't offered there
+([#507](https://github.com/0xAHA/Growatt_ModbusTCP/issues/507)).
+
+**Battery Max Charge Power** and **Battery Max Discharge Power** (MOD/MID TL3-XH and WIT
+4-15K, from v2.0.8) show the most the inverter currently allows the battery to take or give,
+from VPP input 31210-31213. They are **limits, not the power flowing**. They move with the
+battery's state: one MOD read 2000 W and later 1150 W. Compare them with Battery Power to see
+whether the battery, rather than your command, is what's holding charging back. Where the
+limit comes from (the BMS or the inverter's own calculation) isn't documented.
 
 ---
 

@@ -371,14 +371,30 @@ XH2_UNSOURCED_SENSORS: Set[str] = {
     "battery_temp",
 }
 
-# Battery pack description, VPP input 31225-31228. Validated on MIN TL-XH only (#460); MOD
-# maps the registers too but nobody has read them there, so it does not get the sensors.
+# Battery pack description, VPP input 31225-31228. Validated on MIN TL-XH (#460); MOD/MID
+# TL3-XH scans read 1 cluster, 1-4 modules, 51.2 V and 99.9-104.7 Ah (#228, #240, #245).
 BATTERY_PACK_SENSORS: Set[str] = {
     "battery_working_status",   # 31001, same validation
     "battery_cluster_sum",
     "battery_module_number",
     "battery_module_rated_voltage",
     "battery_module_rated_capacity",
+}
+
+# The same description on WIT 4-15K (#507). Two units read sensible clusters, modules and
+# voltage, but 0 for module rated capacity; WIT does not map 31001 (working status).
+WIT_BATTERY_PACK_SENSORS: Set[str] = {
+    "battery_cluster_sum",
+    "battery_module_number",
+    "battery_module_rated_voltage",
+}
+
+# Maximum allowable battery charge / discharge power, VPP input 31210-31213 (#507). Read with
+# sensible values on WIT 4-15K (#507, #226) and MOD/MID TL3-XH (#228, #240, #245). Not
+# offered on the WIT XHU, whose map inherits the registers but which nobody has read.
+BATTERY_LIMIT_SENSORS: Set[str] = {
+    "battery_max_charge_power",
+    "battery_max_discharge_power",
 }
 
 # Full-charge capacity per cluster, VPP 31219-31220 / 31319-31320 (#482). The MOD TL3-XH
@@ -1059,7 +1075,8 @@ INVERTER_PROFILES = {
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
                      | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
                      | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS | BATTERY1_ENERGY_SENSORS
-                     | BATTERY_PACK_SENSORS | BATTERY_FCC_SENSORS)
+                     | BATTERY_PACK_SENSORS | BATTERY_FCC_SENSORS
+                     | BATTERY_LIMIT_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 
@@ -1080,7 +1097,8 @@ INVERTER_PROFILES = {
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
                      | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
                      | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS | BATTERY1_ENERGY_SENSORS
-                     | BATTERY_PACK_SENSORS | BATTERY_FCC_SENSORS)
+                     | BATTERY_PACK_SENSORS | BATTERY_FCC_SENSORS
+                     | BATTERY_LIMIT_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 
@@ -1104,7 +1122,8 @@ INVERTER_PROFILES = {
         "sensors": ((HYBRID_3P_SENSORS | PV3_SENSORS | BACKUP_BOX_SENSORS | DCDC_TEMP_SENSOR
                      | MOD_PEAK_SHAVING_SENSORS | MOD_VPP_STATE_SENSORS
                      | AC_POWER_TOTAL_SENSOR | BATTERY2_SENSORS | BATTERY1_ENERGY_SENSORS
-                     | BATTERY_PACK_SENSORS | BATTERY_FCC_SENSORS)
+                     | BATTERY_PACK_SENSORS | BATTERY_FCC_SENSORS
+                     | BATTERY_LIMIT_SENSORS)
                     - NO_BATTERY_TEMP),
     },
 
@@ -1138,6 +1157,8 @@ INVERTER_PROFILES = {
             BATTERY2_SENSORS |
             WIT_EXTRA_SENSORS |
             WIT_VPP_STATE_SENSORS |
+            WIT_BATTERY_PACK_SENSORS |
+            BATTERY_LIMIT_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
         ),

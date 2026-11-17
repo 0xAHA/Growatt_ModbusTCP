@@ -354,6 +354,12 @@
       "battery_cluster_sum": {
         "name": "Battery Clusters"
       },
+      "battery_max_charge_power": {
+        "name": "Battery Max Charge Power"
+      },
+      "battery_max_discharge_power": {
+        "name": "Battery Max Discharge Power"
+      },
       "battery_working_status": {
         "name": "Battery Working Status"
       },

@@ -633,6 +633,10 @@ class GrowattData:
     battery_module_number: float = 0.0          # Modules per cluster
     battery_module_rated_voltage: float = 0.0   # V, per module
     battery_module_rated_capacity: float = 0.0  # Ah, per module
+    # Maximum allowable battery charge / discharge power (VPP input 31210-31213, #507).
+    # A live limit, not a rating: it moves with the battery's state.
+    battery_max_charge_power: float = 0.0       # W
+    battery_max_discharge_power: float = 0.0    # W
 
     # MOD TL3-XH peak shaving / demand management (holding 3307-3312, #372).
     # Undocumented in any public protocol; mapped from portal round-trips. See mod.py.
@@ -4052,6 +4056,17 @@ class GrowattModbus:
                 _pack_addr = self._find_register_by_name(_pack_field)
                 if _pack_addr:
                     self._set_from_register(data, _pack_field, _pack_addr)
+
+            # 32-bit pairs whose dataclass field nothing else assigned. The register maps
+            # decoded them correctly, but no step copied the result into the data, so the
+            # sensors published their 0.0 default: WIT Extra Power to Grid read 0 W while
+            # 8102-8103 decoded to 2605.3 W (#503). Battery power limits, VPP 31210-31213 (#507).
+            for _pair_field in ('battery_max_charge_power', 'battery_max_discharge_power',
+                                'extra_power_to_grid', 'extra_energy_today',
+                                'extra_energy_total'):
+                _pair_addr = self._find_register_by_name(f'{_pair_field}_low')
+                if _pair_addr:
+                    self._set_from_register(data, _pair_field, _pair_addr)
 
             # Temperatures
             inverter_temp_addr = self._find_register_by_name('inverter_temp')

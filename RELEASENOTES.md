@@ -4,6 +4,23 @@
 
 ---
 
+## v2.0.8 (unreleased)
+
+Issues: #503, #507
+
+- **Fix (WIT): Extra Power to Grid, Extra Energy Today and Extra Energy Total now show the
+  inverter's values** (#503). The registers were decoded but never reached the sensors,
+  which always read 0. With an AC-coupled inverter on the GEN port, Extra Power to Grid now
+  shows its production.
+- **New sensors: Battery Max Charge Power and Battery Max Discharge Power** (#507). These
+  are the limits the inverter currently allows the battery, not the power flowing.
+  Diagnostic. MOD/MID TL3-XH and WIT 4-15K. Thanks @Wojak129.
+- **WIT 4-15K: Battery Clusters, Modules per Cluster and Module Rated Voltage** (#507), as
+  already shown on MOD/MID TL3-XH and MIN TL-XH. Rated capacity reads 0 on WIT, so it isn't
+  offered there.
+
+---
+
 ## v2.0.7
 
 Promoted to stable from the pre-release line below (b1 through b11). Every change in that

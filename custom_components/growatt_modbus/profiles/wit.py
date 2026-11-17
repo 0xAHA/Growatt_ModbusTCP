@@ -218,12 +218,13 @@ WIT_4000_15000TL3 = {
         31209: {'name': 'discharge_energy_total_low', 'scale': 1, 'unit': '', 'pair': 31208, 'combined_scale': 0.1, 'combined_unit': 'kWh'},
 
         # 70: Maximum allowable charging power of battery (this is a LIMIT, not actual power)
-        31210: {'name': 'max_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31211},
-        31211: {'name': 'max_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31210, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        # Read on a WIT 15K as 11426.4 W (#507), and on a second WIT as 7891.2 W (#226 scan).
+        31210: {'name': 'battery_max_charge_power_high', 'scale': 1, 'unit': '', 'pair': 31211},
+        31211: {'name': 'battery_max_charge_power_low', 'scale': 1, 'unit': '', 'pair': 31210, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         # 71: Maximum allowable discharge power of battery (this is a LIMIT, not actual power)
-        31212: {'name': 'max_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31213},
-        31213: {'name': 'max_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31212, 'combined_scale': 0.1, 'combined_unit': 'W'},
+        31212: {'name': 'battery_max_discharge_power_high', 'scale': 1, 'unit': '', 'pair': 31213},
+        31213: {'name': 'battery_max_discharge_power_low', 'scale': 1, 'unit': '', 'pair': 31212, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         # Battery Cluster 1 State (31214-31223)
         31214: {'name': 'battery_voltage_vpp', 'scale': 0.1, 'unit': 'V', 'maps_to': 'battery_voltage', 'signed': True},
@@ -247,6 +248,11 @@ WIT_4000_15000TL3 = {
         31222: {'name': 'battery_temp_vpp_alt', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Battery temp (some firmware variants)'},
         31223: {'name': 'battery_temp', 'scale': 0.1, 'unit': '°C', 'signed': True, 'maps_to': 'battery_temp', 'desc': 'Battery environmental temperature'},
         31224: {'name': 'battery_temp_max', 'scale': 0.1, 'unit': '°C', 'signed': True, 'desc': 'Maximum battery temperature'},
+        # Battery pack description (#507). Two WIT 4-15K units read 1 cluster, 2-3 modules,
+        # 51.2 V. 31228 (module rated capacity) is left out: it read 0 on both.
+        31225: {'name': 'battery_cluster_sum', 'scale': 1, 'unit': '', 'desc': 'Number of battery clusters'},
+        31226: {'name': 'battery_module_number', 'scale': 1, 'unit': '', 'desc': 'Battery modules per cluster'},
+        31227: {'name': 'battery_module_rated_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Module rated voltage'},
 
         # Power flow / consumption (8045-8086)
         8045: {'name': 'self_consumption_power_high', 'scale': 1, 'unit': '', 'pair': 8046},

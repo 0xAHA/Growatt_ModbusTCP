@@ -983,6 +983,30 @@ SENSOR_DEFINITIONS = {
         "entity_category": EntityCategory.DIAGNOSTIC,
         "description": "Rated capacity of one battery module.",
     },
+    # Maximum allowable battery power, VPP 31210-31213 (#507). A live limit reported by the
+    # inverter, which moves with the battery's state; not the power actually flowing.
+    "battery_max_charge_power": {
+        "name": "Battery Max Charge Power",
+        "icon": "mdi:battery-arrow-up-outline",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.WATT,
+        "attr": "battery_max_charge_power",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "description": "Maximum charge power the inverter currently allows the battery. "
+                       "A limit, not the power flowing.",
+    },
+    "battery_max_discharge_power": {
+        "name": "Battery Max Discharge Power",
+        "icon": "mdi:battery-arrow-down-outline",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.WATT,
+        "attr": "battery_max_discharge_power",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "description": "Maximum discharge power the inverter currently allows the battery. "
+                       "A limit, not the power flowing.",
+    },
     "battery_voltage_bms": {
         "name": "Battery Voltage BMS",
         "icon": "mdi:battery-charging",
