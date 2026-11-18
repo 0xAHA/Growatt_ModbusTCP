@@ -1,4 +1,4 @@
-"""MOD-X per-MPPT energy counters use input registers 59-66 (FC04)."""
+"""MOD-X per-MPPT energy counters use input registers 59-70 (FC04)."""
 from __future__ import annotations
 
 import importlib
@@ -14,6 +14,8 @@ COUNTERS = (
     (61, 62, "pv1_energy_total"),
     (63, 64, "pv2_energy_today"),
     (65, 66, "pv2_energy_total"),
+    (67, 68, "pv3_energy_today"),
+    (69, 70, "pv3_energy_total"),
 )
 
 
