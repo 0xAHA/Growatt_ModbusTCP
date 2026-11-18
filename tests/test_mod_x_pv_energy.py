@@ -9,6 +9,7 @@ from .test_register_decoding import _client
 
 _profiles = importlib.import_module("growatt_under_test.profiles")
 MOD_X = _profiles.get_profile("MOD_6000_15000TL3_X")
+_dp = importlib.import_module("growatt_under_test.device_profiles")
 COUNTERS = (
     (59, 60, "pv1_energy_today"),
     (61, 62, "pv1_energy_total"),
@@ -57,3 +58,16 @@ def test_mod_x_incomplete_energy_counter_is_unread(
     client = _client(MOD_X["input_registers"], cache)
     assert client._get_register_value(high_address) is None
     assert client._get_register_value(low_address) is None
+
+
+@pytest.mark.parametrize("high_address,low_address,name", COUNTERS)
+def test_every_mapped_mod_x_counter_has_a_sensor(high_address, low_address, name):
+    """A counter that is read but not in the sensor set never reaches an entity."""
+    assert name in _dp.INVERTER_PROFILES["mod_6000_15000tl3_x"]["sensors"]
+
+
+def test_mod_x_offers_no_pv_energy_total_without_its_register():
+    """pv_energy_total (input 91-92) is not mapped on MOD-X, so it must stay out."""
+    names = {r["name"] for r in MOD_X["input_registers"].values()}
+    assert "pv_energy_total_low" not in names
+    assert "pv_energy_total" not in _dp.INVERTER_PROFILES["mod_6000_15000tl3_x"]["sensors"]

@@ -113,6 +113,12 @@ disabled by default, under `+N entities not shown` on the device page — and co
 The per-string counters matched both units' own Growatt app figures exactly, so they are the
 reliable measure when the two disagree.
 
+**MOD TL3-X (grid-tied) has no PV Energy Total sensor.** From v2.0.8 it has the per-string
+counters instead: PV1-PV3 Energy Today and Energy Total (input registers 59-70). They are
+disabled by default. The PV1/PV2 lifetime totals have been checked against a MOD-X's own
+production figures ([#493](https://github.com/0xAHA/Growatt_ModbusTCP/pull/493)); the daily
+counters and PV3 follow the protocol document.
+
 ### Energy sensors worth distinguishing
 
 Three lifetime counters look similar and mean different things:

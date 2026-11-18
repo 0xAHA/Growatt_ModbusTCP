@@ -1047,8 +1047,11 @@ INVERTER_PROFILES = {
             THREE_PHASE_SENSORS |
             AC_POWER_TOTAL_SENSOR |
             ENERGY_SENSORS |
-            # PV_DC_ENERGY_SENSORS intentionally excluded: MOD X grid-tied profile has no
-            # pv_energy_total registers (91-92 absent), so the sensor would always read 0.
+            # PV_DC_ENERGY_SENSORS is not used whole: its pv_energy_total has no register
+            # in this map (V1.39 defines input 91-92 Epv_total, but no MOD-X has reported
+            # it), so that sensor would always read 0. The per-string daily counters it
+            # carries are mapped at input 59-60 / 63-64 (#493), so they are listed here.
+            {"pv1_energy_today", "pv2_energy_today"} |
             PV_MPPT_TOTAL_SENSORS |
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
