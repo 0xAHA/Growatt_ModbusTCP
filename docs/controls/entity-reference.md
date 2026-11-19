@@ -794,6 +794,14 @@ battery's state: one MOD read 2000 W and later 1150 W. Compare them with Battery
 whether the battery, rather than your command, is what's holding charging back. Where the
 limit comes from (the BMS or the inverter's own calculation) isn't documented.
 
+On one WIT 15K (two parallel 16S LiFePO4 banks with JK BMS), both limits were the battery
+voltage times a fixed current over 842 one-minute samples. Charge was 216.0 A × voltage and
+discharge 229.5 A × voltage, between 52.7 V and 55.4 V. They didn't change with the VPP
+charge setpoint, or between PV and grid charging
+([#507](https://github.com/0xAHA/Growatt_ModbusTCP/issues/507)). So on that system they are
+current limits expressed as power. Other batteries may report different currents, and what
+sets the current (BMS, temperature, SOC) hasn't been tested.
+
 ---
 
 ## MIN TL-XH2 Hybrid (VPP only)
