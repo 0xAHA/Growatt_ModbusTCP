@@ -758,6 +758,8 @@ INVERTER_PROFILES = {
             BASIC_AC_SENSORS |
             THREE_PHASE_SENSORS |
             ENERGY_SENSORS |
+            PV_DC_ENERGY_SENSORS |    # V3.14 input 48-49/52-53 today, 56-57 PV total (#508)
+            PV_MPPT_TOTAL_SENSORS |   # V3.14 input 50-51/54-55 (#508)
             TEMPERATURE_SENSORS |
             STATUS_SENSORS
         ),

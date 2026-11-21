@@ -15,8 +15,8 @@ TL3_S_3000_15000 = {
         'Regs 9-10 are firmware version bytes (ASCII "DH"/"1.") not PV2 power — pv2_power stays 0, use pv_total_power. '
         'AC output total at reg 12 (standalone 16-bit, named ac_power_low). '
         'Per-phase output at regs 16-25 (R/S/T power confirmed by sum crosscheck: 1823+1837+1805=5465W ≈ 5458W total ✓). '
-        'Phase T voltage/current location unclear (regs 26/27 show 0/10 which do not match expected ~420V/7.5A). '
-        'Energy at regs 53 and 55 as standalone 16-bit (×0.1 kWh). '
+        'Energy per V3.14: AC today/total at 26-29, PV1/PV2 today/total at 48-55, PV total at 56-57, '
+        'all 32-bit pairs (×0.1 kWh). '
         'Temperature at reg 32 (38.7°C confirmed). DTC 2049 at holding reg 43. Firmware DH1.0. '
         'No VPP support (holding reg 30000 returns Illegal Function). '
         'Regs 35-39 are all zero (MID-style AC layout does NOT apply to this model).'
@@ -67,17 +67,34 @@ TL3_S_3000_15000 = {
         23: {'name': 'ac_current_s', 'scale': 0.1, 'unit': 'A'},
 
         # Phase T — power confirmed: 1805.0W (regs 24-25 pair)
-        # Voltage/current not mapped: regs 26/27 show 0 and 10 which don't match expected ~420V/7.5A.
+        # Voltage/current not mapped. 26/27 are not phase T: they are the energy-today pair (below).
         24: {'name': 'ac_power_t_high', 'scale': 1, 'unit': '', 'pair': 25},
         25: {'name': 'ac_power_t_low', 'scale': 1, 'unit': '', 'pair': 24, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
         # Temperature — confirmed: reg 32 = 387 × 0.1 = 38.7°C
         32: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True},
 
-        # Energy — standalone 16-bit (NOT 32-bit pairs)
-        # Reg 53: 54 × 0.1 = 5.4 kWh today ✓ | Reg 55: 61329 × 0.1 = 6132.9 kWh total ✓
-        53: {'name': 'energy_today_low', 'scale': 0.1, 'unit': 'kWh', 'desc': 'AC energy today (standalone 16-bit)'},
-        55: {'name': 'energy_total_low', 'scale': 0.1, 'unit': 'kWh', 'desc': 'AC energy total (standalone 16-bit)'},
+        # Energy - V3.14 input 26-29 (AC) and 48-57 (PV), all 32-bit pairs at 0.1 kWh.
+        #
+        # This used 53 and 55 as standalone 16-bit "today" and "total". In V3.14 those are the
+        # LOW words of Epv2_today and Epv2_total, so Energy Today showed string 2 only and Energy
+        # Total wrapped every 6553.6 kWh (#508). The #299 scan is consistent with V3.14 in every
+        # pair: Eac today 0/100 = 10.0 kWh against PV1 5.2 + PV2 5.4 today; Eac total 11/7811 =
+        # 72870.7 kWh; PV1 total 37738.3 + PV2 total 38900.9 = Epv_total 76639.2 exactly.
+        26: {'name': 'energy_today_high', 'scale': 1, 'unit': '', 'pair': 27, 'desc': 'Eac today HIGH'},
+        27: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'pair': 26, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Eac today LOW'},
+        28: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'pair': 29, 'desc': 'Eac total HIGH'},
+        29: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'pair': 28, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Eac total LOW'},
+        48: {'name': 'pv1_energy_today_high', 'scale': 1, 'unit': '', 'pair': 49, 'desc': 'Epv1_today HIGH'},
+        49: {'name': 'pv1_energy_today_low', 'scale': 1, 'unit': '', 'pair': 48, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Epv1_today LOW'},
+        50: {'name': 'pv1_energy_total_high', 'scale': 1, 'unit': '', 'pair': 51, 'desc': 'Epv1_total HIGH'},
+        51: {'name': 'pv1_energy_total_low', 'scale': 1, 'unit': '', 'pair': 50, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Epv1_total LOW'},
+        52: {'name': 'pv2_energy_today_high', 'scale': 1, 'unit': '', 'pair': 53, 'desc': 'Epv2_today HIGH'},
+        53: {'name': 'pv2_energy_today_low', 'scale': 1, 'unit': '', 'pair': 52, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Epv2_today LOW'},
+        54: {'name': 'pv2_energy_total_high', 'scale': 1, 'unit': '', 'pair': 55, 'desc': 'Epv2_total HIGH'},
+        55: {'name': 'pv2_energy_total_low', 'scale': 1, 'unit': '', 'pair': 54, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Epv2_total LOW'},
+        56: {'name': 'pv_energy_total_high', 'scale': 1, 'unit': '', 'pair': 57, 'desc': 'Epv_total HIGH'},
+        57: {'name': 'pv_energy_total_low', 'scale': 1, 'unit': '', 'pair': 56, 'combined_scale': 0.1, 'combined_unit': 'kWh', 'desc': 'Epv_total LOW'},
 
         # Diagnostics - V3.14 input 40 "Fault code" and 64 "WarningCode".
         #
