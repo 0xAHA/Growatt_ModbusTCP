@@ -743,7 +743,7 @@ INVERTER_PROFILES = {
     # ========================================================================
 
     # TL3-S 3000-15000 — DTC 2049 at holding register 43, legacy 0-179 register range.
-    # AC output total at reg 12 (MIC-style standalone), per-phase R/S/T at regs 16-25.
+    # AC output total at reg 12 (MIC-style standalone), per-phase V/I/P at regs 14-25 (#508).
     # Regs 35-39 (MID-style AC layout) are all zero for this model.
     "tl3_s_3000_15000": {
         "name": "TL3-S 3000-15000",

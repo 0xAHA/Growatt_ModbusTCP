@@ -54,7 +54,7 @@ When you add the integration, it attempts to identify your inverter automaticall
 | **MOD 6000-15000TL3-XH** | 6–15 kW | 3 | Yes | VPP + Legacy | DTC 5400 | ✅ | Battery monitoring only (control pending) |
 | **SPA-TL3 4000-10000** | 4–10 kW | None | Yes | VPP + Legacy | DTC 3725 | ✅ | AC-coupled storage only — no PV DC inputs. Shares the SPH-TL3 register map |
 | **SPH-TL3 3000-10000** | 3–10 kW | 2 | Yes | VPP + Legacy | DTC | ✅ | Tested: SPH 8000TL3 BH-UP |
-| **TL3-S 3000-15000** | 3–15 kW | 2 | No | Legacy only | DTC 2049 | ✅ | Grid-tied. Tested on firmware DH1.0 (#299) and dhaa01 (#432) - dhaa01 refuses reads over 50 registers, which the profile now allows for. Before v2.0.8, Energy Today showed string 2 only and Energy Total wrapped at 6553.6 kWh ([#508](https://github.com/0xAHA/Growatt_ModbusTCP/issues/508)) |
+| **TL3-S 3000-15000** | 3–15 kW | 2 | No | Legacy only | DTC 2049 | ✅ | Grid-tied. Tested on firmware DH1.0 (#299) and dhaa01 (#432) - dhaa01 refuses reads over 50 registers, which the profile now allows for. Before v2.0.8, Energy Today showed string 2 only, Energy Total wrapped at 6553.6 kWh, and phase voltage/current were shifted by one phase ([#508](https://github.com/0xAHA/Growatt_ModbusTCP/issues/508)) |
 | **WIT 4000-15000TL3** | 4–15 kW | 2 | Yes | VPP v2.03 | DTC 5603 | ✅ | Advanced VPP control — DTC 5603 hardware-confirmed (Issue #335). Also selected for the WIT 17-25K-HU (5603) and WIT 4-25K-XHU (5605), both unconfirmed |
 
 **Legend:** ✅ Tested with real hardware · ⚠️ Profile from documentation, community validation welcome

@@ -14,7 +14,7 @@ TL3_S_3000_15000 = {
         'Legacy 0-179 register range. Two MPPT inputs: PV1 (regs 3-6), PV2 voltage/current only (regs 7-8). '
         'Regs 9-10 are firmware version bytes (ASCII "DH"/"1.") not PV2 power — pv2_power stays 0, use pv_total_power. '
         'AC output total at reg 12 (standalone 16-bit, named ac_power_low). '
-        'Per-phase output at regs 16-25 (R/S/T power confirmed by sum crosscheck: 1823+1837+1805=5465W ≈ 5458W total ✓). '
+        'Per-phase output at regs 14-25, V/I/P per phase in V3.14 order, confirmed against the app (#508). '
         'Energy per V3.14: AC today/total at 26-29, PV1/PV2 today/total at 48-55, PV total at 56-57, '
         'all 32-bit pairs (×0.1 kWh). '
         'Temperature at reg 32 (38.7°C confirmed). DTC 2049 at holding reg 43. Firmware DH1.0. '
@@ -48,26 +48,27 @@ TL3_S_3000_15000 = {
         # Regs 35-39 (MID-style AC layout) are ALL ZERO for this model.
         12: {'name': 'ac_power_low', 'scale': 0.1, 'unit': 'W', 'desc': 'Total AC active output power (standalone 16-bit)'},
         13: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz'},
-        14: {'name': 'ac_voltage', 'scale': 0.1, 'unit': 'V', 'desc': 'Line-to-line voltage (avg)'},
-        15: {'name': 'ac_current', 'scale': 0.1, 'unit': 'A'},
 
-        # Per-Phase AC Output — confirmed from scan, 4-register groups per phase (32-bit power + V + I)
-        # Sum crosscheck: 1823.1 + 1837.4 + 1805.0 = 5465.5W ≈ 5458.1W total ✓
-
-        # Phase R — confirmed: 1823.1W / 425.2V / 7.5A
+        # Per-phase AC output - V3.14 input 14-25, one 4-register group per phase in the
+        # order voltage, current, power HIGH, power LOW.
+        #
+        # Voltage and current used to be read one group late: phase R from 18/19, S from
+        # 22/23, T not at all, and 14/15 as a generic "average". Power was always right.
+        # A 9000TL3-S against its own app at 10:52 (#508): 18/19/20-21 = 406.6 V / 4.2 A /
+        # 983.9 W, the app's AC2 exactly; 14 = 409.6 V against AC1 409.8 V; 22/23 = 407.4 V /
+        # 4.4 A against AC3 407.6 V / 4.4 A. The three voltages differ, so the groups are
+        # told apart, which a single agreeing value could not do. ~400 V readings suggest the firmware reports line voltage.
+        # Sum crosscheck on the #299 scan: 1823.1 + 1837.4 + 1805.0 = 5465.5W ~ 5458.1W total.
+        14: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V', 'desc': 'Vac1', 'alias': 'ac_voltage'},
+        15: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A', 'desc': 'Iac1', 'alias': 'ac_current'},
         16: {'name': 'ac_power_r_high', 'scale': 1, 'unit': '', 'pair': 17},
         17: {'name': 'ac_power_r_low', 'scale': 1, 'unit': '', 'pair': 16, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        18: {'name': 'ac_voltage_r', 'scale': 0.1, 'unit': 'V'},
-        19: {'name': 'ac_current_r', 'scale': 0.1, 'unit': 'A'},
-
-        # Phase S — confirmed: 1837.4W / 420.7V / 7.5A
+        18: {'name': 'ac_voltage_s', 'scale': 0.1, 'unit': 'V', 'desc': 'Vac2'},
+        19: {'name': 'ac_current_s', 'scale': 0.1, 'unit': 'A', 'desc': 'Iac2'},
         20: {'name': 'ac_power_s_high', 'scale': 1, 'unit': '', 'pair': 21},
         21: {'name': 'ac_power_s_low', 'scale': 1, 'unit': '', 'pair': 20, 'combined_scale': 0.1, 'combined_unit': 'W'},
-        22: {'name': 'ac_voltage_s', 'scale': 0.1, 'unit': 'V'},
-        23: {'name': 'ac_current_s', 'scale': 0.1, 'unit': 'A'},
-
-        # Phase T — power confirmed: 1805.0W (regs 24-25 pair)
-        # Voltage/current not mapped. 26/27 are not phase T: they are the energy-today pair (below).
+        22: {'name': 'ac_voltage_t', 'scale': 0.1, 'unit': 'V', 'desc': 'Vac3'},
+        23: {'name': 'ac_current_t', 'scale': 0.1, 'unit': 'A', 'desc': 'Iac3'},
         24: {'name': 'ac_power_t_high', 'scale': 1, 'unit': '', 'pair': 25},
         25: {'name': 'ac_power_t_low', 'scale': 1, 'unit': '', 'pair': 24, 'combined_scale': 0.1, 'combined_unit': 'W'},
 
