@@ -921,6 +921,28 @@ class GrowattWitActivePowerRateNumber(GrowattEntity, NumberEntity):
 # WIT VPP-specific Number Entities (30xxx registers)
 # =============================================================================
 
+async def _inverter_already_holds(hass, client, register: int, raw_value: int, name: str) -> bool:
+    """True when a FRESH read of holding `register` already equals `raw_value`.
+
+    The no-op check for stored registers (#384): an automation re-applying the same value
+    should not spend an EEPROM write cycle. Compared against a fresh read, not
+    coordinator.data, so a value changed since the last poll is still written. An
+    unreadable register returns False - a skipped write that should have happened is worse
+    than a redundant one. Not for registers the protocol marks "not stored", where the
+    write itself can be the command.
+    """
+    current_raw = await hass.async_add_executor_job(client.read_holding_registers, register, 1)
+    if current_raw is not None and len(current_raw) >= 1:
+        if int(current_raw[0]) == (raw_value & 0xFFFF):
+            _LOGGER.debug("%s already reads raw %d - skipping write to register %d",
+                          name, raw_value, register)
+            return True
+        return False
+    _LOGGER.debug("%s: could not read register %d before writing - proceeding without the "
+                  "no-op check", name, register)
+    return False
+
+
 def _polled_soc(data, field: str) -> float | None:
     """A WIT VPP SOC limit as last polled, or None when it was not read.
 
@@ -1039,6 +1061,13 @@ class GrowattWitVppChargeCutoffSocNumber(GrowattEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         raw_value = int(value)
+        # Stored register: skip a write that changes nothing (#384, #509). An optimizer
+        # raising and restoring this around idle periods should only spend a cycle when
+        # the value actually moves.
+        if await _inverter_already_holds(self.hass, self.coordinator.modbus_client,
+                                         self.VPP_CHARGE_CUTOFF_SOC, raw_value,
+                                         "WIT charge cutoff SOC"):
+            return
         _LOGGER.info("[WIT-VPP] Setting charge cutoff SOC to %d%%", raw_value)
 
         try:
@@ -1096,6 +1125,13 @@ class GrowattWitVppDischargeCutoffSocNumber(GrowattEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         raw_value = int(value)
+        # Stored register: skip a write that changes nothing (#384, #509). An optimizer
+        # raising and restoring this around idle periods should only spend a cycle when
+        # the value actually moves.
+        if await _inverter_already_holds(self.hass, self.coordinator.modbus_client,
+                                         self.VPP_DISCHARGE_CUTOFF_SOC, raw_value,
+                                         "WIT discharge cutoff SOC"):
+            return
         _LOGGER.info("[WIT-VPP] Setting discharge cutoff SOC to %d%%", raw_value)
 
         try:
