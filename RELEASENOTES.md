@@ -4,6 +4,36 @@
 
 ---
 
+## v2.0.8-b2
+
+Issues: #493, #508, #509
+
+- **Fix (TL3-S): Energy Today and Energy Total read the inverter's own counters** (#508).
+  Energy Today showed string 2 only, and Energy Total showed part of string 2's lifetime
+  figure and restarted from zero every 6553.6 kWh. Thanks @JHPHendriks.
+- **Fix (TL3-S): phase voltage and current show the right phase** (#508). Phase R showed
+  phase 2's readings, S showed phase 3's, and T had none. Power per phase was already
+  correct, and AC Voltage / AC Current are unchanged. Confirmed against the Growatt app on a
+  9000TL3-S.
+- **New sensors (TL3-S): PV1/PV2 Energy Today, PV1/PV2 Energy Total and PV Energy Total**
+  (#508), disabled by default.
+- **New sensors (MOD TL3-X): per-string energy counters for PV1-PV3, today and total**
+  (#493), disabled by default. The PV1/PV2 lifetime totals were checked against a MOD-X's
+  own figures. Thanks @EasyBizz.
+- **WIT: setting the charge or on-grid discharge cut-off SOC to the value the inverter
+  already holds no longer writes it again** (#509). Both are stored settings, so an
+  automation that re-applies the same value no longer wears the inverter's memory.
+
+**TL3-S upgrade notes:**
+
+- Energy Total jumps once to the inverter's real lifetime total. The Energy dashboard shows
+  that as a single large production spike on the day you update. Correct it under
+  *Developer tools → Statistics* if you want a clean history.
+- Phase R/S/T Voltage and Current history changes meaning at the update: before it, each
+  showed the next phase along.
+
+---
+
 ## v2.0.8-b1
 
 Issues: #503, #505, #507
