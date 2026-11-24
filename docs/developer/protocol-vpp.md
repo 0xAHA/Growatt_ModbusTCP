@@ -369,7 +369,7 @@ to 100 on its own has since failed to reproduce and should not be relied on.
 
 **Holding SOC using only registers that aren't stored**
 ([#504](https://github.com/0xAHA/Growatt_ModbusTCP/issues/504)). This is from one owner's
-experiment on a MOD 8KTL3-XH with APX batteries. Early results, not a long run.
+experiment on a MOD 8KTL3-XH with APX batteries, run for a week.
 
 The goal is to stop grid charging at a target SOC without writing to EEPROM. Leave 30410
 (AC charging enable) at 1 and switch 30216 (*AC charge power max limitation II*, not stored)
@@ -381,8 +381,18 @@ between 0 and the charge rate. With 30409 = 0 the battery then covers the standb
 | 1 | 1 (0.1 kW) | Discharging at about 80 W; SOC falls slowly |
 | 1 | 2 (0.2 kW) | Hovering between 15 W charging and 5 W discharging |
 
+30409 = 1 with 30216 = 2 ran for a week without problems. It is not a strict hold while
+PV is producing: the battery then charged at about 185 W, and SOC rose 2-3 % over a day.
+With 30409 = 0 and the same 30216 it discharged at about 25 W.
+
 Why 0.1 kW was not enough is unknown. One possibility is that the cap applies before
 conversion losses, but nothing documents it.
+
+Growatt support's own answer to the same question was to set 30404 or 30405 to put the
+battery in standby, and they said that changing those stored registers by VPP command
+every day does not harm the EEPROM, as their own scheduling does the same. That is a
+statement about daily changes. It does not change the V2.05 document's rule that stored
+registers are not for high-frequency writing.
 
 ---
 
