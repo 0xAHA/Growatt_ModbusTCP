@@ -464,6 +464,17 @@ To end the session call [Pattern 5](#pattern-5-proper-termination-sequence-conti
 
 The inverter enforces its own SOC limits (registers 30404/30405). Your automation can mirror these:
 
+!!! note "30405 does not stop discharge in Load First"
+    This pattern is for remote-control sessions. Outside them, a WIT 15K-HU set to
+    Load First kept discharging with 30405 at 100 %. Raising holding register **952**
+    (battery discharge stop SOC) above the current SOC stopped discharge at once, and
+    30405 did not change with it
+    ([#509](https://github.com/0xAHA/Growatt_ModbusTCP/issues/509)). The VPP document
+    names 30405 the *online* discharge cut-off and has a separate load-priority one
+    (30406). Whether PV surplus still charges the battery while 952 holds discharge
+    back is not yet measured. Like 30405, 952 is a setting to change when a period
+    starts and ends, not on a timer.
+
 ```yaml
 variables:
   soc: "{{ states('sensor.INVERTER_battery_soc') | int(0) }}"
