@@ -270,6 +270,16 @@ The integration handles this for you, so there is nothing to configure:
 
 **Serial setups need v2.0.7-b9 or later for this.** Before that, each serial entry locked only itself. Polling usually got through because it retries. Actions such as **Sync Inverter Time** and **Get Register Data** don't retry, so they could fail for every entry but one with `Could not open the serial port` ([#501](https://github.com/0xAHA/Growatt_ModbusTCP/issues/501)). If you have two entries on one adapter and see that, update first.
 
+**When one inverter goes offline, the others keep polling (v2.0.8 or later).** A serial poll
+retries up to three times, but it now gives the bus back during the pause between tries,
+and an inverter that already failed its last poll gets one try per cycle rather than
+three. Before this, one inverter going to sleep at dusk could hold the bus for longer
+than the 60 s the other entries wait. They then skipped polls with `Modbus bus busy ...
+(lock timeout after 60s)` and went unavailable while still producing
+([#501](https://github.com/0xAHA/Growatt_ModbusTCP/issues/501)). A single try can still
+take several timeouts on a model that reads many register blocks, so keep the entry's
+**timeout** short, a few seconds, on a shared adapter.
+
 ### WIT: every unit answers on address 1, whatever ShineTools says
 
 Sharing a bus depends on each inverter having its own Modbus address. **On the WIT HU15 the

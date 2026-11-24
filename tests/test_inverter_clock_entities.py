@@ -61,7 +61,7 @@ def test_the_direct_poll_still_runs_under_the_bus_lock():
     the port out from under the poll (#398)."""
     body = _function_body(_source("coordinator.py"), "GrowattModbusCoordinator", "_fetch_data")
     assert "_bus(" in body, "the direct poll no longer holds the bus for its whole duration"
-    assert "_fetch_data_direct()" in body, "the direct poll body is no longer delegated"
+    assert "_fetch_data_direct(" in body, "the direct poll body is no longer delegated"
 
 
 def test_the_clock_is_not_read_until_something_asks():

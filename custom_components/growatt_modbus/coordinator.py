@@ -50,6 +50,11 @@ from .growatt_modbus import GrowattModbus, GrowattData, SharedModbusConnection, 
 
 _LOGGER = logging.getLogger(__name__)
 
+# Direct (non-hub) poll: attempts per poll while the inverter is answering, and the
+# pause between them, taken with the bus released (#501).
+DIRECT_POLL_ATTEMPTS = 3
+DIRECT_POLL_RETRY_DELAY = 3  # seconds
+
 # Floor for how long a tracked write stays pending verification (Issue #358).
 # Must cover: one poll skipped for pre-dating the write, plus two consecutive mismatching
 # polls to satisfy the debounce — three cycles at the default 60 s scan interval.
@@ -1857,97 +1862,90 @@ class GrowattModbusCoordinator(DataUpdateCoordinator[GrowattData]):
         # RLock and everything below runs in this one executor job, so the per-transaction
         # acquisitions inside re-enter rather than deadlock. Reported by @rinuskroon on
         # v1.8.10 (#398).
-        try:
-            with self._client._bus("poll"):
-                return self._fetch_data_direct()
-        except ModbusWriteError as err:
-            _LOGGER.warning(
-                "Modbus bus busy for %s - skipping this poll: %s",
-                self.config.get(CONF_DEVICE_PATH) or self.config.get(CONF_HOST), err,
-            )
-            return None
-
-    def _fetch_data_direct(self) -> GrowattData | None:
-        """Poll over a connection this client owns outright. Bus already held."""
-        max_retries = 3
-        retry_delay = 3  # seconds - increased from 2
-
-        for attempt in range(max_retries):
+        #
+        # Held per ATTEMPT, not across the retries (#501). Two entries on one RS485
+        # adapter share this lock. When one inverter stops answering at dusk, a single
+        # attempt can take several block timeouts, and three of them plus the pauses ran
+        # past the other entry's 60 s lock timeout: an inverter still producing skipped
+        # its polls and went unavailable. The pause between attempts is now taken with the
+        # bus free, so the other entry polls in it.
+        #
+        # And only one attempt once the last poll failed. The retries exist for a
+        # transient error on a working link; an inverter that has already failed a whole
+        # poll is most likely asleep, and retrying it three times per cycle all night only
+        # keeps the bus from everything else. It costs at most one poll interval of
+        # recovery after a genuine glitch.
+        attempts = 1 if self._consecutive_failures > 0 else DIRECT_POLL_ATTEMPTS
+        for attempt in range(attempts):
+            if attempt:
+                time.sleep(DIRECT_POLL_RETRY_DELAY)  # bus released - see above
             try:
-                # Ensure clean state before connecting - always disconnect first
-                # This prevents file descriptor leaks from failed connection attempts
-                try:
-                    self._client.disconnect()
-                except Exception as err:
-                    _LOGGER.debug("Disconnect before connect raised exception (safe to ignore): %s", err)
-
-                if not self._client.connect():
-                    _LOGGER.warning(
-                        "Failed to connect to Growatt inverter (attempt %d/%d)",
-                        attempt + 1, max_retries
-                    )
-                    # CRITICAL: Always disconnect after failed connect to release serial port/socket
-                    try:
-                        self._client.disconnect()
-                    except Exception as err:
-                        _LOGGER.debug("Disconnect after failed connect raised exception: %s", err)
-
-                    if attempt < max_retries - 1:
-                        time.sleep(retry_delay)  # constant delay, not exponential
-                        continue
-                    _LOGGER.debug("All connection attempts failed")
-                    return None
-
-                self._apply_client_options()
-
-                data = self._client.read_all_data()
-                if data is not None:  # Success!
-                    # Lazily read device identification on the first successful connection.
-                    # Previously called during async_config_entry_first_refresh, but that
-                    # blocked the HA bootstrap executor and triggered a CancelledError on
-                    # slow/offline inverters. Called here while the connection is still open.
-                    if not self._identification_complete:
-                        self._read_device_identification()
-                    # Before the disconnect - this path closes the socket on its way out.
-                    self._refresh_inverter_clock()
-                    self._refresh_onoff()
-                    self._recheck_profile_against_dtc()
-                    self._client.disconnect()
-                    return data
-
-                # Read failed - disconnect before retrying to avoid stale connections
-                _LOGGER.warning("Read returned None (attempt %d/%d)", attempt + 1, max_retries)
-                try:
-                    self._client.disconnect()
-                except Exception as err:
-                    _LOGGER.debug("Disconnect after failed read raised exception: %s", err)
-
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delay)
-                    continue
-
-            except Exception as err:
+                with self._client._bus("poll"):
+                    data = self._fetch_data_direct(attempt + 1, attempts)
+            except ModbusWriteError as err:
                 _LOGGER.warning(
-                    "Error during data fetch (attempt %d/%d): %s",
-                    attempt + 1, max_retries, err
+                    "Modbus bus busy for %s - skipping this poll: %s",
+                    self.config.get(CONF_DEVICE_PATH) or self.config.get(CONF_HOST), err,
                 )
-                if self._client:
-                    try:
-                        self._client.disconnect()
-                    except Exception as disconnect_err:
-                        _LOGGER.debug("Disconnect after exception raised error: %s", disconnect_err)
+                return None
+            if data is not None:
+                return data
+        return None
 
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delay)
-                else:
-                    _LOGGER.debug("All fetch attempts failed after %d retries", max_retries)
-                    return None
+    def _fetch_data_direct(self, attempt: int = 1, attempts: int = 1) -> GrowattData | None:
+        """One poll attempt over a connection this client owns outright. Bus already held.
 
-        # Final disconnect if we get here
+        Always leaves the connection closed on failure, so the next attempt - or the
+        other entry on the same port - starts from a clean open.
+        """
+        try:
+            # Ensure clean state before connecting - always disconnect first
+            # This prevents file descriptor leaks from failed connection attempts
+            try:
+                self._client.disconnect()
+            except Exception as err:
+                _LOGGER.debug("Disconnect before connect raised exception (safe to ignore): %s", err)
+
+            if not self._client.connect():
+                _LOGGER.warning(
+                    "Failed to connect to Growatt inverter (attempt %d/%d)", attempt, attempts
+                )
+                # CRITICAL: Always disconnect after failed connect to release serial port/socket
+                try:
+                    self._client.disconnect()
+                except Exception as err:
+                    _LOGGER.debug("Disconnect after failed connect raised exception: %s", err)
+                return None
+
+            self._apply_client_options()
+
+            data = self._client.read_all_data()
+            if data is not None:  # Success!
+                # Lazily read device identification on the first successful connection.
+                # Previously called during async_config_entry_first_refresh, but that
+                # blocked the HA bootstrap executor and triggered a CancelledError on
+                # slow/offline inverters. Called here while the connection is still open.
+                if not self._identification_complete:
+                    self._read_device_identification()
+                # Before the disconnect - this path closes the socket on its way out.
+                self._refresh_inverter_clock()
+                self._refresh_onoff()
+                self._recheck_profile_against_dtc()
+                self._client.disconnect()
+                return data
+
+            _LOGGER.warning("Read returned None (attempt %d/%d)", attempt, attempts)
+
+        except Exception as err:
+            _LOGGER.warning(
+                "Error during data fetch (attempt %d/%d): %s", attempt, attempts, err
+            )
+
+        # Failed: disconnect so nothing stale carries into the next attempt.
         try:
             self._client.disconnect()
         except Exception as err:
-            _LOGGER.debug("Final disconnect raised exception: %s", err)
+            _LOGGER.debug("Disconnect after failed attempt raised exception: %s", err)
         return None
 
     async def async_config_entry_first_refresh(self) -> None:
