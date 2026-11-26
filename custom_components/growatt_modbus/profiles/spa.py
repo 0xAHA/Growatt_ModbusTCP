@@ -229,6 +229,14 @@ SPA_3000_6000_TL_BL = {
         # Confirmed identical to SPH-TL3 from entity values in scan:
         # priority_mode, discharge_stopped_soc, charge_power_rate, time_period_1/2/3
         **SPH_TL3_3000_10000['holding_registers'],
+
+        # Reads back the real state despite V1.39 marking it write-only (#510). Two
+        # SPA3000TL-BL on firmware RHAA081005, read at the same moment: 0 on the one shut
+        # down (0 W battery and AC), 1 on the one running (-560 W battery, 522.9 W AC).
+        # Same model and firmware giving different values, each matching its state, rules
+        # out a register stuck at one value.
+        0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On',
+            'onoff_readback': True},
     },
 }
 

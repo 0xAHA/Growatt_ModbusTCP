@@ -154,9 +154,11 @@ def test_plain_write_does_not_read():
 # ---------------------------------------------------------------------------
 
 # Confirmed on a MIN TL-X by switching it off and on: register 0 read 0 then 1. The V2.01
-# variants are the same inverters and inherit the entry.
+# variants are the same inverters and inherit the entry. SPA3000TL-BL: two units on the
+# same firmware read 0 (shut down) and 1 (running) at the same moment (#510).
 READBACK = {"MIN_3000_6000TL_X", "MIN_7000_10000TL_X",
-            "MIN_3000_6000TL_X_V201", "MIN_7000_10000TL_X_V201"}
+            "MIN_3000_6000TL_X_V201", "MIN_7000_10000TL_X_V201",
+            "SPA_3000_6000_TL_BL"}
 
 
 @pytest.mark.parametrize("name", sorted(REGISTER_MAPS))

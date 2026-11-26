@@ -893,9 +893,11 @@ The range is the inverter's MPPT window; the right value for you depends on your
 enable it under the inverter device's entity settings. Off-grid owners especially: turning
 **AC Output** off cuts power to everything the inverter supplies.
 
-**On MIN TL-X the switch shows the inverter's real state**, read each poll while the switch
-is enabled. That register was confirmed on a real unit to read `0` while off and `1` while
-on, so a change made from ShinePhone or the front panel shows here too.
+**On MIN TL-X and SPA 3000-6000 TL-BL the switch shows the inverter's real state**, read each
+poll while the switch is enabled. That register was confirmed on real units to read `0` while
+off and `1` while on (on SPA, two units on the same firmware, one off and one running,
+[#510](https://github.com/0xAHA/Growatt_ModbusTCP/issues/510)), so a change made from
+ShinePhone or the front panel shows here too.
 
 **Everywhere else it shows the last command sent**, not a reading, and offers both actions
 rather than a toggle. Growatt documents the register as write-only on most families, so a
@@ -919,11 +921,12 @@ from your profile:
 On the two read-first families, if the register cannot be read nothing is written; guessing
 the other byte is the mistake the read exists to avoid.
 
-!!! warning "Confirmed on hardware for MIN TL-X and TL3-S only"
+!!! warning "Confirmed on hardware for MIN TL-X, TL3-S and SPA TL-BL read-back only"
     The encodings above come from Growatt's protocol documents. So far a MIN TL-X has been
     switched off and back on through this switch, reading `0` and `1` as expected, and a
     TL3-S went to *Waiting* when switched off and ran its start-up sequence when switched
-    back on. On
+    back on. On SPA TL-BL the read-back is confirmed; switching through this switch has not
+    yet been reported. On
     MIN TL-XH2 in particular, other VPP controls are known to need control authority (30100)
     before they act; the switch does not grant it, so 30101 may be ignored there. If you test
     another model, please report what register 0 (or 30101) reads while off and while on
