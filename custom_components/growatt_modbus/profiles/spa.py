@@ -8,14 +8,15 @@ SPA_3000_6000_TL_BL = {
     'name': 'SPA (AC Storage) 3-6kW',
     'description': 'AC-coupled battery storage inverter — no PV MPPT inputs (SPA 3000TL BL and similar)',
     'notes': (
-        'Uses the 1000-1124 range, plus 2000-2124 per the protocol (unverified). '
+        'Uses the 1000-1124 range, plus 2000-2124 (confirmed on a SPA3000TL-BL, #510). '
         'No solar DC inputs. '
         'Base range (0-124) and 3000+ range respond with zeros — not exceptions. '
         'Holding registers identical to SPH-TL3. '
         'Register layout differs from SPH-TL3 at shared addresses: '
         'reg 1021/1022 = grid import power on SPA (SPH-TL3 calls this power_to_load); '
         'reg 1037/1038 = load power (SPH-TL3 load power is at 1021/1022). '
-        'Grid frequency at reg 1113 (×0.01 Hz). Battery current at reg 1088 (×0.01 A, signed).'
+        'AC voltage/frequency at 2038/2037, falling back to 1105/1113 only when the 2000 '
+        'range is unread and the value is plausible. Battery current at reg 1088 (×0.01 A, signed).'
     ),
     'input_registers': {
         # ============================================================================
@@ -96,17 +97,23 @@ SPA_3000_6000_TL_BL = {
         1038: {'name': 'power_to_load_low', 'scale': 1, 'unit': '', 'pair': 1037,
                'combined_scale': 0.1, 'combined_unit': 'W'},
 
-        # AC Grid Voltage
-        # Reg 1105 (input FC04) = ~21575 raw → ×0.01 = 215.75V on UK 230V grid.
-        # Constant between day/night scans — consistent with mains voltage.
+        # AC voltage / frequency FALLBACK only - the primary source is 2038/2037 below.
+        #
+        # #249 read 1105 = 21575 (215.75 V at x0.01) and 1113 = 4986-5000 (49.86-50.00 Hz),
+        # and these were mapped as voltage and frequency. The protocol says otherwise: input
+        # 1105 is BMS_BMSInfo and 1113 is uwMinVoltCellNo, in the BMS block where 1108/1109
+        # are the max/min cell voltages. On a second SPA3000TL-BL (firmware RHAA081005,
+        # #510) they read 256 and 3239 - 2.56 V and 32.39 Hz - while 2038/2037 gave 240.8 V
+        # and 49.90 Hz at one discharge level and 241.9 V / 49.91 Hz at another.
+        #
+        # Kept, under names nothing resolves directly, so a firmware whose 2000 range does
+        # not answer still gets #249's readings - but only when they are plausible mains
+        # values (see _spa_ac_fallback in growatt_modbus.py).
         # NOTE: Not to be confused with holding reg 1105 (FC03) = time_period_2_enable.
-        1105: {'name': 'ac_voltage', 'scale': 0.01, 'unit': 'V',
-               'desc': 'Grid/AC voltage (×0.01; confirmed ~216V on 230V grid)'},
-
-        # Grid Frequency
-        # Confirmed: 4986 × 0.01 = 49.86 Hz, 5000 = 50.00 Hz, varies realistically (#249).
-        1113: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz',
-               'desc': 'Grid frequency (×0.01 Hz; confirmed 49.86-50.00 Hz range #249)'},
+        1105: {'name': 'ac_voltage_bms_block', 'scale': 0.01, 'unit': 'V',
+               'desc': 'Fallback AC voltage (#249); protocol: BMS_BMSInfo'},
+        1113: {'name': 'ac_frequency_bms_block', 'scale': 0.01, 'unit': 'Hz',
+               'desc': 'Fallback AC frequency (#249); protocol: uwMinVoltCellNo'},
 
         # Energy Breakdown (all registers confirmed from day + night cross-scan analysis)
         1044: {'name': 'energy_to_user_today_high', 'scale': 1, 'unit': '', 'pair': 1045},
@@ -164,8 +171,9 @@ SPA_3000_6000_TL_BL = {
         # This block describes single-phase SPA models only. A three-phase SPA uses the
         # SPH-TL3 layout instead — see spa_tl3_4000_10000_v201.
         #
-        # If you own a single-phase SPA, a scan of 2000-2124 would confirm or refute all
-        # of this in one pass; the scanner has covered the range since v1.4.0.
+        # Until v2.0.8 nothing requested this range: read_all_data had no window for
+        # 2000-2999, so every field here was unread on every SPA. A SPA3000TL-BL scan
+        # (#510) then showed it populated and matching the protocol.
         #
         # PARTIAL. The protocol documents roughly forty registers here; the ones below
         # are those with an existing sensor behind them. Still unmapped and available:
@@ -174,24 +182,23 @@ SPA_3000_6000_TL_BL = {
         # 2112-2115 (AC charge energy). Each needs a sensor definition, so they are left
         # until there is a device to verify against.
         2000: {'name': 'status', 'scale': 1, 'unit': '',
-               'desc': 'Inverter run state (0=waiting, 1=normal, 3=fault) — spec, unverified'},
+               'desc': 'Run state, hybrid work-mode codes: 0 in standby, 6 (Bat On-Grid) while discharging (#510)'},
 
         # Pac — AC output power. Distinct from the 1000-range flow registers above:
         # this is the inverter's own output, not the grid connection point.
         2035: {'name': 'ac_power_high', 'scale': 1, 'unit': '', 'pair': 2036},
         2036: {'name': 'ac_power_low', 'scale': 1, 'unit': '', 'pair': 2035,
-               'combined_scale': 0.1, 'combined_unit': 'W',
-               'desc': 'AC output power (spec 0.1W, unverified)'},
+               'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True,
+               'desc': 'AC output power (0.1 W; 634.0 / 1992.9 W discharging, #510). Sign while charging unconfirmed'},
 
-        # Iac1 — AC output current. Fills a gap the model matrix flagged as unconfirmed.
-        #
-        # Vac1 (2038, 0.1V) and Fac (2037, 0.01Hz) are deliberately NOT mapped: this
-        # profile already has ac_voltage at 1105 and ac_frequency at 1113, both verified
-        # against real readings in #249. A second register with the same name would make
-        # _find_register_by_name() resolution order-dependent, and the verified one must
-        # win. Document-derived values do not get to displace measured ones.
+        # Fac / Vac1 / Iac1. Protocol and #510 agree, at two operating points: 49.90 /
+        # 49.91 Hz, 240.8 / 241.9 V, 2.6 / 8.1 A with Pac 634.0 / 1992.9 W.
+        2037: {'name': 'ac_frequency', 'scale': 0.01, 'unit': 'Hz',
+               'desc': 'AC frequency (Fac, 0.01 Hz; confirmed #510)'},
+        2038: {'name': 'ac_voltage', 'scale': 0.1, 'unit': 'V',
+               'desc': 'AC voltage (Vac1, 0.1 V; confirmed #510)'},
         2039: {'name': 'ac_current', 'scale': 0.1, 'unit': 'A',
-               'desc': 'AC output current (spec 0.1A, unverified)'},
+               'desc': 'AC output current (Iac1, 0.1 A; confirmed #510)'},
 
         # Eac today / total — AC energy generated.
         #
@@ -202,21 +209,21 @@ SPA_3000_6000_TL_BL = {
         2053: {'name': 'energy_today_high', 'scale': 1, 'unit': '', 'pair': 2054},
         2054: {'name': 'energy_today_low', 'scale': 1, 'unit': '', 'pair': 2053,
                'combined_scale': 0.1, 'combined_unit': 'kWh',
-               'desc': 'AC energy today (spec 0.1kWh, unverified)'},
+               'desc': 'AC energy today (0.1 kWh; plausible on #510, not cross-checked)'},
         2055: {'name': 'energy_total_high', 'scale': 1, 'unit': '', 'pair': 2056},
         2056: {'name': 'energy_total_low', 'scale': 1, 'unit': '', 'pair': 2055,
                'combined_scale': 0.1, 'combined_unit': 'kWh',
-               'desc': 'AC energy total (spec 0.1kWh, unverified)'},
+               'desc': 'AC energy total (0.1 kWh; plausible on #510, not cross-checked)'},
 
         # Temperatures. This profile had none at all before — an SPA reported no
         # temperature of any kind, which read as "this hardware doesn't measure it"
         # rather than "we never asked".
         2093: {'name': 'inverter_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
-               'desc': 'Inverter temperature (spec 0.1C, unverified)'},
+               'desc': 'Inverter temperature (0.1 C; 23.1 C on #510)'},
         2094: {'name': 'ipm_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
-               'desc': 'IPM temperature (spec 0.1C, unverified)'},
+               'desc': 'IPM temperature (0.1 C; 20.3 C on #510)'},
         2095: {'name': 'boost_temp', 'scale': 0.1, 'unit': '°C', 'signed': True,
-               'desc': 'Boost temperature (spec 0.1C, unverified)'},
+               'desc': 'Boost temperature (0.1 C; 20.0 C on #510)'},
     },
     'holding_registers': {
         # Confirmed identical to SPH-TL3 from entity values in scan:

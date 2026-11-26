@@ -2692,6 +2692,34 @@ class GrowattModbus:
             scale,
         )
 
+    # Plausible mains for the SPA fallback below: 100-280 V covers 120 V and 230 V grids
+    # with margin; frequency 45-65 Hz covers 50 and 60 Hz.
+    _SPA_FALLBACK_LIMITS = {
+        'ac_voltage': ('ac_voltage_bms_block', 100.0, 280.0),
+        'ac_frequency': ('ac_frequency_bms_block', 45.0, 65.0),
+    }
+
+    def _spa_ac_fallback(self, data: "GrowattData") -> None:
+        """SPA: use 1105/1113 only when 2038/2037 were not read and they look like mains.
+
+        The protocol puts BMS fields at 1105/1113, and on one SPA firmware they read 2.56 V
+        and 32.39 Hz (#510). On another they read 215.75 V and 49.86-50.00 Hz (#249). That
+        earlier firmware's 2000 range has never been read, so it is unknown whether it
+        answers there; this keeps its readings if it does not, and never publishes the
+        #510 values. No-op for profiles without the *_bms_block names.
+        """
+        for field_name, (alt_name, lo, hi) in self._SPA_FALLBACK_LIMITS.items():
+            if field_name not in data.unread_fields:
+                continue
+            alt_addr = self._find_register_by_name(alt_name)
+            if not alt_addr:
+                continue
+            value = self._get_register_value(alt_addr)
+            if value is None or not (lo <= value <= hi):
+                continue
+            setattr(data, field_name, value)
+            data.unread_fields.discard(field_name)
+
     def _set_from_register(self, data: "GrowattData", field_name: str, address: int) -> None:
         """Assign a decoded register to a field, or record that it could not be read.
 
@@ -3238,6 +3266,11 @@ class GrowattModbus:
         # to avoid requesting a single oversized read spanning the 0-874 gap up to ~999
         has_base_range = any(0 <= addr < 875 for addr in addresses)
         has_storage_range = any(1000 <= addr < 2000 for addr in addresses)
+        # SPA 2000-2124 (#510). The SPA profile mapped this range from v1.5.2 on, but no
+        # window here covered it, so it was never requested: every field in it stayed
+        # unread. tests/test_input_read_windows.py fails if a profile maps an input address
+        # that no window below reads.
+        has_2000_range = any(2000 <= addr < 3000 for addr in addresses)
         has_3000_range = any(3000 <= addr < 4000 for addr in addresses)
         has_875_range = any(875 <= addr < 1000 for addr in addresses)
         has_8000_range = any(8000 <= addr < 8200 for addr in addresses)
@@ -3257,7 +3290,7 @@ class GrowattModbus:
         #
         # When other ranges exist, a base failure is now a warning and the poll continues.
         # The empty-cache guard further down still catches "every range failed".
-        _base_is_primary = not (has_storage_range or has_3000_range
+        _base_is_primary = not (has_storage_range or has_2000_range or has_3000_range
                                 or has_875_range or has_8000_range or has_31000_range)
 
         # Read base range (0-N) if needed — size trimmed to profile's actual max address.
@@ -3333,7 +3366,29 @@ class GrowattModbus:
                     else:
                         for i, value in enumerate(chunk_regs):
                             self._register_cache[chunk_start + i] = value
-        
+
+        # Read 2000 range if needed - SPA inverter/AC side (#510). Optional: a failure
+        # leaves these fields unread (unknown), and the storage range still carries the
+        # battery data.
+        if has_2000_range:
+            addrs_2000 = sorted(a for a in addresses if 2000 <= a < 3000)
+            if _sparse_mode:
+                logger.debug("Reading 2000 range sparse (%d registers, block_size=%d)",
+                             len(addrs_2000), _block_size)
+                _read_sparse(addrs_2000)
+            else:
+                min_addr_2000, max_addr_2000 = addrs_2000[0], addrs_2000[-1]
+                logger.debug("Reading 2000 range (%d-%d)", min_addr_2000, max_addr_2000)
+                for chunk_start in range(min_addr_2000, max_addr_2000 + 1, 125):
+                    chunk_count = min(125, max_addr_2000 - chunk_start + 1)
+                    chunk_regs = self.read_input_registers(chunk_start, chunk_count)
+                    if chunk_regs is None:
+                        logger.warning("Failed to read 2000 register block (%d-%d)",
+                                       chunk_start, chunk_start + chunk_count - 1)
+                    else:
+                        for i, value in enumerate(chunk_regs):
+                            self._register_cache[chunk_start + i] = value
+
         # Read 3000 range if needed - MIN/MOD models
         if has_3000_range:
             addrs_3000 = sorted([addr for addr in addresses if 3000 <= addr < 4000])
@@ -3787,6 +3842,7 @@ class GrowattModbus:
                 logger.debug(f"AC Power from reg {ac_power_addr}: {data.ac_power}W")
             if ac_freq_addr:
                 self._set_from_register(data, 'ac_frequency', ac_freq_addr)
+            self._spa_ac_fallback(data)
 
             # AC Apparent Power (SPF Off-Grid, some other models)
             ac_apparent_power_addr = self._find_register_by_name('ac_apparent_power_low')

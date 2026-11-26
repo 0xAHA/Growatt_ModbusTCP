@@ -1333,7 +1333,7 @@ sleep both disabled. Which change caused that is not established.
 | 1248 | bKeyAgingTestOkFlag | Key detection success flag | — | 0=Not completed, 1=Finished |
 | 1249 | Reserved | Reserved | — | |
 | *Thirteenth group — SPA storage (2000–2124)* | | | | |
-| 2000 | Inverter Status | SPA inverter run state | — | 0=Waiting, 1=Normal, 3=Fault |
+| 2000 | Inverter Status | SPA inverter run state | — | 0=Waiting, 1=Normal, 3=Fault. A SPA3000TL-BL reads 0 in standby and 6 while discharging, matching the 1000 uwSysWorkMode codes (6 = Bat On-Grid) rather than this list (#510) |
 | 2001–2034 | Reserved | Reserved | — | |
 | 2035 | Pac H | SPA output power (high) | 0.1W | |
 | 2036 | Pac L | SPA output power (low) | 0.1W | |
