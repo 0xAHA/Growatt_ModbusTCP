@@ -88,9 +88,10 @@ model rejects the write, use the inverter display panel or the manufacturer app 
 > 30408 and 30409** are marked "Not stored". So **Control Authority (30100), AC Charge
 > (30410), the time segments (30411-30471), the per-period priorities (30380-30399), the
 > default mode (30476) and the SOC limits are all EEPROM**: set them when a session or
-> schedule changes, never on a timer. Growatt gives no figure for "high-frequency", and the
-> document covers the VPP range only; for the V1.39 ranges there is still nothing, so the
-> same caution applies ([#392](https://github.com/0xAHA/Growatt_ModbusTCP/issues/392),
+> schedule changes, never on a timer. The document gives no figure for "high-frequency";
+> the only one is from Growatt support, who told a MOD user that 5–10 writes a day is fine
+> ([#504](https://github.com/0xAHA/Growatt_ModbusTCP/issues/504)). The document covers the
+> VPP range only; for the V1.39 ranges there is still nothing, so the same caution applies ([#392](https://github.com/0xAHA/Growatt_ModbusTCP/issues/392),
 > [#481](https://github.com/0xAHA/Growatt_ModbusTCP/issues/481)).
 
 #### Register 30407: Remote Power Control Enable

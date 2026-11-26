@@ -390,9 +390,12 @@ conversion losses, but nothing documents it.
 
 Growatt support's own answer to the same question was to set 30404 or 30405 to put the
 battery in standby, and they said that changing those stored registers by VPP command
-every day does not harm the EEPROM, as their own scheduling does the same. That is a
-statement about daily changes. It does not change the V2.05 document's rule that stored
-registers are not for high-frequency writing.
+every day does not harm the EEPROM, as their own scheduling does the same. Asked how
+often is safe, support answered "5–10 times a day is fine". That is the only figure
+Growatt has given; it comes from a support reply to this user, not from a protocol
+document, and the V2.05 document still says only that stored registers are not for
+high-frequency writing. An automation that changes a stored register on a timer, rather
+than a handful of times a day, is outside what anyone has said is safe.
 
 ---
 
