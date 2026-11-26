@@ -189,6 +189,11 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         self._control_name = control_name
         self._control_config = control_config
 
+        # (written raw, register raw at the time) after a write the inverter applies but
+        # does not store, so the register cannot show it (#501). Cleared when the register
+        # moves, since that means something else has since changed the setting.
+        self._unstored_write: tuple[int, int | None] | None = None
+
         # Controls that should exist but not be operable until someone chooses to enable
         # them. Used for the SPF bulk and float charging voltages (#384), where a wrong
         # in-range value damages a battery bank rather than producing a wrong reading —
@@ -357,6 +362,18 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         if raw_value is None:
             return None
 
+        # A write the inverter applied without storing: the register still shows its
+        # initial value, so show what was written until the register itself moves (#501).
+        if self._unstored_write is not None:
+            written, baseline = self._unstored_write
+            if baseline is None:
+                self._unstored_write = (written, int(raw_value))
+                raw_value = written
+            elif int(raw_value) == baseline:
+                raw_value = written
+            else:
+                self._unstored_write = None
+
         # Apply scale
         scale = self._control_config.get('scale', 1)
         return round(float(raw_value) * scale, 2)
@@ -516,6 +533,35 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
                 return min(hi, paired)
         return hi
 
+    async def _write_is_stored(self) -> bool:
+        """False only when the inverter says a write to this control will not be stored.
+
+        Declared per control as `stored_if_holding_reads: (register, value)` (#501). Any
+        other reading - 0, or 65535 where the switch is not implemented - means not stored.
+        An unreadable switch keeps the normal path: nothing is known, and the normal path
+        is the one every model ran on before.
+        """
+        gate = self._control_config.get('stored_if_holding_reads')
+        if not gate:
+            return True
+        gate_register, stored_value = gate
+        regs = await self.hass.async_add_executor_job(
+            self.coordinator.modbus_client.read_holding_registers, gate_register, 1
+        )
+        if regs is None or len(regs) < 1:
+            _LOGGER.debug(
+                "%s: holding %d unreadable - treating the write as stored",
+                self._control_name, gate_register,
+            )
+            return True
+        if int(regs[0]) == stored_value:
+            return True
+        _LOGGER.debug(
+            "%s: holding %d reads %d - the inverter will not store this write",
+            self._control_name, gate_register, int(regs[0]),
+        )
+        return False
+
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
         scale = self._control_config.get('scale', 1)
@@ -570,7 +616,13 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         # the command: rewriting 30408 with the same duration is how an automation would
         # expect to restart the window, and skipping it would leave the old one running
         # (#481).
-        if not self._control_config.get('not_stored'):
+        #
+        # Nor when the inverter says it will not store this write (#501). Then the register
+        # keeps reading its initial value whatever rate is in force, so "already reads 100"
+        # means nothing - on a throttled MOD it skipped the write of 100 that would have
+        # lifted the throttle. The EEPROM argument goes with it: the write is not stored.
+        stored = await self._write_is_stored()
+        if stored and not self._control_config.get('not_stored'):
             current_raw = await self.hass.async_add_executor_job(
                 self.coordinator.modbus_client.read_holding_registers, register, 1
             )
@@ -601,7 +653,22 @@ class GrowattGenericNumber(GrowattEntity, NumberEntity):
         if not write_ok:
             raise HomeAssistantError(RATE_LIMITED_MESSAGE.format(name=self._control_name))
 
-        if write_ok:
+        if write_ok and not stored:
+            # Applied but not stored: the read-back cannot confirm it, and the deferred
+            # override check would report the unchanged register as a reversion. Neither
+            # is evidence of anything, so neither runs; the entity shows what was written.
+            data = self.coordinator.data
+            current = getattr(data, self._control_name, None) if data is not None else None
+            self._unstored_write = (raw_value, int(current) if current is not None else None)
+            _LOGGER.info(
+                "Set %s to %.1f (raw=%d). The inverter reports this setting as not stored, "
+                "so register %d keeps reading its initial value and cannot confirm the "
+                "write.", self._control_name, value, raw_value, register,
+            )
+            self.async_write_ha_state()
+            await self.coordinator.async_request_refresh()
+        elif write_ok:
+            self._unstored_write = None
             if verified:
                 _LOGGER.info("Set %s to %.1f (raw=%d, verified)", self._control_name, value, raw_value)
             else:

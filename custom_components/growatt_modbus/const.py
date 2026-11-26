@@ -248,6 +248,16 @@ WRITABLE_REGISTERS = {
         # 3500/5000 ES manual v4.0; his raw dump reads 0/0/0/0, the factory default rather
         # than a failed read.
         'not_profiles': ['SPF_3000_6000_ES_PLUS', 'SPE_8000_12000_ES'],
+        # Whether a write here is stored depends on holding 2 (#501). V1.39:
+        #
+        #     2 | PF CMD | Set holding register 3,4,5,99 CMD will be set or not(1/0),
+        #                  if not, these settings are the initial value.
+        #
+        # When it is not 1 the inverter applies the rate but register 3 keeps reading its
+        # initial value, so the read-back says nothing about what is in force. Two MOD
+        # TL3-X read holding 2 as 65535 (not implemented) and register 3 as 100 throughout,
+        # while a lower written rate visibly throttled output. See GrowattGenericNumber.
+        'stored_if_holding_reads': (2, 1),
     },
 
     # =========================================================================

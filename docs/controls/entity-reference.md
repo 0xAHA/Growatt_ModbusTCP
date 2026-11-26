@@ -932,6 +932,28 @@ the other byte is the mistake the read exists to avoid.
 
 ---
 
+## Max Output Power Rate (holding 3)
+
+`number.<name>_max_output_power_rate` limits the inverter's AC output to a percentage of its
+rating, on grid-tied and hybrid models (not SPF/SPE, where register 3 is a schedule time).
+
+Whether the inverter **stores** the rate depends on holding register 2 (*PF CMD* in Growatt's
+V1.39 protocol). Before each write the integration reads it:
+
+- **Holding 2 reads 1:** the rate is stored. Register 3 reads back what you set, a write of
+  the value already there is skipped to save EEPROM cycles, and a value that later changes
+  underneath you is reported as a reversion.
+- **Holding 2 reads anything else** (`0`, or `65535` where the firmware does not implement
+  it): the inverter applies the rate but register 3 keeps reading its initial value, often
+  `100`. Every write is sent, nothing is reported as reverted, and the entity shows the value
+  you wrote until register 3 itself changes. After a Home Assistant restart it shows register 3
+  again, because nothing on the inverter records what was written.
+
+Seen on two MOD TL3-X with holding 2 = `65535`
+([#501](https://github.com/0xAHA/Growatt_ModbusTCP/issues/501)).
+
+---
+
 ## Keeping the inverter's clock accurate
 
 Time period schedules run against the **inverter's own clock**, not Home Assistant's. That
