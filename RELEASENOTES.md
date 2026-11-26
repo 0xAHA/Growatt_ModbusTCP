@@ -4,6 +4,30 @@
 
 ---
 
+## v2.0.8-b3
+
+Issues: #501, #510
+
+- **Fix (SPA TL-BL): status, AC power, current, energy and temperatures are read** (#510).
+  They were mapped but never requested from the inverter, so they showed unknown. Status
+  now shows *Bat On-Grid* while discharging instead of *Waiting*. Thanks @asmith-localphone.
+- **Fix (SPA TL-BL): AC voltage and frequency read from input 2038/2037** (#510). On some
+  firmware the old registers (1105/1113) gave values such as 2.56 V and 32 Hz. They are
+  still used if the inverter doesn't answer at 2038/2037 and the value looks like mains.
+- **SPA TL-BL: the Inverter Power switch shows the inverter's real on/off state** (#510),
+  read from the inverter each poll, rather than the last command sent. It is still
+  disabled by default. Confirmed on two SPA3000TL-BL.
+- **Fix (serial): an inverter that stops answering no longer makes another inverter on the
+  same adapter go unavailable** (#501). The adapter is released between retries, and an
+  inverter that failed its last poll gets one attempt per cycle instead of three. Thanks
+  @HA-Fredericia.
+- **Fix: Max Output Power Rate can be set back to 100 % on inverters that don't store it**
+  (#501). When holding register 2 reads anything other than 1, every write is sent, nothing
+  is reported as reverted, and the entity shows the value written. Seen on MOD TL3-X.
+  After a Home Assistant restart the entity shows the inverter's register value again.
+
+---
+
 ## v2.0.8-b2
 
 Issues: #493, #508, #509
