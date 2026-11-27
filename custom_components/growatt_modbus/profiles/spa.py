@@ -189,7 +189,7 @@ SPA_3000_6000_TL_BL = {
         2035: {'name': 'ac_power_high', 'scale': 1, 'unit': '', 'pair': 2036},
         2036: {'name': 'ac_power_low', 'scale': 1, 'unit': '', 'pair': 2035,
                'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True,
-               'desc': 'AC output power (0.1 W; 634.0 / 1992.9 W discharging, #510). Sign while charging unconfirmed'},
+               'desc': 'AC output power (0.1 W, signed: +531.1 W discharging, -326.4 W grid charging, #510)'},
 
         # Fac / Vac1 / Iac1. Protocol and #510 agree, at two operating points: 49.90 /
         # 49.91 Hz, 240.8 / 241.9 V, 2.6 / 8.1 A with Pac 634.0 / 1992.9 W.

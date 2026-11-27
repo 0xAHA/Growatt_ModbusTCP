@@ -72,6 +72,26 @@ def test_spa_ac_side_decodes_from_2000(scan, power, volts, hz, amps):
         assert field not in data.unread_fields
 
 
+# SPA2 (#510), 2035-2039 discharging and then grid charging, read through Shine mode
+# changes. The charging pair [65535, 62272] is the first sample with power flowing in.
+DISCHARGING = {**SCAN_1, 2035: 0, 2036: 5311, 2037: 5004, 2038: 2432, 2039: 21}
+CHARGING = {**SCAN_1, 2035: 65535, 2036: 62272, 2037: 5008, 2038: 2416, 2039: 13}
+
+
+@pytest.mark.parametrize("scan, power, volts, hz, amps", [
+    (DISCHARGING, 531.1, 243.2, 50.04, 2.1),
+    (CHARGING, -326.4, 241.6, 50.08, 1.3),
+])
+def test_spa_ac_power_is_signed_32_bit(scan, power, volts, hz, amps):
+    """Positive while the SPA supplies AC, negative while it charges from the grid - not
+    the 429 MW an unsigned decode of 0xFFFF_F340 would give."""
+    data, _ = _poll(SPA, scan)
+    assert data.ac_power == pytest.approx(power)
+    assert data.ac_voltage == pytest.approx(volts)
+    assert data.ac_frequency == pytest.approx(hz)
+    assert data.ac_current == pytest.approx(amps)
+
+
 def test_spa_status_temperatures_and_energy_are_read():
     data, _ = _poll(SPA, SCAN_1)
     assert data.status == 6                      # Bat On-Grid while discharging
