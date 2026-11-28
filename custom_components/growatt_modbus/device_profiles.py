@@ -157,6 +157,9 @@ NO_BOOST_OR_IPM_TEMP: Set[str] = {"boost_temp", "ipm_temp"}
 # 3071-3119 on three DTC 3501 scans (#470).
 DRY_CONTACT_SENSORS: Set[str] = {"dry_contact_state"}
 
+# SPA CT2 (input 2102/2103): AC output of a second, AC-coupled inverter beside the SPA (#510).
+SPA_EXTRA_INVERTER_SENSORS: Set[str] = {"extra_inverter_power"}
+
 NO_LINE_VOLTAGES: Set[str] = {"ac_voltage_rs", "ac_voltage_st", "ac_voltage_tr"}
 
 # dcdc_temp is NOT in TEMPERATURE_SENSORS, and must not be put back there.
@@ -915,7 +918,8 @@ INVERTER_PROFILES = {
             # Every BMS sensor is gated on hasattr(), so only the four registers this
             # profile actually defines (1083/1085/1095/1096) create entities (#360).
             BMS_SENSORS |
-            STATUS_SENSORS
+            STATUS_SENSORS |
+            SPA_EXTRA_INVERTER_SENSORS
         ),
     },
 

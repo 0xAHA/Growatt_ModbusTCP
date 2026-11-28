@@ -178,9 +178,19 @@ SPA_3000_6000_TL_BL = {
         # PARTIAL. The protocol documents roughly forty registers here; the ones below
         # are those with an existing sensor behind them. Still unmapped and available:
         # 2040/2041 (apparent power VA), 2057/2058 (work time total), 2097 (BatVolt_DSP),
-        # 2098/2099 (P/N bus voltage), 2102-2111 (extra-inverter and system energy),
+        # 2098/2099 (P/N bus voltage), 2104-2111 (extra-inverter and system energy),
         # 2112-2115 (AC charge energy). Each needs a sensor definition, so they are left
         # until there is a device to verify against.
+        # CT2 - "Extra inverter AC power to grid" in V1.39, unit column blank. On SPA it
+        # meters a second, AC-coupled inverter. #510: both SPA3000TL-BL read 0 at night and
+        # 1600-1800 raw in daylight with CT2 on a Solis output, and kept reading while shut
+        # down. The 0.1 W scale is inferred (matches Pac at 2035/2036), not documented;
+        # signed so a reversed clamp reads negative rather than as ~429 MW.
+        2102: {'name': 'extra_inverter_power_high', 'scale': 1, 'unit': '', 'pair': 2103},
+        2103: {'name': 'extra_inverter_power_low', 'scale': 1, 'unit': '', 'pair': 2102,
+               'combined_scale': 0.1, 'combined_unit': 'W', 'signed': True,
+               'desc': 'CT2 extra inverter AC power (0.1 W inferred; 160-180 W daylight, #510)'},
+
         2000: {'name': 'status', 'scale': 1, 'unit': '',
                'desc': 'Run state, hybrid work-mode codes: 0 in standby, 6 (Bat On-Grid) while discharging (#510)'},
 
@@ -237,6 +247,14 @@ SPA_3000_6000_TL_BL = {
         # out a register stuck at one value.
         0: {'name': 'on_off', 'scale': 1, 'unit': '', 'access': 'RW', 'desc': '0=Off, 1=On',
             'onoff_readback': True},
+
+        # V1.39 marks 1044 R. SPA2 (#510) read 0 / 1 / 0 as Load First / Battery First /
+        # Load First were set in Shine, so the register reflects the mode in force. Marked
+        # RW here so the (disabled-by-default) Priority Mode select is offered; a direct
+        # Modbus write has not been reported yet.
+        1044: {'name': 'priority_mode', 'scale': 1, 'unit': '', 'access': 'RW',
+               'desc': 'Priority mode: read-back confirmed (#510), Modbus write untested',
+               'values': {0: 'Load First', 1: 'Battery First', 2: 'Grid First'}},
     },
 }
 

@@ -471,6 +471,7 @@ class GrowattData:
     grid_frequency: float = 0.0       # Hz (AC input frequency)
     ac_input_power: float = 0.0       # W (AC input power)
     ac_apparent_power: float = 0.0    # VA (AC apparent power)
+    extra_inverter_power: float = 0.0  # W (SPA CT2: external inverter's AC output, 2102/2103)
     load_percentage: float = 0.0      # % (Load percentage)
 
     # SPF Generator Sensors
@@ -3843,6 +3844,11 @@ class GrowattModbus:
             if ac_freq_addr:
                 self._set_from_register(data, 'ac_frequency', ac_freq_addr)
             self._spa_ac_fallback(data)
+
+            # SPA CT2: AC power of a second, external inverter (input 2102/2103, #510)
+            extra_power_addr = self._find_register_by_name('extra_inverter_power_low')
+            if extra_power_addr:
+                self._set_from_register(data, 'extra_inverter_power', extra_power_addr)
 
             # AC Apparent Power (SPF Off-Grid, some other models)
             ac_apparent_power_addr = self._find_register_by_name('ac_apparent_power_low')

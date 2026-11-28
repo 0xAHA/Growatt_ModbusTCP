@@ -150,6 +150,9 @@
   },
   "entity": {
     "sensor": {
+      "extra_inverter_power": {
+        "name": "Extra Inverter Power"
+      },
       "ac_apparent_power": {
         "name": "AC Apparent Power"
       },

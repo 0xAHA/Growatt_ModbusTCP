@@ -957,6 +957,32 @@ Seen on two MOD TL3-X with holding 2 = `65535`
 
 ---
 
+## SPA 3000-6000 TL-BL: Priority Mode and CT2
+
+| Entity | Type | Register | Notes |
+|---|---|---|---|
+| Priority Mode | Select | Holding 1044 | Load First (0), Battery First (1), Grid First (2). **Disabled by default** |
+| Extra Inverter Power | Sensor | Input 2102/2103 | Power measured by the CT2 clamp, usually on a second, AC-coupled PV inverter's output |
+
+**Priority Mode.** The protocol lists holding 1044 as read-only. On a SPA3000TL-BL it read
+`0`, `1`, `0` while Load First, Battery First and Load First were set in Shine, so it shows the
+mode in force ([#510](https://github.com/0xAHA/Growatt_ModbusTCP/issues/510)). Changing it
+over Modbus has **not been confirmed yet**, which is why the select starts disabled. Enable it
+under the inverter device's entity settings. Battery First and Grid First only act inside an
+enabled time window for that mode.
+
+1044 is a stored setting. Selecting the mode the inverter is already in sends nothing: the
+select reads the register first and skips the write. An automation that sets the mode on every
+run does not add EEPROM writes when nothing changes. Growatt support's guidance for stored
+settings is 5-10 writes a day
+([#504](https://github.com/0xAHA/Growatt_ModbusTCP/issues/504)).
+
+**Extra Inverter Power.** Reads 0 at night and 160-180 W in weak daylight on two units, and keeps
+reading while the SPA is shut down. The protocol gives this register no unit or scale. The
+0.1 W scale matches the AC power register next to it but is not documented, and whether the
+value is W or VA is not documented either. Readings against the other inverter's own figure at
+higher generation are still to come.
+
 ## Keeping the inverter's clock accurate
 
 Time period schedules run against the **inverter's own clock**, not Home Assistant's. That

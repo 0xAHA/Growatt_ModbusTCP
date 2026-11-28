@@ -308,6 +308,14 @@ SENSOR_DEFINITIONS = {
         "unit": UnitOfPower.WATT,
         "attr": "ac_power",
     },
+    "extra_inverter_power": {
+        "name": "Extra Inverter Power",
+        "icon": "mdi:solar-power-variant",
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": UnitOfPower.WATT,
+        "attr": "extra_inverter_power",
+    },
     "ac_apparent_power": {
         "name": "AC Apparent Power",
         "icon": "mdi:power-plug",

@@ -463,7 +463,7 @@
 | 1036 | --- | --- | --- | --- |
 | 1037 | bCTMode | Use the CTMode to Choose RFCT \ Cable CT\METER | W |
 | 1038 | CTAdjust | CTAdjust enable | W |
-| 1044 | Priority | ForceChrEn/ForceD ischrEn Load first/bat first /grid first | R |
+| 1044 | Priority | ForceChrEn/ForceD ischrEn Load first/bat first /grid first | R. A SPA3000TL-BL read 0/1/0 as Load/Battery/Load First were set in Shine (#510); a Modbus write is unconfirmed |
 | 1045 | Reserve |  |  |
 | 1046 | Reserve |  |  |
 | 1047 | AgingTestS tep Cmd | Command for aging test |  |
@@ -1360,7 +1360,7 @@ sleep both disabled. Which change caused that is not established.
 | 2100 | RemoteCtrlEn | Remote control enable | — | 0=Load First, 1=Bat First, 2=Grid |
 | 2101 | RemoteCtrlPower | Remotely set power | — | |
 | 2102 | Extra AC Power to grid H | Extra inverter AC power to grid (high) | — | SPA |
-| 2103 | Extra AC Power to grid L | Extra inverter AC power to grid (low) | — | SPA |
+| 2103 | Extra AC Power to grid L | Extra inverter AC power to grid (low) | — | SPA. CT2: a SPA3000TL-BL read 0 at night and 1600-1800 in daylight with the clamp on a second inverter's output, also while shut down (#510). Unit and scale not documented; the integration uses 0.1 W, as Pac |
 | 2104 | Eextra_today H | Extra inverter power to user today (high) | 0.1kWh | SPA |
 | 2105 | Eextra_today L | Extra inverter power to user today (low) | 0.1kWh | SPA |
 | 2106 | Eextra_total H | Extra inverter power to user total (high) | 0.1kWh | SPA |

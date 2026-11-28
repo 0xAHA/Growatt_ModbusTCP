@@ -934,6 +934,27 @@ WRITABLE_REGISTERS = {
         },
         'desc': 'Priority mode — hardware-confirmed on MIN TL-XH (Issue #311)'
     },
+    # SPA holding 1044 (#510). V1.39 lists it as R; on a SPA3000TL-BL it read back 0 / 1 / 0
+    # as Load First / Battery First / Load First were set in Shine. A write over Modbus is
+    # untested, so the select is disabled by default and offered on SPA only - every other
+    # profile keeps 1044 read-only. Battery First and Grid First only act inside an enabled
+    # time window of that mode.
+    #
+    # Read before write: an unchanged value is not sent, since 1044 is a stored setting and
+    # Growatt support's guidance is 5-10 writes a day (#504).
+    'priority_mode': {
+        'register': 1044,
+        'scale': 1,
+        'options': {
+            0: 'Load First',
+            1: 'Battery First',
+            2: 'Grid First',
+        },
+        'only_profiles': ['SPA_3000_6000_TL_BL'],
+        'disabled_by_default': True,
+        'skip_unchanged': True,
+        'desc': 'Priority mode (holding 1044) - read-back confirmed on SPA (#510), write untested',
+    },
     'batt_first_charge_power_rate': {
         'register': 3047,
         'scale': 1,
@@ -1228,6 +1249,8 @@ SENSOR_DEVICE_MAP = {
 
     # Solar device - PV production and AC output
     DEVICE_TYPE_SOLAR: {
+        # SPA CT2: output of a second, AC-coupled inverter (#510)
+        'extra_inverter_power',
         # PV inputs
         'pv1_voltage', 'pv1_current', 'pv1_power',
         'pv2_voltage', 'pv2_current', 'pv2_power',

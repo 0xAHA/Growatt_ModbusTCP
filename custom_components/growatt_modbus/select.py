@@ -388,6 +388,21 @@ class GrowattGenericSelect(GrowattEntity, SelectEntity):
                     self.coordinator._saved_export_limit_mode_wit,
                 )
 
+        # Stored settings opt in to a read before the write, so an unchanged value is not
+        # sent (#510) - the same check number.py has carried since #384. A failed read
+        # proceeds with the write: skipping it would silently drop the user's request.
+        if self._control_config.get('skip_unchanged'):
+            current = await self.hass.async_add_executor_job(
+                self.coordinator.modbus_client.read_holding_registers, register_addr, 1
+            )
+            if current and int(current[0]) == value:
+                _LOGGER.info("%s already reads %s (value=%d) - not writing register %d",
+                             self._control_name, option, value, register_addr)
+                return
+            if not current:
+                _LOGGER.debug("%s: could not read register %d before writing - writing anyway",
+                              self._control_name, register_addr)
+
         # Write to Modbus register with read-back verification
         try:
             write_ok, verified = await self.hass.async_add_executor_job(

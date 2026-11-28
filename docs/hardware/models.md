@@ -107,7 +107,7 @@ The **MOD** column below represents the **MOD TL3-XH** (hybrid, with battery). T
 | Status / Derating / Fault Codes | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 *HU variants only (SPH/SPM 8000-10000TL3-BH-HU)
-†SPA: status, AC power, frequency, voltage and current come from the SPA extended range (input 2000, 2035/2036, 2037, 2038, 2039), confirmed on a SPA3000TL-BL at two discharge levels ([#510](https://github.com/0xAHA/Growatt_ModbusTCP/issues/510)). Until v2.0.8 the integration never requested this range, so these read as unknown. Input 1105/1113, earlier used for AC voltage and frequency, are BMS fields in the protocol and read 2.56 V / 32 Hz on that unit; they are now used only if the 2000 range does not answer and they look like mains values. Three-phase SPA-TL3 does not serve the 2000 range and uses the SPH-TL3 layout instead.
+†SPA: status, AC power, frequency, voltage and current come from the SPA extended range (input 2000, 2035/2036, 2037, 2038, 2039), confirmed on a SPA3000TL-BL at two discharge levels ([#510](https://github.com/0xAHA/Growatt_ModbusTCP/issues/510)). Until v2.0.8 the integration never requested this range, so these read as unknown. Input 1105/1113, earlier used for AC voltage and frequency, are BMS fields in the protocol and read 2.56 V / 32 Hz on that unit; they are now used only if the 2000 range does not answer and they look like mains values. Three-phase SPA-TL3 does not serve the 2000 range and uses the SPH-TL3 layout instead. From v2.0.8 the single-phase SPA also has **Extra Inverter Power** (CT2, input 2102/2103) and a disabled-by-default **Priority Mode** select (holding 1044). See [SPA Priority Mode and CT2](../controls/entity-reference.md#spa-3000-6000-tl-bl-priority-mode-and-ct2).
 
 ---
 
