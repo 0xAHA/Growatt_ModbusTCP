@@ -4,6 +4,21 @@
 
 ---
 
+## v2.0.8-b4
+
+Issues: #510
+
+- **New (SPA TL-BL): Extra Inverter Power sensor** (#510). Power measured by the CT2 clamp,
+  usually on a second, AC-coupled PV inverter. Read from input 2102/2103; the protocol gives
+  no unit, so the 0.1 W scale is taken from the AC power register beside it.
+- **New (SPA TL-BL): Priority Mode select (holding 1044), disabled by default** (#510). Read-back
+  is confirmed on a SPA3000TL-BL; a change made over Modbus is not confirmed yet. Selecting the
+  mode already in force sends no write. Enable it on the inverter device to use it.
+- SPA TL-BL AC power sign confirmed while charging from the grid: negative while charging,
+  positive while discharging. No change from b3.
+
+---
+
 ## v2.0.8-b3
 
 Issues: #501, #510
